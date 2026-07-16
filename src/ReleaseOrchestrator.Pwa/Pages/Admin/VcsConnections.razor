@@ -1,0 +1,127 @@
+@page "/admin/vcs"
+@attribute [Authorize]
+@inject ApiService Api
+
+<PageTitle>VCS Connections</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">VCS Connections</h4>
+    <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Connection</button>
+</div>
+
+<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
+<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+
+@if (_loading) { <Spinner /> }
+else if (_result is not null)
+{
+    <table class="table table-hover">
+        <thead><tr><th>Name</th><th>Type</th><th>API URL</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var c in _result.Items)
+        {
+            <tr>
+                <td>@c.Name</td>
+                <td><span class="badge bg-secondary">@c.VcsType</span></td>
+                <td class="text-muted small">@c.ApiUrl</td>
+                <td class="text-end">
+                    <button class="btn btn-outline-secondary btn-sm me-1" @onclick="@(() => OpenEdit(c))">Edit</button>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(c.Id))">Delete</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (_result.Total > _result.PageSize)
+    {
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">Showing @_result.Items.Count of @_result.Total</small>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm me-1" disabled="@(_page == 1)" @onclick="@(() => LoadPage(_page - 1))">Prev</button>
+                <button class="btn btn-outline-secondary btn-sm" disabled="@(_page * _result.PageSize >= _result.Total)" @onclick="@(() => LoadPage(_page + 1))">Next</button>
+            </div>
+        </div>
+    }
+}
+
+@if (_showModal)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Edit" : "New") VCS Connection</h5>
+                    <button class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">Name</label><input class="form-control" @bind="_fName" /></div>
+                    <div class="mb-3"><label class="form-label">Type</label>
+                        <select class="form-select" @bind="_fType">
+                            <option value="GitLab">GitLab</option>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="form-label">API URL</label><input class="form-control" @bind="_fUrl" placeholder="https://gitlab.example.com" /></div>
+                    <div class="mb-3"><label class="form-label">Access Token @(_editId.HasValue ? "(leave blank to keep current)" : "")</label>
+                        <input class="form-control" type="password" @bind="_fToken" /></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="Save" disabled="@_saving">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    PagedResult<VcsConnectionDto>? _result;
+    bool _loading = true;
+    bool _showModal, _saving;
+    string? _error, _success;
+    int _page = 1;
+
+    Guid? _editId;
+    string _fName = "", _fType = "GitLab", _fUrl = "", _fToken = "";
+
+    protected override async Task OnInitializedAsync() => await LoadPage(1);
+
+    async Task LoadPage(int page)
+    {
+        _page = page; _loading = true;
+        try { _result = await Api.GetVcsConnectionsAsync(page); }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _loading = false; }
+    }
+
+    void OpenCreate() { _editId = null; _fName = ""; _fType = "GitLab"; _fUrl = ""; _fToken = ""; _showModal = true; }
+    void OpenEdit(VcsConnectionDto c) { _editId = c.Id; _fName = c.Name; _fType = c.VcsType; _fUrl = c.ApiUrl; _fToken = ""; _showModal = true; }
+    void CloseModal() => _showModal = false;
+
+    async Task Save()
+    {
+        _saving = true; _error = null;
+        try
+        {
+            bool ok;
+            if (_editId.HasValue)
+                ok = await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fType, _fUrl, _fToken);
+            else
+                ok = await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken);
+
+            if (ok) { CloseModal(); _success = "Saved."; await LoadPage(_page); }
+            else _error = "Save failed.";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+
+    async Task Delete(Guid id)
+    {
+        if (!await Api.DeleteVcsConnectionAsync(id)) { _error = "Delete failed."; return; }
+        _success = "Deleted.";
+        await LoadPage(_page);
+    }
+}

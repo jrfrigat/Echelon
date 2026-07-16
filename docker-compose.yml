@@ -1,0 +1,120 @@
+services:
+  ingress:
+    build:
+      context: src
+      dockerfile: ReleaseOrchestrator.Ingress.Webhooks/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Queue__Host: rabbitmq
+      Queue__Username: guest
+      Queue__Password: guest
+      Seq__Url: http://seq:5341
+      # Webhook shared secrets — set per-connection; must match the token GitLab/Tracker sends.
+      # Pattern: Webhooks__GitLab__{connectionName}__Token and Webhooks__Tracker__{connectionName}__Token
+      # Example (override in .env or secrets manager):
+      Webhooks__GitLab__default__Token: "${WEBHOOK_GITLAB_DEFAULT_TOKEN:-}"
+      Webhooks__Tracker__default__Token: "${WEBHOOK_TRACKER_DEFAULT_TOKEN:-}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  core:
+    build:
+      context: src
+      dockerfile: ReleaseOrchestrator.Web/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DatabaseProvider: SqlServer
+      ConnectionStrings__Default: "Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__Archive: "Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Queue__Host: rabbitmq
+      Queue__Username: guest
+      Queue__Password: guest
+      Redis__ConnectionString: "redis:6379"
+      Seq__Url: http://seq:5341
+      # Azure AD / ADFS authentication — required for API authorization.
+      AD__Authority: "${AD_AUTHORITY:-https://login.microsoftonline.com/YOUR_TENANT_ID}"
+      AD__ClientId: "${AD_CLIENT_ID:-YOUR_API_CLIENT_ID}"
+      AD__TenantId: "${AD_TENANT_ID:-YOUR_TENANT_ID}"
+      # Allowed origins for CORS (comma-separated or JSON array)
+      AllowedOrigins__0: "http://localhost:8081"
+      AllowedOrigins__1: "${ALLOWED_ORIGIN:-http://localhost:8081}"
+    depends_on:
+      mssql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Dev_Password1}"
+      MSSQL_MEMORY_LIMIT_MB: 2048
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$MSSQL_SA_PASSWORD -Q 'SELECT 1' -No || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5341:5341"
+      - "8082:80"
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - seqdata:/data
+    restart: unless-stopped
+
+volumes:
+  mssqldata:
+  rabbitmqdata:
+  redisdata:
+  seqdata:

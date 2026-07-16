@@ -1,0 +1,49 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.csproj.user
+
+# Test / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+*.coverage
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+appsettings.*.local.json
+
+# Tooling artifacts (ruflo / claude-flow)
+ruvector.db
+*.db-shm
+*.db-wal
+.claude-flow/
+.swarm/
+
+# OS
+Thumbs.db
+.DS_Store

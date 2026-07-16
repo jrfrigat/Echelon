@@ -1,0 +1,164 @@
+@page "/admin/permissions"
+@attribute [Authorize]
+@inject ApiService Api
+
+<PageTitle>Permissions</PageTitle>
+
+<h4 class="mb-4">Permissions</h4>
+
+<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
+<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+
+@if (_loading) { <Spinner /> }
+else
+{
+    <div class="row g-4">
+        <!-- Permission Claims -->
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Permission Claims</strong>
+                </div>
+                <div class="card-body p-0">
+                    @if (_claims is null || !_claims.Any())
+                    {
+                        <div class="text-muted p-3">No permission claims defined.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>Name</th></tr></thead>
+                            <tbody>
+                            @foreach (var claim in _claims)
+                            {
+                                <tr><td>@claim.Name</td></tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Group Mappings -->
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Group Mappings</strong>
+                    <button class="btn btn-primary btn-sm" @onclick="@(() => _showAddMapping = !_showAddMapping)">+ Add Mapping</button>
+                </div>
+                <div class="card-body">
+                    @if (_showAddMapping)
+                    {
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="mb-2">
+                                <label class="form-label small">AD Group SID</label>
+                                <input class="form-control form-control-sm" @bind="_fSid" placeholder="S-1-5-..." />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">Permission Claim</label>
+                                <select class="form-select form-select-sm" @bind="_fClaimId">
+                                    <option value="">-- Select claim --</option>
+                                    @if (_claims is not null)
+                                    {
+                                        @foreach (var claim in _claims)
+                                        {
+                                            <option value="@claim.Id">@claim.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm" @onclick="AddMapping" disabled="@(_savingMapping || string.IsNullOrWhiteSpace(_fSid) || string.IsNullOrEmpty(_fClaimId))">
+                                    @if (_savingMapping) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    Add
+                                </button>
+                                <button class="btn btn-secondary btn-sm" @onclick="@(() => _showAddMapping = false)">Cancel</button>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_mappings is null || !_mappings.Any())
+                    {
+                        <div class="text-muted">No group mappings configured.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm table-hover">
+                            <thead><tr><th>AD Group SID</th><th>Claim</th><th></th></tr></thead>
+                            <tbody>
+                            @foreach (var m in _mappings)
+                            {
+                                <tr>
+                                    <td class="small font-monospace">@m.AdGroupSid</td>
+                                    <td class="small">@m.ClaimName</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="@(() => RemoveMapping(m.Id))">&#x2715;</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<PermissionClaimDto>? _claims;
+    List<GroupMappingDto>? _mappings;
+    bool _loading = true;
+    bool _showAddMapping, _savingMapping;
+    string? _error, _success;
+
+    string _fSid = "", _fClaimId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        try
+        {
+            var claimsTask = Api.GetPermissionClaimsAsync();
+            var mappingsTask = Api.GetGroupMappingsAsync();
+            await Task.WhenAll(claimsTask, mappingsTask);
+            _claims = claimsTask.Result;
+            _mappings = mappingsTask.Result;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _loading = false; }
+    }
+
+    async Task AddMapping()
+    {
+        if (!Guid.TryParse(_fClaimId, out var claimId)) return;
+        _savingMapping = true; _error = null;
+        try
+        {
+            var ok = await Api.AddGroupMappingAsync(_fSid, claimId);
+            if (ok)
+            {
+                _success = "Mapping added.";
+                _showAddMapping = false;
+                _fSid = ""; _fClaimId = "";
+                _mappings = await Api.GetGroupMappingsAsync();
+            }
+            else _error = "Failed to add mapping.";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _savingMapping = false; }
+    }
+
+    async Task RemoveMapping(Guid id)
+    {
+        _error = null;
+        try
+        {
+            var ok = await Api.RemoveGroupMappingAsync(id);
+            if (ok) { _success = "Mapping removed."; _mappings = await Api.GetGroupMappingsAsync(); }
+            else _error = "Failed to remove mapping.";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+}

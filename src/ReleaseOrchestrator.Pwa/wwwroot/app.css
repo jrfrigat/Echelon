@@ -1,0 +1,15 @@
+html, body { height: 100%; }
+.page { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; min-height: 100vh; background: #1e293b; flex-shrink: 0; }
+.sidebar .nav-link:hover { background: rgba(255,255,255,0.1); border-radius: 6px; }
+.sidebar .nav-link.active { background: rgba(255,255,255,0.15); border-radius: 6px; }
+.main-content { flex: 1; overflow-y: auto; background: #f8f9fa; }
+.stage-card { border: 2px solid #dee2e6; cursor: default; }
+.stage-card .card-header { cursor: grab; user-select: none; background: #f1f5f9; }
+.stage-drag-over { border-color: #0d6efd !important; background: #eff6ff; }
+.mr-item { background: #ffffff; border: 1px solid #e2e8f0; cursor: grab; }
+.mr-item:hover { background: #f8fafc; }
+.mr-item.dragging { opacity: 0.5; }
+.drag-handle { cursor: grab; }
+.drop-zone { border: 2px dashed #dee2e6; border-radius: 6px; }
+#blazor-error-ui { background: #fef3cd; border: 1px solid #ffc107; padding: 1rem; position: fixed; bottom: 0; right: 0; left: 0; z-index: 9999; }

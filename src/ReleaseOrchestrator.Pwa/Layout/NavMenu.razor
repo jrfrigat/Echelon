@@ -1,0 +1,50 @@
+<AuthorizeView>
+    <Authorized>
+        <nav class="sidebar d-flex flex-column p-3">
+            <a class="navbar-brand mb-4 fw-bold text-white" href="/">Release Orchestrator</a>
+            <ul class="nav flex-column gap-1">
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/" Match="NavLinkMatch.All">
+                        <span class="me-2">&#x1F4CB;</span>Release Plan
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/plan/yaml">
+                        <span class="me-2">&#x1F4C4;</span>YAML Editor
+                    </NavLink>
+                </li>
+                <li class="nav-item mt-3">
+                    <span class="text-white-50 small text-uppercase px-3">Administration</span>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/admin/vcs">
+                        <span class="me-2">&#x1F517;</span>VCS Connections
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/admin/trackers">
+                        <span class="me-2">&#x1F3AF;</span>Tracker Connections
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/admin/repos">
+                        <span class="me-2">&#x1F4E6;</span>Repositories
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/admin/stacks">
+                        <span class="me-2">&#x1F5C2;</span>Stacks
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link text-white" href="/admin/permissions">
+                        <span class="me-2">&#x1F512;</span>Permissions
+                    </NavLink>
+                </li>
+            </ul>
+            <div class="mt-auto">
+                <a class="btn btn-outline-light btn-sm" href="authentication/logout">Logout</a>
+            </div>
+        </nav>
+    </Authorized>
+</AuthorizeView>

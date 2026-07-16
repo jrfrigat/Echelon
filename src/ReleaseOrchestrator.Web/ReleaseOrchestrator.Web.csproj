@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.8.3" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReleaseOrchestrator.Application\ReleaseOrchestrator.Application.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Infrastructure\ReleaseOrchestrator.Infrastructure.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Migrations.MsSql\ReleaseOrchestrator.Migrations.MsSql.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Pwa\ReleaseOrchestrator.Pwa.csproj" />
+  </ItemGroup>
+
+</Project>
