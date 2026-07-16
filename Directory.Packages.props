@@ -58,8 +58,8 @@
   </ItemGroup>
 
   <ItemGroup Label="UI">
-    <PackageVersion Include="Flare.Blazor" Version="0.5.0" />
-    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.5.0" />
+    <PackageVersion Include="Flare.Blazor" Version="0.6.0" />
+    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.6.0" />
   </ItemGroup>
 
   <ItemGroup Label="Serialization">
