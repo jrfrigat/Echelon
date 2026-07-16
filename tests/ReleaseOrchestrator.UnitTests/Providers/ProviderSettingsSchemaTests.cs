@@ -21,6 +21,9 @@ public class ProviderSettingsSchemaTests
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
+            // See DependencyInjectionTests: outside Development the composition root requires a
+            // certificate for the key ring.
+            ["ASPNETCORE_ENVIRONMENT"] = "Development",
             ["ConnectionStrings:Default"] = "Server=unused;Database=unused;Trusted_Connection=True",
             ["ConnectionStrings:Archive"] = "Server=unused;Database=unused-archive;Trusted_Connection=True",
             ["Redis:ConnectionString"] = "localhost:6379",

@@ -23,6 +23,10 @@ public class DependencyInjectionTests
     {
         var settings = new Dictionary<string, string?>
         {
+            // Declared, not omitted: outside Development the composition root refuses to start
+            // without a certificate to encrypt the Data Protection key ring, and an unset
+            // environment counts as outside. See DataProtectionSetupTests for that rule itself.
+            ["ASPNETCORE_ENVIRONMENT"] = "Development",
             ["ConnectionStrings:Default"] = "Server=unused;Database=unused;Trusted_Connection=True",
             ["ConnectionStrings:Archive"] = "Server=unused;Database=unused-archive;Trusted_Connection=True",
             ["Redis:ConnectionString"] = "localhost:6379",

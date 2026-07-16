@@ -52,9 +52,7 @@ public static class InfrastructureExtensions
             opt.UseSqlServer(archiveConnectionString, sql =>
                 sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null)));
 
-        services.AddDataProtection()
-            .SetApplicationName("ReleaseOrchestrator")
-            .PersistKeysToDbContext<AppDbContext>();
+        services.AddTokenProtection(config);
 
         services.AddSingleton(TimeProvider.System);
 

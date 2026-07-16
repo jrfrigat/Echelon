@@ -53,6 +53,19 @@ services:
       # This stack runs a single replica, so startup migration is safe here. Concurrent replicas
       # race on Migrate() — move this to an init container or CI before scaling out.
       Database__MigrateOnStartup: "${DB_MIGRATE_ON_STARTUP:-true}"
+
+      # The Data Protection key ring encrypts the VCS and tracker tokens and is stored in the same
+      # database as them, so the keys must be encrypted with something that database does not hold
+      # — otherwise a dump yields both halves and the encryption is decoration.
+      #
+      # Mount a PKCS#12 file and point DATAPROTECTION_CERT_PATH at it:
+      #   volumes: [ "./secrets/keyring.pfx:/run/secrets/keyring.pfx:ro" ]
+      # Defaulted to the opt-out so `docker compose up` still works out of the box, which is a
+      # deliberate trade for a stack whose database is not published either. It is the wrong
+      # default for anything holding real tokens.
+      DataProtection__CertificatePath: "${DATAPROTECTION_CERT_PATH:-}"
+      DataProtection__CertificatePassword: "${DATAPROTECTION_CERT_PASSWORD:-}"
+      DataProtection__AllowUnprotectedKeys: "${DATAPROTECTION_ALLOW_UNPROTECTED_KEYS:-true}"
       Queue__Host: rabbitmq
       Queue__Username: "${RABBITMQ_USER:?RABBITMQ_USER is required (see .env.example)}"
       Queue__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required (see .env.example)}"
