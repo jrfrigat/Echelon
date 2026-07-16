@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
@@ -11,6 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 public class PermissionClaimsTransformation(
     AppDbContext db,
     IDistributedCache cache,
+    IConfiguration config,
     ILogger<PermissionClaimsTransformation> logger) : IClaimsTransformation
 {
     public const string PermissionClaimType = "permission";
@@ -57,6 +59,20 @@ public class PermissionClaimsTransformation(
             return [];
         }
 
+        // Bootstrap escape hatch. Permissions live in the database and are granted through
+        // config.edit — which nobody can hold on a fresh install, because granting it needs
+        // config.edit. Without this the deployment is unusable and the only way in is hand-
+        // editing the database. It is not a privilege boundary: whoever sets this variable
+        // already owns the connection string.
+        if (IsBootstrapAdmin(userId))
+        {
+            logger.LogWarning(
+                "User {UserId} is granted every permission by Authorization:BootstrapAdminObjectIds. "
+                + "This is a bootstrap-only setting — grant the permissions properly and remove it.",
+                userId);
+            return [Permissions.ConfigEdit, Permissions.ReleasePlanApprove, Permissions.ReleasePlanView];
+        }
+
         var groupSids = principal.FindAll(GroupClaimType).Select(c => c.Value).ToList();
 
         try
@@ -98,5 +114,16 @@ public class PermissionClaimsTransformation(
             logger.LogError(ex, "Failed to load permissions for user {UserId}", userId);
             return [];
         }
+    }
+
+    /// <summary>Object ids listed in Authorization:BootstrapAdminObjectIds, normalised the same way overrides are.</summary>
+    private bool IsBootstrapAdmin(string userId)
+    {
+        var configured = config.GetSection("Authorization:BootstrapAdminObjectIds").Get<string[]>();
+        if (configured is null || configured.Length == 0) return false;
+
+        return configured
+            .Select(id => UserIdentifier.TryNormalize(id, out var normalized) ? normalized : null)
+            .Any(id => id is not null && string.Equals(id, userId, StringComparison.Ordinal));
     }
 }

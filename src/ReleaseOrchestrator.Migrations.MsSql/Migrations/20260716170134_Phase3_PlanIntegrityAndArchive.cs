@@ -84,6 +84,21 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     table.PrimaryKey("PK_DataProtectionKeys", x => x.Id);
                 });
 
+            // The three permissions the code enforces. Nothing ever created these rows, so
+            // PermissionClaims was empty, every grant had nothing to reference, and no one
+            // could hold config.edit — which is itself required to grant config.edit. The
+            // deployment was unusable by design. Ids are fixed so re-running is a no-op.
+            migrationBuilder.Sql("""
+                MERGE [PermissionClaims] AS target
+                USING (VALUES
+                    ('7f3e6a1c-0000-4000-8000-000000000001', 'release.plan.view'),
+                    ('7f3e6a1c-0000-4000-8000-000000000002', 'release.plan.approve'),
+                    ('7f3e6a1c-0000-4000-8000-000000000003', 'config.edit')
+                ) AS source ([Id], [Name])
+                ON target.[Name] = source.[Name]
+                WHEN NOT MATCHED THEN INSERT ([Id], [Name]) VALUES (CAST(source.[Id] AS uniqueidentifier), source.[Name]);
+                """);
+
             // Data fixes must land before the indexes below, which will not build against the
             // rows as they stand.
 
