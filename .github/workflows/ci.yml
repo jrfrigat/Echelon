@@ -1,0 +1,107 @@
+name: CI
+
+# Build + test + dependency audit on every push/PR.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build, test & audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore src/ReleaseOrchestrator.sln
+
+      - name: Build (Release)
+        run: dotnet build src/ReleaseOrchestrator.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test src/ReleaseOrchestrator.sln -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+
+  audit:
+    name: Vulnerable dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Developer machines here sit behind a proxy that blocks nuget.org, so the audit degrades to
+      # a warning locally (see Directory.Build.props). CI has network, so this is where it must
+      # actually bite.
+      #
+      # `dotnet list package --vulnerable` exits 0 even when it finds something — the flag reports,
+      # it does not gate. The output has to be inspected, or the step passes while shipping a known
+      # CVE. This is exactly how System.Security.Cryptography.Xml 9.0.5 (two high-severity
+      # advisories, reached through DataProtection, which encrypts the VCS tokens) went unnoticed.
+      - name: Audit dependencies
+        run: |
+          set -euo pipefail
+          dotnet restore src/ReleaseOrchestrator.sln
+          dotnet list src/ReleaseOrchestrator.sln package --vulnerable --include-transitive \
+            | tee audit.txt
+          if grep -qiE '\b(Critical|High|Moderate|Low)\b' audit.txt; then
+            echo "::error::Vulnerable packages found — see the table above."
+            exit 1
+          fi
+          echo "No vulnerable packages."
+
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Empty files named after code fragments ("_success", "t.ClosedAt") are the residue of stray
+      # shell redirects and have reached commits repeatedly. Cheap to catch, confusing to inherit.
+      - name: No committed empty files
+        run: |
+          set -euo pipefail
+          empty=$(git ls-files --empty-directory -z 2>/dev/null || true)
+          found=$(find . -path ./.git -prune -o -type f -empty -print | grep -v '/obj/\|/bin/' || true)
+          tracked_empty=$(echo "$found" | while read -r f; do
+            [ -n "$f" ] && git ls-files --error-unmatch "$f" >/dev/null 2>&1 && echo "$f"
+          done)
+          if [ -n "$tracked_empty" ]; then
+            echo "::error::Empty files are committed:"
+            echo "$tracked_empty"
+            exit 1
+          fi
+          echo "No committed empty files."

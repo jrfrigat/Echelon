@@ -10,6 +10,30 @@
 - NEVER commit secrets, credentials, or .env files
 - Keep files under 500 lines
 - Validate input at system boundaries
+- **Коммиты БЕЗ трейлера co-author** (`Co-authored-by: ...`) — никогда не добавлять
+- **XML-документация обязательна** на public типах/членах/параметрах — там, где комментарий говорит больше имени. Держится на ревью, не на компиляторе: CS1591 заглушён (как в Flare), иначе он заставляет писать «Gets or sets the Id» и обесценивает комментарии как жанр
+- **Версии пакетов — ТОЛЬКО в `Directory.Packages.props`** (Central Package Management). В `.csproj` — `<PackageReference Include="X" />` без `Version`. Одна правка вместо восьми, и версии не расходятся молча
+- **Перед коммитом** — `bash scripts/clean-empty-files.sh`. Незаэкранированный `>` в shell-команде создаёт пустой файл с именем следующего токена (`_success`, `t.ClosedAt`); такие файлы уже трижды попадали в коммиты
+- Правки, ломающие публичный контракт, допустимы, если оправданы — но должны быть видны на `dotnet build`, а не в рантайме
+
+## Архитектура
+
+Onion / ports-adapters, зависимости **только внутрь** (эталон — репозиторий Flare):
+
+```
+Core (домен: сущности, enum'ы; ноль зависимостей)
+  ← Application (порты, контракты сообщений, алгоритм планирования — без EF)
+      ← Infrastructure (адаптеры: EF Core, MassTransit, Redis, DataProtection)
+      ← Providers.Abstractions (контракты провайдеров) ← Providers.GitLab / Providers.YandexTracker
+          ← Web (корень композиции, API) / Ingress.Webhooks
+```
+
+Правила:
+
+- **Ядро не знает ни об одном конкретном провайдере.** Имена GitLab/YandexTracker, их словари статусов и форматы ключей задач живут в адаптерах, не в `Core`. В домене — только нормализованные значения
+- **Алгоритм планирования (`Application/ReleasePlanning`) не зависит от EF** — он чистый и тестируется без БД. Именно недостижимость этого кода для теста скрыла инверсию рёбер графа до аудита
+- **Провайдеры регистрируются на этапе компиляции** (keyed services + фабрика), без динамической загрузки сборок. Обоснование и обзор аналогов — `docs/issues/002-provider-independence.md`
+- **Локализация** — `Resources/*.resx` (нейтральная культура = en) + `*.ru.resx`. Логи не локализуются: они для операторов и должны быть на одном языке
 
 ## Agent Comms (SendMessage-First Coordination)
 
@@ -147,8 +171,19 @@ Any string works as a custom agent type.
 - ALWAYS verify build succeeds before committing
 
 ```bash
-npm run build && npm test
+dotnet build src/ReleaseOrchestrator.sln -v q --nologo   # must be 0 errors, 0 warnings
+dotnet test src/ReleaseOrchestrator.sln
+bash scripts/clean-empty-files.sh                        # before every commit
 ```
+
+`TreatWarningsAsErrors=true`, поэтому «0 предупреждений» — не пожелание, а условие сборки.
+
+### Ограничения среды (проверено, не тратьте время заново)
+
+- **nuget.org заблокирован прокси (403).** Ставить можно только пакеты, уже лежащие в `~/.nuget/packages`. Проверка уязвимостей (NU1902/NU1903) работает по локально закэшированной базе и потому оставлена предупреждением, а не ошибкой — **в CI она обязана валить сборку**
+- **Реестр Docker фильтруется** — образы не собрать, теги не проверить
+- **Нет провайдера EF in-memory**, а EF SQLite в кэше только 10.x — тесты с БД офлайн не написать. Покрыта чистая логика
+- Миграции: `dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.MsSql --context AppDbContext`
 
 ## CLI Quick Reference
 

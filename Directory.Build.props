@@ -1,17 +1,57 @@
 <Project>
 
-  <PropertyGroup>
+  <PropertyGroup Label="Identity">
+    <Authors>FrigaT</Authors>
+    <Company>FrigaT</Company>
+    <Copyright>Copyright (c) 2026 FrigaT</Copyright>
+    <RepositoryType>git</RepositoryType>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Language">
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
     <!--
-      NU1900 means NuGet could not reach the feed to check packages for known
-      vulnerabilities. That is a statement about the network, not about the code, so it must
-      stay visible as a warning without failing the build: behind a proxy that blocks
-      nuget.org it otherwise makes every restore fatal. A build box with feed access should
-      still surface it, and vulnerability scanning belongs in CI regardless.
+      Warnings are errors, which is stricter than the Flare reference — deliberately. This is a
+      service, not a library: nobody consumes its warnings downstream, and a clean build is a
+      precondition we can actually hold.
+
+      The analyzer level is left at the SDK default, matching Flare. Raising it to
+      latest-recommended demanded renaming the domain's own word (CA1711 objects to a type called
+      Stack — "стек" is the term the README is written in) and would have traded a real design
+      vocabulary for a rule's preference.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Documentation">
+    <!--
+      Generate the XML doc file so IntelliSense and any doc generator have something to read.
+
+      CS1591 (missing comment on a public member) is suppressed, matching the Flare repository:
+      the "document every public member" rule is enforced by review, not by the compiler. Turning
+      it on wholesale here produced 276 errors across entity properties whose names already say
+      everything a comment would — noise that teaches people to write "Gets or sets the Id."
+      Comments earn their place by explaining what the code cannot.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      CS1573 (some parameters documented, not all) is suppressed for the same reason. A method
+      here carries exactly one <param> — "Blank keeps the stored token" — because that one
+      parameter has a contract the signature cannot express. CS1573 answers by demanding prose for
+      `id` and `name` too. That turns a useful note into a reason to delete the note.
+    -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet audit">
+    <!--
+      NU1900 means NuGet could not reach the feed to check packages for known vulnerabilities.
+      That is a statement about the network, not the code, so it stays a visible warning rather
+      than a fatal error: behind a proxy that blocks nuget.org it would make every restore fail.
     -->
     <NoWarn>$(NoWarn);NU1900</NoWarn>
 
@@ -22,8 +62,8 @@
       vulnerability we cannot see is worse than one we can.
 
       NU1902/NU1903 stay warnings rather than errors only because a fix is not always reachable
-      from here — nuget.org is proxy-blocked, so a patched package whose dependencies are not
-      already cached cannot be restored. CI has network and MUST fail on them.
+      from a developer machine — nuget.org is proxy-blocked here, so a patched package whose
+      dependencies are not already cached cannot be restored. CI has network and MUST fail on them.
     -->
     <NuGetAuditMode>all</NuGetAuditMode>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1902;NU1903</WarningsNotAsErrors>

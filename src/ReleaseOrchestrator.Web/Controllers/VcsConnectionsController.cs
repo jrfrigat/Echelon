@@ -128,9 +128,10 @@ public record CreateVcsConnectionRequest(
     [property: Required, MaxLength(500)] string AccessToken,
     [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel);
 
+/// <param name="AccessToken">Blank keeps the stored token.</param>
+/// <param name="ReadyForDeployLabel">Blank disables label-driven promotion for this connection.</param>
 public record UpdateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
-    /// <summary>Blank keeps the stored token.</summary>
     [property: MaxLength(500)] string? AccessToken = null,
     [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel);

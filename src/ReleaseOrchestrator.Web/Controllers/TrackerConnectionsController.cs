@@ -124,9 +124,9 @@ public record CreateTrackerConnectionRequest(
     [property: MaxLength(200)] string? OrgId,
     [property: Required, MaxLength(500)] string AccessToken);
 
+/// <param name="AccessToken">Blank keeps the stored token.</param>
 public record UpdateTrackerConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: MaxLength(200)] string? OrgId,
-    /// <summary>Blank keeps the stored token.</summary>
     [property: MaxLength(500)] string? AccessToken = null);

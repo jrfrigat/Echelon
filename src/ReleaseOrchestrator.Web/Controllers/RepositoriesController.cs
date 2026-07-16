@@ -122,9 +122,12 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
     }
 }
 
+/// <param name="TrackerConnectionId">
+/// Which tracker this repository's branch issue keys belong to. Null falls back to matching the
+/// key across every tracker, which is fine with one tracker and ambiguous with several.
+/// </param>
 public record CreateRepositoryRequest(
     [property: Required, MaxLength(300)] string Name,
     [property: Required, MaxLength(500)] string ExternalId,
     [property: Required] Guid ConnectionId,
-    /// <summary>Which tracker this repository's branch issue keys belong to. Null falls back to a global match.</summary>
     Guid? TrackerConnectionId = null);
