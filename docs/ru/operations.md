@@ -1,0 +1,434 @@
+# Release Orchestrator — Эксплуатация и развёртывание
+
+> [English version ->](../en/operations.md) - [← Вернуться к документации](../README.md)
+
+---
+
+## Обзор
+
+Этот документ охватывает production-развёртывание, мониторинг и операционные заботы Release Orchestrator.
+
+**⚠️ Предупреждение:** Это приложение **никогда не запускалось и не развёртывалось в живой среде**. Следующие рекомендации основаны на анализе кода, не на production-опыте. Рассматривайте рекомендации как отправные точки; тщательно тестируйте в staging перед production.
+
+---
+
+## Развёртывание
+
+### Требования
+
+- **Kubernetes 1.20+** или Docker Swarm (или standalone server)
+- **Microsoft SQL Server 2019+** (может быть управляемый сервис облака)
+- **RabbitMQ 3.8+** (или облачный managed service)
+- **Redis 6.0+** (или облачный managed service)
+- **Reverse proxy** (Nginx, Traefik, API Gateway) с HTTPS терминацией
+- **OpenID Connect провайдер** (Azure AD, Keycloak, Auth0 и т.д.)
+
+### Docker образы
+
+Приложение включает `docker-compose.yml` для локальной разработки. Для production:
+
+```dockerfile
+# Multi-stage build (пример)
+FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS builder
+WORKDIR /src
+COPY . .
+RUN dotnet publish -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.8
+WORKDIR /app
+COPY --from=builder /app .
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "ReleaseOrchestrator.Web.dll"]
+```
+
+**Base image:** `mcr.microsoft.com/dotnet/aspnet:10.0.8`
+**SDK:** `mcr.microsoft.com/dotnet/sdk:10.0.300`
+
+**Примечание:** Образы не были собраны в dev-среде (реестр заблокирован прокси). Проверьте доступность образа в вашей среде перед развёртыванием.
+
+### Пример Kubernetes Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-orchestrator
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: release-orchestrator
+  template:
+    metadata:
+      labels:
+        app: release-orchestrator
+    spec:
+      containers:
+      - name: web
+        image: your-registry/release-orchestrator:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ConnectionStrings__Default
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: connection-string
+        - name: ConnectionStrings__Archive
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: archive-connection-string
+        - name: Queue__Username
+          valueFrom:
+            secretKeyRef:
+              name: queue-credentials
+              key: username
+        - name: Queue__Password
+          valueFrom:
+            secretKeyRef:
+              name: queue-credentials
+              key: password
+        - name: Redis__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: cache-credentials
+              key: connection-string
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+          value: "true"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: release-orchestrator
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 5000
+  selector:
+    app: release-orchestrator
+```
+
+---
+
+## Health Checks
+
+### Liveness (`/health`)
+
+Указывает, работает ли процесс и может ли обрабатывать запросы.
+
+```bash
+curl http://localhost:5000/health
+# Response: 200 OK, пустое тело
+```
+
+**Случай использования:** Kubernetes liveness probe, обнаружение рестарта процесса
+
+### Readiness (`/health/ready`)
+
+Указывает, доступны ли все зависимости (БД, RabbitMQ, Redis).
+
+```bash
+curl http://localhost:5000/health/ready
+# Если здорово: 200 OK
+# Если любая зависимость недоступна: 503 Service Unavailable
+```
+
+**Пример body ответа (недоступная БД):**
+```json
+{
+  "status": "Unhealthy",
+  "checks": {
+    "Database": {
+      "status": "Unhealthy",
+      "description": "Could not connect to SQL Server"
+    },
+    "RabbitMQ": {
+      "status": "Healthy"
+    },
+    "Redis": {
+      "status": "Healthy"
+    }
+  }
+}
+```
+
+**Случай использования:**
+- Kubernetes readiness probe (pod удаляется из load balancer если не ready)
+- Развёртывание: подождите 200 перед маркировкой healthy
+- Мониторинг: alert если остаётся 503 >5 минут
+
+---
+
+## Мониторинг
+
+### Метрики для наблюдения
+
+| Метрика | Как проверить | Warning порог | Действие |
+|--------|---|---|---|
+| **API response time** | Логи, APM tool | >500ms p99 | Проверьте slow queries БД |
+| **Queue depth (RabbitMQ)** | RabbitMQ admin, логи | >10,000 messages | Масштабируйте consumers или исследуйте stall |
+| **Database connections** | `SELECT COUNT(*) FROM sys.dm_exec_sessions` | >80 (если max 100) | Найдите long-running queries, масштабируйте connections |
+| **Archive job runtime** | Логи | >30 минут (если hourly) | Исследуйте slow deletes, рассмотрите smaller batches |
+| **Redis memory** | `redis-cli INFO memory` | >80% of limit | Исследуйте memory leaks, purge old cache entries |
+| **Permission cache hit rate** | Monitor hits vs. DB queries | <80% | Рассмотрите cache TTL tuning |
+| **Active users** | Azure AD sign-in logs, app metrics | N/A | Baseline для capacity planning |
+
+### Ключевые log patterns
+
+Ищите эти в логах:
+
+- **"Database connection failed"** — Проверьте доступность SQL Server
+- **"RabbitMQ connection failed"** — Проверьте RabbitMQ, network, credentials
+- **"Release plan recalculation failed"** — Проверьте логи для graph algorithm issues
+- **"Archive batch failed"** — Проверьте foreign key constraints, disk space
+- **"Permissions cache error"** — Проверьте Redis availability
+
+### Observability с OpenTelemetry
+
+Если конфигурирован (`OTEL_EXPORTER_OTLP_ENDPOINT` установлен):
+
+```bash
+# Пример: Отправите traces в Jaeger
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger-collector:4317
+dotnet run --project src/ReleaseOrchestrator.Web
+```
+
+Traces захватывают:
+- Webhook ingestion (Ingress)
+- Message queue consumption
+- Database operations (EF Core)
+- Release plan calculations
+
+**Ограничение:** Без OTEL асинхронные пути (webhook → queue → processing) не имеют distributed tracing.
+
+---
+
+## Масштабирование
+
+### Horizontal Scaling (несколько реплик)
+
+Все компоненты stateless:
+
+- **Web pods:** Автоматически масштабируются за load balancer
+- **RabbitMQ:** Требует cluster setup (см. RabbitMQ docs)
+- **Database:** Shared между всеми pods (SQL Server replication если desired)
+- **Redis:** Shared cache (Redis Cluster если масштабирование beyond single instance)
+- **Archive service:** Запускается в каждом поде (идемпотентно, no coordination needed)
+
+**Concurrency note:** Archive service не имеет leader election. Несколько pods работают simultaneously. Корректность поддерживается через idempotent insert + retry; performance может страдать due to lock contention.
+
+### Database Connection Pooling
+
+EF Core автоматически управляет pool (default 100 connections). Мониторьте:
+
+```sql
+SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE database_id = DB_ID('ReleaseOrchestrator');
+```
+
+Если approaching limit, увеличьте в connection string:
+
+```
+Server=...;Max Pool Size=200;
+```
+
+### RabbitMQ Tuning
+
+Текущая конфигурация (из кода):
+- Consumers per deployment: Default (проверьте `Program.cs`)
+- Retry policy: Exponential backoff (initial 0s, max 1h)
+- Dead letter queue: Not configured
+
+**Рекомендация для production:**
+- Включите RabbitMQ Dead Letter Queue (DLQ) для failed messages
+- Установите мониторинг на DLQ depth
+- Конфигурируйте consumer concurrency based on workload (3-5 per pod recommended)
+
+---
+
+## Maintenance
+
+### Database Backups
+
+**Частота:** Daily (adjust based on criticality)
+**Scope:** Обе БД `ReleaseOrchestrator` и `ReleaseOrchestratorArchive`
+
+**Пример (SQL Server):**
+```bash
+sqlcmd -S your-server -U sa -P password -Q "
+BACKUP DATABASE ReleaseOrchestrator 
+TO DISK = '/var/opt/mssql/backup/ReleaseOrchestrator.bak'
+WITH FORMAT, COMPRESSION;
+"
+```
+
+### Archive Database Maintenance
+
+Archive DB растёт ~3.6М rows/year при 10K tasks/day throughput. После 2+ лет рассмотрите:
+
+1. **Index maintenance:** Rebuild indexes на `TaskItem`, `MergeRequest`
+2. **Clean up old archives:** Опционально delete records >2 лет (not implemented in code)
+3. **Separate storage:** Archive DB может переместиться на дешёвый tier (cold storage)
+
+### Periodic Tasks
+
+| Task | Frequency | Owner | Notes |
+|---|---|---|---|
+| **Archival** | Hourly (configurable) | Automatic (Archive service) | Перемещает closed tasks/MRs >90 дней |
+| **Task sync** | Every 30 minutes (configurable) | Automatic (Task Reconciliation) | Загружает open task dependencies |
+| **Permission cache invalidation** | On-demand | Automatic (permission changes) | Нет TTL — invalidate на change only |
+| **Health check** | Continuous | Kubernetes/monitoring | `/health` и `/health/ready` |
+
+---
+
+## Известные ограничения и workarounds
+
+### Обработка недоступности RabbitMQ Broker
+
+Если RabbitMQ down, webhooks возвращают 503 Service Unavailable с заголовком Retry-After. Большинство систем VCS (например GitLab) уважают это и переотправляют доставку вебхука. Event buffering не реализован. Рекомендация:
+
+- Реализуйте buffering в reverse proxy или API gateway
+- Или: Accept event loss и monitor RabbitMQ health closely
+
+### Распределённая аренда для Archive (не leader election)
+
+Archive service запускается в каждом поде, но гейтится распределённой арендой на Redis. За раз только один под может держать аренду и запускать архивацию. Это **не алгоритм консенсуса**, а механизм взаимного исключения: один Redis — единственная точка отказа. Однако это приемлемо, так как архивация идемпотентна. Рекомендация:
+
+- Убедитесь Redis доступен и здоров (часть `/health/ready`)
+- Если Redis недоступен, архивация пропускается (fail-closed) — планы не архивируются до восстановления
+- Мониторьте excessive locking на archive tables (признак длительных циклов архивации)
+- Если performance деградирует из-за lock contention, рассмотрите более длительный Lease Duration в коде
+
+### Limited Observability без OTEL
+
+Async paths имеют poor visibility. Рекомендация:
+
+- Включите OTEL + Jaeger/DataDog/similar
+- Или: Monitor через RabbitMQ admin + database query logs
+- Установите alerts для `/health/ready` returning 503
+
+### Нет PostgreSQL Support
+
+Только SQL Server supported (Npgsql code removed for clarity). Porting потребовал бы:
+- EF Core migration assembly для PostgreSQL
+- Testing против PostgreSQL-specific SQL (filtered unique index, rowversion handling)
+
+---
+
+## Security Checklist
+
+- [ ] HTTPS enabled (reverse proxy с valid certificate)
+- [ ] `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` установлен
+- [ ] Redis requires password (`Redis__ConnectionString` includes password)
+- [ ] RabbitMQ credentials strong (not default guest/guest)
+- [ ] SQL Server connections используют strong SA password + firewall
+- [ ] OIDC credentials хранятся в secure secret management (not `.env` files)
+- [ ] `AUTHORIZATION__BOOTSTRAPADMINOBJECTIDS` пусто в production (или removed)
+- [ ] API rate limiting enabled (consider reverse proxy)
+- [ ] Audit logging enabled (check logs для permission changes)
+- [ ] Data Protection keys backed up (хранятся в `DataProtectionKeys` table)
+
+---
+
+## Disaster Recovery
+
+### Data Loss Scenarios
+
+| Scenario | Impact | Recovery |
+|---|---|---|
+| **SQL Server database deleted** | Complete data loss | Restore из backup |
+| **Redis cache cleared** | Permissions re-computed на next request (slow) | No action needed (cache refill) |
+| **RabbitMQ messages lost** | Webhook events потеряны (no retry) | Manual re-trigger из VCS/tracker |
+| **Active plan потеряна** | Users видят no plan до auto-recalculation | Manually import YAML backup |
+
+### Backup Strategy
+
+```bash
+# Weekly full backup
+sqlcmd -S server -U sa -P pwd -Q "
+BACKUP DATABASE ReleaseOrchestrator 
+TO DISK = '/mnt/backups/full_$(date +%Y%m%d).bak' 
+WITH FORMAT, COMPRESSION;
+"
+
+# Daily incremental (если using full backup model)
+BACKUP DATABASE ReleaseOrchestrator 
+TO DISK = '/mnt/backups/incr_$(date +%Y%m%d).bak' 
+WITH DIFFERENTIAL;
+```
+
+### Restore Procedure
+
+```bash
+# Restore latest full backup
+RESTORE DATABASE ReleaseOrchestrator 
+FROM DISK = '/mnt/backups/full_20250115.bak' 
+WITH REPLACE;
+
+# Restore latest incremental (если applicable)
+RESTORE DATABASE ReleaseOrchestrator 
+FROM DISK = '/mnt/backups/incr_20250117.bak' 
+WITH RECOVERY;
+```
+
+---
+
+## Support & Troubleshooting
+
+### Common Issues
+
+**Issue:** API возвращает 500 с "Database connection timeout"
+- **Cause:** SQL Server overloaded или unreachable
+- **Check:** `SELECT COUNT(*) FROM sys.dm_exec_sessions`, network connectivity
+- **Fix:** Увеличьте connection pool, масштабируйте БД, restart container
+
+**Issue:** Webhooks возвращают 503 "RabbitMQ unavailable"
+- **Cause:** RabbitMQ down или network issue
+- **Check:** RabbitMQ admin UI (port 15672), network policies
+- **Fix:** Restart RabbitMQ, check firewall rules, масштабируйте если queue depth high
+
+**Issue:** План не обновляется после создания MR
+- **Cause:** Task не linked, MR status не ReadyForDeploy, или sync не run
+- **Check:** `/health/ready` (должно быть 200), check logs для sync errors
+- **Fix:** Manually check branch name (должно include task key), verify label config
+
+---
+
+## См. также
+
+- [Архитектура](architecture.md) - Дизайн системы и компоненты
+- [Конфигурация](configuration.md) - Все переменные окружения
+- [Начало работы](getting-started.md) - Локальная настройка
+
+---
+
+## Полезные ссылки
+
+- [.NET 10 Deployment Guide](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
+- [SQL Server Backup & Restore](https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/back-up-and-restore-of-sql-server-databases)
+- [RabbitMQ Clustering](https://www.rabbitmq.com/clustering.html)
+- [Redis Cluster](https://redis.io/docs/management/replication/)
+- [Kubernetes Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
