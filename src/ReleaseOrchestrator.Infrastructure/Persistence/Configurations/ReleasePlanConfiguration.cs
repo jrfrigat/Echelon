@@ -12,7 +12,13 @@ public class ReleasePlanConfiguration : IEntityTypeConfiguration<ReleasePlan>
         b.Property(e => e.Name).HasMaxLength(300).IsRequired();
         b.Property(e => e.Version).HasMaxLength(50).IsRequired();
         b.Property(e => e.YamlHash).HasMaxLength(64);
-        b.HasIndex(e => e.IsActive).HasDatabaseName("IX_ReleasePlan_IsActive");
+        // Filtered unique index: at most one active plan, enforced by the database
+        // rather than by convention. Concurrent recalculations previously left two.
+        b.HasIndex(e => e.IsActive)
+            .IsUnique()
+            .HasFilter("[IsActive] = 1")
+            .HasDatabaseName("IX_ReleasePlan_IsActive");
+        b.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_ReleasePlan_CreatedAt");
     }
 }
 

@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using ReleaseOrchestrator.Application.Exceptions;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -19,10 +21,39 @@ public static class YamlReleasePlanSerializer
     public static string Serialize(YamlReleasePlanModel model)
         => Serializer.Serialize(new { release_plan = model });
 
+    /// <summary>
+    /// Parses a release plan document. Every malformed input surfaces as a domain
+    /// validation error (HTTP 400) rather than an unhandled YamlException or
+    /// KeyNotFoundException, which the API would report as a 500.
+    /// </summary>
     public static YamlReleasePlanModel Deserialize(string yaml)
     {
-        var root = Deserializer.Deserialize<Dictionary<string, YamlReleasePlanModel>>(yaml);
-        return root["release_plan"];
+        if (string.IsNullOrWhiteSpace(yaml))
+            throw new DomainValidationException("YAML document is empty.");
+
+        Dictionary<string, YamlReleasePlanModel>? root;
+        try
+        {
+            root = Deserializer.Deserialize<Dictionary<string, YamlReleasePlanModel>>(yaml);
+        }
+        catch (YamlException ex)
+        {
+            throw new DomainValidationException($"Malformed YAML: {ex.Message}");
+        }
+
+        if (root is null || !root.TryGetValue("release_plan", out var model) || model is null)
+            throw new DomainValidationException("YAML document must have a top-level 'release_plan' key.");
+
+        if (string.IsNullOrWhiteSpace(model.Name))
+            throw new DomainValidationException("release_plan.name is required.");
+        if (string.IsNullOrWhiteSpace(model.Version))
+            throw new DomainValidationException("release_plan.version is required.");
+
+        var duplicateSeq = model.Stages.GroupBy(s => s.Seq).FirstOrDefault(g => g.Count() > 1);
+        if (duplicateSeq is not null)
+            throw new DomainValidationException($"release_plan.stages has duplicate seq {duplicateSeq.Key}.");
+
+        return model;
     }
 
     public static string ComputeHash(string yaml)

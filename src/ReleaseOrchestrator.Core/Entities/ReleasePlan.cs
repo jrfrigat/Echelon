@@ -11,5 +11,12 @@ public class ReleasePlan
     public DateTime UpdatedAt { get; set; }
     public string? YamlHash { get; set; }
 
+    /// <summary>
+    /// Ordering constraints the planner had to drop to produce this plan, as JSON.
+    /// Empty means the plan honours every dependency. Surfaced to operators so a
+    /// broken plan is never mistaken for a clean one.
+    /// </summary>
+    public string? ConflictsJson { get; set; }
+
     public ICollection<ReleaseStage> Stages { get; set; } = [];
 }

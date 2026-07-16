@@ -14,6 +14,12 @@ public class MergeRequest
     public DateTime CreatedAt { get; set; }
     public DateTime? MergedAt { get; set; }
 
+    /// <summary>Set when the MR is closed without merging. Archiving needs both this
+    /// and <see cref="MergedAt"/>: a closed MR never gets a merge timestamp.</summary>
+    public DateTime? ClosedAt { get; set; }
+
+    public byte[]? RowVersion { get; set; }
+
     public Repository Repository { get; set; } = null!;
     public TaskItem? Task { get; set; }
     public ICollection<StageItem> StageItems { get; set; } = [];
