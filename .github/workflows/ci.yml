@@ -82,6 +82,35 @@ jobs:
           fi
           echo "No vulnerable packages."
 
+  migrations:
+    name: Migrations match the model
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      # Editing an entity without adding a migration compiles, tests green, and then fails at
+      # deployment against a schema that does not match — or worse, does not fail, and the column
+      # is quietly missing. No database needed: this compares the model to the snapshot.
+      - name: No pending model changes
+        run: |
+          set -euo pipefail
+          for context in AppDbContext ArchiveDbContext; do
+            echo "::group::$context"
+            dotnet ef migrations has-pending-model-changes \
+              --project src/ReleaseOrchestrator.Migrations.MsSql \
+              --context "$context"
+            echo "::endgroup::"
+          done
+
   hygiene:
     name: Repository hygiene
     runs-on: ubuntu-latest
