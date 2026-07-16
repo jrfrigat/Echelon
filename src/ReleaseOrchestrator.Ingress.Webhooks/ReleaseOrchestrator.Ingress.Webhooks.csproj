@@ -1,20 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+	  <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.1" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8" />
-    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
-    <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="9.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Pinned above the 2.0.0 that AspNetCore.OpenApi resolves transitively: it carries a
+         high-severity advisory (GHSA-v5pm-xwqc-g5wc). Drop the pin once the parent moves. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.1.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Telemetry">
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+    <!-- See ReleaseOrchestrator.Web.csproj for why this pin exists and what it costs. -->
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReleaseOrchestrator.Application\ReleaseOrchestrator.Application.csproj" />
+  </ItemGroup>
+
+  <!--
+    Both hosts must name services and sample sources identically, so the wiring is compiled from
+    one source file rather than copied. Linking is a stopgap: the proper home is a small shared
+    Observability project, which needs a solution change.
+  -->
+  <ItemGroup>
+    <Compile Include="..\ReleaseOrchestrator.Web\Observability\*.cs" LinkBase="Observability" />
   </ItemGroup>
 
 </Project>

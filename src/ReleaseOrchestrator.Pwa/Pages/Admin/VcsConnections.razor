@@ -4,88 +4,96 @@
 
 <PageTitle>VCS Connections</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">VCS Connections</h4>
-    <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Connection</button>
-</div>
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">VCS Connections</FlareText>
+    <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+        <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
+        <ChildContent>New Connection</ChildContent>
+    </FlareButton>
+</FlareStack>
 
-<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
-<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (Loading) { <Spinner /> }
+@if (Loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
 else if (Result is not null)
 {
-    <table class="table table-hover">
-        <thead><tr><th>Name</th><th>Type</th><th>API URL</th><th>Ready-for-deploy label</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var c in Result.Items)
-        {
-            <tr>
-                <td>@c.Name</td>
-                <td><span class="badge bg-secondary">@c.VcsType</span></td>
-                <td class="text-muted small">@c.ApiUrl</td>
-                <td class="small">
-                    @if (string.IsNullOrWhiteSpace(c.ReadyForDeployLabel))
+    <FlareDataGrid TItem="VcsConnectionDto" Items="Result.Items" ShowPager="false">
+        <Columns>
+            <FlareColumn TItem="VcsConnectionDto" Title="Name" Field="@(c => c.Name)" />
+            <FlareColumn TItem="VcsConnectionDto" Title="Type">
+                <Template>
+                    <FlareChip Label="@context.VcsType" Size="ChipSize.Sm" />
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="VcsConnectionDto" Title="API URL" Field="@(c => c.ApiUrl)" />
+            <FlareColumn TItem="VcsConnectionDto" Title="Ready-for-deploy label">
+                <Template>
+                    @if (string.IsNullOrWhiteSpace(context.ReadyForDeployLabel))
                     {
-                        <span class="text-muted fst-italic">disabled</span>
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">disabled</FlareText>
                     }
                     else
                     {
-                        <code>@c.ReadyForDeployLabel</code>
+                        <FlareCode>@context.ReadyForDeployLabel</FlareCode>
                     }
-                </td>
-                <td class="text-end">
-                    <button class="btn btn-outline-secondary btn-sm me-1" @onclick="@(() => OpenEdit(c))">Edit</button>
-                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(c))">Delete</button>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton AriaLabel="@($"Edit {context.Name}")" OnClick="@(() => OpenEdit(context))">
+                            <FlareIcon Name="@FlareIcons.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIcon Name="@FlareIcons.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
+
+    @if (Result.Total > Result.PageSize)
+    {
+        <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                         TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+    }
 }
 
-<ModalDialog Visible="ShowModal"
+<FlareDialog Visible="ShowModal"
              Title="@(_editId.HasValue ? "Edit VCS Connection" : "New VCS Connection")"
-             OnClose="CloseModal"
-             OnSave="Save"
-             Saving="Saving"
-             SaveDisabled="@IsFormIncomplete">
-    <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input class="form-control" @bind="_fName" />
-    </div>
-    @if (!_editId.HasValue)
-    {
-        <div class="mb-3">
-            <label class="form-label">Type</label>
-            <select class="form-select" @bind="_fType">
-                <option value="GitLab">GitLab</option>
-            </select>
-        </div>
-    }
-    <div class="mb-3">
-        <label class="form-label">API URL</label>
-        <input class="form-control" @bind="_fUrl" placeholder="https://gitlab.example.com" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Ready-for-deploy label</label>
-        <input class="form-control" @bind="_fLabel" placeholder="@DefaultReadyForDeployLabel" />
-        <div class="form-text">
-            Merge requests carrying this @(_fType) label are picked up into the release plan automatically.
-            Leave blank to turn that off — merge requests from this connection will then only enter a plan
-            when added by hand.
-        </div>
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Access Token @(_editId.HasValue ? "(leave blank to keep current)" : "")</label>
-        <input class="form-control" type="password" @bind="_fToken" />
-    </div>
-</ModalDialog>
+             VisibleChanged="OnDialogVisibleChanged">
+    <ChildContent>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="Name" @bind-Value="_fName" />
+            @if (!_editId.HasValue)
+            {
+                <FlareSelect TValue="string" Label="Type" @bind-Value="_fType" Items="VcsTypes" />
+            }
+            <FlareTextField Label="API URL" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
+            <FlareTextField Label="Ready-for-deploy label" @bind-Value="_fLabel"
+                            Placeholder="@DefaultReadyForDeployLabel"
+                            HelperText="@($"Merge requests carrying this {_fType} label are picked up into the release plan automatically. Leave blank to turn that off — merge requests from this connection will then only enter a plan when added by hand.")" />
+            <FlarePasswordField Label="@($"Access Token{(_editId.HasValue ? " (leave blank to keep current)" : "")}")"
+                                @bind-Value="_fToken" />
+        </FlareStack>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+    </Actions>
+</FlareDialog>
 
 @code {
     // Mirrors VcsConnection.DefaultReadyForDeployLabel; the PWA does not reference Core.
     const string DefaultReadyForDeployLabel = "ready-for-deploy";
+
+    static readonly string[] VcsTypes = ["GitLab"];
 
     Guid? _editId;
     string _fName = "", _fType = "GitLab", _fUrl = "", _fToken = "", _fLabel = "";
@@ -115,8 +123,6 @@ else if (Result is not null)
         _fToken = "";
         ShowModal = true;
     }
-
-    void CloseModal() => ShowModal = false;
 
     Task Save() => SaveAsync(async () =>
     {

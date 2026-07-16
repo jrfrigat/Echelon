@@ -4,115 +4,119 @@
 
 <PageTitle>Stacks</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Stacks</h4>
-    <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Stack</button>
-</div>
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Stacks</FlareText>
+    <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+        <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
+        <ChildContent>New Stack</ChildContent>
+    </FlareButton>
+</FlareStack>
 
-<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
-<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (Loading) { <Spinner /> }
+@if (Loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
 else if (Result is not null)
 {
-    @foreach (var stack in Result.Items)
+    <FlareStack Gap="FlareSpacing.Medium">
+        @foreach (var stack in Result.Items)
+        {
+            <FlareCard Variant="CardVariant.Outlined">
+                <FlareCardHeader Title="@stack.Name">
+                    <Action>
+                        <FlareStack Row Gap="FlareSpacing.XSmall">
+                            <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined"
+                                         OnClick="@(() => ToggleSection(stack.Id, "deps"))">Dependencies</FlareButton>
+                            <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined"
+                                         OnClick="@(() => ToggleSection(stack.Id, "repos"))">Repositories</FlareButton>
+                        </FlareStack>
+                    </Action>
+                </FlareCardHeader>
+
+                @if (_expandedSection.TryGetValue(stack.Id, out var section) && section == "deps")
+                {
+                    <FlareCardContent>
+                        <FlareText Typo="TypographyScale.TitleSmall">Add Dependency</FlareText>
+                        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" StretchFirst>
+                            <FlareSelect TValue="Guid?" Label="Target Stack" @bind-Value="_depTargetId"
+                                         Items="@Result.Items.Where(s => s.Id != stack.Id).Select(s => (Guid?)s.Id)"
+                                         ItemLabel="@(id => StackName(id))" />
+                            <FlareSelect TValue="string" Label="Type" @bind-Value="_depType" Items="DependencyTypes" />
+                            <FlareButton OnClick="@(() => AddDependency(stack.Id))"
+                                         Disabled="@(_depTargetId is null)">Add</FlareButton>
+                        </FlareStack>
+                    </FlareCardContent>
+                }
+
+                @if (_expandedSection.TryGetValue(stack.Id, out var section2) && section2 == "repos")
+                {
+                    <FlareCardContent>
+                        <FlareText Typo="TypographyScale.TitleSmall">Assign Repository</FlareText>
+                        @if (_repositories is null)
+                        {
+                            <FlareProgress Variant="ProgressVariant.Circular" />
+                        }
+                        else
+                        {
+                            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" StretchFirst>
+                                <FlareSelect TValue="Guid?" Label="Repository" @bind-Value="_repoId"
+                                             Items="@_repositories.Items.Select(r => (Guid?)r.Id)"
+                                             ItemLabel="@(id => RepositoryName(id))" />
+                                <FlareButton OnClick="@(() => AssignRepo(stack.Id))"
+                                             Disabled="@(_repoId is null)">Assign</FlareButton>
+                            </FlareStack>
+                        }
+                    </FlareCardContent>
+                }
+            </FlareCard>
+        }
+    </FlareStack>
+
+    @if (Result.Total > Result.PageSize)
     {
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center py-2">
-                <strong>@stack.Name</strong>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="@(() => ToggleSection(stack.Id, "deps"))">Dependencies</button>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="@(() => ToggleSection(stack.Id, "repos"))">Repositories</button>
-                </div>
-            </div>
-
-            @if (_expandedSection.TryGetValue(stack.Id, out var section) && section == "deps")
-            {
-                <div class="card-body border-top p-3">
-                    <h6 class="mb-2">Add Dependency</h6>
-                    <div class="d-flex gap-2 align-items-end">
-                        <div class="flex-grow-1">
-                            <label class="form-label small">Target Stack</label>
-                            <select class="form-select form-select-sm" @bind="_depTargetId">
-                                <option value="">-- Select stack --</option>
-                                @foreach (var s in Result.Items.Where(s => s.Id != stack.Id))
-                                {
-                                    <option value="@s.Id">@s.Name</option>
-                                }
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label small">Type</label>
-                            <select class="form-select form-select-sm" @bind="_depType">
-                                <option value="Hard">Hard</option>
-                                <option value="Soft">Soft</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary btn-sm" @onclick="@(() => AddDependency(stack.Id))"
-                                disabled="@(string.IsNullOrEmpty(_depTargetId))">Add</button>
-                    </div>
-                </div>
-            }
-
-            @if (_expandedSection.TryGetValue(stack.Id, out var section2) && section2 == "repos")
-            {
-                <div class="card-body border-top p-3">
-                    <h6 class="mb-2">Assign Repository</h6>
-                    @if (_repositories is null)
-                    {
-                        <Spinner />
-                    }
-                    else
-                    {
-                        <div class="d-flex gap-2 align-items-end">
-                            <div class="flex-grow-1">
-                                <label class="form-label small">Repository</label>
-                                <select class="form-select form-select-sm" @bind="_repoId">
-                                    <option value="">-- Select repository --</option>
-                                    @foreach (var r in _repositories.Items)
-                                    {
-                                        <option value="@r.Id">@r.Name (@r.ConnectionName)</option>
-                                    }
-                                </select>
-                            </div>
-                            <button class="btn btn-primary btn-sm" @onclick="@(() => AssignRepo(stack.Id))"
-                                    disabled="@(string.IsNullOrEmpty(_repoId))">Assign</button>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
+        <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                         TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
     }
-    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
 }
 
-<ModalDialog Visible="ShowModal"
-             Title="New Stack"
-             OnClose="CloseModal"
-             OnSave="CreateStack"
-             Saving="Saving"
-             SaveDisabled="@(string.IsNullOrWhiteSpace(_fName))"
-             SaveText="Create">
-    <div class="mb-3">
-        <label class="form-label">Stack Name</label>
-        <input class="form-control" @bind="_fName" />
-    </div>
-</ModalDialog>
+<FlareDialog Visible="ShowModal" Title="New Stack" VisibleChanged="OnDialogVisibleChanged">
+    <ChildContent>
+        <FlareTextField Label="Stack Name" @bind-Value="_fName" />
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
+        <FlareButton OnClick="CreateStack" Loading="Saving"
+                     Disabled="@(string.IsNullOrWhiteSpace(_fName))">Create</FlareButton>
+    </Actions>
+</FlareDialog>
 
 @code {
+    static readonly string[] DependencyTypes = ["Hard", "Soft"];
+
     PagedResult<RepositoryDto>? _repositories;
 
     string _fName = "";
-    string _depTargetId = "";
+    Guid? _depTargetId;
     string _depType = "Hard";
-    string _repoId = "";
+    Guid? _repoId;
 
     readonly Dictionary<Guid, string> _expandedSection = new();
 
     protected override Task<PagedResult<StackDto>> FetchPageAsync(int page) => Api.GetStacksAsync(page);
 
     void OpenCreate() { _fName = ""; ShowModal = true; }
-    void CloseModal() => ShowModal = false;
+
+    string StackName(Guid? id) => Result?.Items.FirstOrDefault(s => s.Id == id)?.Name ?? "";
+
+    string RepositoryName(Guid? id)
+    {
+        var r = _repositories?.Items.FirstOrDefault(x => x.Id == id);
+        return r is null ? "" : $"{r.Name} ({r.ConnectionName})";
+    }
 
     Task CreateStack() => SaveAsync(() => Api.CreateStackAsync(_fName), "Stack created.");
 
@@ -132,17 +136,17 @@ else if (Result is not null)
 
     async Task AddDependency(Guid fromStackId)
     {
-        if (!Guid.TryParse(_depTargetId, out var toStackId)) return;
+        if (_depTargetId is not { } toStackId) return;
 
         if (await RunAsync(() => Api.AddStackDependencyAsync(fromStackId, toStackId, _depType), "Dependency added."))
-            _depTargetId = "";
+            _depTargetId = null;
     }
 
     async Task AssignRepo(Guid stackId)
     {
-        if (!Guid.TryParse(_repoId, out var repositoryId)) return;
+        if (_repoId is not { } repositoryId) return;
 
         if (await RunAsync(() => Api.AssignRepositoryToStackAsync(stackId, repositoryId), "Repository assigned."))
-            _repoId = "";
+            _repoId = null;
     }
 }

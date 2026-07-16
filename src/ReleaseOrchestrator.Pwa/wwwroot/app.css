@@ -1,15 +1,121 @@
-html, body { height: 100%; }
-.page { display: flex; min-height: 100vh; }
-.sidebar { width: 240px; min-height: 100vh; background: #1e293b; flex-shrink: 0; }
-.sidebar .nav-link:hover { background: rgba(255,255,255,0.1); border-radius: 6px; }
-.sidebar .nav-link.active { background: rgba(255,255,255,0.15); border-radius: 6px; }
-.main-content { flex: 1; overflow-y: auto; background: #f8f9fa; }
-.stage-card { border: 2px solid #dee2e6; cursor: default; }
-.stage-card .card-header { cursor: grab; user-select: none; background: #f1f5f9; }
-.stage-drag-over { border-color: #0d6efd !important; background: #eff6ff; }
-.mr-item { background: #ffffff; border: 1px solid #e2e8f0; cursor: grab; }
-.mr-item:hover { background: #f8fafc; }
-.mr-item.dragging { opacity: 0.5; }
-.drag-handle { cursor: grab; }
-.drop-zone { border: 2px dashed #dee2e6; border-radius: 6px; }
-#blazor-error-ui { background: #fef3cd; border: 1px solid #ffc107; padding: 1rem; position: fixed; bottom: 0; right: 0; left: 0; z-index: 9999; }
+/* Material Symbols is self-hosted rather than linked from fonts.googleapis.com as the Flare README
+   suggests: the API serves default-src 'self', so a CDN stylesheet (and the gstatic font it points
+   at) is blocked outright and the icons would silently render as their ligature names. Self-hosting
+   also keeps the PWA usable offline and on a closed network.
+
+   The file is the variable font subset to only the glyphs this app and Flare itself render (via the
+   fonts.googleapis.com "icon_names=" parameter): 44 KB against 5.3 MB for the full font, which
+   matters because the service worker precaches every asset. Adding a <FlareIcon Name="..."> whose
+   glyph is not in the subset renders nothing — re-fetch the subset with that name included.
+
+   Google's stylesheet would normally supply this @font-face and the class below; both are vendored
+   here because we deliberately do not load it. */
+@font-face {
+    font-family: 'Material Symbols Rounded';
+    font-style: normal;
+    font-weight: 100 700;
+    src: url('fonts/material-symbols-rounded-subset.woff2') format('woff2');
+}
+
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Paired with js/icon-font-ready.js: hide ligatures until the font resolves, so they appear as
+   glyphs instead of flashing their names. visibility keeps layout, so nothing shifts. */
+html:not(.flare-icons-ready) .material-symbols-rounded {
+    visibility: hidden;
+}
+
+/* Pre-boot splash: index.html shows this before Blazor (and therefore Flare) has loaded, so it
+   cannot use a Flare component. flare-bootstrap.js has already applied the theme classes by then,
+   so the tokens below still resolve to the right colour scheme. */
+.app-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: var(--flare-color-surface, #fff);
+}
+
+.app-loading-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid var(--flare-color-outline-variant, #dee2e6);
+    border-top-color: var(--flare-color-primary, #0d6efd);
+    border-radius: 50%;
+    animation: app-loading-spin 0.8s linear infinite;
+}
+
+@keyframes app-loading-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-loading-spinner { animation-duration: 2s; }
+}
+
+/* Blazor's own error bar: plain HTML in index.html, outside the component tree. */
+#blazor-error-ui {
+    background: var(--flare-color-warning-container, #fef3cd);
+    color: var(--flare-color-on-warning-container, #000);
+    border-top: 1px solid var(--flare-color-warning, #ffc107);
+    padding: 1rem;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: 9999;
+}
+
+/* Drag-and-drop affordances for the release plan. Flare has no drag-reorder surface for this shape,
+   so these stay the app's own — written in theme tokens so they track the palette and dark mode. */
+.stage-drop-target {
+    border: 2px solid transparent;
+    border-radius: var(--flare-shape-medium, 6px);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.stage-drag-over {
+    border-color: var(--flare-color-primary);
+    background: var(--flare-color-primary-container);
+}
+
+.drag-handle {
+    cursor: grab;
+    user-select: none;
+}
+
+.mr-item {
+    border: 1px solid var(--flare-color-outline-variant);
+    border-radius: var(--flare-shape-small, 4px);
+    padding: var(--flare-spacing-2, 0.5rem);
+    cursor: grab;
+}
+
+.mr-item:hover {
+    background: var(--flare-color-surface-variant);
+}
+
+.mr-item.dragging {
+    opacity: 0.5;
+}
+
+.drop-zone {
+    border: 2px dashed var(--flare-color-outline-variant);
+    border-radius: var(--flare-shape-medium, 6px);
+    padding: var(--flare-spacing-4, 1rem);
+    text-align: center;
+}

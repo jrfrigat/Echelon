@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -16,14 +16,14 @@
     <NoWarn>$(NoWarn);NU1900</NoWarn>
 
     <!--
-      Audit the whole graph, not just direct references. The default under the .NET 9 SDK is
-      "direct", which hid a high-severity advisory in a transitively pulled package: the same
-      restore under the .NET 10 SDK reported it immediately. A vulnerability we cannot see is
-      worse than one we can.
+      Audit the whole graph, not just direct references. Kept explicit rather than relying on the
+      SDK default: under the .NET 9 SDK the default was "direct", and it hid a high-severity
+      advisory in a transitively pulled package until a .NET 10 restore reported it. A
+      vulnerability we cannot see is worse than one we can.
 
-      NU1902/NU1903 stay warnings rather than errors only because the fix is not reachable from
-      here: nuget.org is blocked by a proxy, and the patched package's own dependencies are not
-      in the local cache. CI has network and MUST fail on them — see .github/workflows.
+      NU1902/NU1903 stay warnings rather than errors only because a fix is not always reachable
+      from here — nuget.org is proxy-blocked, so a patched package whose dependencies are not
+      already cached cannot be restored. CI has network and MUST fail on them.
     -->
     <NuGetAuditMode>all</NuGetAuditMode>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1902;NU1903</WarningsNotAsErrors>

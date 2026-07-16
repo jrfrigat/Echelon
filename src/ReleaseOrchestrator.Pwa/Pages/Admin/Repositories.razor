@@ -4,68 +4,70 @@
 
 <PageTitle>Repositories</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Repositories</h4>
-    <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Repository</button>
-</div>
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Repositories</FlareText>
+    <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+        <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
+        <ChildContent>New Repository</ChildContent>
+    </FlareButton>
+</FlareStack>
 
-<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
-<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (Loading) { <Spinner /> }
+@if (Loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
 else if (Result is not null)
 {
-    <table class="table table-hover">
-        <thead><tr><th>Name</th><th>External ID</th><th>VCS Connection</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var r in Result.Items)
-        {
-            <tr>
-                <td>@r.Name</td>
-                <td class="text-muted small">@r.ExternalId</td>
-                <td class="small">@r.ConnectionName</td>
-                <td class="text-end">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(r))">Delete</button>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
+    <FlareDataGrid TItem="RepositoryDto" Items="Result.Items" ShowPager="false">
+        <Columns>
+            <FlareColumn TItem="RepositoryDto" Title="Name" Field="@(r => r.Name)" />
+            <FlareColumn TItem="RepositoryDto" Title="External ID" Field="@(r => r.ExternalId)" />
+            <FlareColumn TItem="RepositoryDto" Title="VCS Connection" Field="@(r => r.ConnectionName)" />
+            <FlareColumn TItem="RepositoryDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIcon Name="@FlareIcons.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
+
+    @if (Result.Total > Result.PageSize)
+    {
+        <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                         TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+    }
 }
 
-<ModalDialog Visible="ShowModal"
-             Title="New Repository"
-             OnClose="CloseModal"
-             OnSave="Save"
-             Saving="Saving"
-             SaveDisabled="@IsFormIncomplete">
-    <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input class="form-control" @bind="_fName" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">External ID</label>
-        <input class="form-control" @bind="_fExternalId" placeholder="GitLab project ID or path" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">VCS Connection</label>
-        @if (_connections is null)
-        {
-            <Spinner />
-        }
-        else
-        {
-            <select class="form-select" @bind="_fConnectionId">
-                <option value="">-- Select connection --</option>
-                @foreach (var c in _connections.Items)
-                {
-                    <option value="@c.Id">@c.Name (@c.VcsType)</option>
-                }
-            </select>
-        }
-    </div>
-</ModalDialog>
+<FlareDialog Visible="ShowModal" Title="New Repository" VisibleChanged="OnDialogVisibleChanged">
+    <ChildContent>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="Name" @bind-Value="_fName" />
+            <FlareTextField Label="External ID" @bind-Value="_fExternalId" Placeholder="GitLab project ID or path" />
+            @if (_connections is null)
+            {
+                <FlareProgress Variant="ProgressVariant.Circular" />
+            }
+            else
+            {
+                <FlareSelect TValue="Guid" Label="VCS Connection" @bind-Value="_fConnectionId"
+                             Items="@_connections.Items.Select(c => c.Id)"
+                             ItemLabel="@(id => ConnectionLabel(id))" />
+            }
+        </FlareStack>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+    </Actions>
+</FlareDialog>
 
 @code {
     PagedResult<VcsConnectionDto>? _connections;
@@ -80,6 +82,12 @@ else if (Result is not null)
     protected override Task<PagedResult<RepositoryDto>> FetchPageAsync(int page) =>
         Api.GetRepositoriesAsync(page);
 
+    string ConnectionLabel(Guid id)
+    {
+        var c = _connections?.Items.FirstOrDefault(x => x.Id == id);
+        return c is null ? id.ToString() : $"{c.Name} ({c.VcsType})";
+    }
+
     async Task OpenCreate()
     {
         _fName = ""; _fExternalId = ""; _fConnectionId = Guid.Empty;
@@ -89,8 +97,6 @@ else if (Result is not null)
 
         await RunAsync(async () => _connections = await Api.GetVcsConnectionsAsync());
     }
-
-    void CloseModal() => ShowModal = false;
 
     Task Save() => SaveAsync(
         () => Api.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId),

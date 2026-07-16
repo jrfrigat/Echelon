@@ -507,7 +507,7 @@ Authorization__BootstrapAdminObjectIds__0=<oid первого администр
 
 | Слой              | Технология                                | Статус |
 |-------------------|-------------------------------------------|--------|
-| Бэкенд            | .NET 9, ASP.NET Core                      | ✅ |
+| Бэкенд            | .NET 10, ASP.NET Core                     | ✅ |
 | Язык              | C# 12                                     | ✅ |
 | ORM               | Entity Framework Core 9                   | ✅ |
 | Очередь           | RabbitMQ + MassTransit                    | ✅ |

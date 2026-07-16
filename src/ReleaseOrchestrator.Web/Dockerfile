@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0.16 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.8 AS base
 WORKDIR /app
 EXPOSE 8080
 # The aspnet image ships no HTTP client, and compose's healthcheck needs one.
@@ -6,7 +6,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0.109 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src
 COPY ["ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj", "ReleaseOrchestrator.Web/"]
 COPY ["ReleaseOrchestrator.Application/ReleaseOrchestrator.Application.csproj", "ReleaseOrchestrator.Application/"]

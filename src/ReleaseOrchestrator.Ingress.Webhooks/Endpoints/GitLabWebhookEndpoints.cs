@@ -14,9 +14,10 @@ public static class GitLabWebhookEndpoints
 {
     public static IEndpointRouteBuilder MapGitLabWebhooks(this IEndpointRouteBuilder app)
     {
+        // No WithOpenApi(): deprecated in .NET 10 (ASPDEPR002). The endpoint is still described
+        // by the document generator through its name and typed results.
         app.MapPost("/webhooks/gitlab/{connectionName}", HandleAsync)
-           .WithName("GitLabWebhook")
-           .WithOpenApi();
+           .WithName("GitLabWebhook");
 
         return app;
     }

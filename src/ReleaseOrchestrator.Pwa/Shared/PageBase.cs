@@ -1,5 +1,5 @@
+using Flare.Components;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using ReleaseOrchestrator.Pwa.Services;
 
 namespace ReleaseOrchestrator.Pwa.Shared;
@@ -15,7 +15,9 @@ namespace ReleaseOrchestrator.Pwa.Shared;
 public abstract class PageBase : ComponentBase
 {
     [Inject] protected ApiService Api { get; set; } = default!;
-    [Inject] protected IJSRuntime Js { get; set; } = default!;
+
+    /// <summary>Supplied by the FlareConfirmDialogProvider that App.razor wraps the router in.</summary>
+    [CascadingParameter] protected FlareConfirmDialogProvider? ConfirmDialog { get; set; }
 
     protected string? Error;
     protected string? Success;
@@ -37,7 +39,18 @@ public abstract class PageBase : ComponentBase
         }
     }
 
-    protected ValueTask<bool> ConfirmAsync(string message) => Js.InvokeAsync<bool>("confirm", message);
+    /// <summary>
+    /// Asks for confirmation before a destructive action. True only on an explicit confirm: Flare
+    /// reports a cancel as false and a dismissal (Escape) as null, and neither is consent. A missing
+    /// provider answers false for the same reason — losing the dialog must not mean losing the
+    /// prompt.
+    /// </summary>
+    protected async Task<bool> ConfirmAsync(string title, string message)
+    {
+        if (ConfirmDialog is null) return false;
+
+        return await ConfirmDialog.ConfirmAsync(title, message, confirmLabel: "Delete") is true;
+    }
 
     /// <summary>
     /// An ApiException already reads as a sentence written for the operator. Anything else is a

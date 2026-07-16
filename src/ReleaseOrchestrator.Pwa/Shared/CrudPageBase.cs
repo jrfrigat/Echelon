@@ -15,9 +15,19 @@ public abstract class CrudPageBase<TItem> : PageBase
     protected bool Saving;
     protected int Page = 1;
 
+    /// <summary>Page count for FlarePagination, which counts pages where the API reports rows.</summary>
+    protected int TotalPages => Result is null || Result.PageSize <= 0
+        ? 1
+        : (int)Math.Ceiling(Result.Total / (double)Result.PageSize);
+
     protected abstract Task<PagedResult<TItem>> FetchPageAsync(int page);
 
     protected override Task OnInitializedAsync() => LoadPage(1);
+
+    protected void CloseModal() => ShowModal = false;
+
+    /// <summary>FlareDialog reports its own dismissals (Escape, scrim click) through here.</summary>
+    protected void OnDialogVisibleChanged(bool visible) => ShowModal = visible;
 
     protected async Task LoadPage(int page)
     {
@@ -55,7 +65,7 @@ public abstract class CrudPageBase<TItem> : PageBase
     /// <param name="what">Names the row in the prompt, e.g. "connection 'gitlab-prod'".</param>
     protected async Task DeleteAsync(string what, Func<Task> delete)
     {
-        if (!await ConfirmAsync($"Delete {what}? This cannot be undone.")) return;
+        if (!await ConfirmAsync("Delete", $"Delete {what}? This cannot be undone.")) return;
 
         if (await RunAsync(delete, "Deleted.")) await LoadPage(Page);
     }

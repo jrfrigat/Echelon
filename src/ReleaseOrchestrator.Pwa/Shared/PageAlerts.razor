@@ -1,0 +1,22 @@
+@* The Error/Success pair every page carries, over FlareAlert.
+
+   @key is load-bearing: FlareAlert tracks "dismissed" internally and never resets it, so Blazor
+   reusing one instance for a second message would show nothing. Keying on the text makes each
+   distinct message a fresh instance. *@
+
+@if (Error is not null)
+{
+    <FlareAlert @key="Error" Severity="AlertSeverity.Error" Dismissible OnDismiss="OnErrorDismiss">@Error</FlareAlert>
+}
+
+@if (Success is not null)
+{
+    <FlareAlert @key="Success" Severity="AlertSeverity.Success" Dismissible OnDismiss="OnSuccessDismiss">@Success</FlareAlert>
+}
+
+@code {
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public string? Success { get; set; }
+    [Parameter] public EventCallback OnErrorDismiss { get; set; }
+    [Parameter] public EventCallback OnSuccessDismiss { get; set; }
+}

@@ -4,72 +4,81 @@
 
 <PageTitle>Tracker Connections</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Tracker Connections</h4>
-    <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Connection</button>
-</div>
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Tracker Connections</FlareText>
+    <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+        <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
+        <ChildContent>New Connection</ChildContent>
+    </FlareButton>
+</FlareStack>
 
-<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
-<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (Loading) { <Spinner /> }
+@if (Loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
 else if (Result is not null)
 {
-    <table class="table table-hover">
-        <thead><tr><th>Name</th><th>Type</th><th>API URL</th><th>Org ID</th><th></th></tr></thead>
-        <tbody>
-        @foreach (var c in Result.Items)
-        {
-            <tr>
-                <td>@c.Name</td>
-                <td><span class="badge bg-secondary">@c.TrackerType</span></td>
-                <td class="text-muted small">@c.ApiUrl</td>
-                <td class="text-muted small">@c.OrgId</td>
-                <td class="text-end">
-                    <button class="btn btn-outline-secondary btn-sm me-1" @onclick="@(() => OpenEdit(c))">Edit</button>
-                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(c))">Delete</button>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
-    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
+    <FlareDataGrid TItem="TrackerConnectionDto" Items="Result.Items" ShowPager="false">
+        <Columns>
+            <FlareColumn TItem="TrackerConnectionDto" Title="Name" Field="@(c => c.Name)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="Type">
+                <Template>
+                    <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="TrackerConnectionDto" Title="API URL" Field="@(c => c.ApiUrl)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="Org ID" Field="@(c => c.OrgId)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton AriaLabel="@($"Edit {context.Name}")" OnClick="@(() => OpenEdit(context))">
+                            <FlareIcon Name="@FlareIcons.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIcon Name="@FlareIcons.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
+
+    @if (Result.Total > Result.PageSize)
+    {
+        <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                         TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+    }
 }
 
-<ModalDialog Visible="ShowModal"
+<FlareDialog Visible="ShowModal"
              Title="@(_editId.HasValue ? "Edit Tracker Connection" : "New Tracker Connection")"
-             OnClose="CloseModal"
-             OnSave="Save"
-             Saving="Saving"
-             SaveDisabled="@IsFormIncomplete">
-    <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input class="form-control" @bind="_fName" />
-    </div>
-    @if (!_editId.HasValue)
-    {
-        <div class="mb-3">
-            <label class="form-label">Type</label>
-            <select class="form-select" @bind="_fType">
-                <option value="YandexTracker">YandexTracker</option>
-            </select>
-        </div>
-    }
-    <div class="mb-3">
-        <label class="form-label">API URL</label>
-        <input class="form-control" @bind="_fUrl" placeholder="https://api.tracker.yandex.net" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Org ID (optional)</label>
-        <input class="form-control" @bind="_fOrgId" placeholder="Yandex organization ID" />
-    </div>
-    <div class="mb-3">
-        <label class="form-label">Access Token @(_editId.HasValue ? "(leave blank to keep current)" : "")</label>
-        <input class="form-control" type="password" @bind="_fToken" />
-    </div>
-</ModalDialog>
+             VisibleChanged="OnDialogVisibleChanged">
+    <ChildContent>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="Name" @bind-Value="_fName" />
+            @if (!_editId.HasValue)
+            {
+                <FlareSelect TValue="string" Label="Type" @bind-Value="_fType" Items="TrackerTypes" />
+            }
+            <FlareTextField Label="API URL" @bind-Value="_fUrl" Placeholder="https://api.tracker.yandex.net" />
+            <FlareTextField Label="Org ID (optional)" @bind-Value="_fOrgId" Placeholder="Yandex organization ID" />
+            <FlarePasswordField Label="@($"Access Token{(_editId.HasValue ? " (leave blank to keep current)" : "")}")"
+                                @bind-Value="_fToken" />
+        </FlareStack>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+    </Actions>
+</FlareDialog>
 
 @code {
+    static readonly string[] TrackerTypes = ["YandexTracker"];
+
     Guid? _editId;
     string _fName = "", _fType = "YandexTracker", _fUrl = "", _fOrgId = "", _fToken = "";
 
@@ -95,8 +104,6 @@ else if (Result is not null)
         _fToken = "";
         ShowModal = true;
     }
-
-    void CloseModal() => ShowModal = false;
 
     Task Save() => SaveAsync(async () =>
     {

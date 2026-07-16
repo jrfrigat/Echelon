@@ -3,6 +3,8 @@ using MassTransit;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
+using ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
+using ReleaseOrchestrator.Observability;
 using Serilog;
 using Serilog.Events;
 
@@ -26,10 +28,18 @@ try
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddHealthChecks();
 
+    builder.Services.AddProblemDetails();
+    // A downed broker must answer 503, not 500: senders treat 500 as permanent and drop the event.
+    builder.Services.AddExceptionHandler<BrokerUnavailableExceptionHandler>();
+
+    // No-op unless an OTLP endpoint is configured. Carries the trace across the queue into Core.
+    builder.Services.AddReleaseOrchestratorTelemetry(
+        builder.Configuration, "release-orchestrator-ingress", builder.Environment.EnvironmentName);
+
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
         o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        o.KnownNetworks.Clear();
+        o.KnownIPNetworks.Clear();
         o.KnownProxies.Clear();
     });
 
@@ -66,6 +76,7 @@ try
     var app = builder.Build();
 
     app.UseForwardedHeaders();
+    app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())

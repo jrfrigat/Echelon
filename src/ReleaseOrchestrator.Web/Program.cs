@@ -10,6 +10,7 @@ using ReleaseOrchestrator.Infrastructure;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Observability;
 using ReleaseOrchestrator.Web.ExceptionHandling;
 using ReleaseOrchestrator.Web.HealthChecks;
 using Serilog;
@@ -42,6 +43,11 @@ try
     builder.Services.AddExceptionHandler<DomainExceptionHandler>();
     builder.Services.AddInfrastructure(builder.Configuration);
 
+    // No-op unless an OTLP endpoint is configured. Exports over OTLP only: there is no
+    // /metrics endpoint, so a collector has to translate for Prometheus (README §10).
+    builder.Services.AddReleaseOrchestratorTelemetry(
+        builder.Configuration, "release-orchestrator-core", builder.Environment.EnvironmentName);
+
     builder.Services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"])
         .AddCheck<ArchiveDatabaseHealthCheck>("archive-database", tags: ["ready"])
@@ -52,7 +58,7 @@ try
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
         o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        o.KnownNetworks.Clear();
+        o.KnownIPNetworks.Clear();
         o.KnownProxies.Clear();
     });
 

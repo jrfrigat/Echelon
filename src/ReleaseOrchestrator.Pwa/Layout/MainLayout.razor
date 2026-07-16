@@ -1,10 +1,38 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <NavMenu />
-    <main class="main-content">
-        <div class="container-fluid py-3">
-            @Body
-        </div>
-    </main>
-</div>
+<FlareLayout>
+    <FlareLayoutAppBar DrawerToggle="true">
+        <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Small" Style="flex:1;min-width:0;">
+            <FlareLink Href="/" Underline="LinkUnderline.None" Color="FlareColor.Default">
+                <FlareText Typo="TypographyScale.TitleMedium" Weight="FontWeight.Bold">Release Orchestrator</FlareText>
+            </FlareLink>
+            <FlareSpacer />
+            <AuthorizeView>
+                <Authorized>
+                    <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" Href="authentication/logout">
+                        <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
+                        <ChildContent>Logout</ChildContent>
+                    </FlareButton>
+                </Authorized>
+            </AuthorizeView>
+        </FlareStack>
+    </FlareLayoutAppBar>
+
+    @* The drawer is gated on auth rather than NavMenu hiding its own contents: an empty rail next to
+       the sign-in redirect is still a rail. *@
+    <AuthorizeView>
+        <Authorized>
+            <FlareLayoutDrawer @bind-Open="_navOpen" Variant="DrawerVariant.Responsive" Width="16rem">
+                <NavMenu />
+            </FlareLayoutDrawer>
+        </Authorized>
+    </AuthorizeView>
+
+    <FlareLayoutContent>
+        @Body
+    </FlareLayoutContent>
+</FlareLayout>
+
+@code {
+    bool _navOpen = true;
+}

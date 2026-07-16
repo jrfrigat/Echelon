@@ -13,9 +13,9 @@ public static class YandexTrackerWebhookEndpoints
 {
     public static IEndpointRouteBuilder MapYandexTrackerWebhooks(this IEndpointRouteBuilder app)
     {
+        // No WithOpenApi(): deprecated in .NET 10 (ASPDEPR002).
         app.MapPost("/webhooks/tracker/{connectionName}", HandleAsync)
-           .WithName("YandexTrackerWebhook")
-           .WithOpenApi();
+           .WithName("YandexTrackerWebhook");
 
         return app;
     }
