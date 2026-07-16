@@ -513,64 +513,51 @@ UserPermissionOverride (Id, UserId, PermissionClaimId)
 
 ### 11.1. Переменные окружения
 
+Обязательные переменные не имеют дефолтов: приложение падает на старте с внятным сообщением, а `docker compose` отказывается стартовать. Это осознанно — прежде отсутствие пароля молча приводило к тому, что SQL Server поднимался с дефолтным `Dev_Password1`, а приложение уходило в бесконечный рестарт с пустым паролем.
+
 **Ingress:**
-- `Queue__Host`, `Queue__Username`, `Queue__Password`
 
-**Core Service:**
-- `DatabaseProvider` = `SqlServer`
-- `ConnectionStrings__Default` (ReleaseOrchestrator)
-- `ConnectionStrings__Archive` (ReleaseOrchestratorArchive)
-- `Queue__Host`
-- `AD__Authority`, `AD__ClientId`, `AD__ClientSecret`
-- `Archiving__Enabled`, `Archiving__ScheduleCron`, `Archiving__ArchiveAfterDays`
+| Переменная | Обяз. | Назначение |
+|---|---|---|
+| `Queue__Host`, `Queue__Username`, `Queue__Password` | да | RabbitMQ |
+| `Webhooks__GitLab__{connectionName}__Token` | да | Секрет вебхука GitLab. `{connectionName}` — имя `VcsConnection`; допустимы `[A-Za-z0-9_-]` |
+| `Webhooks__Tracker__{connectionName}__Token` | да | Секрет вебхука Трекера |
+| `Seq__Url` | нет | Логи |
+| `RateLimit__WebhooksPerMinute` | нет | По умолчанию 1200 (README §9.1 закладывает пики 5–10/сек) |
 
-### 11.2. docker-compose (фрагмент)
+**Core:**
 
-```yaml
-services:
-  ingress:
-    image: registry.example.com/release-orchestrator/ingress:latest
-    ports: ["8080:8080"]
-    environment:
-      Queue__Host: rabbitmq
-    restart: unless-stopped
+| Переменная | Обяз. | Назначение |
+|---|---|---|
+| `ConnectionStrings__Default` | да | Оперативная БД |
+| `ConnectionStrings__Archive` | да | Архивная БД |
+| `Redis__ConnectionString` | да | Кэш прав. Пароль обязателен; **запятая в пароле недопустима** — StackExchange.Redis разбирает строку как список опций |
+| `Queue__Host`, `Queue__Username`, `Queue__Password` | да | RabbitMQ |
+| `AD__Instance`, `AD__TenantId`, `AD__ClientId`, `AD__Audience` | да | Microsoft.Identity.Web. Схема одна; `AD__Authority` и `AD__ClientSecret` больше не используются |
+| `AllowedOrigins__0`, `AllowedOrigins__1`, … | нет | CORS |
+| `Seq__Url` | нет | Логи |
+| `Database__MigrateOnStartup` | нет | По умолчанию `false`, см. §11.3 |
+| `Security__AllowedApiHosts__0`, … | нет | Allow-list хостов для `ApiUrl` подключений. Пусто — проверяются только схема (https) и приватные адреса |
+| `RateLimit__PermitsPerMinute` | нет | По умолчанию 300 |
+| `Queue__PrefetchCount` | нет | По умолчанию 16 |
+| `Archiving__Enabled`, `Archiving__RunAtUtcHour`, `Archiving__ArchiveAfterDays` | нет | См. §8. `Archiving__ScheduleCron` **удалена**: она биндилась и никогда не читалась, расписание было захардкожено |
 
-  core:
-    image: registry.example.com/release-orchestrator/core:latest
-    environment:
-      DatabaseProvider: SqlServer
-      ConnectionStrings__Default: Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=...
-      ConnectionStrings__Archive: Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=...
-      Queue__Host: rabbitmq
-      AD__Authority: https://adfs.company.com/adfs
-    depends_on: [mssql, rabbitmq]
-    restart: unless-stopped
+**PWA** конфигурируется не переменными окружения, а файлом `wwwroot/appsettings.json`, который Blazor загружает по HTTP при старте. Переопределяется bind-mount'ом поверх `/app/wwwroot/appsettings.json` (заготовка есть в `docker-compose.yml`, закомментирована: если файла на хосте нет, Docker создаст на его месте директорию и сломает фронтенд). Переменные `AD__*` влияют **только на сервер**.
 
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: Y
-      MSSQL_SA_PASSWORD: ...
-      MSSQL_MEMORY_LIMIT_MB: 14336
-    volumes:
-      - mssqldata:/var/opt/mssql
-      - mssqllog:/var/opt/mssql/log
-      - mssqlarchive:/var/opt/mssql/archive
-    deploy:
-      resources:
-        limits: { cpus: '6', memory: 16G }
-    restart: unless-stopped
+### 11.2. docker-compose
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    volumes: [rabbitmqdata:/var/lib/rabbitmq]
+Актуальный `docker-compose.yml` лежит в корне репозитория — здесь он намеренно не дублируется: прежний фрагмент разошёлся с реальным файлом и показывал пароли открытым текстом.
 
-volumes:
-  mssqldata:
-  mssqllog:
-  mssqlarchive:
-  rabbitmqdata:
-```
+Что важно знать про его устройство:
+
+- **Наружу опубликованы только `ingress` (8080) и `core` (8081).** У `mssql`, `rabbitmq`, `redis` и `seq` портов нет — они общаются по внутренней сети compose. Раньше все они торчали на хост при `ASPNETCORE_ENVIRONMENT: Production`, причём Redis без пароля, а RabbitMQ с `guest/guest`.
+- **Все секреты — в форме `${VAR:?...}`**, без дефолтов: без `.env` compose падает с указанием недостающей переменной. Раньше `mssql` поднимался с дефолтным паролем, а `core` получал пустой — и уходил в рестарт-цикл.
+- **TLS не терминируется.** Реверс-прокси в compose нет, оба сервиса слушают HTTP. Приложение готово к прокси (`UseForwardedHeaders`, HSTS вне Development), но сам прокси разворачивается отдельно. Пока его нет, Bearer-токены и секреты вебхуков идут по открытому HTTP.
+- **`TrustServerCertificate=True` для SQL Server оставлен осознанно**: образ отдаёт самоподписанный сертификат, без этого `core` не подключится.
+- **Ротация паролей не подействует на существующих томах.** `MSSQL_SA_PASSWORD` и `RABBITMQ_DEFAULT_USER/PASS` применяются только к пустому volume — иначе RabbitMQ сохранит прежние креды. Нужен `docker compose down -v`.
+- **`Directory.Build.props` и `global.json` в контейнер не попадают**: контекст сборки — `src`, а они лежат в корне. Сборка от этого не ломается (свойства продублированы в `.csproj`), версия SDK в контейнере фиксируется тегом образа, но `TreatWarningsAsErrors` внутри контейнера не действует.
+
+> Образы запинены до конкретных версий, но **собрать их и проверить существование тегов не удалось** — доступ к реестру из этой среды фильтруется. `docker compose config` валиден; `docker compose build/up` не запускались.
 
 ### 11.3. Применение миграций
 
