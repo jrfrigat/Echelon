@@ -1,3 +1,4 @@
+using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
 namespace ReleaseOrchestrator.Providers.YandexTracker;
@@ -12,6 +13,15 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// </remarks>
 internal sealed class YandexTrackerProviderAdapter(HttpClient http) : ITrackerProviderAdapter
 {
+    /// <inheritdoc/>
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } =
+    [
+        new(YandexTrackerOptions.OrgIdKey,
+            Label: "Organization ID",
+            Description: "Yandex.Tracker organization the token belongs to; sent as the X-Org-Id header.",
+            Required: true)
+    ];
+
     /// <inheritdoc/>
     public Task<ITrackerProvider> ConnectAsync(TrackerProviderContext context, CancellationToken ct)
     {

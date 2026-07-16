@@ -19,6 +19,13 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </remarks>
 public interface IVcsProviderAdapter
 {
+    /// <summary>
+    /// The provider-specific settings a connection to this VCS may carry. Empty when it needs
+    /// none — GitLab does not, which is exactly why the API must not assume every provider has
+    /// the same fields.
+    /// </summary>
+    IReadOnlyList<ProviderSettingSchema> SettingsSchema => [];
+
     /// <summary>Binds this adapter to a connection, detecting whatever the install has to be asked about.</summary>
     /// <param name="context">The connection's endpoint, credentials and label configuration.</param>
     /// <param name="ct">Cancellation token.</param>

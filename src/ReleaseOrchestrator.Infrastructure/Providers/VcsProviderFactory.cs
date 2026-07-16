@@ -33,6 +33,17 @@ internal sealed class VcsProviderFactory(
     public IReadOnlyCollection<string> AvailableProviders => _available;
 
     /// <inheritdoc/>
+    public IReadOnlyList<ProviderSettingSchema> GetSettingsSchema(string providerType)
+    {
+        var key = ProviderKey.Normalize(providerType);
+
+        if (!_available.Contains(key))
+            throw new UnknownProviderException("VCS", providerType, _available);
+
+        return services.GetRequiredKeyedService<IVcsProviderAdapter>(key).SettingsSchema;
+    }
+
+    /// <inheritdoc/>
     public async Task<IVcsProvider> CreateAsync(VcsConnection connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);

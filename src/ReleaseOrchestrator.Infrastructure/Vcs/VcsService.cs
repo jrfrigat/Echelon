@@ -67,7 +67,7 @@ public class VcsService(
         mr.TaskExternalId = provider.ParseTaskKeyFromBranch(info.SourceBranch);
         mr.TaskId = await ResolveTaskIdAsync(repo, mr.TaskExternalId, ct) ?? mr.TaskId;
 
-        ApplyStatus(mr, info);
+        ApplyStatus(mr, info, provider.Capabilities, repo.Connection.ReadyForDeployLabel);
 
         await db.SaveChangesAsync(ct);
     }
@@ -77,7 +77,8 @@ public class VcsService(
     /// pin, an open MR's deployability comes from the connection's label unless an operator pinned
     /// it, and merged and closed carry distinct timestamps — archiving needs one of them set.
     /// </summary>
-    private void ApplyStatus(MergeRequest mr, VcsMergeRequest info)
+    private void ApplyStatus(
+        MergeRequest mr, VcsMergeRequest info, VcsCapabilities capabilities, string? readyForDeployLabel)
     {
         // Already normalized by the adapter; a null means the provider reported a state its
         // adapter does not model, which is not something to guess at.
@@ -106,13 +107,20 @@ public class VcsService(
         mr.MergedAt = null;
         mr.ClosedAt = null;
 
-        // Promotion is still the webhook's: this path never demotes an MR out of the plan.
-        //
-        // The old reason for that — "the API does not return labels" — no longer holds, since the
-        // provider reports them and Capabilities.SupportsMergeRequestLabels says whether to
-        // believe an empty list. Re-deriving the status here would be a change to when an MR
-        // leaves a release plan, which is not a side effect to smuggle into a refactor; it is
-        // left as a deliberate follow-up.
+        // Re-derive promotion from the labels the provider reports, exactly as the webhook does.
+        // This is the whole point of a reconcile: a missed "label removed" event otherwise leaves an
+        // MR sitting in the release plan forever, because nothing else ever revisits it — and the
+        // sync would keep confirming the stale status as if it were current.
+        if (capabilities.SupportsMergeRequestLabels)
+        {
+            mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
+                info.Labels, readyForDeployLabel, mr.IsStatusManual, mr.Status);
+            return;
+        }
+
+        // The provider cannot report labels, so an empty list means "cannot say", not "none".
+        // Demoting on that would drop an MR out of the plan on missing evidence; leave a promoted
+        // status alone and let the webhook own it.
         if (!mr.IsStatusManual && mr.Status != Core.Enums.MergeRequestStatus.ReadyForDeploy)
             mr.Status = status.Value;
     }

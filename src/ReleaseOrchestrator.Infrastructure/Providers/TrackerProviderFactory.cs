@@ -23,6 +23,17 @@ internal sealed class TrackerProviderFactory(
     public IReadOnlyCollection<string> AvailableProviders => _available;
 
     /// <inheritdoc/>
+    public IReadOnlyList<ProviderSettingSchema> GetSettingsSchema(string providerType)
+    {
+        var key = ProviderKey.Normalize(providerType);
+
+        if (!_available.Contains(key))
+            throw new UnknownProviderException("Tracker", providerType, _available);
+
+        return services.GetRequiredKeyedService<ITrackerProviderAdapter>(key).SettingsSchema;
+    }
+
+    /// <inheritdoc/>
     public async Task<ITrackerProvider> CreateAsync(TrackerConnection connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);
