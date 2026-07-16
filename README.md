@@ -4,621 +4,278 @@ Enterprise release planning and orchestration platform for heterogeneous VCS and
 
 Release Orchestrator помогает автоматически выстраивать последовательность merge request'ов, управлять ручными правками плана и архивировать завершённые задачи.
 
-## Содержание
+---
 
-1. [Введение и цели проекта](#1-введение-и-цели-проекта)
-2. [Архитектурные принципы и принятые решения](#2-архитектурные-принципы-и-принятые-решения)
-3. [Компонентная архитектура](#3-компонентная-архитектура)
-4. [Модель данных](#4-модель-данных)
-5. [Автоматическое построение плана релиза](#5-автоматическое-построение-плана-релиза)
-6. [Ручное редактирование плана и YAML](#6-ручное-редактирование-плана-и-yaml)
-7. [Аутентификация и авторизация](#7-аутентификация-и-авторизация)
-8. [Архивирование выполненных задач](#8-архивирование-выполненных-задач)
-9. [Оценка нагрузки, масштабирование и требования к инфраструктуре](#9-оценка-нагрузки-масштабирование-и-требования-к-инфраструктуре)
-10. [Технологический стек](#10-технологический-стек)
-11. [Развёртывание и конфигурация](#11-развёртывание-и-конфигурация)
-12. [План разработки](#12-план-разработки)
+## Quick Start
+
+**👉 Start here:** [Comprehensive Documentation](docs/README.md)
+
+- **[Getting Started](docs/en/getting-started.md)** — Local setup with Docker Compose
+- **[Architecture](docs/en/architecture.md)** — System design and data flow
+- **[Configuration](docs/en/configuration.md)** — All environment variables
+- **[Providers](docs/en/providers.md)** — How to add new VCS or tracker providers
+- **[Operations](docs/en/operations.md)** — Deployment and monitoring
+- **[Localization](docs/en/localization.md)** — How i18n works
+
+**Русский:**
+- **[Начало работы](docs/ru/getting-started.md)**
+- **[Архитектура](docs/ru/architecture.md)**
+- **[Конфигурация](docs/ru/configuration.md)**
+- **[Провайдеры](docs/ru/providers.md)**
+- **[Эксплуатация](docs/ru/operations.md)**
+- **[Локализация](docs/ru/localization.md)**
 
 ---
 
-## 1. Введение и цели проекта
+## ⚠️ Critical Note: Not Yet Production-Ready
 
-**Release Orchestrator** — это корпоративный инструмент планирования и контроля выкатки релизов в гетерогенной среде с множеством репозиториев, систем контроля версий и трекеров задач.  
-Система автоматически выстраивает упорядоченный план деплоя merge request'ов (MR) на основе зависимостей задач из трекеров и конфигурации «стеков» — вручную дополняемых и корректируемых правил.
+**The application has never been run in a live environment.** The following have not been tested:
 
-Ключевые показатели:
+- Application startup against live SQL Server, RabbitMQ, Redis
+- Database migrations (on real instance)
+- Docker image builds (registry blocked in dev environment)
+- Behavior against real GitLab or Yandex Tracker instances
+- Concurrency and load testing
 
-- До 10 000 задач и соответствующих MR в сутки, пиковый поток вебхуков 5–10 событий/сек.
-- Одновременная работа до 100 пользователей (UI/API).
-- Хранение горячих данных за последние 90 дней, архив исторических данных для отчётности.
-- Полная контейнеризация, запуск на Linux, СУБД — Microsoft SQL Server (см. §2.4 о статусе переносимости).
+**See [Current State Audit](docs/issues/001-current-state.md) §4 for full details.**
 
-**Цель документа:** зафиксировать архитектурное решение и предоставить руководство для команды разработки.
-
----
-
-## 2. Архитектурные принципы и принятые решения
-
-### 2.1. Модульный монолит
-
-Выделение отдельных сервисов под каждое подключение к VCS или трекеру отвергнуто.  
-Задачи, MR и конфигурация стеков тесно связаны; построение плана релиза требует одновременного доступа к этим данным. Распределение привело бы к распределённым запросам и усложнению транзакционности.
-
-**Решение:** единый Core Service с модулями `VcsModule`, `TaskModule`, `ReleasePlanning`, `Authorization`, взаимодействующими напрямую. Это даёт:
-
-- Транзакционную целостность на уровне EF Core.
-- Простоту разработки и отладки.
-- Возможность выделить `ReleasePlanning` в отдельный сервис при экстремальном росте через очередь сообщений.
-
-### 2.2. Выделенный Ingress-сервис для вебхуков
-
-Приём вебхуков вынесен в `Ingress.Webhooks` (ASP.NET Core Minimal API). Причины:
-
-- Быстрая отдача `200 OK` независимо от бизнес-обработки.
-- Независимое масштабирование.
-- Единая точка нормализации событий.
-
-### 2.3. Очередь сообщений RabbitMQ
-
-Используется для надёжной асинхронной доставки событий от Ingress к Core, а также для фоновых пересчётов. При пиковых нагрузках очередь сглаживает всплески, Core может обрабатывать события конкурентно (включая многопоточность в рамках одного процесса или несколько реплик).
-
-### 2.4. Приоритет MSSQL
-
-Целевая и единственная поддерживаемая СУБД — Microsoft SQL Server. Миграции EF Core вынесены в отдельную сборку `Migrations.MsSql` (оперативная и архивная БД — два контекста с раздельной историей миграций).
-
-> **Статус переносимости на PostgreSQL: не реализована.** Ранее код содержал ветку Npgsql, ссылавшуюся на сборку `Migrations.PostgreSql`, которой не существует: любое значение `DatabaseProvider`, кроме `SqlServer`, приводило к падению на старте. Ветка и переменная `DatabaseProvider` удалены, чтобы не создавать ложного впечатления работоспособности. Доступ к данным идёт через EF Core, поэтому переход возможен, но потребует отдельной сборки миграций и проверки SQL-специфичных мест (фильтрованный уникальный индекс на `ReleasePlan.IsActive`, `rowversion`).
-
-### 2.5. Архивирование как отдельный процесс
-
-При 10 000 задачах/день таблица `TaskItem` будет расти на ~3.6 млн строк в год. Вводится выделенная архивная БД и фоновый сервис `ArchiveService`. Подробнее — в разделе 8.
+Before deploying to production:
+1. Test locally with Docker Compose (see [Getting Started](docs/en/getting-started.md))
+2. Verify migrations apply cleanly to SQL Server
+3. Build and test Docker images
+4. Test against staging instances of your VCS/tracker
+5. Load testing with expected traffic volume
 
 ---
 
-## 3. Компонентная архитектура
+## What It Does
+
+Release Orchestrator transforms merge requests into a **staged deployment plan**:
+
+1. **Input:** Merge requests from multiple VCS systems + task dependencies from trackers
+2. **Processing:** Combines VCS and task dependencies into a graph, resolves cycles, topologically sorts
+3. **Output:** Stages (sets of MRs that can deploy in parallel) with conflict logging
 
 ```
-                    +-------------------+
-                    |  GitLab           |
-                    |  (несколько экз.)|
-                    +---------+---------+
-                              |
-                              | Webhook (HTTP POST)
-                              v
-                    +---------+---------+       +------------------+
-                    | Ingress.Webhooks  |<------+ Яндекс.Трекер    |
-                    | (Minimal API)     |       +------------------+
-                    +---------+---------+
-                              |
-                              | Публикация нормализованных событий
-                              v
-                    +---------+---------+
-                    | RabbitMQ          |
-                    +---------+---------+
-                              |
-                              | Потребление
-                              v
-                    +---------+---------+
-                    | Core Service      |
-                    | (модульный        |
-                    |  монолит)         |
-                    |  - VcsModule      |
-                    |  - TaskModule     |
-                    |  - ReleasePlanning|
-                    |  - Authorization  |
-                    |  - BFF/API        |
-                    +----+------+-------+
-                         |      |
-                         |      +-------- Вызов архивной БД
-                         v
-                    +----+------+
-                    |  MSSQL    |
-                    | (основная |
-                    |  и архив) |
-                    +-----------+
-                             |
-                             v
-                    +-------------------+
-                    | PWA (Blazor)      |
-                    | через BFF         |
-                    +-------------------+
+VCS webhooks → Ingress → RabbitMQ → Core → Release Plan
+                           ↓
+                        Database
 ```
 
-### 3.1. Ingress.Webhooks
+**Key features:**
+- Automatic plan generation from dependencies
+- Manual editing (drag-and-drop stages, override order)
+- YAML export/import for version control
+- Multi-repository support (GitLab, Yandex Tracker, extensible to others)
+- Permission-based access control (claim-based, integrates with OIDC)
+- 90-day archival for data retention
+- OpenTelemetry-ready observability
 
-- **Технология:** ASP.NET Core Minimal API, .NET 10 (или актуальная LTS).
-- **Масштабирование:** несколько реплик за обратным прокси (Nginx/Traefik).
-- **Безопасность:** каждый вебхук валидируется по токену из конфигурации.
-- **Нормализация:** из специфичных payload GitLab/Яндекс.Трекер формируются универсальные сообщения:
-  ```csharp
-  public record MrOpened(Guid MrId, string ExternalMrId, Guid RepositoryId, string SourceBranch, string TaskExternalId);
-  public record TaskCreated(Guid TaskId, string ExternalId, string Title);
-  ```
-- **Обработка ошибок:** при недоступности RabbitMQ сообщения буферизуются в памяти ограниченное время; при превышении — вебхук возвращает 503. Рекомендуется настроить Dead Letter Queue (DLQ) на стороне RabbitMQ и мониторинг DLQ.
+---
 
-### 3.2. Core Service
-
-Структура решения:
+## Architecture Layers
 
 ```
-ReleaseOrchestrator.Core/              # Domain layer
-  Entities/
-  Interfaces/
-ReleaseOrchestrator.Application/       # Application layer
-  Vcs/                                 # VcsModule
-  Tasks/                               # TaskModule
-  ReleasePlanning/                     # Планировщик
-  Authorization/                       # Управление доступом
-ReleaseOrchestrator.Infrastructure/    # Infrastructure layer
-  Persistence/                         # EF Core DbContext, миграции
-  Vcs/                                 # GitLab API клиент
-  Tracker/                             # Клиент Яндекс.Трекера
-  Queue/                               # RabbitMQ consumer/producer (MassTransit)
-  Archive/                             # ArchiveService
-ReleaseOrchestrator.Web/               # Web layer
-  Api/                                 # REST endpoints
-  Bff/                                 # Backend for Frontend
+Core                        domain entities; knows no provider, no database
+  ↑
+Providers.Abstractions      provider contracts + normalized models
+  ↑                    ↖
+Application            Providers.GitLab / Providers.YandexTracker
+  ↑                    ↗       (adapters: see only Abstractions + Core)
+Infrastructure              EF Core, MassTransit, Redis — the composition root
+  ↑
+Web / Ingress.Webhooks      HTTP
 ```
 
-Фоновые обработчики RabbitMQ построены на MassTransit (конкурентное потребление, повторные попытки с exponential backoff). Пересчёт плана выполняется асинхронно через выделенный потребитель, чтобы не блокировать приём других событий.
+**Dependencies point inward only.** Two consequences worth stating, because both were absent
+before and both cost real defects:
 
-### 3.3. База данных
-
-Основная БД (MSSQL) хранит оперативные сущности.  
-Архивная БД (также MSSQL) размещается в отдельной базе `ReleaseOrchestratorArchive`. В первой версии допустимо использование той же инстанции SQL Server, но для production рекомендуется вынести архив на отдельный сервер (или файловую группу на отдельных дисках) с целью снижения влияния на оперативные бэкапы и производительность.
-
-### 3.4. Веб-интерфейс (PWA)
-
-Выбран Blazor WebAssembly (PWA) — единый стек разработки (C#), переиспользование моделей, встроенная офлайн-поддержка.  
-Допустим React при наличии соответствующих компетенций; тогда BFF остаётся на .NET.
-
-Основные функции UI:
-- Просмотр плана релиза (последовательность стадий, графическое дерево).
-- Drag-and-drop ручное редактирование.
-- Экспорт/импорт YAML.
-- Административные настройки (VCS, трекеры, стеки, права доступа).
+- The planning algorithm lives in `Application` and touches no EF. It used to be a private method
+  on a class built around `DbContext` — unreachable from a test, which is exactly why its
+  dependency edges were inverted for as long as they were.
+- No provider name appears in `Core`. Adding one is a project and a line of registration, not a
+  domain change and a migration.
 
 ---
 
-## 4. Модель данных
+## Tech Stack
 
-### 4.1. Основные сущности (оперативная БД)
-
-Все первичные ключи — `Guid`, генерируются автоматически.
-
-**VcsConnection**
-- `Id` (PK)
-- `Name` (string, **уникальное**, используется в YAML)
-- `VcsType` (enum: GitLab)
-- `ApiUrl` (string)
-- `EncryptedAccessToken` (byte[])
-
-**TrackerConnection**
-- `Id` (PK)
-- `Name` (string)
-- `TrackerType` (enum: YandexTracker)
-- `ApiUrl` (string)
-- `EncryptedAccessToken` (byte[])
-- `OrgId` (string) — для Яндекс.Трекера
-
-**Repository**
-- `Id` (PK)
-- `Name` (string)
-- `ExternalId` (string) — полный путь в VCS, напр. `group/project`
-- `ConnectionId` (FK -> VcsConnection)
-
-**TrackerProject** *(задел на будущее, в первой версии не используется)*
-- `Id` (PK)
-- `ExternalId` (string)
-- `Name` (string)
-- `ConnectionId` (FK -> TrackerConnection)
-
-**Stack**
-- `Id` (PK)
-- `Name` (string, уникальное)
-
-**RepositoryStack** (M2M)
-- `RepositoryId` (FK)
-- `StackId` (FK)
-
-**StackDependency**
-- `Id` (PK)
-- `FromStackId` (FK -> Stack, зависимый)
-- `ToStackId` (FK -> Stack, требуемый)
-- `Type` (enum: Hard=1, Soft=2)
-
-**TaskItem** (задачи из трекера)
-- `Id` (PK)
-- `ExternalId` (string, индексирован) — например "TASK-123"
-- `Title` (string)
-- `Status` (string)
-- `ClosedAt` (DateTime?, nullable)
-- `TrackerConnectionId` (FK -> TrackerConnection, NOT NULL)
-- `TrackerProjectId` (FK -> TrackerProject, NULL — задел)
-
-**TaskDependency**
-- `Id` (PK)
-- `DependentTaskId` (FK -> TaskItem — задача, которая зависит)
-- `DependsOnTaskId` (FK -> TaskItem — задача-предшественник)
-
-**MergeRequest**
-- `Id` (PK)
-- `ExternalId` (string) — iid MR в VCS-проекте
-- `SourceBranch` (string)
-- `TargetBranch` (string)
-- `RepositoryId` (FK -> Repository)
-- `TaskId` (FK -> TaskItem, nullable) — связь с задачей (парсится из имени ветки)
-- `Status` (enum `MergeRequestStatus`: Opened, Reviewed, ReadyForDeploy, Merged, Closed; хранится как int/string через EF value converter)
-- `CreatedAt` (DateTime)
-- `MergedAt` (DateTime?, nullable)
-
-**ReleasePlan**
-- `Id` (PK)
-- `Name` (string)
-- `Version` (string)
-- `IsActive` (bool)
-- `AutoGenerated` (bool)
-- `CreatedAt` (DateTime)
-- `UpdatedAt` (DateTime)
-- `YamlHash` (string) — контрольная сумма импортированного YAML
-
-**ReleaseStage**
-- `Id` (PK)
-- `PlanId` (FK -> ReleasePlan)
-- `Sequence` (int) — порядковый номер стадии
-- `Name` (string, nullable)
-- `IsManualOverride` (bool)
-
-**StageItem**
-- `Id` (PK)
-- `StageId` (FK -> ReleaseStage)
-- `MergeRequestId` (FK -> MergeRequest)
-- `ManualInclusion` (bool) — true, если добавлен/убран вручную
-
-**Разрешения (claims)**
-- `PermissionClaims` (`Id`, `Name` — уникальная строка, напр. `release.plan.approve`)
-- `GroupPermissionMapping` (`Id`, `AdGroupSid`, `PermissionClaimId`)
-- `UserPermissionOverride` (`Id`, `UserId`, `PermissionClaimId`)
-
-**Пользователи:**
-Стандартная `AspNetUsers`. Роли в стандартном понимании не используются.
-
-### 4.2. Индексы и ограничения
-
-- `IX_TaskItem_ExternalId`
-- `IX_TaskItem_TrackerConnectionId_ExternalId`
-- `IX_MergeRequest_RepositoryId_Status`
-- `IX_MergeRequest_TaskId`
-- `IX_StageItem_MergeRequestId`
-- `IX_ReleasePlan_IsActive`
-- `UQ_VcsConnection_Name` — уникальность `VcsConnection.Name`
-- Каскадное удаление: при удалении `ReleasePlan` удаляются его `ReleaseStage` и `StageItem`. `MergeRequest` и `TaskItem` удаляются только через процесс архивирования.
+- **.NET 10** (C# 14)
+- **Database:** Microsoft SQL Server 2019+ (EF Core 10)
+- **Message Queue:** RabbitMQ 3.8+ (MassTransit)
+- **Cache:** Redis 6.0+ (StackExchange.Redis)
+- **Frontend:** Blazor WebAssembly (PWA, .NET 10)
+- **Authentication:** OpenID Connect (external provider)
+- **Observability:** OpenTelemetry (optional)
 
 ---
 
-## 5. Автоматическое построение плана релиза
-
-Алгоритм графа реализован в `ReleaseOrchestrator.Application/ReleasePlanning/ReleasePlanGraph` — это чистый класс без EF и обращений к БД, покрытый юнит-тестами. Оркестрация вокруг него (чтение данных, сохранение плана) — в `ReleasePlanner` слоя Infrastructure. Запускается асинхронно по событиям (новый MR, смена статуса, смена лейблов, изменение зависимостей задач/стеков).
-
-**Как MR становится `ReadyForDeploy`** (оба способа работают):
-1. **Лейбл VCS** — на открытом MR стоит лейбл, заданный в `VcsConnection.ReadyForDeployLabel` (по умолчанию `ready-for-deploy`). Снятие лейбла возвращает MR в `Opened`.
-2. **Вручную** — `PATCH /api/merge-requests/{id}/status` под правом `release.plan.approve`. Такой статус помечается `IsStatusManual = true` и не перезатирается лейблами; терминальные статусы от VCS (`Merged`/`Closed`) имеют приоритет и снимают пометку.
-
-**Вход:**
-- Множество MR со статусом `ReadyForDeploy`.
-- Задачи, привязанные к этим MR.
-- Зависимости задач (`TaskDependency`).
-- Зависимости стеков (`StackDependency`).
-- Маппинг репозиторий → стеки.
-
-**Этапы:**
-
-1. **Построение графа:** вершина — один `MergeRequest`.
-   - Ребро MR2 → MR1, если задача MR2 зависит от задачи MR1.
-   - Ребро MR2 → MR1, если стек репозитория MR2 зависит от стека репозитория MR1 (Hard).
-   Задача может охватывать несколько репозиториев — предшественниками становятся **все** её MR. Рёбра дедуплицируются; при совпадении пары побеждает наиболее критичная связь, поэтому Soft-дубликат не делает Hard-ограничение отбрасываемым. Петли (репозиторий входит в два взаимозависимых стека) отбрасываются: они не несут информации о порядке и заблокировали бы алгоритм Кана.
-2. **Учёт типов зависимостей:**
-   - Hard — жёсткое требование, отбрасывается последним.
-   - Soft — рекомендательное: соблюдается, когда не мешает, и отбрасывается первым при конфликте.
-3. **Разрешение циклов:** последовательно удаляется наименее критичное ребро цикла (Soft → рёбра задач → Hard), пока граф не станет ацикличным. Каждое отброшенное ребро сохраняется в `ReleasePlan.ConflictsJson` и отдаётся в `ReleasePlanDto.Conflicts`; UI показывает предупреждение. Цикл, целиком состоящий из Hard-рёбер, удовлетворить невозможно — план всё равно строится (иначе не было бы плана вообще), но помечается как unresolvable, чтобы оператор не принял его за корректный.
-4. **Топологическая сортировка:** алгоритм Кана группирует вершины по уровням, каждый уровень становится `ReleaseStage`. Порядок детерминирован: запрос отсортирован, ничьи внутри стадии разрешаются по этому же порядку, поэтому два прогона на одних данных дают идентичный план.
-5. **Сохранение:** создаётся новый автоматический `ReleasePlan` (`AutoGenerated = true`) в одной транзакции с деактивацией предыдущего. Если активен импортированный (ручной) план, автоматический сохраняется **неактивным** — пересчёт не затирает осознанную ручную работу (§6.1). Инвариант «активный план ровно один» обеспечен фильтрованным уникальным индексом.
-
-**Пересчёт и коалесинг.** Пересчёт запрашивается сообщением `ReleasePlanRecalculationRequested` и выполняется **внутри консьюмера**, то есть брокер подтверждает сообщение только после того, как план построен. Таймера дебаунса нет: всплеск из N событий даёт N сообщений, первое строит план, остальные видят, что снимок данных (`ReleasePlan.SnapshotStartedAt`) их уже покрывает, и стоят один запрос. Сравнение идёт именно с моментом начала чтения данных, а не с временем создания плана — иначе изменения, закоммиченные во время расчёта, были бы потеряны.
-
-**Производительность:** заявленная цель — не более 500 мс для 10 000 вершин и ~20 000 рёбер. **Не измерено.** Устранены известные препятствия: `AsSplitQuery` вместо декартова произведения трёх коллекционных `Include`, поиск предшественников через `ToLookup` вместо `O(n²)`, отдельный индекс по `MergeRequest.Status` (ведущий `RepositoryId` в составном индексе не позволял seek). Нагрузочное тестирование остаётся в Фазе 5.
-
----
-
-## 6. Ручное редактирование плана и YAML
-
-### 6.1. Ручные корректировки через UI
-
-Пользователи с правом `release.plan.approve` могут:
-- Менять порядок стадий.
-- Перемещать MR между стадиями.
-- Добавлять/убирать MR из плана.
-- Утверждать план.
-
-Все ручные изменения проставляют `IsManualOverride = true` и `ManualInclusion`.
-
-**Приоритет ручного плана.** Пока активен импортированный план (`AutoGenerated = false`), автоматические пересчёты сохраняются неактивными и не подменяют его. Так ручная работа не теряется при первом же вебхуке.
-
-> **Diff «авто vs ручной» — не реализован.** Пользователь пока не может сравнить автоматический план с ручным и выбрать версию: автоматические планы сохраняются и доступны по `GET /api/release-plans/{id}`, но UI сравнения нет. Ранее было хуже: пересчёт молча деактивировал только автоматические планы и вставлял новый активный, из-за чего в БД оказывалось **два** активных плана, а `GetActiveAsync` возвращал произвольный.
-
-### 6.2. YAML-формат
-
-Экспорт/импорт плана в YAML для хранения в Git и массовых правок.
-
-Пример:
-```yaml
-release_plan:
-  name: "Release 24.3"
-  version: "1.0.0"
-  created: "2026-05-10T10:00:00Z"
-  stages:
-    - seq: 1
-      name: "Pre-deploy: SQL.vv03"
-      items:
-        - mr_id: "gitlab-sql:automacon/mssql-databases/vv03!123"
-          task: "TASK-456"
-    - seq: 2
-      name: "Main deploy"
-      items:
-        - mr_id: "gitlab-sql:automacon/mssql-databases/loyalty!78"
-          task: "TASK-456"
-        - mr_id: "gitlab-sql:automacon/oms/backend!45"
-          task: "TASK-789"
-  manual_overrides:
-    - type: reorder
-      reason: "Инфраструктурная задержка"
-```
-
-**Формат `mr_id`:** `<connectionName>:<projectFullPath>!<iid>`.  
-`connectionName` соответствует `VcsConnection.Name` (уникальное).
-
-**Валидация при импорте:**
-- Корректность YAML: непустой документ, ключ `release_plan`, обязательные `name`/`version`, отсутствие дублирующихся `seq`, разбираемый `mr_id`. Любое нарушение — HTTP 400 с указанием причины (раньше битый YAML давал необработанное 500).
-- Существование `connectionName` и MR — проверяются по локальной БД, за два запроса на весь документ.
-- Обязательные зависимости (Hard-связи стеков и связи задач) не должны нарушаться порядком стадий — иначе импорт отклоняется с перечислением конфликтов. Проверка использует то же построение рёбер (`ReleasePlanGraph.MandatoryEdges`), что и сам планировщик, поэтому импорт и пересчёт не могут разойтись в трактовке.
-- Режим `force = true` отключает все перечисленные проверки существования и зависимостей.
-
-Требуется право `release.plan.approve`.
-
-> **Проверка доступности MR через API VCS — не реализована.** Валидация идёт только по локальной БД; живой вызов GitLab при импорте не выполняется.
-
----
-
-## 7. Аутентификация и авторизация
-
-### 7.1. Поток аутентификации
-
-1. Пользователь без сессии перенаправляется на ADFS/Azure AD (OpenID Connect).
-2. После логина приложение получает id_token/access_token, содержащий группы AD.
-3. Custom `IClaimsTransformation` (или событие `OnTokenValidated`) обогащает `ClaimsPrincipal` разрешениями из кэшированного маппинга.
-4. Middleware `UseAuthorization` применяет политики, построенные на permission claims.
-
-### 7.2. Хранение маппинга
-
-```sql
-PermissionClaims (Id, Name UNIQUE)         -- 'release.plan.approve', 'config.edit' и т.д.
-GroupPermissionMapping (Id, AdGroupSid, PermissionClaimId)
-UserPermissionOverride (Id, UserId, PermissionClaimId)
-```
-
-- Группам AD и отдельным пользователям назначаются разрешения (claims).
-- Маппинг кэшируется в распределённом кэше (Redis) с TTL 5 минут.
-- При изменении маппингов через UI публикуется событие инвалидации кэша (`PermissionMappingChanged`).
-
-### 7.3. Управление через UI
-
-Административная панель позволяет просматривать, выдавать и **отзывать** разрешения групп и пользователей. Все изменения аудируются: в лог пишется, кто, кому и какое право выдал или отозвал.
-
-Идентификатор пользователя для персональных прав — **object id (`oid`)** из Entra ID, в формате GUID. UPN и email отклоняются с 400. Прежде поиск шёл по `sub`, который у Entra ID попарный (уникален для пары пользователь+приложение) и не виден в портале, поэтому созданный администратором override молча никогда не срабатывал.
-
-### 7.4. Первый вход (bootstrap)
-
-Права хранятся в БД и выдаются под правом `config.edit`. На чистой установке им никто не обладает — и выдать его тоже некому: получается замкнутый круг, при котором развёрнутая система нерабочая, а единственный вход — правка БД руками.
-
-Штатный выход — переменная:
-
-```
-Authorization__BootstrapAdminObjectIds__0=<oid первого администратора>
-```
-
-Перечисленные `oid` получают все права в обход БД. Каждый такой вход пишет warning в лог. **Это временная мера:** после того как первый администратор выдал права нормальным способом (группе AD или персонально), переменную нужно убрать.
-
-Границы привилегий это не расширяет: кто задаёт переменные окружения, тот и так владеет строкой подключения к БД.
-
-> Сами разрешения (`release.plan.view`, `release.plan.approve`, `config.edit`) заводятся миграцией. Раньше таблица `PermissionClaims` не наполнялась ничем, поэтому ссылаться при выдаче было не на что.
-
----
-
-## 8. Архивирование выполненных задач
-
-### 8.1. Критерии архивации
-
-- Статус `Closed`, `Merged` или `Cancelled`.
-- `ClosedAt` / `MergedAt` старше `ArchiveAfterDays` (по умолчанию 90 дней).
-- Сущность не входит ни в один активный `ReleasePlan`.
-- MR: связанная задача уже архивирована или отсутствует.
-
-### 8.2. Архивная база данных
-
-Отдельная БД `ReleaseOrchestratorArchive` (на том же или выделенном сервере). Структура денормализована для быстрых исторических запросов:
-
-- `ArchivedTask` — `Id`, `ExternalId`, `Title`, `Status`, `ClosedAt`, `DependenciesJson`.
-- `ArchivedMergeRequest` — `Id`, `ExternalId`, `RepositoryName`, `SourceBranch`, `TargetBranch`, `Status`, `TaskExternalId`, `ClosedAt`.
-- `ArchivedReleasePlan` — полные копии исторических планов.
-
-### 8.3. Процесс архивации
-
-- Фоновый сервис `ArchiveHostedService` запускается по cron (ночью).
-- Выбирает записи пакетами (TaskItem — по 1000, MergeRequest — по 500).
-- В одной транзакции на пакет:
-  - Вставка в архивную БД (`SqlBulkCopy` для больших объёмов).
-  - Удаление из оперативной БД.
-- Между пакетами пауза 1 секунда для снижения блокировок.
-- При ошибке пакет повторяется до 3 раз, затем пропускается с записью в лог.
-- Старые архивы (старше 2 лет) удаляются ежемесячным заданием.
-
-### 8.4. Влияние на производительность
-
-Оперативная БД хранит только ~90 дней горячих данных (≈900 000 задач и MR). Запросы к архиву выполняются редко и не пересекаются с оперативной нагрузкой.
-
----
-
-## 9. Оценка нагрузки, масштабирование и требования к инфраструктуре
-
-### 9.1. Расчёт нагрузки
-
-- **Вебхуки:** до 20 000 событий/день (пик 5–10/с). Ingress выдерживает >50 запросов/с.
-- **API Core:** 50–100 RPS, большинство ответов кэшируется.
-- **Пересчёт плана:** 5–10 раз в минуту, <500 мс каждый.
-- **БД:** 100–200 транзакций/с на пике.
-
-### 9.2. Требования к оборудованию (на 3 года)
-
-- **Сервер:** 8 vCPU (x86-64, 2.5+ GHz), 32 ГБ RAM, 512 ГБ SSD NVMe.
-- Распределение контейнеров:
-
-| Компонент                | vCPU        | RAM        |
-|--------------------------|-------------|------------|
-| Ingress (3 реплики)      | 0.5/реплика | 512 МБ     |
-| Core Service (2-3 реплики)| 1.5/реплика| 2 ГБ       |
-| MSSQL                    | 6           | 16 ГБ      |
-| RabbitMQ                 | 0.5         | 1 ГБ       |
-| Nginx/Traefik            | 0.2         | 128 МБ     |
-| **Итого**                | ~8          | ~23 ГБ     |
-
-При использовании внешнего MSSQL хост контейнеров может быть 4 vCPU / 8 ГБ.
-
-### 9.3. Масштабирование
-
-- Ingress — горизонтальное масштабирование за балансировщиком.
-- Core — конкурентное потребление RabbitMQ; реплики настраиваются через `Concurrency`.
-- RabbitMQ — возможен кластер с mirrored queues.
-- MSSQL — шардирование или облачный сервис при дальнейшем росте.
-
----
-
-## 10. Технологический стек
-
-Таблица отражает то, что реально есть в коде. Пункты со статусом «не реализовано» оставлены как зафиксированное намерение — раньше они были перечислены наравне с работающими, из-за чего документация обещала несуществующее.
-
-| Слой              | Технология                                | Статус |
-|-------------------|-------------------------------------------|--------|
-| Бэкенд            | .NET 10, ASP.NET Core                     | ✅ |
-| Язык              | C# 12                                     | ✅ |
-| ORM               | Entity Framework Core 9                   | ✅ |
-| Очередь           | RabbitMQ + MassTransit                    | ✅ |
-| База данных       | Microsoft SQL Server 2022 (основная и архивная) | ✅ |
-| Кэш               | Redis 7+                                  | ✅ |
-| Контейнеризация   | Docker, Docker Compose                    | ✅ |
-| Frontend          | Blazor WebAssembly PWA                    | ✅ |
-| Аутентификация    | Microsoft.Identity.Web (OIDC)             | ✅ |
-| YAML              | YamlDotNet                                | ✅ |
-| Логирование       | Serilog + Seq                             | ✅ |
-| Тесты             | xUnit (`tests/ReleaseOrchestrator.UnitTests`) | ✅ |
-| Веб-сервер        | Kestrel                                   | ✅ TLS терминируется реверс-прокси; в compose прокси нет |
-| Kubernetes        | —                                         | ❌ манифестов нет |
-| Метрики           | Prometheus + Grafana                      | ❌ не реализовано: ни пакета, ни `/metrics`, ни сервиса в compose. Наблюдаемость — только логи в Seq и `/health/ready` |
-| Трейсинг          | OpenTelemetry                             | ❌ не реализовано; для асинхронного пути Ingress → RabbitMQ → Core это заметный пробел |
-| CI/CD             | GitLab CI / GitHub Actions                | ❌ пайплайнов нет |
-
----
-
-## 11. Развёртывание и конфигурация
-
-### 11.1. Переменные окружения
-
-Обязательные переменные не имеют дефолтов: приложение падает на старте с внятным сообщением, а `docker compose` отказывается стартовать. Это осознанно — прежде отсутствие пароля молча приводило к тому, что SQL Server поднимался с дефолтным `Dev_Password1`, а приложение уходило в бесконечный рестарт с пустым паролем.
-
-**Ingress:**
-
-| Переменная | Обяз. | Назначение |
-|---|---|---|
-| `Queue__Host`, `Queue__Username`, `Queue__Password` | да | RabbitMQ |
-| `Webhooks__GitLab__{connectionName}__Token` | да | Секрет вебхука GitLab. `{connectionName}` — имя `VcsConnection`; допустимы `[A-Za-z0-9_-]` |
-| `Webhooks__Tracker__{connectionName}__Token` | да | Секрет вебхука Трекера |
-| `Seq__Url` | нет | Логи |
-| `RateLimit__WebhooksPerMinute` | нет | По умолчанию 1200 (README §9.1 закладывает пики 5–10/сек) |
-
-**Core:**
-
-| Переменная | Обяз. | Назначение |
-|---|---|---|
-| `ConnectionStrings__Default` | да | Оперативная БД |
-| `ConnectionStrings__Archive` | да | Архивная БД |
-| `Redis__ConnectionString` | да | Кэш прав. Пароль обязателен; **запятая в пароле недопустима** — StackExchange.Redis разбирает строку как список опций |
-| `Queue__Host`, `Queue__Username`, `Queue__Password` | да | RabbitMQ |
-| `AD__Instance`, `AD__TenantId`, `AD__ClientId`, `AD__Audience` | да | Microsoft.Identity.Web. Схема одна; `AD__Authority` и `AD__ClientSecret` больше не используются |
-| `AllowedOrigins__0`, `AllowedOrigins__1`, … | нет | CORS |
-| `Seq__Url` | нет | Логи |
-| `Database__MigrateOnStartup` | нет | По умолчанию `false`, см. §11.3 |
-| `Security__AllowedApiHosts__0`, … | нет | Allow-list хостов для `ApiUrl` подключений. Пусто — проверяются только схема (https) и приватные адреса |
-| `RateLimit__PermitsPerMinute` | нет | По умолчанию 300 |
-| `Queue__PrefetchCount` | нет | По умолчанию 16 |
-| `Archiving__Enabled`, `Archiving__RunAtUtcHour`, `Archiving__ArchiveAfterDays` | нет | См. §8. `Archiving__ScheduleCron` **удалена**: она биндилась и никогда не читалась, расписание было захардкожено |
-
-**PWA** конфигурируется не переменными окружения, а файлом `wwwroot/appsettings.json`, который Blazor загружает по HTTP при старте. Переопределяется bind-mount'ом поверх `/app/wwwroot/appsettings.json` (заготовка есть в `docker-compose.yml`, закомментирована: если файла на хосте нет, Docker создаст на его месте директорию и сломает фронтенд). Переменные `AD__*` влияют **только на сервер**.
-
-### 11.2. docker-compose
-
-Актуальный `docker-compose.yml` лежит в корне репозитория — здесь он намеренно не дублируется: прежний фрагмент разошёлся с реальным файлом и показывал пароли открытым текстом.
-
-Что важно знать про его устройство:
-
-- **Наружу опубликованы только `ingress` (8080) и `core` (8081).** У `mssql`, `rabbitmq`, `redis` и `seq` портов нет — они общаются по внутренней сети compose. Раньше все они торчали на хост при `ASPNETCORE_ENVIRONMENT: Production`, причём Redis без пароля, а RabbitMQ с `guest/guest`.
-- **Все секреты — в форме `${VAR:?...}`**, без дефолтов: без `.env` compose падает с указанием недостающей переменной. Раньше `mssql` поднимался с дефолтным паролем, а `core` получал пустой — и уходил в рестарт-цикл.
-- **TLS не терминируется.** Реверс-прокси в compose нет, оба сервиса слушают HTTP. Приложение готово к прокси (`UseForwardedHeaders`, HSTS вне Development), но сам прокси разворачивается отдельно. Пока его нет, Bearer-токены и секреты вебхуков идут по открытому HTTP.
-- **`TrustServerCertificate=True` для SQL Server оставлен осознанно**: образ отдаёт самоподписанный сертификат, без этого `core` не подключится.
-- **Ротация паролей не подействует на существующих томах.** `MSSQL_SA_PASSWORD` и `RABBITMQ_DEFAULT_USER/PASS` применяются только к пустому volume — иначе RabbitMQ сохранит прежние креды. Нужен `docker compose down -v`.
-- **`Directory.Build.props` и `global.json` в контейнер не попадают**: контекст сборки — `src`, а они лежат в корне. Сборка от этого не ломается (свойства продублированы в `.csproj`), версия SDK в контейнере фиксируется тегом образа, но `TreatWarningsAsErrors` внутри контейнера не действует.
-
-> Образы запинены до конкретных версий, но **собрать их и проверить существование тегов не удалось** — доступ к реестру из этой среды фильтруется. `docker compose config` валиден; `docker compose build/up` не запускались.
-
-### 11.3. Применение миграций
-
-Обе БД — оперативная и архивная — ведутся миграциями EF Core из сборки `Migrations.MsSql` (два контекста с раздельной историей). Строка подключения берётся из окружения, поэтому команды применимы к любому стенду:
+## Build
 
 ```bash
-# Оперативная БД
-ConnectionStrings__Default='Server=...;Database=ReleaseOrchestrator;...' \
-  dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql --context AppDbContext
-
-# Архивная БД
-ConnectionStrings__Archive='Server=...;Database=ReleaseOrchestratorArchive;...' \
-  dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql --context ArchiveDbContext
+dotnet build
+# 0 errors, 0 warnings (checked in CI)
 ```
 
-Это делает init-контейнер или CI/CD. Приложение по умолчанию миграции **не применяет**: при нескольких репликах одновременные `Migrate()` конкурируют, и приложению пришлось бы постоянно держать DDL-права на прод-БД. Для одиночного инстанса или локального запуска включается флагом `Database__MigrateOnStartup=true`.
+## Test
 
-> Архивная БД раньше создавалась через `EnsureCreated()`, который обходит систему миграций: таблица `__EFMigrationsHistory` не заполняется, и схема архива не могла эволюционировать без ручного DDL.
+```bash
+dotnet test src/ReleaseOrchestrator.sln
+```
+
+Unit tests only. They cover the pure logic — the graph algorithm, the EF model's shape, the
+provider registry, the composition root — and deliberately touch no database, broker or cache.
+There are no integration tests: the environment this was built in has no SQL Server, and no EF
+in-memory provider is available offline, so the paths that talk to one are **unverified**.
+
+## Run Locally
+
+```bash
+cd docs/en
+# or
+cd docs/ru
+
+# See getting-started.md for Docker Compose setup
+```
 
 ---
 
-## 12. План разработки
+## Key Architectural Decisions
 
-**Фаза 1: Фундамент (недели 1–3)**
-- Структура проектов, CI/CD, модели и миграции (MSSQL).
-- Ingress.Webhooks: приём вебхуков GitLab и Яндекс.Трекера, публикация в RabbitMQ.
+### Why Modular Monolith, Not Microservices?
 
-**Фаза 2: Основная функциональность (недели 4–7)**
-- VcsModule, TaskModule: CRUD конфигураций, обработка событий.
-- Парсинг связей «ветка-задача».
-- Прототип ReleasePlanning.
+Tasks, MRs, and stack definitions are tightly coupled. Building a plan requires simultaneous access to all three. A monolith with message queue allows future service extraction without coupling.
 
-**Фаза 3: Планирование и UI (недели 8–11)**
-- Фоновые пересчёты, сохранение планов.
-- BFF и API, PWA (Blazor) с отображением плана и ручным редактированием.
-- YAML экспорт/импорт.
+### Why Compile-Time Provider Registration?
 
-**Фаза 4: Аутентификация и безопасность (неделя 12)**
-- Интеграция с AD, permission claims, кэширование маппингов.
+Providers are registered explicitly in `InfrastructureExtensions.cs`, not discovered at runtime:
 
-**Фаза 5: Архивирование и production (недели 13–15)**
-- ArchiveService, архивная БД.
-- Мониторинг, логирование, нагрузочное тестирование.
+- **Fail-fast** — an unknown provider type is rejected when the connection is saved, naming the
+  ones that would have worked, rather than becoming a stored row that fails on first use
+- **Visible** — `grep AddGitLabProvider` finds every provider this deployment has
+- **Checked by the compiler** — a contract change is a build error, not a runtime surprise
 
-**Фаза 6: Стабилизация (недели 16–20)**
-- Пилотная эксплуатация, оптимизация, обработка edge cases.
+Dynamic loading was considered and rejected. It and container deployment cancel each other out:
+the only payoff is "add a provider without rebuilding", and the image rebuilds anyway. See
+[docs/issues/002](docs/issues/002-provider-independence.md) §4 for the full argument, including
+what Orchard Core and Backstage did about the same question.
+
+### Why Multiple Databases?
+
+Operational DB holds current MRs and plans. Archive DB (same server or separate) holds closed tasks >90 days old. This keeps operational queries fast and allows archival deletion without impacting backups.
+
+### Why a Lease, Not Consensus?
+
+Archiving and reconciliation are registered in every replica, so both are gated on a Redis lease —
+one run per cycle across the deployment rather than one per replica. It is deliberately not a
+consensus algorithm: one Redis is one point of failure, and under a partition two replicas could
+briefly both believe they hold it. That is acceptable here because both jobs are idempotent, so
+the worst case is the double run that used to be the *normal* case. A job where a double run were
+a correctness bug would need fencing tokens instead.
+
+---
+
+## Security Model
+
+- **Credentials encrypted at rest** — VCS and tracker tokens are encrypted with ASP.NET Core Data
+  Protection. The key ring lives in the same database, so outside Development a certificate to
+  encrypt the keys themselves is **required**: without one, a database dump yields both the
+  ciphertext and the key. See [Configuration](docs/en/configuration.md)
+- **Authentication:** OpenID Connect (delegated to external provider)
+- **Authorization:** Claim-based permissions (no roles)
+- **HTTPS:** Assumed at reverse proxy (Nginx/Traefik)
+- **Redis cache:** Caches computed permissions; must be password-protected
+
+---
+
+## Known Limitations
+
+- **Never run at all.** Not "untested under load" — the application has never started against a
+  live SQL Server, RabbitMQ or Redis, and migrations have never been applied
+- No PostgreSQL support (SQL Server only)
+- No Prometheus exporter — telemetry leaves over OTLP, so scraping needs an OpenTelemetry
+  collector in between
+- No buffering when RabbitMQ is down: webhooks answer **503**, which senders retry. Buffering in
+  memory was considered and rejected — it answers 200 while the event exists only in RAM, so a
+  restart loses it silently. Not losing events across an outage needs a persistent outbox
+- TLS is terminated outside the app; nothing in `docker-compose.yml` does it
+
+See [docs/issues/003-roadmap.md](docs/issues/003-roadmap.md) for planned improvements.
+
+---
+
+## Project Structure
+
+```
+src/
+  ReleaseOrchestrator.Core/                    # Domain entities
+  ReleaseOrchestrator.Application/             # Application logic
+  ReleaseOrchestrator.Infrastructure/          # EF Core, providers, queue
+  ReleaseOrchestrator.Web/                     # REST API + BFF
+  ReleaseOrchestrator.Ingress.Webhooks/        # Webhook receiver
+  ReleaseOrchestrator.Pwa/                     # Blazor WebAssembly UI
+  ReleaseOrchestrator.Providers.Abstractions/  # Port interfaces
+  ReleaseOrchestrator.Providers.GitLab/        # GitLab adapter
+  ReleaseOrchestrator.Providers.YandexTracker/ # Yandex Tracker adapter
+  ReleaseOrchestrator.Migrations.MsSql/        # EF Core migrations
+
+tests/
+  ReleaseOrchestrator.UnitTests/               # unit tests (no live dependencies)
+
+docs/
+  README.md                                    # This doc's parent (navigation)
+  en/, ru/                                     # Comprehensive guides
+  issues/                                      # Audit reports & decision logs
+```
+
+---
+
+## Development
+
+### Prerequisites
+
+- .NET SDK 10
+- Visual Studio 2024, VS Code, or Rider
+- Docker & Docker Compose (for local stack)
+
+### First Steps
+
+1. Clone repo
+2. Read [Architecture](docs/en/architecture.md)
+3. Run `dotnet build` (verify 0/0)
+4. See [Getting Started](docs/en/getting-started.md) for Docker Compose setup
+
+### Contributing
+
+Before submitting a PR:
+1. Run `dotnet build` (must be 0/0 errors/warnings)
+2. Run `dotnet test` (all tests must pass)
+3. Follow commit style: lowercase, imperative, reference issue
+4. Update docs if you change architecture or add configuration
+
+---
+
+## Audit Reports
+
+- **[001. Current State](docs/issues/001-current-state.md)** — What was broken, what was fixed, what was never tested
+- **[002. Provider Independence](docs/issues/002-provider-independence.md)** — Why providers are registered at compile-time, not discovered
+- **[003. Roadmap](docs/issues/003-roadmap.md)** — Planned features, known gaps, performance improvements
+
+---
+
+## Support
+
+**Community:** GitHub Issues (if enabled)
+**Documentation:** [docs/README.md](docs/README.md)
+**Security:** Report privately (see SECURITY.md if present)
+
+---
+
+## License
+
+[Add license here if applicable]
+
+---
+
+**Last Updated:** 2025-01-17  
+**Status:** Audit complete, documentation published, app untested in live environment
