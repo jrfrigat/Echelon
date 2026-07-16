@@ -1,7 +1,6 @@
 @page "/"
 @attribute [Authorize]
-@inject ApiService Api
-@inject IJSRuntime JS
+@inherits PageBase
 
 <PageTitle>Release Plan</PageTitle>
 
@@ -16,8 +15,8 @@
     </div>
 </div>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
 @if (_loading)
 {
@@ -35,11 +34,36 @@ else
         Updated: @_plan.UpdatedAt.ToString("g")
     </div>
 
+    @* A conflict means the stage order below contradicts a declared dependency. The plan still
+       renders as a normal ordering, so without this banner it looks deployable when it is not. *@
+    @if (_plan.Conflicts is { Count: > 0 } conflicts)
+    {
+        <div class="alert alert-warning" role="alert">
+            <h6 class="alert-heading">
+                &#9888; This plan breaks @conflicts.Count declared @(conflicts.Count == 1 ? "dependency" : "dependencies")
+            </h6>
+            <p class="small mb-2">
+                The planner could not satisfy every constraint and ordered the stages anyway.
+                Deploying in this order will violate the rules listed below — review before releasing.
+            </p>
+            <ul class="small mb-0">
+                @foreach (var conflict in conflicts)
+                {
+                    <li>
+                        <span class="badge bg-warning text-dark me-1">@conflict.Kind</span>
+                        @conflict.Reason
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
     <div class="stages-container">
-        @foreach (var (stage, si) in _plan.Stages.OrderBy(s => s.Sequence).Select((s, i) => (s, i)))
+        @foreach (var stage in _plan.Stages.OrderBy(s => s.Sequence))
         {
+            @* Dropping requires the dragover default to be cancelled. The Blazor directive does
+               that; an inline ondragover="..." attribute would be blocked by the script-src CSP. *@
             <div class="stage-card card mb-3 @(_dragOverStageId == stage.Id ? "stage-drag-over" : "")"
-                 ondragover="event.preventDefault()"
                  @ondragover:preventDefault
                  @ondragenter="@(() => _dragOverStageId = stage.Id)"
                  @ondragleave="@(() => { if (_dragOverStageId == stage.Id) _dragOverStageId = null; })"
@@ -83,7 +107,7 @@ else
                             {
                                 <span class="badge bg-info text-dark" title="Manually added">M</span>
                             }
-                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="@(() => RemoveItem(item.Id))" title="Remove from plan">&#x2715;</button>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="@(() => RemoveItem(item))" title="Remove from plan">&#x2715;</button>
                         </div>
                     }
                     <button class="btn btn-outline-success btn-sm w-100 mt-1" @onclick="@(() => OpenAddMrModal(stage.Id))">+ Add MR</button>
@@ -93,48 +117,33 @@ else
     </div>
 }
 
-@if (_showAddMrModal)
-{
-    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Merge Request to Stage</h5>
-                    <button class="btn-close" @onclick="@(() => _showAddMrModal = false)"></button>
-                </div>
-                <div class="modal-body">
-                    <input class="form-control mb-2" placeholder="Filter by branch or repo..." @bind="_mrFilter" @bind:event="oninput" />
-                    @if (_availableMrs is null)
-                    {
-                        <Spinner />
-                    }
-                    else
-                    {
-                        <div style="max-height:400px;overflow-y:auto">
-                            <table class="table table-sm table-hover">
-                                <thead><tr><th>Repo</th><th>Branch</th><th>Task</th><th></th></tr></thead>
-                                <tbody>
-                                @foreach (var mr in _availableMrs.Items.Where(m =>
-                                    string.IsNullOrEmpty(_mrFilter) ||
-                                    m.SourceBranch.Contains(_mrFilter, StringComparison.OrdinalIgnoreCase) ||
-                                    m.RepositoryName.Contains(_mrFilter, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    <tr>
-                                        <td class="small">@mr.RepositoryName</td>
-                                        <td class="small">@mr.SourceBranch</td>
-                                        <td class="small">@mr.TaskExternalId</td>
-                                        <td><button class="btn btn-primary btn-sm" @onclick="@(() => AddMrToStage(mr.Id))">Add</button></td>
-                                    </tr>
-                                }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
-            </div>
+<ModalDialog Visible="_showAddMrModal" Title="Add Merge Request to Stage" Large="true"
+             OnClose="@(() => _showAddMrModal = false)">
+    <input class="form-control mb-2" placeholder="Filter by branch or repo..." @bind="_mrFilter" @bind:event="oninput" />
+    @if (_availableMrs is null)
+    {
+        <Spinner />
+    }
+    else
+    {
+        <div style="max-height:400px;overflow-y:auto">
+            <table class="table table-sm table-hover">
+                <thead><tr><th>Repo</th><th>Branch</th><th>Task</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var mr in FilteredMrs(_availableMrs))
+                {
+                    <tr>
+                        <td class="small">@mr.RepositoryName</td>
+                        <td class="small">@mr.SourceBranch</td>
+                        <td class="small">@mr.TaskExternalId</td>
+                        <td><button class="btn btn-primary btn-sm" @onclick="@(() => AddMrToStage(mr.Id))">Add</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         </div>
-    </div>
-}
+    }
+</ModalDialog>
 
 @code {
     [Inject] NavigationManager Nav { get; set; } = default!;
@@ -142,8 +151,6 @@ else
     ReleasePlanDto? _plan;
     bool _loading = true;
     bool _busy;
-    string? _error;
-    string? _success;
 
     // DnD state
     Guid? _dragItemId;
@@ -159,21 +166,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        try { _plan = await Api.GetActivePlanAsync(); }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _loading = false; }
+        // A null plan is a legitimate answer here (nothing generated yet), not a failure.
+        await RunAsync(async () => _plan = await Api.GetActivePlanAsync());
+        _loading = false;
     }
 
     async Task Recalculate()
     {
-        _busy = true; _error = null;
-        try
-        {
-            _plan = await Api.RecalculatePlanAsync();
-            _success = "Plan recalculated successfully.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _busy = false; }
+        _busy = true;
+        await RunAsync(async () => _plan = await Api.RecalculatePlanAsync(), "Plan recalculated successfully.");
+        _busy = false;
     }
 
     void NavigateToYaml() => Nav.NavigateTo(_plan is null ? "/plan/yaml" : $"/plan/yaml?id={_plan.Id}");
@@ -184,63 +186,76 @@ else
     async Task OnDropToStage(Guid targetStageId)
     {
         _dragOverStageId = null;
-        if (_plan is null) return;
 
-        if (_dragItemId.HasValue && _dragSourceStageId != targetStageId)
-        {
-            // Move item to target stage
-            var updated = await Api.MoveItemAsync(_plan.Id, _dragItemId.Value, targetStageId);
-            if (updated is not null) { _plan = updated; _success = "Item moved."; }
-            else _error = "Failed to move item.";
-        }
-        else if (_dragStageId.HasValue && _dragStageId != targetStageId)
-        {
-            // Reorder stages: swap positions
-            var stages = _plan.Stages.OrderBy(s => s.Sequence).ToList();
-            var fromIdx = stages.FindIndex(s => s.Id == _dragStageId);
-            var toIdx = stages.FindIndex(s => s.Id == targetStageId);
-            if (fromIdx >= 0 && toIdx >= 0)
-            {
-                var item = stages[fromIdx];
-                stages.RemoveAt(fromIdx);
-                stages.Insert(toIdx, item);
-                var updated = await Api.ReorderStagesAsync(_plan.Id, stages.Select(s => s.Id).ToList());
-                if (updated is not null) { _plan = updated; _success = "Stages reordered."; }
-                else _error = "Failed to reorder stages.";
-            }
-        }
-
+        // Snapshot and clear before awaiting: a second drop landing mid-request would otherwise
+        // read half-reset state.
+        var itemId = _dragItemId;
+        var stageId = _dragStageId;
+        var sourceStageId = _dragSourceStageId;
         _dragItemId = null; _dragStageId = null; _dragSourceStageId = null;
+
+        var plan = _plan;
+        if (plan is null) return;
+
+        if (itemId.HasValue && sourceStageId != targetStageId)
+        {
+            await RunAsync(async () => _plan = await Api.MoveItemAsync(plan.Id, itemId.Value, targetStageId), "Item moved.");
+            return;
+        }
+
+        if (!stageId.HasValue || stageId == targetStageId) return;
+
+        var stages = plan.Stages.OrderBy(s => s.Sequence).ToList();
+        var fromIdx = stages.FindIndex(s => s.Id == stageId);
+        var toIdx = stages.FindIndex(s => s.Id == targetStageId);
+        if (fromIdx < 0 || toIdx < 0) return;
+
+        var moved = stages[fromIdx];
+        stages.RemoveAt(fromIdx);
+        stages.Insert(toIdx, moved);
+
+        var order = stages.Select(s => s.Id).ToList();
+        await RunAsync(async () => _plan = await Api.ReorderStagesAsync(plan.Id, order), "Stages reordered.");
     }
 
-    async Task RemoveItem(Guid itemId)
+    async Task RemoveItem(StageItemDto item)
     {
-        if (_plan is null) return;
-        var updated = await Api.RemoveItemAsync(_plan.Id, itemId);
-        if (updated is not null) { _plan = updated; _success = "Item removed."; }
-        else _error = "Failed to remove item.";
+        var plan = _plan;
+        if (plan is null) return;
+
+        if (!await ConfirmAsync($"Remove {item.RepositoryName} !{item.MrExternalId} from the plan?")) return;
+
+        await RunAsync(async () => _plan = await Api.RemoveItemAsync(plan.Id, item.Id), "Item removed.");
     }
 
     async Task OpenAddMrModal(Guid stageId)
     {
         _targetStageId = stageId;
         _showAddMrModal = true;
-        _availableMrs = await Api.GetMergeRequestsAsync(pageSize: 200);
+        _availableMrs = null;
+        _mrFilter = "";
+
+        await RunAsync(async () => _availableMrs = await Api.GetMergeRequestsAsync(pageSize: 200));
     }
 
     async Task AddMrToStage(Guid mrId)
     {
-        if (_plan is null) return;
-        var updated = await Api.AddItemAsync(_plan.Id, _targetStageId, mrId);
-        if (updated is not null)
-        {
-            _plan = updated;
+        var plan = _plan;
+        if (plan is null) return;
+
+        var stageId = _targetStageId;
+        if (await RunAsync(async () => _plan = await Api.AddItemAsync(plan.Id, stageId, mrId), "MR added to stage."))
             _showAddMrModal = false;
-            _success = "MR added to stage.";
-        }
-        else _error = "Failed to add MR.";
     }
 
+    IEnumerable<MrDto> FilteredMrs(PagedResult<MrDto> mrs) =>
+        string.IsNullOrEmpty(_mrFilter)
+            ? mrs.Items
+            : mrs.Items.Where(m =>
+                m.SourceBranch.Contains(_mrFilter, StringComparison.OrdinalIgnoreCase) ||
+                m.RepositoryName.Contains(_mrFilter, StringComparison.OrdinalIgnoreCase));
+
+    // Mirrors the server-side MergeRequestStatus enum, which the PWA does not reference.
     static string GetStatusBadge(string status) => status switch
     {
         "ReadyForDeploy" => "bg-success",

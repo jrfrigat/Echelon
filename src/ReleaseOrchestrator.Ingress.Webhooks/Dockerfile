@@ -1,13 +1,19 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.16 AS base
 WORKDIR /app
 EXPOSE 8080
+# The aspnet image ships no HTTP client, and compose's healthcheck needs one.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0.109 AS build
 WORKDIR /src
 COPY ["ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj", "ReleaseOrchestrator.Ingress.Webhooks/"]
 COPY ["ReleaseOrchestrator.Application/ReleaseOrchestrator.Application.csproj", "ReleaseOrchestrator.Application/"]
 COPY ["ReleaseOrchestrator.Core/ReleaseOrchestrator.Core.csproj", "ReleaseOrchestrator.Core/"]
 RUN dotnet restore "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj"
+# src/.dockerignore keeps host bin/obj out of this copy; without it the restore above is
+# overwritten by Windows-path artifacts and the build fails to resolve packages.
 COPY . .
 RUN dotnet build "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" -c Release -o /app/build
 
@@ -17,4 +23,5 @@ RUN dotnet publish "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ing
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+USER $APP_UID
 ENTRYPOINT ["dotnet", "ReleaseOrchestrator.Ingress.Webhooks.dll"]

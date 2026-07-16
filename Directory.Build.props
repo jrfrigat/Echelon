@@ -1,0 +1,19 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!--
+      NU1900 means NuGet could not reach the feed to check packages for known
+      vulnerabilities. That is a statement about the network, not about the code, so it must
+      stay visible as a warning without failing the build: behind a proxy that blocks
+      nuget.org it otherwise makes every restore fatal. A build box with feed access should
+      still surface it, and vulnerability scanning belongs in CI regardless.
+    -->
+    <NoWarn>$(NoWarn);NU1900</NoWarn>
+  </PropertyGroup>
+
+</Project>

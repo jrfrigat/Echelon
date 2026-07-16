@@ -1,6 +1,6 @@
 @page "/admin/stacks"
 @attribute [Authorize]
-@inject ApiService Api
+@inherits CrudPageBase<StackDto>
 
 <PageTitle>Stacks</PageTitle>
 
@@ -9,13 +9,13 @@
     <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Stack</button>
 </div>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
-@if (_loading) { <Spinner /> }
-else if (_result is not null)
+@if (Loading) { <Spinner /> }
+else if (Result is not null)
 {
-    @foreach (var stack in _result.Items)
+    @foreach (var stack in Result.Items)
     {
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
@@ -35,7 +35,7 @@ else if (_result is not null)
                             <label class="form-label small">Target Stack</label>
                             <select class="form-select form-select-sm" @bind="_depTargetId">
                                 <option value="">-- Select stack --</option>
-                                @foreach (var s in _result.Items.Where(s => s.Id != stack.Id))
+                                @foreach (var s in Result.Items.Where(s => s.Id != stack.Id))
                                 {
                                     <option value="@s.Id">@s.Name</option>
                                 }
@@ -48,7 +48,8 @@ else if (_result is not null)
                                 <option value="Soft">Soft</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary btn-sm" @onclick="@(() => AddDependency(stack.Id))" disabled="@(string.IsNullOrEmpty(_depTargetId))">Add</button>
+                        <button class="btn btn-primary btn-sm" @onclick="@(() => AddDependency(stack.Id))"
+                                disabled="@(string.IsNullOrEmpty(_depTargetId))">Add</button>
                     </div>
                 </div>
             }
@@ -74,88 +75,46 @@ else if (_result is not null)
                                     }
                                 </select>
                             </div>
-                            <button class="btn btn-primary btn-sm" @onclick="@(() => AssignRepo(stack.Id))" disabled="@(string.IsNullOrEmpty(_repoId))">Assign</button>
+                            <button class="btn btn-primary btn-sm" @onclick="@(() => AssignRepo(stack.Id))"
+                                    disabled="@(string.IsNullOrEmpty(_repoId))">Assign</button>
                         </div>
                     }
                 </div>
             }
         </div>
     }
-    @if (_result.Total > _result.PageSize)
-    {
-        <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">Showing @_result.Items.Count of @_result.Total</small>
-            <div>
-                <button class="btn btn-outline-secondary btn-sm me-1" disabled="@(_page == 1)" @onclick="@(() => LoadPage(_page - 1))">Prev</button>
-                <button class="btn btn-outline-secondary btn-sm" disabled="@(_page * _result.PageSize >= _result.Total)" @onclick="@(() => LoadPage(_page + 1))">Next</button>
-            </div>
-        </div>
-    }
+    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
 }
 
-@if (_showCreateModal)
-{
-    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">New Stack</h5>
-                    <button class="btn-close" @onclick="@(() => _showCreateModal = false)"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Stack Name</label><input class="form-control" @bind="_fName" /></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="@(() => _showCreateModal = false)">Cancel</button>
-                    <button class="btn btn-primary" @onclick="CreateStack" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Create
-                    </button>
-                </div>
-            </div>
-        </div>
+<ModalDialog Visible="ShowModal"
+             Title="New Stack"
+             OnClose="CloseModal"
+             OnSave="CreateStack"
+             Saving="Saving"
+             SaveDisabled="@(string.IsNullOrWhiteSpace(_fName))"
+             SaveText="Create">
+    <div class="mb-3">
+        <label class="form-label">Stack Name</label>
+        <input class="form-control" @bind="_fName" />
     </div>
-}
+</ModalDialog>
 
 @code {
-    PagedResult<StackDto>? _result;
     PagedResult<RepositoryDto>? _repositories;
-    bool _loading = true;
-    bool _showCreateModal, _saving;
-    string? _error, _success;
-    int _page = 1;
 
     string _fName = "";
     string _depTargetId = "";
     string _depType = "Hard";
     string _repoId = "";
 
-    Dictionary<Guid, string> _expandedSection = new();
+    readonly Dictionary<Guid, string> _expandedSection = new();
 
-    protected override async Task OnInitializedAsync() => await LoadPage(1);
+    protected override Task<PagedResult<StackDto>> FetchPageAsync(int page) => Api.GetStacksAsync(page);
 
-    async Task LoadPage(int page)
-    {
-        _page = page; _loading = true;
-        try { _result = await Api.GetStacksAsync(page); }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _loading = false; }
-    }
+    void OpenCreate() { _fName = ""; ShowModal = true; }
+    void CloseModal() => ShowModal = false;
 
-    void OpenCreate() { _fName = ""; _showCreateModal = true; }
-
-    async Task CreateStack()
-    {
-        _saving = true; _error = null;
-        try
-        {
-            var ok = await Api.CreateStackAsync(_fName);
-            if (ok) { _showCreateModal = false; _success = "Stack created."; await LoadPage(_page); }
-            else _error = "Create failed.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _saving = false; }
-    }
+    Task CreateStack() => SaveAsync(() => Api.CreateStackAsync(_fName), "Stack created.");
 
     async Task ToggleSection(Guid stackId, string section)
     {
@@ -166,36 +125,24 @@ else if (_result is not null)
         }
         _expandedSection[stackId] = section;
 
-        if (section == "repos" && _repositories is null)
-        {
-            try { _repositories = await Api.GetRepositoriesAsync(); }
-            catch (Exception ex) { _error = ex.Message; }
-        }
+        if (section != "repos" || _repositories is not null) return;
+
+        await RunAsync(async () => _repositories = await Api.GetRepositoriesAsync());
     }
 
     async Task AddDependency(Guid fromStackId)
     {
         if (!Guid.TryParse(_depTargetId, out var toStackId)) return;
-        _error = null;
-        try
-        {
-            var ok = await Api.AddStackDependencyAsync(fromStackId, toStackId, _depType);
-            if (ok) { _success = "Dependency added."; _depTargetId = ""; }
-            else _error = "Failed to add dependency.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
+
+        if (await RunAsync(() => Api.AddStackDependencyAsync(fromStackId, toStackId, _depType), "Dependency added."))
+            _depTargetId = "";
     }
 
     async Task AssignRepo(Guid stackId)
     {
         if (!Guid.TryParse(_repoId, out var repositoryId)) return;
-        _error = null;
-        try
-        {
-            var ok = await Api.AssignRepositoryToStackAsync(stackId, repositoryId);
-            if (ok) { _success = "Repository assigned."; _repoId = ""; }
-            else _error = "Failed to assign repository.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
+
+        if (await RunAsync(() => Api.AssignRepositoryToStackAsync(stackId, repositoryId), "Repository assigned."))
+            _repoId = "";
     }
 }

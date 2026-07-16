@@ -1,6 +1,6 @@
 @page "/plan/yaml"
 @attribute [Authorize]
-@inject ApiService Api
+@inherits PageBase
 
 <PageTitle>YAML Editor</PageTitle>
 
@@ -16,8 +16,8 @@
     </div>
 </div>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
 @if (_busy) { <Spinner /> }
 
@@ -29,43 +29,41 @@
     string _yaml = "";
     bool _busy;
     bool _force;
-    string? _error;
-    string? _success;
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id.HasValue)
-        {
-            _busy = true;
-            try { _yaml = await Api.ExportYamlAsync(Id.Value) ?? ""; }
-            catch (Exception ex) { _error = ex.Message; }
-            finally { _busy = false; }
-        }
+        if (!Id.HasValue) return;
+
+        _busy = true;
+        await RunAsync(async () => _yaml = await Api.ExportYamlAsync(Id.Value));
+        _busy = false;
     }
 
     async Task LoadExport()
     {
-        _busy = true; _error = null;
-        try
+        _busy = true;
+        await RunAsync(async () =>
         {
+            // Null here is "nothing generated yet" rather than a failure, so it needs its own notice.
             var plan = await Api.GetActivePlanAsync();
-            if (plan is null) { _error = "No active plan found."; return; }
-            _yaml = await Api.ExportYamlAsync(plan.Id) ?? "";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _busy = false; }
+            if (plan is null)
+            {
+                Error = "No active plan found.";
+                return;
+            }
+            _yaml = await Api.ExportYamlAsync(plan.Id);
+        });
+        _busy = false;
     }
 
     async Task ImportYaml()
     {
-        _busy = true; _error = null;
-        try
+        _busy = true;
+        await RunAsync(async () =>
         {
             var plan = await Api.ImportYamlAsync(_yaml, _force);
-            if (plan is not null) _success = $"Plan '{plan.Name}' imported successfully.";
-            else _error = "Import failed. Check YAML format or use Force import.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _busy = false; }
+            Success = $"Plan '{plan.Name}' imported successfully.";
+        });
+        _busy = false;
     }
 }

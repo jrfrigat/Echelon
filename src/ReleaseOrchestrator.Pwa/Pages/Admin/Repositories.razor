@@ -1,6 +1,6 @@
 @page "/admin/repos"
 @attribute [Authorize]
-@inject ApiService Api
+@inherits CrudPageBase<RepositoryDto>
 
 <PageTitle>Repositories</PageTitle>
 
@@ -9,132 +9,93 @@
     <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Repository</button>
 </div>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
-@if (_loading) { <Spinner /> }
-else if (_result is not null)
+@if (Loading) { <Spinner /> }
+else if (Result is not null)
 {
     <table class="table table-hover">
         <thead><tr><th>Name</th><th>External ID</th><th>VCS Connection</th><th></th></tr></thead>
         <tbody>
-        @foreach (var r in _result.Items)
+        @foreach (var r in Result.Items)
         {
             <tr>
                 <td>@r.Name</td>
                 <td class="text-muted small">@r.ExternalId</td>
                 <td class="small">@r.ConnectionName</td>
                 <td class="text-end">
-                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(r.Id))">Delete</button>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(r))">Delete</button>
                 </td>
             </tr>
         }
         </tbody>
     </table>
-    @if (_result.Total > _result.PageSize)
-    {
-        <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">Showing @_result.Items.Count of @_result.Total</small>
-            <div>
-                <button class="btn btn-outline-secondary btn-sm me-1" disabled="@(_page == 1)" @onclick="@(() => LoadPage(_page - 1))">Prev</button>
-                <button class="btn btn-outline-secondary btn-sm" disabled="@(_page * _result.PageSize >= _result.Total)" @onclick="@(() => LoadPage(_page + 1))">Next</button>
-            </div>
-        </div>
-    }
+    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
 }
 
-@if (_showModal)
-{
-    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">New Repository</h5>
-                    <button class="btn-close" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Name</label><input class="form-control" @bind="_fName" /></div>
-                    <div class="mb-3"><label class="form-label">External ID</label><input class="form-control" @bind="_fExternalId" placeholder="GitLab project ID or path" /></div>
-                    <div class="mb-3"><label class="form-label">VCS Connection</label>
-                        @if (_connections is null)
-                        {
-                            <Spinner />
-                        }
-                        else
-                        {
-                            <select class="form-select" @bind="_fConnectionId">
-                                <option value="">-- Select connection --</option>
-                                @foreach (var c in _connections.Items)
-                                {
-                                    <option value="@c.Id">@c.Name (@c.VcsType)</option>
-                                }
-                            </select>
-                        }
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button class="btn btn-primary" @onclick="Save" disabled="@(_saving || _fConnectionId == Guid.Empty)">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Save
-                    </button>
-                </div>
-            </div>
-        </div>
+<ModalDialog Visible="ShowModal"
+             Title="New Repository"
+             OnClose="CloseModal"
+             OnSave="Save"
+             Saving="Saving"
+             SaveDisabled="@IsFormIncomplete">
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" @bind="_fName" />
     </div>
-}
+    <div class="mb-3">
+        <label class="form-label">External ID</label>
+        <input class="form-control" @bind="_fExternalId" placeholder="GitLab project ID or path" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">VCS Connection</label>
+        @if (_connections is null)
+        {
+            <Spinner />
+        }
+        else
+        {
+            <select class="form-select" @bind="_fConnectionId">
+                <option value="">-- Select connection --</option>
+                @foreach (var c in _connections.Items)
+                {
+                    <option value="@c.Id">@c.Name (@c.VcsType)</option>
+                }
+            </select>
+        }
+    </div>
+</ModalDialog>
 
 @code {
-    PagedResult<RepositoryDto>? _result;
     PagedResult<VcsConnectionDto>? _connections;
-    bool _loading = true;
-    bool _showModal, _saving;
-    string? _error, _success;
-    int _page = 1;
 
     string _fName = "", _fExternalId = "";
     Guid _fConnectionId;
 
-    protected override async Task OnInitializedAsync() => await LoadPage(1);
+    bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
+                             || string.IsNullOrWhiteSpace(_fExternalId)
+                             || _fConnectionId == Guid.Empty;
 
-    async Task LoadPage(int page)
-    {
-        _page = page; _loading = true;
-        try { _result = await Api.GetRepositoriesAsync(page); }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _loading = false; }
-    }
+    protected override Task<PagedResult<RepositoryDto>> FetchPageAsync(int page) =>
+        Api.GetRepositoriesAsync(page);
 
     async Task OpenCreate()
     {
         _fName = ""; _fExternalId = ""; _fConnectionId = Guid.Empty;
-        _showModal = true;
-        if (_connections is null)
-        {
-            try { _connections = await Api.GetVcsConnectionsAsync(); }
-            catch (Exception ex) { _error = ex.Message; }
-        }
+        ShowModal = true;
+
+        if (_connections is not null) return;
+
+        await RunAsync(async () => _connections = await Api.GetVcsConnectionsAsync());
     }
 
-    void CloseModal() => _showModal = false;
+    void CloseModal() => ShowModal = false;
 
-    async Task Save()
-    {
-        _saving = true; _error = null;
-        try
-        {
-            var ok = await Api.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId);
-            if (ok) { CloseModal(); _success = "Repository created."; await LoadPage(_page); }
-            else _error = "Save failed.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _saving = false; }
-    }
+    Task Save() => SaveAsync(
+        () => Api.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId),
+        "Repository created.");
 
-    async Task Delete(Guid id)
-    {
-        if (!await Api.DeleteRepositoryAsync(id)) { _error = "Delete failed."; return; }
-        _success = "Deleted.";
-        await LoadPage(_page);
-    }
+    Task Delete(RepositoryDto r) =>
+        DeleteAsync($"repository '{r.Name}'", () => Api.DeleteRepositoryAsync(r.Id));
 }

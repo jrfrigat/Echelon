@@ -1,4 +1,4 @@
-@if (!string.IsNullOrEmpty(Message))
+@if (!_dismissed && !string.IsNullOrEmpty(Message))
 {
     <div class="alert alert-@Type alert-dismissible fade show" role="alert">
         @Message
@@ -11,9 +11,23 @@
     [Parameter] public string Type { get; set; } = "info";
     [Parameter] public EventCallback OnDismiss { get; set; }
 
-    private async Task Dismiss()
+    private string? _shownMessage;
+    private bool _dismissed;
+
+    // Dismissal is local state. Nulling the Message parameter instead would be reverted the
+    // next time the parent re-renders and re-supplies its own value, so the alert would only
+    // stay hidden for callers that also pass OnDismiss.
+    protected override void OnParametersSet()
     {
-        Message = null;
-        await OnDismiss.InvokeAsync();
+        if (Message == _shownMessage) return;
+
+        _shownMessage = Message;
+        _dismissed = false;
+    }
+
+    private Task Dismiss()
+    {
+        _dismissed = true;
+        return OnDismiss.InvokeAsync();
     }
 }

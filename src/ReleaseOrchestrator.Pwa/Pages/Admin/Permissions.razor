@@ -1,13 +1,13 @@
 @page "/admin/permissions"
 @attribute [Authorize]
-@inject ApiService Api
+@inherits PageBase
 
 <PageTitle>Permissions</PageTitle>
 
 <h4 class="mb-4">Permissions</h4>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
 @if (_loading) { <Spinner /> }
 else
@@ -69,7 +69,8 @@ else
                                 </select>
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-primary btn-sm" @onclick="AddMapping" disabled="@(_savingMapping || string.IsNullOrWhiteSpace(_fSid) || string.IsNullOrEmpty(_fClaimId))">
+                                <button class="btn btn-primary btn-sm" @onclick="AddMapping"
+                                        disabled="@(_savingMapping || string.IsNullOrWhiteSpace(_fSid) || string.IsNullOrEmpty(_fClaimId))">
                                     @if (_savingMapping) { <span class="spinner-border spinner-border-sm me-1"></span> }
                                     Add
                                 </button>
@@ -93,7 +94,7 @@ else
                                     <td class="small font-monospace">@m.AdGroupSid</td>
                                     <td class="small">@m.ClaimName</td>
                                     <td class="text-end">
-                                        <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="@(() => RemoveMapping(m.Id))">&#x2715;</button>
+                                        <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="@(() => RemoveMapping(m))">&#x2715;</button>
                                     </td>
                                 </tr>
                             }
@@ -111,54 +112,46 @@ else
     List<GroupMappingDto>? _mappings;
     bool _loading = true;
     bool _showAddMapping, _savingMapping;
-    string? _error, _success;
 
     string _fSid = "", _fClaimId = "";
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        try
+        await RunAsync(async () =>
         {
             var claimsTask = Api.GetPermissionClaimsAsync();
             var mappingsTask = Api.GetGroupMappingsAsync();
             await Task.WhenAll(claimsTask, mappingsTask);
-            _claims = claimsTask.Result;
-            _mappings = mappingsTask.Result;
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _loading = false; }
+
+            _claims = await claimsTask;
+            _mappings = await mappingsTask;
+        });
+        _loading = false;
     }
 
     async Task AddMapping()
     {
         if (!Guid.TryParse(_fClaimId, out var claimId)) return;
-        _savingMapping = true; _error = null;
-        try
-        {
-            var ok = await Api.AddGroupMappingAsync(_fSid, claimId);
-            if (ok)
-            {
-                _success = "Mapping added.";
-                _showAddMapping = false;
-                _fSid = ""; _fClaimId = "";
-                _mappings = await Api.GetGroupMappingsAsync();
-            }
-            else _error = "Failed to add mapping.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _savingMapping = false; }
+
+        _savingMapping = true;
+        var added = await RunAsync(() => Api.AddGroupMappingAsync(_fSid, claimId), "Mapping added.");
+        _savingMapping = false;
+
+        if (!added) return;
+
+        _showAddMapping = false;
+        _fSid = ""; _fClaimId = "";
+        await ReloadMappings();
     }
 
-    async Task RemoveMapping(Guid id)
+    async Task RemoveMapping(GroupMappingDto m)
     {
-        _error = null;
-        try
-        {
-            var ok = await Api.RemoveGroupMappingAsync(id);
-            if (ok) { _success = "Mapping removed."; _mappings = await Api.GetGroupMappingsAsync(); }
-            else _error = "Failed to remove mapping.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
+        if (!await ConfirmAsync($"Remove '{m.ClaimName}' from group {m.AdGroupSid}? This cannot be undone.")) return;
+
+        if (await RunAsync(() => Api.RemoveGroupMappingAsync(m.Id), "Mapping removed."))
+            await ReloadMappings();
     }
+
+    Task ReloadMappings() => RunAsync(async () => _mappings = await Api.GetGroupMappingsAsync());
 }

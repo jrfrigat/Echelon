@@ -1,6 +1,6 @@
 @page "/admin/trackers"
 @attribute [Authorize]
-@inject ApiService Api
+@inherits CrudPageBase<TrackerConnectionDto>
 
 <PageTitle>Tracker Connections</PageTitle>
 
@@ -9,16 +9,16 @@
     <button class="btn btn-primary btn-sm" @onclick="OpenCreate">+ New Connection</button>
 </div>
 
-<Alert Message="@_error" Type="danger" OnDismiss="@(() => _error = null)" />
-<Alert Message="@_success" Type="success" OnDismiss="@(() => _success = null)" />
+<Alert Message="@Error" Type="danger" OnDismiss="@(() => Error = null)" />
+<Alert Message="@Success" Type="success" OnDismiss="@(() => Success = null)" />
 
-@if (_loading) { <Spinner /> }
-else if (_result is not null)
+@if (Loading) { <Spinner /> }
+else if (Result is not null)
 {
     <table class="table table-hover">
         <thead><tr><th>Name</th><th>Type</th><th>API URL</th><th>Org ID</th><th></th></tr></thead>
         <tbody>
-        @foreach (var c in _result.Items)
+        @foreach (var c in Result.Items)
         {
             <tr>
                 <td>@c.Name</td>
@@ -27,104 +27,87 @@ else if (_result is not null)
                 <td class="text-muted small">@c.OrgId</td>
                 <td class="text-end">
                     <button class="btn btn-outline-secondary btn-sm me-1" @onclick="@(() => OpenEdit(c))">Edit</button>
-                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(c.Id))">Delete</button>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="@(() => Delete(c))">Delete</button>
                 </td>
             </tr>
         }
         </tbody>
     </table>
-    @if (_result.Total > _result.PageSize)
+    <Pager Result="Result" Page="Page" OnPageChange="LoadPage" />
+}
+
+<ModalDialog Visible="ShowModal"
+             Title="@(_editId.HasValue ? "Edit Tracker Connection" : "New Tracker Connection")"
+             OnClose="CloseModal"
+             OnSave="Save"
+             Saving="Saving"
+             SaveDisabled="@IsFormIncomplete">
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" @bind="_fName" />
+    </div>
+    @if (!_editId.HasValue)
     {
-        <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">Showing @_result.Items.Count of @_result.Total</small>
-            <div>
-                <button class="btn btn-outline-secondary btn-sm me-1" disabled="@(_page == 1)" @onclick="@(() => LoadPage(_page - 1))">Prev</button>
-                <button class="btn btn-outline-secondary btn-sm" disabled="@(_page * _result.PageSize >= _result.Total)" @onclick="@(() => LoadPage(_page + 1))">Next</button>
-            </div>
+        <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select class="form-select" @bind="_fType">
+                <option value="YandexTracker">YandexTracker</option>
+            </select>
         </div>
     }
-}
-
-@if (_showModal)
-{
-    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editId.HasValue ? "Edit" : "New") Tracker Connection</h5>
-                    <button class="btn-close" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Name</label><input class="form-control" @bind="_fName" /></div>
-                    <div class="mb-3"><label class="form-label">Type</label>
-                        <select class="form-select" @bind="_fType">
-                            <option value="YandexTracker">YandexTracker</option>
-                        </select>
-                    </div>
-                    <div class="mb-3"><label class="form-label">API URL</label><input class="form-control" @bind="_fUrl" placeholder="https://api.tracker.yandex.net" /></div>
-                    <div class="mb-3"><label class="form-label">Org ID (optional)</label><input class="form-control" @bind="_fOrgId" placeholder="Yandex organization ID" /></div>
-                    <div class="mb-3"><label class="form-label">Access Token @(_editId.HasValue ? "(leave blank to keep current)" : "")</label>
-                        <input class="form-control" type="password" @bind="_fToken" /></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button class="btn btn-primary" @onclick="Save" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Save
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="mb-3">
+        <label class="form-label">API URL</label>
+        <input class="form-control" @bind="_fUrl" placeholder="https://api.tracker.yandex.net" />
     </div>
-}
+    <div class="mb-3">
+        <label class="form-label">Org ID (optional)</label>
+        <input class="form-control" @bind="_fOrgId" placeholder="Yandex organization ID" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Access Token @(_editId.HasValue ? "(leave blank to keep current)" : "")</label>
+        <input class="form-control" type="password" @bind="_fToken" />
+    </div>
+</ModalDialog>
 
 @code {
-    PagedResult<TrackerConnectionDto>? _result;
-    bool _loading = true;
-    bool _showModal, _saving;
-    string? _error, _success;
-    int _page = 1;
-
     Guid? _editId;
     string _fName = "", _fType = "YandexTracker", _fUrl = "", _fOrgId = "", _fToken = "";
 
-    protected override async Task OnInitializedAsync() => await LoadPage(1);
+    // As with VCS connections, the type is fixed at creation and Update does not accept it.
+    bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
+                             || string.IsNullOrWhiteSpace(_fUrl)
+                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken));
 
-    async Task LoadPage(int page)
+    protected override Task<PagedResult<TrackerConnectionDto>> FetchPageAsync(int page) =>
+        Api.GetTrackerConnectionsAsync(page);
+
+    void OpenCreate()
     {
-        _page = page; _loading = true;
-        try { _result = await Api.GetTrackerConnectionsAsync(page); }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _loading = false; }
+        _editId = null;
+        _fName = ""; _fType = "YandexTracker"; _fUrl = ""; _fOrgId = ""; _fToken = "";
+        ShowModal = true;
     }
 
-    void OpenCreate() { _editId = null; _fName = ""; _fType = "YandexTracker"; _fUrl = ""; _fOrgId = ""; _fToken = ""; _showModal = true; }
-    void OpenEdit(TrackerConnectionDto c) { _editId = c.Id; _fName = c.Name; _fType = c.TrackerType; _fUrl = c.ApiUrl; _fOrgId = c.OrgId ?? ""; _fToken = ""; _showModal = true; }
-    void CloseModal() => _showModal = false;
-
-    async Task Save()
+    void OpenEdit(TrackerConnectionDto c)
     {
-        _saving = true; _error = null;
-        try
-        {
-            bool ok;
-            var orgId = string.IsNullOrWhiteSpace(_fOrgId) ? null : _fOrgId;
-            if (_editId.HasValue)
-                ok = await Api.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fType, _fUrl, orgId, _fToken);
-            else
-                ok = await Api.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, orgId, _fToken);
-
-            if (ok) { CloseModal(); _success = "Saved."; await LoadPage(_page); }
-            else _error = "Save failed.";
-        }
-        catch (Exception ex) { _error = ex.Message; }
-        finally { _saving = false; }
+        _editId = c.Id;
+        _fName = c.Name; _fType = c.TrackerType; _fUrl = c.ApiUrl; _fOrgId = c.OrgId ?? "";
+        _fToken = "";
+        ShowModal = true;
     }
 
-    async Task Delete(Guid id)
+    void CloseModal() => ShowModal = false;
+
+    Task Save() => SaveAsync(async () =>
     {
-        if (!await Api.DeleteTrackerConnectionAsync(id)) { _error = "Delete failed."; return; }
-        _success = "Deleted.";
-        await LoadPage(_page);
-    }
+        var orgId = string.IsNullOrWhiteSpace(_fOrgId) ? null : _fOrgId.Trim();
+
+        if (_editId.HasValue)
+            await Api.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fUrl, orgId, _fToken);
+        else
+            await Api.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, orgId, _fToken);
+    });
+
+    Task Delete(TrackerConnectionDto c) =>
+        DeleteAsync($"tracker connection '{c.Name}'", () => Api.DeleteTrackerConnectionAsync(c.Id));
 }

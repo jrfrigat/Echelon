@@ -1,138 +1,124 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ReleaseOrchestrator.Core.Enums;
-using ReleaseOrchestrator.Infrastructure.Archive.Entities;
 using ReleaseOrchestrator.Infrastructure.Persistence;
-using System.Text.Json;
 
 namespace ReleaseOrchestrator.Infrastructure.Archive;
 
-public class ArchiveOptions
-{
-    public bool Enabled { get; set; } = true;
-    public string ScheduleCron { get; set; } = "0 2 * * *";
-    public int ArchiveAfterDays { get; set; } = 90;
-    public int TaskBatchSize { get; set; } = 1000;
-    public int MrBatchSize { get; set; } = 500;
-}
-
+/// <summary>
+/// Nightly archiving of superseded release plans, closed merge requests and closed tasks.
+/// </summary>
+/// <remarks>
+/// <para>
+/// LIMITATION — this service has no leader election. It is registered unconditionally, so
+/// every replica runs the cycle at the same UTC hour against the same rows. Concurrent runs
+/// select overlapping batches and compete for the same deletes: expect deadlock victims and
+/// duplicated work under more than one replica. Correctness survives it — the archive insert
+/// skips rows another replica already wrote, and a batch lost to a deadlock is retried and
+/// then left for the next cycle — but the cycle is slower and noisier than it should be.
+/// </para>
+/// <para>
+/// Run a single replica, or set <c>Archiving__Enabled=false</c> on all but one, until a
+/// distributed lock is available to gate this properly.
+/// </para>
+/// </remarks>
 public class ArchiveHostedService(
     IServiceScopeFactory scopeFactory,
     IOptions<ArchiveOptions> options,
+    TimeProvider clock,
     ILogger<ArchiveHostedService> logger) : BackgroundService
 {
-    private static readonly TimeSpan RunInterval = TimeSpan.FromHours(24);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Value.Enabled) return;
+        if (!options.Value.Enabled)
+        {
+            logger.LogInformation("Archiving is disabled");
+            return;
+        }
+
+        var runAtHour = ResolveRunAtHour();
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.UtcNow;
-            var nextRun = now.Date.AddDays(1).AddHours(2); // next 02:00 UTC
-            var delay = nextRun - now;
-            if (delay < TimeSpan.Zero) delay = RunInterval;
+            var delay = DelayUntilNextRun(runAtHour);
+            logger.LogInformation("Next archive cycle in {Delay} (at {RunAtHour:00}:00 UTC)", delay, runAtHour);
 
-            await Task.Delay(delay, stoppingToken);
-            await RunArchiveCycleAsync(stoppingToken);
+            try
+            {
+                await Task.Delay(delay, stoppingToken);
+                await RunArchiveCycleAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
         }
+    }
+
+    private int ResolveRunAtHour()
+    {
+        var configured = options.Value.RunAtUtcHour;
+        var hour = Math.Clamp(configured, 0, 23);
+        if (hour != configured)
+        {
+            logger.LogWarning("Archiving:RunAtUtcHour is {Configured}, which is not an hour of day; using {Hour}",
+                configured, hour);
+        }
+
+        return hour;
+    }
+
+    private TimeSpan DelayUntilNextRun(int runAtHour)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        var nextRun = now.Date.AddHours(runAtHour);
+
+        // Only roll to tomorrow once today's slot has passed. Unconditionally adding a day
+        // meant a process started at 01:00 waited 25 hours for its first 02:00 run.
+        if (nextRun <= now) nextRun = nextRun.AddDays(1);
+
+        return nextRun - now;
     }
 
     private async Task RunArchiveCycleAsync(CancellationToken ct)
     {
         logger.LogInformation("Archive cycle started");
+
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var archiveDb = scope.ServiceProvider.GetRequiredService<ArchiveDbContext>();
+        var runner = new ArchiveRunner(db, archiveDb, options.Value, clock, logger);
+
+        var cutoff = clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.ArchiveAfterDays);
+
+        // The order is load-bearing, in both directions of the foreign keys:
+        //  - plans first, because their StageItems reference merge requests with Restrict, so
+        //    an MR that ever entered any plan stays undeletable while that plan exists;
+        //  - merge requests before tasks, because MergeRequest.TaskId is SetNull, so deleting
+        //    a task first blanks the link and the archived MR loses its TaskExternalId.
+        await RunPhaseAsync("release plans", c => runner.ArchiveReleasePlansAsync(cutoff, c), ct);
+        await RunPhaseAsync("merge requests", c => runner.ArchiveMergeRequestsAsync(cutoff, c), ct);
+        await RunPhaseAsync("tasks", c => runner.ArchiveTasksAsync(cutoff, c), ct);
+
+        logger.LogInformation("Archive cycle completed");
+    }
+
+    // One phase failing must not cancel the others: a single try/catch around the whole cycle
+    // meant the first error while archiving tasks also skipped merge requests for that night.
+    private async Task RunPhaseAsync(string phase, Func<CancellationToken, Task> work, CancellationToken ct)
+    {
         try
         {
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var archiveDb = scope.ServiceProvider.GetRequiredService<ArchiveDbContext>();
-
-            var cutoff = DateTime.UtcNow.AddDays(-options.Value.ArchiveAfterDays);
-            await ArchiveTasksAsync(db, archiveDb, cutoff, ct);
-            await ArchiveMergeRequestsAsync(db, archiveDb, cutoff, ct);
-
-            logger.LogInformation("Archive cycle completed");
+            await work(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Archive cycle failed");
-        }
-    }
-
-    private async Task ArchiveTasksAsync(AppDbContext db, ArchiveDbContext archiveDb, DateTime cutoff, CancellationToken ct)
-    {
-        while (true)
-        {
-            var tasks = await db.Tasks
-                .Where(t => t.ClosedAt < cutoff
-                    && !db.StageItems.Any(si => si.MergeRequest.TaskId == t.Id
-                        && si.Stage.Plan.IsActive))
-                .Take(options.Value.TaskBatchSize)
-                .Include(t => t.Dependencies)
-                .ToListAsync(ct);
-
-            if (tasks.Count == 0) break;
-
-            var archived = tasks.Select(t => new ArchivedTask
-            {
-                Id = t.Id,
-                ExternalId = t.ExternalId,
-                Title = t.Title,
-                Status = t.Status,
-                ClosedAt = t.ClosedAt,
-                DependenciesJson = JsonSerializer.Serialize(t.Dependencies.Select(d => d.DependsOnTaskId)),
-                ArchivedAt = DateTime.UtcNow
-            }).ToList();
-
-            await archiveDb.ArchivedTasks.AddRangeAsync(archived, ct);
-            await archiveDb.SaveChangesAsync(ct);
-            db.Tasks.RemoveRange(tasks);
-            await db.SaveChangesAsync(ct);
-
-            logger.LogInformation("Archived {Count} tasks", tasks.Count);
-            await Task.Delay(TimeSpan.FromSeconds(1), ct);
-        }
-    }
-
-    private async Task ArchiveMergeRequestsAsync(AppDbContext db, ArchiveDbContext archiveDb, DateTime cutoff, CancellationToken ct)
-    {
-        while (true)
-        {
-            var mrs = await db.MergeRequests
-                .Where(mr => (mr.Status == MergeRequestStatus.Merged || mr.Status == MergeRequestStatus.Closed)
-                    && mr.MergedAt < cutoff
-                    && !db.StageItems.Any(si => si.MergeRequestId == mr.Id && si.Stage.Plan.IsActive))
-                .Take(options.Value.MrBatchSize)
-                .Include(mr => mr.Repository)
-                .Include(mr => mr.Task)
-                .ToListAsync(ct);
-
-            if (mrs.Count == 0) break;
-
-            var archived = mrs.Select(mr => new ArchivedMergeRequest
-            {
-                Id = mr.Id,
-                ExternalId = mr.ExternalId,
-                RepositoryName = mr.Repository.Name,
-                SourceBranch = mr.SourceBranch,
-                TargetBranch = mr.TargetBranch,
-                Status = mr.Status.ToString(),
-                TaskExternalId = mr.Task?.ExternalId,
-                ClosedAt = mr.MergedAt,
-                ArchivedAt = DateTime.UtcNow
-            }).ToList();
-
-            await archiveDb.ArchivedMergeRequests.AddRangeAsync(archived, ct);
-            await archiveDb.SaveChangesAsync(ct);
-            db.MergeRequests.RemoveRange(mrs);
-            await db.SaveChangesAsync(ct);
-
-            logger.LogInformation("Archived {Count} merge requests", mrs.Count);
-            await Task.Delay(TimeSpan.FromSeconds(1), ct);
+            logger.LogError(ex, "Archive phase {Phase} failed; continuing with the remaining phases", phase);
         }
     }
 }

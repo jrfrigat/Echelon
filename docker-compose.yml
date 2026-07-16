@@ -1,3 +1,10 @@
+# Secrets use the `${VAR:?message}` form on purpose: compose refuses to start and names the
+# missing variable, instead of interpolating an empty string and leaving a service to fail in a
+# restart loop. Copy .env.example to .env and fill it in before the first run.
+#
+# Only `ingress` and `core` publish ports. The datastores talk to them over this file's default
+# network and are deliberately unreachable from the host — reach them with `docker compose exec`,
+# or add a docker-compose.override.yml locally if you need a port for debugging.
 services:
   ingress:
     build:
@@ -8,17 +15,27 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Queue__Host: rabbitmq
-      Queue__Username: guest
-      Queue__Password: guest
+      Queue__Username: "${RABBITMQ_USER:?RABBITMQ_USER is required (see .env.example)}"
+      Queue__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required (see .env.example)}"
+      Queue__PrefetchCount: "${QUEUE_PREFETCH_COUNT:-16}"
       Seq__Url: http://seq:5341
-      # Webhook shared secrets — set per-connection; must match the token GitLab/Tracker sends.
-      # Pattern: Webhooks__GitLab__{connectionName}__Token and Webhooks__Tracker__{connectionName}__Token
-      # Example (override in .env or secrets manager):
-      Webhooks__GitLab__default__Token: "${WEBHOOK_GITLAB_DEFAULT_TOKEN:-}"
-      Webhooks__Tracker__default__Token: "${WEBHOOK_TRACKER_DEFAULT_TOKEN:-}"
+      RateLimit__WebhooksPerMinute: "${WEBHOOKS_PER_MINUTE:-1200}"
+      # Per-connection shared secrets; the {connectionName} segment must match the URL GitLab and
+      # Tracker post to (/webhooks/gitlab/default). Required, not defaulted: the token check fails
+      # closed, so an empty value silently rejects every webhook instead of erroring at startup.
+      Webhooks__GitLab__default__Token: "${WEBHOOK_GITLAB_DEFAULT_TOKEN:?WEBHOOK_GITLAB_DEFAULT_TOKEN is required (see .env.example)}"
+      Webhooks__Tracker__default__Token: "${WEBHOOK_TRACKER_DEFAULT_TOKEN:?WEBHOOK_TRACKER_DEFAULT_TOKEN is required (see .env.example)}"
     depends_on:
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      # Ingress exposes liveness only (/health); it has no readiness probe registered.
+      # Body is matched because UseHttpsRedirection can answer 3xx, which `curl -f` treats as success.
+      test: ["CMD-SHELL", "curl -fsS --max-time 3 http://localhost:8080/health | grep -q Healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   core:
@@ -29,21 +46,34 @@ services:
       - "8081:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      DatabaseProvider: SqlServer
-      ConnectionStrings__Default: "Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
-      ConnectionStrings__Archive: "Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      # TrustServerCertificate stays on: the mssql image serves a self-signed certificate, and the
+      # connection never leaves this compose network. Drop it once a real cert is provisioned.
+      ConnectionStrings__Default: "Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Archive: "Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
+      # This stack runs a single replica, so startup migration is safe here. Concurrent replicas
+      # race on Migrate() — move this to an init container or CI before scaling out.
+      Database__MigrateOnStartup: "${DB_MIGRATE_ON_STARTUP:-true}"
       Queue__Host: rabbitmq
-      Queue__Username: guest
-      Queue__Password: guest
-      Redis__ConnectionString: "redis:6379"
+      Queue__Username: "${RABBITMQ_USER:?RABBITMQ_USER is required (see .env.example)}"
+      Queue__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required (see .env.example)}"
+      Queue__PrefetchCount: "${QUEUE_PREFETCH_COUNT:-16}"
+      # StackExchange.Redis parses this as a comma-delimited option list, so REDIS_PASSWORD must
+      # not contain a comma.
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD:?REDIS_PASSWORD is required (see .env.example)}"
       Seq__Url: http://seq:5341
-      # Azure AD / ADFS authentication — required for API authorization.
-      AD__Authority: "${AD_AUTHORITY:-https://login.microsoftonline.com/YOUR_TENANT_ID}"
-      AD__ClientId: "${AD_CLIENT_ID:-YOUR_API_CLIENT_ID}"
-      AD__TenantId: "${AD_TENANT_ID:-YOUR_TENANT_ID}"
-      # Allowed origins for CORS (comma-separated or JSON array)
-      AllowedOrigins__0: "http://localhost:8081"
-      AllowedOrigins__1: "${ALLOWED_ORIGIN:-http://localhost:8081}"
+      RateLimit__PermitsPerMinute: "${API_PERMITS_PER_MINUTE:-300}"
+      # Microsoft.Identity.Web binds this section. Instance + TenantId compose the authority;
+      # Audience is the API's own identifier and must match the `aud` claim the token carries.
+      AD__Instance: "${AD_INSTANCE:-https://login.microsoftonline.com/}"
+      AD__TenantId: "${AD_TENANT_ID:?AD_TENANT_ID is required (see .env.example)}"
+      AD__ClientId: "${AD_CLIENT_ID:?AD_CLIENT_ID is required (see .env.example)}"
+      AD__Audience: "${AD_AUDIENCE:?AD_AUDIENCE is required (see .env.example)}"
+      AllowedOrigins__0: "${ALLOWED_ORIGIN:-http://localhost:8081}"
+    # The PWA reads wwwroot/appsettings.json over HTTP at startup, so its tenant/client ids are
+    # baked into the image at publish time and no AD__* variable above can reach the browser.
+    # Uncomment and point at a filled-in copy to override it without rebuilding:
+    # volumes:
+    #   - ./pwa-appsettings.json:/app/wwwroot/appsettings.json:ro
     depends_on:
       mssql:
         condition: service_healthy
@@ -51,16 +81,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # /health/ready exercises the primary database, the archive database and Redis.
+      test: ["CMD-SHELL", "curl -fsS --max-time 5 http://localhost:8080/health/ready | grep -q Healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Dev_Password1}"
+      # Only applied when mssqldata is empty. Rotating this against an existing volume does
+      # nothing — the password lives in the database.
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)}"
       MSSQL_MEMORY_LIMIT_MB: 2048
-    ports:
-      - "1433:1433"
     volumes:
       - mssqldata:/var/opt/mssql
     healthcheck:
@@ -68,6 +105,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -76,10 +114,12 @@ services:
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    image: rabbitmq:3.13-management
+    environment:
+      # Like mssql, these seed the broker only on a fresh rabbitmqdata volume. An existing volume
+      # keeps whatever users it already has, including guest/guest.
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?RABBITMQ_USER is required (see .env.example)}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required (see .env.example)}"
     volumes:
       - rabbitmqdata:/var/lib/rabbitmq
     healthcheck:
@@ -90,25 +130,28 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    image: redis:7.4-alpine
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?REDIS_PASSWORD is required (see .env.example)}"
+    # Redis holds the computed permission cache (perm:{version}:{userId}); on a cache hit the
+    # database is never consulted, so write access here is equivalent to granting yourself roles.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
     restart: unless-stopped
 
   seq:
-    image: datalust/seq:latest
-    ports:
-      - "5341:5341"
-      - "8082:80"
+    image: datalust/seq:2024.3
     environment:
       ACCEPT_EULA: "Y"
+      # Generate with: docker run --rm datalust/seq:2024.3 config hash <password>
+      # Left empty Seq runs unauthenticated, which is survivable only because no port is published.
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: "${SEQ_ADMIN_PASSWORD_HASH:-}"
     volumes:
       - seqdata:/data
     restart: unless-stopped

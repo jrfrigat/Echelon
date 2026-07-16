@@ -13,5 +13,6 @@ public class VcsConnectionConfiguration : IEntityTypeConfiguration<VcsConnection
         b.HasIndex(e => e.Name).IsUnique().HasDatabaseName("UQ_VcsConnection_Name");
         b.Property(e => e.ApiUrl).HasMaxLength(500).IsRequired();
         b.Property(e => e.VcsType).IsRequired();
+        b.Property(e => e.ReadyForDeployLabel).HasMaxLength(200);
     }
 }

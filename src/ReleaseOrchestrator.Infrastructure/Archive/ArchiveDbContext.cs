@@ -28,7 +28,10 @@ public class ArchiveDbContext(DbContextOptions<ArchiveDbContext> options) : DbCo
             e.Property(x => x.RepositoryName).HasMaxLength(300);
             e.Property(x => x.SourceBranch).HasMaxLength(500);
             e.Property(x => x.TargetBranch).HasMaxLength(500);
+            e.Property(x => x.Status).HasMaxLength(100);
             e.Property(x => x.TaskExternalId).HasMaxLength(200);
+            e.HasIndex(x => x.TaskExternalId);
+            e.HasIndex(x => x.MergedAt);
             e.HasIndex(x => x.ClosedAt);
         });
 
@@ -36,6 +39,7 @@ public class ArchiveDbContext(DbContextOptions<ArchiveDbContext> options) : DbCo
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(300);
+            e.Property(x => x.Version).HasMaxLength(50);
             e.HasIndex(x => x.CreatedAt);
         });
     }

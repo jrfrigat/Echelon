@@ -1,8 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.16 AS base
 WORKDIR /app
 EXPOSE 8080
+# The aspnet image ships no HTTP client, and compose's healthcheck needs one.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0.109 AS build
 WORKDIR /src
 COPY ["ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj", "ReleaseOrchestrator.Web/"]
 COPY ["ReleaseOrchestrator.Application/ReleaseOrchestrator.Application.csproj", "ReleaseOrchestrator.Application/"]
@@ -11,6 +15,8 @@ COPY ["ReleaseOrchestrator.Infrastructure/ReleaseOrchestrator.Infrastructure.csp
 COPY ["ReleaseOrchestrator.Migrations.MsSql/ReleaseOrchestrator.Migrations.MsSql.csproj", "ReleaseOrchestrator.Migrations.MsSql/"]
 COPY ["ReleaseOrchestrator.Pwa/ReleaseOrchestrator.Pwa.csproj", "ReleaseOrchestrator.Pwa/"]
 RUN dotnet restore "ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj"
+# src/.dockerignore keeps host bin/obj out of this copy; without it the restore above is
+# overwritten by Windows-path artifacts and the build fails to resolve packages.
 COPY . .
 RUN dotnet build "ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj" -c Release -o /app/build
 
@@ -20,4 +26,5 @@ RUN dotnet publish "ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj" -c R
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+USER $APP_UID
 ENTRYPOINT ["dotnet", "ReleaseOrchestrator.Web.dll"]
