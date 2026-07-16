@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
@@ -30,17 +31,19 @@ public class TaskReconciliationOptions
 /// handling covers the common path; this covers the rest.
 /// </summary>
 /// <remarks>
-/// LIMITATION — no leader election. Every replica runs this pass, so with N replicas each task is
-/// requested N times per interval. Correctness holds (the sync is idempotent and only replans when
-/// edges actually change), but the tracker sees N× the calls. Run one replica, or set
-/// <c>TaskReconciliation__Enabled=false</c> on the others, until a distributed lock exists.
+/// Registered in every replica but gated on a lease, so one pass runs per interval across the
+/// deployment rather than one per replica — the tracker's API is the scarce resource here, and N
+/// replicas asking it about the same tasks N times bought nothing.
 /// </remarks>
 public class TaskReconciliationService(
     IServiceScopeFactory scopeFactory,
     IOptions<TaskReconciliationOptions> options,
+    IDistributedLease lease,
     TimeProvider clock,
     ILogger<TaskReconciliationService> logger) : BackgroundService
 {
+    /// <summary>Lease name; shared by every replica of this service.</summary>
+    private const string LeaseName = "task-reconciliation";
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Value.Enabled)
@@ -60,6 +63,16 @@ public class TaskReconciliationService(
             try
             {
                 if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
+
+                // Held for the interval, not for the expected duration of the pass: a replica that
+                // dies mid-pass then blocks the job for at most one cycle, and a slow pass renews.
+                await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
+                if (held is null)
+                {
+                    logger.LogDebug("Another replica is reconciling; skipping this pass");
+                    continue;
+                }
+
                 await ReconcileAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

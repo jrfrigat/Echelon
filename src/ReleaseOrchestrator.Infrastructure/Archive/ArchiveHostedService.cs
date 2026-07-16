@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Archive;
@@ -10,25 +11,27 @@ namespace ReleaseOrchestrator.Infrastructure.Archive;
 /// Nightly archiving of superseded release plans, closed merge requests and closed tasks.
 /// </summary>
 /// <remarks>
-/// <para>
-/// LIMITATION — this service has no leader election. It is registered unconditionally, so
-/// every replica runs the cycle at the same UTC hour against the same rows. Concurrent runs
-/// select overlapping batches and compete for the same deletes: expect deadlock victims and
-/// duplicated work under more than one replica. Correctness survives it — the archive insert
-/// skips rows another replica already wrote, and a batch lost to a deadlock is retried and
-/// then left for the next cycle — but the cycle is slower and noisier than it should be.
-/// </para>
-/// <para>
-/// Run a single replica, or set <c>Archiving__Enabled=false</c> on all but one, until a
-/// distributed lock is available to gate this properly.
-/// </para>
+/// Registered in every replica but gated on a lease, so one cycle runs per night across the
+/// deployment. Without it every replica woke at the same UTC hour and raced for the same deletes:
+/// correctness held — the archive insert skips rows another replica already wrote — but they
+/// deadlocked each other doing work only one of them needed to do.
 /// </remarks>
 public class ArchiveHostedService(
     IServiceScopeFactory scopeFactory,
     IOptions<ArchiveOptions> options,
+    IDistributedLease lease,
     TimeProvider clock,
     ILogger<ArchiveHostedService> logger) : BackgroundService
 {
+    /// <summary>Lease name; shared by every replica of this service.</summary>
+    private const string LeaseName = "archive-cycle";
+
+    /// <summary>
+    /// How long the lease survives without renewal. Generous because the cycle is long and runs
+    /// once a night: the cost of over-holding is a skipped night, the cost of under-holding is two
+    /// replicas deleting the same rows.
+    /// </summary>
+    private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(30);
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Value.Enabled)
@@ -47,6 +50,14 @@ public class ArchiveHostedService(
             try
             {
                 await Task.Delay(delay, stoppingToken);
+
+                await using var held = await lease.TryAcquireAsync(LeaseName, LeaseDuration, stoppingToken);
+                if (held is null)
+                {
+                    logger.LogInformation("Another replica is running the archive cycle; skipping tonight's run");
+                    continue;
+                }
+
                 await RunArchiveCycleAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

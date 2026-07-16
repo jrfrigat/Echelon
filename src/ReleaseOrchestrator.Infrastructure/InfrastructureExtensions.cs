@@ -17,6 +17,7 @@ using ReleaseOrchestrator.Infrastructure.Tracker;
 using ReleaseOrchestrator.Infrastructure.Vcs;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using StackExchange.Redis;
 using ReleaseOrchestrator.Providers.GitLab;
 using ReleaseOrchestrator.Providers.YandexTracker;
 
@@ -74,6 +75,13 @@ public static class InfrastructureExtensions
         services.AddYandexTrackerProvider();
 
         services.AddStackExchangeRedisCache(opt => opt.Configuration = redisConnectionString);
+
+        // A multiplexer of our own: AddStackExchangeRedisCache keeps its connection private, and
+        // IDistributedCache has no compare-and-set — which is the whole of a lease.
+        // Connect lazily so a Redis that is down delays the first lease, not startup.
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(ConfigurationOptions.Parse(redisConnectionString, ignoreUnknown: true)));
+        services.AddSingleton<IDistributedLease, RedisDistributedLease>();
 
         services.Configure<PermissionBootstrapOptions>(config.GetSection("Authorization"));
         services.AddScoped<IClaimsTransformation, PermissionClaimsTransformation>();
