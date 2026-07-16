@@ -22,19 +22,28 @@ public class TaskCreatedConsumer(AppDbContext db, ILogger<TaskCreatedConsumer> l
             return;
         }
 
-        var exists = await db.Tasks.AnyAsync(
+        // Upsert rather than check-then-skip: at-least-once delivery and multiple replicas
+        // make the check racy, and the unique index on (TrackerConnectionId, ExternalId)
+        // now turns a lost race into a retryable violation instead of a duplicate task.
+        var task = await db.Tasks.FirstOrDefaultAsync(
             t => t.TrackerConnectionId == conn.Id && t.ExternalId == msg.ExternalId,
             context.CancellationToken);
-        if (exists) return;
 
-        db.Tasks.Add(new TaskItem
+        if (task is null)
         {
-            Id = Guid.NewGuid(),
-            ExternalId = msg.ExternalId,
-            Title = msg.Title,
-            Status = "Open",
-            TrackerConnectionId = conn.Id
-        });
+            db.Tasks.Add(new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                ExternalId = msg.ExternalId,
+                Title = msg.Title,
+                Status = "open",
+                TrackerConnectionId = conn.Id
+            });
+        }
+        else
+        {
+            task.Title = msg.Title;
+        }
 
         await db.SaveChangesAsync(context.CancellationToken);
     }

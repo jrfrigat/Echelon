@@ -5,19 +5,13 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Ingress.Webhooks.Models;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 
 public static class GitLabWebhookEndpoints
 {
-    private static readonly Dictionary<string, MergeRequestStatus> StateMap = new()
-    {
-        ["opened"] = MergeRequestStatus.Opened,
-        ["merged"] = MergeRequestStatus.Merged,
-        ["closed"] = MergeRequestStatus.Closed
-    };
-
     public static IEndpointRouteBuilder MapGitLabWebhooks(this IEndpointRouteBuilder app)
     {
         app.MapPost("/webhooks/gitlab/{connectionName}", HandleAsync)
@@ -33,50 +27,69 @@ public static class GitLabWebhookEndpoints
         HttpContext httpContext,
         IPublishEndpoint publisher,
         IConfiguration config,
+        TimeProvider clock,
         CancellationToken ct)
     {
+        var name = WebhookConnectionName.Sanitize(connectionName);
+        var expected = name is null ? null : config[$"Webhooks:GitLab:{name}:Token"];
         var token = httpContext.Request.Headers["X-Gitlab-Token"].FirstOrDefault();
-        var expected = config[$"Webhooks:GitLab:{connectionName}:Token"];
-        if (string.IsNullOrEmpty(expected) || token != expected)
+
+        // Identical answer for an unknown connection and a wrong token, so neither the
+        // connection list nor the secret can be probed.
+        if (!WebhookTokens.Matches(token, expected))
             return Results.Unauthorized();
 
         if (payload.ObjectKind != "merge_request")
             return Results.Ok();
 
-        var repositoryExternalId = payload.Project.PathWithNamespace;
-        var externalMrId = payload.ObjectAttributes.Iid.ToString();
-        var state = payload.ObjectAttributes.State;
+        var attributes = payload.ObjectAttributes;
+        if (payload.Project?.PathWithNamespace is not { Length: > 0 } repositoryExternalId
+            || attributes?.Iid is not { } iid
+            || attributes.State is not { Length: > 0 } state)
+            return Results.BadRequest(new
+            {
+                error = "payload requires project.path_with_namespace, object_attributes.iid and object_attributes.state"
+            });
 
-        // Parse task id from branch name (e.g. feature/TASK-123-something)
-        string? taskExternalId = ParseTaskId(payload.ObjectAttributes.SourceBranch);
+        var status = MergeRequestStatusResolver.FromVcsState(state);
+        if (status is null)
+            return Results.Ok();   // A state we do not model; nothing to record.
 
-        if (state == "opened")
+        var externalMrId = iid.ToString();
+
+        if (status == MergeRequestStatus.Opened)
         {
+            // Published for every open-state event, not only the first. GitLab re-sends on
+            // label changes, pushes and reopens; the consumer upserts, so a reopened MR
+            // rejoins the plan and a newly labelled one enters it.
             await publisher.Publish(new MrOpened(
                 ConnectionName: connectionName,
                 RepositoryExternalId: repositoryExternalId,
                 ExternalMrId: externalMrId,
-                SourceBranch: payload.ObjectAttributes.SourceBranch,
-                TargetBranch: payload.ObjectAttributes.TargetBranch,
-                TaskExternalId: taskExternalId), ct);
+                SourceBranch: attributes.SourceBranch ?? string.Empty,
+                TargetBranch: attributes.TargetBranch ?? string.Empty,
+                TaskExternalId: BranchTaskParser.ParseTaskId(attributes.SourceBranch),
+                Labels: ExtractLabels(payload)), ct);
         }
-        else if (StateMap.TryGetValue(state, out var status))
+        else
         {
             await publisher.Publish(new MrStatusChanged(
                 ConnectionName: connectionName,
                 RepositoryExternalId: repositoryExternalId,
                 ExternalMrId: externalMrId,
-                NewStatus: status,
-                ChangedAt: DateTime.UtcNow), ct);
+                NewStatus: status.Value,
+                ChangedAt: clock.GetUtcNow().UtcDateTime), ct);
         }
 
         return Results.Ok();
     }
 
-    private static string? ParseTaskId(string branch)
-    {
-        // matches PROJ-123 patterns in branch names
-        var match = System.Text.RegularExpressions.Regex.Match(branch, @"([A-Z]+-\d+)");
-        return match.Success ? match.Groups[1].Value : null;
-    }
+    /// <summary>GitLab populates labels at the top level, and for some events only under object_attributes.</summary>
+    private static IReadOnlyList<string> ExtractLabels(GitLabMrPayload payload) =>
+        (payload.Labels ?? payload.ObjectAttributes?.Labels ?? [])
+            .Select(l => l.Title)
+            .Where(title => !string.IsNullOrWhiteSpace(title))
+            .Select(title => title!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 }

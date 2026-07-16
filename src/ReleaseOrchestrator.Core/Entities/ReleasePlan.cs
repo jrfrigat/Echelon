@@ -12,6 +12,14 @@ public class ReleasePlan
     public string? YamlHash { get; set; }
 
     /// <summary>
+    /// When the planner began reading the data this plan was built from. A recalculation
+    /// request raised before this instant is already reflected here and can be skipped;
+    /// one raised after it is not. Comparing against <see cref="CreatedAt"/> instead would
+    /// drop changes committed while the plan was being computed.
+    /// </summary>
+    public DateTime SnapshotStartedAt { get; set; }
+
+    /// <summary>
     /// Ordering constraints the planner had to drop to produce this plan, as JSON.
     /// Empty means the plan honours every dependency. Surfaced to operators so a
     /// broken plan is never mistaken for a clean one.

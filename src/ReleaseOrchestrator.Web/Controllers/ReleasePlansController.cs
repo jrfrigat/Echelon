@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReleaseOrchestrator.Application.DTOs;
@@ -8,7 +9,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 
 [ApiController]
 [Route("api/release-plans")]
-[Authorize]
+[Authorize(Policy = Permissions.ReleasePlanView)]
 public class ReleasePlansController(IReleasePlannerService planner) : ControllerBase
 {
     [HttpGet("active")]
@@ -29,7 +30,10 @@ public class ReleasePlansController(IReleasePlannerService planner) : Controller
         return plan is null ? NotFound() : Ok(plan);
     }
 
+    // Recalculation is a heavy full rebuild; leaving it on bare [Authorize] let any
+    // authenticated user drive it in a loop.
     [HttpPost("recalculate")]
+    [Authorize(Policy = Permissions.ReleasePlanApprove)]
     [ProducesResponseType<ReleasePlanDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Recalculate(CancellationToken ct)
     {
@@ -37,7 +41,10 @@ public class ReleasePlansController(IReleasePlannerService planner) : Controller
         return Ok(plan);
     }
 
+    // Import replaces the active plan wholesale — the single most destructive operation
+    // here, and the only mutating one that used to require no permission at all.
     [HttpPost("import")]
+    [Authorize(Policy = Permissions.ReleasePlanApprove)]
     [ProducesResponseType<ReleasePlanDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportYaml([FromBody] ImportYamlRequest request, CancellationToken ct)
@@ -96,7 +103,11 @@ public class ReleasePlansController(IReleasePlannerService planner) : Controller
     }
 }
 
-public record ImportYamlRequest(string Yaml, bool Force = false);
+public record ImportYamlRequest(
+    // Kestrel's 30 MB default body limit is far too generous for a plan document, and the
+    // parser holds the whole thing in memory.
+    [property: Required, MaxLength(2 * 1024 * 1024)] string Yaml,
+    bool Force = false);
 public record ReorderStagesRequest(List<Guid> StageIds);
 public record AddStageItemRequest(Guid MergeRequestId);
 public record MoveItemRequest(Guid TargetStageId);

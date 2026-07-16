@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Ingress.Webhooks.Models;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
@@ -25,35 +26,41 @@ public static class YandexTrackerWebhookEndpoints
         HttpContext httpContext,
         IPublishEndpoint publisher,
         IConfiguration config,
+        TimeProvider clock,
         CancellationToken ct)
     {
+        var name = WebhookConnectionName.Sanitize(connectionName);
+        var expected = name is null ? null : config[$"Webhooks:Tracker:{name}:Token"];
         var token = httpContext.Request.Headers["X-Tracker-Token"].FirstOrDefault();
-        var expected = config[$"Webhooks:Tracker:{connectionName}:Token"];
-        if (string.IsNullOrEmpty(expected) || token != expected)
+
+        if (!WebhookTokens.Matches(token, expected))
             return Results.Unauthorized();
+
+        if (payload.Issue?.Key is not { Length: > 0 } issueKey)
+            return Results.BadRequest(new { error = "payload requires issue.key" });
 
         switch (payload.Event)
         {
             case "issue:created":
                 await publisher.Publish(new TaskCreated(
                     TrackerConnectionName: connectionName,
-                    ExternalId: payload.Issue.Key,
-                    Title: payload.Issue.Summary), ct);
+                    ExternalId: issueKey,
+                    Title: payload.Issue.Summary ?? string.Empty), ct);
                 break;
 
             case "issue:updated":
             case "issue:statusUpdated":
+                if (payload.Issue.Status?.Key is not { Length: > 0 } statusKey)
+                    return Results.BadRequest(new { error = "status update requires issue.status.key" });
+
                 await publisher.Publish(new TaskStatusChanged(
-                    TaskId: Guid.Empty,
-                    ExternalId: payload.Issue.Key,
-                    NewStatus: payload.Issue.Status.Key,
-                    ClosedAt: IsClosedStatus(payload.Issue.Status.Key) ? DateTime.UtcNow : null), ct);
+                    TrackerConnectionName: connectionName,
+                    ExternalId: issueKey,
+                    NewStatus: statusKey,
+                    ClosedAt: TaskStatusRules.IsClosed(statusKey) ? clock.GetUtcNow().UtcDateTime : null), ct);
                 break;
         }
 
         return Results.Ok();
     }
-
-    private static bool IsClosedStatus(string statusKey) =>
-        statusKey is "closed" or "cancelled" or "rejected";
 }
