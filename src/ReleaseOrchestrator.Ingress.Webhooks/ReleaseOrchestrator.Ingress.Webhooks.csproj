@@ -25,6 +25,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ReleaseOrchestrator.Application\ReleaseOrchestrator.Application.csproj" />
+
+    <!--
+      Each webhook endpoint is already tied to one provider — its route, its payload shape and its
+      secret header are that provider's — so it references that provider's adapter to reuse the
+      same dialect the sync path uses. This is the layer where provider specifics are supposed to
+      die (Argo Events does the same): past here only normalized messages travel.
+    -->
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.YandexTracker\ReleaseOrchestrator.Providers.YandexTracker.csproj" />
   </ItemGroup>
 
   <!--

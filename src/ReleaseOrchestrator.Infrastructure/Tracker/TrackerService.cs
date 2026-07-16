@@ -2,9 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Entities;
-using ReleaseOrchestrator.Core.Parsing;
-using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
 namespace ReleaseOrchestrator.Infrastructure.Tracker;
 
@@ -15,40 +14,62 @@ namespace ReleaseOrchestrator.Infrastructure.Tracker;
 /// release plan. It used to be unreachable — registered in DI and injected nowhere — so the
 /// table stayed empty and plans were ordered by stack links alone.
 /// </summary>
+/// <remarks>
+/// Provider-agnostic: which tracker answers, and what it needs to be asked, is the factory's and
+/// the adapter's business.
+/// </remarks>
 public class TrackerService(
     AppDbContext db,
-    ITrackerApiClient apiClient,
-    TokenProtector protector,
+    ITrackerProviderFactory providerFactory,
     TimeProvider clock,
     ILogger<TrackerService> logger) : ITrackerService
 {
+    /// <inheritdoc/>
     public async Task<bool> SyncTaskAsync(Guid trackerConnectionId, string externalTaskId, CancellationToken ct)
     {
         var conn = await db.TrackerConnections.FirstOrDefaultAsync(c => c.Id == trackerConnectionId, ct)
             ?? throw new InvalidOperationException($"TrackerConnection {trackerConnectionId} not found");
 
-        var token = protector.Unprotect(conn.EncryptedAccessToken);
+        var provider = await providerFactory.CreateAsync(conn, ct);
 
-        var info = await apiClient.GetIssueAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, externalTaskId, ct);
+        var info = await provider.GetIssueAsync(externalTaskId, ct);
         if (info is null)
         {
             logger.LogInformation("Task {Task} does not exist in tracker {Tracker}", externalTaskId, conn.Name);
             return false;
         }
 
-        var task = await UpsertTaskAsync(conn.Id, info, ct);
-        var links = await apiClient.GetIssueDependenciesAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, externalTaskId, ct);
+        var task = await UpsertTaskAsync(conn.Id, provider, info, ct);
+        var links = await ReadDependenciesAsync(provider, conn, externalTaskId, ct);
 
-        var changed = await ReplaceDependenciesAsync(conn, token, task, links, ct);
+        var changed = await ReplaceDependenciesAsync(conn, provider, task, links, ct);
 
         await db.SaveChangesAsync(ct);
         return changed;
     }
 
-    public Task<string?> ParseTaskIdFromBranchAsync(string branchName, CancellationToken ct)
-        => Task.FromResult(BranchTaskParser.ParseTaskId(branchName));
+    private async Task<IReadOnlyList<TrackerIssueDependency>> ReadDependenciesAsync(
+        ITrackerProvider provider,
+        TrackerConnection conn,
+        string externalTaskId,
+        CancellationToken ct)
+    {
+        // The "can this provider do it at all" question, answered by the type system rather than
+        // by making the call and reading the failure. A tracker with no link model returns no
+        // edges, which is indistinguishable from an issue that has none — so the difference has
+        // to be visible before the call, not after.
+        if (provider is not ITrackerDependencySource source)
+        {
+            logger.LogDebug(
+                "Tracker {Tracker} does not report dependency links; task {Task} contributes no edges.",
+                conn.Name, externalTaskId);
+            return [];
+        }
 
-    private async Task<TaskItem> UpsertTaskAsync(Guid connectionId, TrackerIssueInfo info, CancellationToken ct)
+        return await source.GetIssueDependenciesAsync(externalTaskId, ct);
+    }
+
+    private async Task<TaskItem> UpsertTaskAsync(Guid connectionId, ITrackerProvider provider, TrackerIssue info, CancellationToken ct)
     {
         var task = await db.Tasks.FirstOrDefaultAsync(
             t => t.TrackerConnectionId == connectionId && t.ExternalId == info.Key, ct);
@@ -68,7 +89,8 @@ public class TrackerService(
         task.Status = info.StatusKey;
         // Derived from the status rather than trusted from ResolvedAt: a tracker can report a
         // resolution time for a status we do not treat as closed, and archiving keys off this.
-        task.ClosedAt = TaskStatusRules.IsClosed(info.StatusKey)
+        // The provider owns which statuses are closed — the set is its vocabulary, not ours.
+        task.ClosedAt = provider.IsClosedStatus(info.StatusKey)
             ? info.ResolvedAt ?? clock.GetUtcNow().UtcDateTime
             : null;
 
@@ -80,7 +102,7 @@ public class TrackerService(
     /// <returns>True when the set of edges actually changed — the caller only replans then.</returns>
     private async Task<bool> ReplaceDependenciesAsync(
         TrackerConnection conn,
-        string token,
+        ITrackerProvider provider,
         TaskItem task,
         IReadOnlyList<TrackerIssueDependency> links,
         CancellationToken ct)
@@ -89,7 +111,7 @@ public class TrackerService(
 
         foreach (var key in links.Select(l => l.DependsOnKey).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var dependsOnId = await ResolveOrFetchTaskAsync(conn, token, key, ct);
+            var dependsOnId = await ResolveOrFetchTaskAsync(conn, provider, key, ct);
             if (dependsOnId is null || dependsOnId == task.Id) continue;   // self-links carry no order
             wanted.Add(dependsOnId.Value);
         }
@@ -135,7 +157,7 @@ public class TrackerService(
     /// The fetch is deliberately shallow — the prerequisite's own links are left to its own sync,
     /// which bounds this at one extra call per edge instead of walking the graph.
     /// </summary>
-    private async Task<Guid?> ResolveOrFetchTaskAsync(TrackerConnection conn, string token, string key, CancellationToken ct)
+    private async Task<Guid?> ResolveOrFetchTaskAsync(TrackerConnection conn, ITrackerProvider provider, string key, CancellationToken ct)
     {
         var existingId = await db.Tasks
             .Where(t => t.TrackerConnectionId == conn.Id && t.ExternalId == key)
@@ -144,7 +166,7 @@ public class TrackerService(
 
         if (existingId is not null) return existingId;
 
-        var info = await apiClient.GetIssueAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, key, ct);
+        var info = await provider.GetIssueAsync(key, ct);
         if (info is null)
         {
             logger.LogWarning(
@@ -153,7 +175,7 @@ public class TrackerService(
             return null;
         }
 
-        var fetched = await UpsertTaskAsync(conn.Id, info, ct);
+        var fetched = await UpsertTaskAsync(conn.Id, provider, info, ct);
         return fetched.Id;
     }
 }

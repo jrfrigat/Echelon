@@ -2,14 +2,14 @@
 @attribute [Authorize]
 @inherits CrudPageBase<RepositoryDto>
 
-<PageTitle>Repositories</PageTitle>
+<PageTitle>@UiStrings.Repos_Title</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Repositories</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Repos_Title</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
         <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
-        <ChildContent>New Repository</ChildContent>
+        <ChildContent>@UiStrings.Repos_New</ChildContent>
     </FlareButton>
 </FlareStack>
 
@@ -24,13 +24,13 @@ else if (Result is not null)
 {
     <FlareDataGrid TItem="RepositoryDto" Items="Result.Items" ShowPager="false">
         <Columns>
-            <FlareColumn TItem="RepositoryDto" Title="Name" Field="@(r => r.Name)" />
-            <FlareColumn TItem="RepositoryDto" Title="External ID" Field="@(r => r.ExternalId)" />
-            <FlareColumn TItem="RepositoryDto" Title="VCS Connection" Field="@(r => r.ConnectionName)" />
+            <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Common_Name" Field="@(r => r.Name)" />
+            <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Repos_Col_ExternalId" Field="@(r => r.ExternalId)" />
+            <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Repos_Col_Connection" Field="@(r => r.ConnectionName)" />
             <FlareColumn TItem="RepositoryDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
                             <FlareIcon Name="@FlareIcons.Delete" />
                         </FlareIconButton>
                     </FlareStack>
@@ -46,26 +46,26 @@ else if (Result is not null)
     }
 }
 
-<FlareDialog Visible="ShowModal" Title="New Repository" VisibleChanged="OnDialogVisibleChanged">
+<FlareDialog Visible="ShowModal" Title="@UiStrings.Repos_New" VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
         <FlareStack Gap="FlareSpacing.Medium">
-            <FlareTextField Label="Name" @bind-Value="_fName" />
-            <FlareTextField Label="External ID" @bind-Value="_fExternalId" Placeholder="GitLab project ID or path" />
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
+            <FlareTextField Label="@UiStrings.Repos_Col_ExternalId" @bind-Value="_fExternalId" Placeholder="@UiStrings.Repos_ExternalId_Placeholder" />
             @if (_connections is null)
             {
                 <FlareProgress Variant="ProgressVariant.Circular" />
             }
             else
             {
-                <FlareSelect TValue="Guid" Label="VCS Connection" @bind-Value="_fConnectionId"
+                <FlareSelect TValue="Guid" Label="@UiStrings.Repos_Col_Connection" @bind-Value="_fConnectionId"
                              Items="@_connections.Items.Select(c => c.Id)"
                              ItemLabel="@(id => ConnectionLabel(id))" />
             }
         </FlareStack>
     </ChildContent>
     <Actions>
-        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
-        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">@UiStrings.Common_Save</FlareButton>
     </Actions>
 </FlareDialog>
 
@@ -100,8 +100,8 @@ else if (Result is not null)
 
     Task Save() => SaveAsync(
         () => Api.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId),
-        "Repository created.");
+        UiStrings.Repos_Created);
 
     Task Delete(RepositoryDto r) =>
-        DeleteAsync($"repository '{r.Name}'", () => Api.DeleteRepositoryAsync(r.Id));
+        DeleteAsync(string.Format(UiStrings.Repos_Delete_What, r.Name), () => Api.DeleteRepositoryAsync(r.Id));
 }

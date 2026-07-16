@@ -2,14 +2,14 @@
 @attribute [Authorize]
 @inherits CrudPageBase<TrackerConnectionDto>
 
-<PageTitle>Tracker Connections</PageTitle>
+<PageTitle>@UiStrings.Tracker_Title</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Tracker Connections</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Tracker_Title</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
         <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
-        <ChildContent>New Connection</ChildContent>
+        <ChildContent>@UiStrings.Tracker_New</ChildContent>
     </FlareButton>
 </FlareStack>
 
@@ -24,21 +24,21 @@ else if (Result is not null)
 {
     <FlareDataGrid TItem="TrackerConnectionDto" Items="Result.Items" ShowPager="false">
         <Columns>
-            <FlareColumn TItem="TrackerConnectionDto" Title="Name" Field="@(c => c.Name)" />
-            <FlareColumn TItem="TrackerConnectionDto" Title="Type">
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Type">
                 <Template>
                     <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
                 </Template>
             </FlareColumn>
-            <FlareColumn TItem="TrackerConnectionDto" Title="API URL" Field="@(c => c.ApiUrl)" />
-            <FlareColumn TItem="TrackerConnectionDto" Title="Org ID" Field="@(c => c.OrgId)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Tracker_Col_OrgId" Field="@(c => c.OrgId)" />
             <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton AriaLabel="@($"Edit {context.Name}")" OnClick="@(() => OpenEdit(context))">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
                             <FlareIcon Name="@FlareIcons.Edit" />
                         </FlareIconButton>
-                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
                             <FlareIcon Name="@FlareIcons.Delete" />
                         </FlareIconButton>
                     </FlareStack>
@@ -55,24 +55,24 @@ else if (Result is not null)
 }
 
 <FlareDialog Visible="ShowModal"
-             Title="@(_editId.HasValue ? "Edit Tracker Connection" : "New Tracker Connection")"
+             Title="@(_editId.HasValue ? UiStrings.Tracker_Dialog_Edit : UiStrings.Tracker_Dialog_New)"
              VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
         <FlareStack Gap="FlareSpacing.Medium">
-            <FlareTextField Label="Name" @bind-Value="_fName" />
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
             @if (!_editId.HasValue)
             {
-                <FlareSelect TValue="string" Label="Type" @bind-Value="_fType" Items="TrackerTypes" />
+                <FlareSelect TValue="string" Label="@UiStrings.Common_Type" @bind-Value="_fType" Items="TrackerTypes" />
             }
-            <FlareTextField Label="API URL" @bind-Value="_fUrl" Placeholder="https://api.tracker.yandex.net" />
-            <FlareTextField Label="Org ID (optional)" @bind-Value="_fOrgId" Placeholder="Yandex organization ID" />
-            <FlarePasswordField Label="@($"Access Token{(_editId.HasValue ? " (leave blank to keep current)" : "")}")"
+            <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://api.tracker.yandex.net" />
+            <FlareTextField Label="@UiStrings.Tracker_OrgId_Label" @bind-Value="_fOrgId" Placeholder="@UiStrings.Tracker_OrgId_Placeholder" />
+            <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
     </ChildContent>
     <Actions>
-        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
-        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">@UiStrings.Common_Save</FlareButton>
     </Actions>
 </FlareDialog>
 
@@ -116,5 +116,5 @@ else if (Result is not null)
     });
 
     Task Delete(TrackerConnectionDto c) =>
-        DeleteAsync($"tracker connection '{c.Name}'", () => Api.DeleteTrackerConnectionAsync(c.Id));
+        DeleteAsync(string.Format(UiStrings.Tracker_Delete_What, c.Name), () => Api.DeleteTrackerConnectionAsync(c.Id));
 }

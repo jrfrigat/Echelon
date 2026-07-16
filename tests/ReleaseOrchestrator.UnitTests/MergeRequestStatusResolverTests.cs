@@ -9,24 +9,13 @@ namespace ReleaseOrchestrator.UnitTests;
 /// consumers and the VCS sync route through here — they used to keep separate mappings, so the
 /// same MR got a different status depending on which path imported it.
 /// </summary>
+/// <remarks>
+/// Raw-state mapping used to be tested here too. It was GitLab's dictionary, so it moved to that
+/// adapter along with its cases — see <c>Providers.GitLab.GitLabMergeRequestStateTests</c>. What
+/// remains operates only on the normalized status and the connection's own label.
+/// </remarks>
 public class MergeRequestStatusResolverTests
 {
-    [Theory]
-    [InlineData("opened", MergeRequestStatus.Opened)]
-    [InlineData("reopened", MergeRequestStatus.Opened)]
-    [InlineData("merged", MergeRequestStatus.Merged)]
-    [InlineData("closed", MergeRequestStatus.Closed)]
-    [InlineData("OPENED", MergeRequestStatus.Opened)]
-    public void MapsKnownVcsStates(string state, MergeRequestStatus expected)
-        => Assert.Equal(expected, MergeRequestStatusResolver.FromVcsState(state));
-
-    [Theory]
-    [InlineData("locked")]
-    [InlineData("")]
-    [InlineData(null)]
-    public void DoesNotGuessAtUnknownStates(string? state)
-        => Assert.Null(MergeRequestStatusResolver.FromVcsState(state));
-
     [Theory]
     [InlineData(MergeRequestStatus.Merged, true)]
     [InlineData(MergeRequestStatus.Closed, true)]

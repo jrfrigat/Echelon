@@ -22,6 +22,11 @@
     <!-- Needed to assert the EF model's shape; the mapping tests build the model
          in-memory and never open a connection. -->
     <ProjectReference Include="..\..\src\ReleaseOrchestrator.Infrastructure\ReleaseOrchestrator.Infrastructure.csproj" />
+
+    <!-- The provider dialects moved out of Core into these; their tests followed them. -->
+    <ProjectReference Include="..\..\src\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />
+    <ProjectReference Include="..\..\src\ReleaseOrchestrator.Providers.YandexTracker\ReleaseOrchestrator.Providers.YandexTracker.csproj" />
   </ItemGroup>
 
 </Project>

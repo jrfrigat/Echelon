@@ -2,14 +2,14 @@
 @attribute [Authorize]
 @inherits CrudPageBase<VcsConnectionDto>
 
-<PageTitle>VCS Connections</PageTitle>
+<PageTitle>@UiStrings.Vcs_Title</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">VCS Connections</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Vcs_Title</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
         <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
-        <ChildContent>New Connection</ChildContent>
+        <ChildContent>@UiStrings.Vcs_New</ChildContent>
     </FlareButton>
 </FlareStack>
 
@@ -24,18 +24,18 @@ else if (Result is not null)
 {
     <FlareDataGrid TItem="VcsConnectionDto" Items="Result.Items" ShowPager="false">
         <Columns>
-            <FlareColumn TItem="VcsConnectionDto" Title="Name" Field="@(c => c.Name)" />
-            <FlareColumn TItem="VcsConnectionDto" Title="Type">
+            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
+            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Type">
                 <Template>
                     <FlareChip Label="@context.VcsType" Size="ChipSize.Sm" />
                 </Template>
             </FlareColumn>
-            <FlareColumn TItem="VcsConnectionDto" Title="API URL" Field="@(c => c.ApiUrl)" />
-            <FlareColumn TItem="VcsConnectionDto" Title="Ready-for-deploy label">
+            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
+            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Vcs_Col_ReadyLabel">
                 <Template>
                     @if (string.IsNullOrWhiteSpace(context.ReadyForDeployLabel))
                     {
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">disabled</FlareText>
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Vcs_Label_Disabled</FlareText>
                     }
                     else
                     {
@@ -46,10 +46,10 @@ else if (Result is not null)
             <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton AriaLabel="@($"Edit {context.Name}")" OnClick="@(() => OpenEdit(context))">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
                             <FlareIcon Name="@FlareIcons.Edit" />
                         </FlareIconButton>
-                        <FlareIconButton AriaLabel="@($"Delete {context.Name}")" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
                             <FlareIcon Name="@FlareIcons.Delete" />
                         </FlareIconButton>
                     </FlareStack>
@@ -66,26 +66,26 @@ else if (Result is not null)
 }
 
 <FlareDialog Visible="ShowModal"
-             Title="@(_editId.HasValue ? "Edit VCS Connection" : "New VCS Connection")"
+             Title="@(_editId.HasValue ? UiStrings.Vcs_Dialog_Edit : UiStrings.Vcs_Dialog_New)"
              VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
         <FlareStack Gap="FlareSpacing.Medium">
-            <FlareTextField Label="Name" @bind-Value="_fName" />
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
             @if (!_editId.HasValue)
             {
-                <FlareSelect TValue="string" Label="Type" @bind-Value="_fType" Items="VcsTypes" />
+                <FlareSelect TValue="string" Label="@UiStrings.Common_Type" @bind-Value="_fType" Items="VcsTypes" />
             }
-            <FlareTextField Label="API URL" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
-            <FlareTextField Label="Ready-for-deploy label" @bind-Value="_fLabel"
+            <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
+            <FlareTextField Label="@UiStrings.Vcs_Col_ReadyLabel" @bind-Value="_fLabel"
                             Placeholder="@DefaultReadyForDeployLabel"
-                            HelperText="@($"Merge requests carrying this {_fType} label are picked up into the release plan automatically. Leave blank to turn that off — merge requests from this connection will then only enter a plan when added by hand.")" />
-            <FlarePasswordField Label="@($"Access Token{(_editId.HasValue ? " (leave blank to keep current)" : "")}")"
+                            HelperText="@string.Format(UiStrings.Vcs_ReadyLabel_Helper, _fType)" />
+            <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
     </ChildContent>
     <Actions>
-        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
-        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">Save</FlareButton>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">@UiStrings.Common_Save</FlareButton>
     </Actions>
 </FlareDialog>
 
@@ -136,5 +136,5 @@ else if (Result is not null)
     });
 
     Task Delete(VcsConnectionDto c) =>
-        DeleteAsync($"VCS connection '{c.Name}'", () => Api.DeleteVcsConnectionAsync(c.Id));
+        DeleteAsync(string.Format(UiStrings.Vcs_Delete_What, c.Name), () => Api.DeleteVcsConnectionAsync(c.Id));
 }

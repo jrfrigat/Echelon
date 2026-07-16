@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Contracts only: provider ports plus the normalized models they exchange. No implementation,
+    no HTTP, no EF.
+
+    This lives in its own assembly rather than inside Application on purpose (Backstage's
+    plugin-*-node packages do the same). A provider adapter references this and nothing else of
+    ours, so a breaking change to a port is a compile error in every adapter on the next
+    `dotnet build` instead of a surprise at runtime.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReleaseOrchestrator.Core\ReleaseOrchestrator.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

@@ -9,11 +9,16 @@ using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Queue;
 using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 using ReleaseOrchestrator.Infrastructure.Tracker;
 using ReleaseOrchestrator.Infrastructure.Vcs;
+using ReleaseOrchestrator.Providers.Abstractions.Tracker;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using ReleaseOrchestrator.Providers.GitLab;
+using ReleaseOrchestrator.Providers.YandexTracker;
 
 namespace ReleaseOrchestrator.Infrastructure;
 
@@ -58,11 +63,17 @@ public static class InfrastructureExtensions
         services.AddScoped<IVcsService, VcsService>();
         services.AddScoped<ITrackerService, TrackerService>();
 
-        // Registered against the interface: consumers only ever resolve the interface, so
-        // binding the typed client to the concrete type left these registrations dead and
-        // any timeout or retry policy configured on them silently unapplied.
-        services.AddHttpClient<IVcsApiClient, GitLabApiClient>(c => c.Timeout = ExternalApiTimeout);
-        services.AddHttpClient<ITrackerApiClient, YandexTrackerApiClient>(c => c.Timeout = ExternalApiTimeout);
+        // The factories map a connection's provider type to an adapter. They resolve keyed
+        // services, so they stay satisfiable even with no adapter registered — an unknown
+        // provider type is reported by the factory, naming the ones that exist, rather than by
+        // container validation.
+        services.AddScoped<IVcsProviderFactory, VcsProviderFactory>();
+        services.AddScoped<ITrackerProviderFactory, TrackerProviderFactory>();
+
+        // The registry, in full. Adding a provider is a project plus a line here — no dynamic
+        // loading, no discovery by reflection: see the note in this project's .csproj.
+        services.AddGitLabProvider();
+        services.AddYandexTrackerProvider();
 
         services.AddStackExchangeRedisCache(opt => opt.Configuration = redisConnectionString);
 

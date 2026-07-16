@@ -35,8 +35,19 @@ builder.Services.AddMsalAuthentication(options =>
 // AddHttpMessageHandler is what attaches the access token. A bare HttpClient was being
 // injected into ApiService, so no request ever carried an Authorization header and every
 // call hit the API's RequireAuthenticatedUser fallback with a 401.
+builder.Services.AddTransient<AcceptLanguageHandler>();
+
 builder.Services.AddHttpClient<ApiService>(client =>
         client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
-    .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
+    .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>()
+    .AddHttpMessageHandler<AcceptLanguageHandler>();
 
-await builder.Build().RunAsync();
+builder.Services.AddScoped<LanguageService>();
+
+var host = builder.Build();
+
+// Before RunAsync, not after: the culture has to be in place for the first render, or the shell
+// paints in English and only flips once something else re-renders it.
+await host.Services.GetRequiredService<LanguageService>().InitializeCultureAsync();
+
+await host.RunAsync();

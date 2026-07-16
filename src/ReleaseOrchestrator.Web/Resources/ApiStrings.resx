@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Error_NotFound_Title" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="Error_Validation_Title" xml:space="preserve">
+    <value>Invalid request</value>
+  </data>
+  <data name="Url_Required" xml:space="preserve">
+    <value>apiUrl is required.</value>
+  </data>
+  <data name="Url_MustBeAbsolute" xml:space="preserve">
+    <value>apiUrl must be an absolute URL.</value>
+  </data>
+  <data name="Url_MustBeHttps" xml:space="preserve">
+    <value>apiUrl must use https.</value>
+  </data>
+  <data name="Url_HostNotAllowed" xml:space="preserve">
+    <value>Host '{0}' is not in Security:AllowedApiHosts.</value>
+  </data>
+  <data name="Url_InternalAddress" xml:space="preserve">
+    <value>apiUrl must not point at an internal address ({0}).</value>
+  </data>
+  <data name="Mr_UnknownStatus" xml:space="preserve">
+    <value>Unknown status '{0}'. Valid: {1}</value>
+  </data>
+  <data name="Mr_StatusVcsOwned" xml:space="preserve">
+    <value>{0} is reported by the VCS and cannot be set manually.</value>
+  </data>
+  <data name="Mr_StatusFinal" xml:space="preserve">
+    <value>MR is already {0}; its status is final.</value>
+  </data>
+  <data name="Mr_NotFound" xml:space="preserve">
+    <value>Merge request {0} not found.</value>
+  </data>
+  <data name="Perm_ClaimNotFound" xml:space="preserve">
+    <value>Permission claim '{0}' does not exist.</value>
+  </data>
+  <data name="Perm_GroupAlreadyHolds" xml:space="preserve">
+    <value>Group '{0}' already holds '{1}'.</value>
+  </data>
+  <data name="Perm_UserIdMustBeOid" xml:space="preserve">
+    <value>userId must be the Entra ID object id (oid) — a GUID.</value>
+  </data>
+  <data name="Perm_UserAlreadyHolds" xml:space="preserve">
+    <value>User '{0}' already holds '{1}'.</value>
+  </data>
+  <data name="Repo_ConnectionNotFound" xml:space="preserve">
+    <value>VCS connection '{0}' does not exist.</value>
+  </data>
+  <data name="Repo_AlreadyRegistered" xml:space="preserve">
+    <value>Repository '{0}' is already registered on this connection.</value>
+  </data>
+  <data name="Repo_TrackerConnectionNotFound" xml:space="preserve">
+    <value>Tracker connection '{0}' does not exist.</value>
+  </data>
+  <data name="Repo_HasMergeRequests" xml:space="preserve">
+    <value>Repository still has merge requests; remove them first.</value>
+  </data>
+  <data name="Stack_NameTaken" xml:space="preserve">
+    <value>A stack named '{0}' already exists.</value>
+  </data>
+  <data name="Stack_UnknownDependencyType" xml:space="preserve">
+    <value>Unknown type '{0}'. Valid: {1}</value>
+  </data>
+  <data name="Stack_SelfDependency" xml:space="preserve">
+    <value>A stack cannot depend on itself.</value>
+  </data>
+  <data name="Stack_NotFound" xml:space="preserve">
+    <value>Stack {0} not found.</value>
+  </data>
+  <data name="Stack_DependencyExists" xml:space="preserve">
+    <value>That dependency already exists.</value>
+  </data>
+  <data name="Stack_RepositoryNotFound" xml:space="preserve">
+    <value>Repository {0} not found.</value>
+  </data>
+  <data name="Stack_RepositoryAlreadyIn" xml:space="preserve">
+    <value>That repository is already in the stack.</value>
+  </data>
+  <data name="Tracker_UnknownType" xml:space="preserve">
+    <value>Unknown trackerType '{0}'. Valid: {1}</value>
+  </data>
+  <data name="Tracker_NameTaken" xml:space="preserve">
+    <value>A tracker connection named '{0}' already exists.</value>
+  </data>
+  <data name="Tracker_HasTasks" xml:space="preserve">
+    <value>Connection still has tasks; archive them first.</value>
+  </data>
+  <data name="Vcs_UnknownType" xml:space="preserve">
+    <value>Unknown vcsType '{0}'. Valid: {1}</value>
+  </data>
+  <data name="Vcs_NameTaken" xml:space="preserve">
+    <value>A VCS connection named '{0}' already exists.</value>
+  </data>
+  <data name="Vcs_HasRepositories" xml:space="preserve">
+    <value>Connection still has repositories; remove them first.</value>
+  </data>
+</root>

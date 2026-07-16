@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using ReleaseOrchestrator.Application.Contracts.Messages;
-using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Ingress.Webhooks.Models;
+using ReleaseOrchestrator.Providers.YandexTracker;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 
@@ -57,7 +57,7 @@ public static class YandexTrackerWebhookEndpoints
                     TrackerConnectionName: connectionName,
                     ExternalId: issueKey,
                     NewStatus: statusKey,
-                    ClosedAt: TaskStatusRules.IsClosed(statusKey) ? clock.GetUtcNow().UtcDateTime : null), ct);
+                    ClosedAt: YandexTrackerStatusRules.IsClosed(statusKey) ? clock.GetUtcNow().UtcDateTime : null), ct);
                 break;
         }
 

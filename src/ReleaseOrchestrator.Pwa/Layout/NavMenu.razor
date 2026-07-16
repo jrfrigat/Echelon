@@ -1,36 +1,38 @@
+@inherits LocalizedComponent
+
 @* Auth gating and the logout action live in MainLayout, which owns the drawer this sits in.
    Icon names with no FlareIcons constant are passed as literals, which FlareIcon also accepts. *@
-<FlareNavMenu AriaLabel="Main navigation">
+<FlareNavMenu AriaLabel="@UiStrings.Nav_Aria">
     @* Exact only for "/", which would otherwise prefix-match every route and always look active. *@
     <FlareNavLink Href="/" Match="NavMatchMode.Exact">
         <Icon><FlareIcon Name="list_alt" /></Icon>
-        <ChildContent>Release Plan</ChildContent>
+        <ChildContent>@UiStrings.Nav_ReleasePlan</ChildContent>
     </FlareNavLink>
     <FlareNavLink Href="/plan/yaml">
         <Icon><FlareIcon Name="@FlareIcons.Code" /></Icon>
-        <ChildContent>YAML Editor</ChildContent>
+        <ChildContent>@UiStrings.Nav_YamlEditor</ChildContent>
     </FlareNavLink>
 
-    <FlareNavGroup Label="Administration" Expanded="true">
+    <FlareNavGroup Label="@UiStrings.Nav_Administration" Expanded="true">
         <FlareNavLink Href="/admin/vcs">
             <Icon><FlareIcon Name="@FlareIcons.Link" /></Icon>
-            <ChildContent>VCS Connections</ChildContent>
+            <ChildContent>@UiStrings.Nav_VcsConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/trackers">
             <Icon><FlareIcon Name="assignment" /></Icon>
-            <ChildContent>Tracker Connections</ChildContent>
+            <ChildContent>@UiStrings.Nav_TrackerConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/repos">
             <Icon><FlareIcon Name="@FlareIcons.Folder" /></Icon>
-            <ChildContent>Repositories</ChildContent>
+            <ChildContent>@UiStrings.Nav_Repositories</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/stacks">
             <Icon><FlareIcon Name="layers" /></Icon>
-            <ChildContent>Stacks</ChildContent>
+            <ChildContent>@UiStrings.Nav_Stacks</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/permissions">
             <Icon><FlareIcon Name="@FlareIcons.Lock" /></Icon>
-            <ChildContent>Permissions</ChildContent>
+            <ChildContent>@UiStrings.Nav_Permissions</ChildContent>
         </FlareNavLink>
     </FlareNavGroup>
 </FlareNavMenu>

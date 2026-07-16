@@ -1,7 +1,25 @@
 @page "/authentication/{action}"
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inherits LocalizedComponent
 
-<RemoteAuthenticatorView Action="@Action" />
+@* Every fragment is supplied on purpose. RemoteAuthenticatorView carries its own built-in English
+   for each state ("Checking login state...", "Completing login...", and so on), and any fragment
+   left unset silently renders in English whichever language the user picked. *@
+<RemoteAuthenticatorView Action="@Action">
+    <LoggingIn><FlareText>@UiStrings.Auth_LoggingIn</FlareText></LoggingIn>
+    <CompletingLoggingIn><FlareText>@UiStrings.Auth_CompletingLoggingIn</FlareText></CompletingLoggingIn>
+    <LogInFailed Context="error">
+        <FlareAlert Severity="AlertSeverity.Error">@string.Format(UiStrings.Auth_LogInFailed, error)</FlareAlert>
+    </LogInFailed>
+    <LogOut><FlareText>@UiStrings.Auth_LogOut</FlareText></LogOut>
+    <CompletingLogOut><FlareText>@UiStrings.Auth_CompletingLogOut</FlareText></CompletingLogOut>
+    <LogOutFailed Context="error">
+        <FlareAlert Severity="AlertSeverity.Error">@string.Format(UiStrings.Auth_LogOutFailed, error)</FlareAlert>
+    </LogOutFailed>
+    <LogOutSucceeded><FlareText>@UiStrings.Auth_LogOutSucceeded</FlareText></LogOutSucceeded>
+    <Registering><FlareText>@UiStrings.Auth_Registering</FlareText></Registering>
+    <UserProfile><FlareText>@UiStrings.Auth_UserProfile</FlareText></UserProfile>
+</RemoteAuthenticatorView>
 
 @code {
     [Parameter] public string? Action { get; set; }

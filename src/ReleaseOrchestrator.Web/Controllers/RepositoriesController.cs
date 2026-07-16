@@ -2,16 +2,18 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
 [ApiController]
 [Route("api/repositories")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class RepositoriesController(AppDbContext db) : ControllerBase
+public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -47,12 +49,12 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateRepositoryRequest req, CancellationToken ct)
     {
         if (!await db.VcsConnections.AnyAsync(c => c.Id == req.ConnectionId, ct))
-            return BadRequest(new { error = $"VCS connection '{req.ConnectionId}' does not exist." });
+            return BadRequest(new { error = localizer["Repo_ConnectionNotFound", req.ConnectionId].Value });
 
         // Webhook routing resolves a repository by connection and external id and takes the first
         // match, so a second row with the same pair would silently divert merge requests.
         if (await db.Repositories.AnyAsync(r => r.ConnectionId == req.ConnectionId && r.ExternalId == req.ExternalId, ct))
-            return Conflict(new { error = $"Repository '{req.ExternalId}' is already registered on this connection." });
+            return Conflict(new { error = localizer["Repo_AlreadyRegistered", req.ExternalId].Value });
 
         if (await ValidateTrackerAsync(req.TrackerConnectionId, ct) is { } trackerError)
             return BadRequest(new { error = trackerError });
@@ -79,11 +81,11 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
         if (entity is null) return NotFound();
 
         if (!await db.VcsConnections.AnyAsync(c => c.Id == req.ConnectionId, ct))
-            return BadRequest(new { error = $"VCS connection '{req.ConnectionId}' does not exist." });
+            return BadRequest(new { error = localizer["Repo_ConnectionNotFound", req.ConnectionId].Value });
 
         if (await db.Repositories.AnyAsync(
                 r => r.ConnectionId == req.ConnectionId && r.ExternalId == req.ExternalId && r.Id != id, ct))
-            return Conflict(new { error = $"Repository '{req.ExternalId}' is already registered on this connection." });
+            return Conflict(new { error = localizer["Repo_AlreadyRegistered", req.ExternalId].Value });
 
         if (await ValidateTrackerAsync(req.TrackerConnectionId, ct) is { } trackerError)
             return BadRequest(new { error = trackerError });
@@ -103,7 +105,7 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
 
         return await db.TrackerConnections.AnyAsync(c => c.Id == trackerConnectionId, ct)
             ? null
-            : $"Tracker connection '{trackerConnectionId}' does not exist.";
+            : localizer["Repo_TrackerConnectionNotFound", trackerConnectionId].Value;
     }
 
     [HttpDelete("{id:guid}")]
@@ -114,7 +116,7 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
         if (entity is null) return NotFound();
 
         if (await db.MergeRequests.AnyAsync(mr => mr.RepositoryId == id, ct))
-            return Conflict(new { error = "Repository still has merge requests; remove them first." });
+            return Conflict(new { error = localizer["Repo_HasMergeRequests"].Value });
 
         db.Repositories.Remove(entity);
         await db.SaveChangesAsync(ct);

@@ -2,14 +2,14 @@
 @attribute [Authorize]
 @inherits CrudPageBase<StackDto>
 
-<PageTitle>Stacks</PageTitle>
+<PageTitle>@UiStrings.Stacks_Title</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Stacks</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Stacks_Title</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
         <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
-        <ChildContent>New Stack</ChildContent>
+        <ChildContent>@UiStrings.Stacks_New</ChildContent>
     </FlareButton>
 </FlareStack>
 
@@ -30,9 +30,9 @@ else if (Result is not null)
                     <Action>
                         <FlareStack Row Gap="FlareSpacing.XSmall">
                             <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined"
-                                         OnClick="@(() => ToggleSection(stack.Id, "deps"))">Dependencies</FlareButton>
+                                         OnClick="@(() => ToggleSection(stack.Id, "deps"))">@UiStrings.Stacks_Dependencies</FlareButton>
                             <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined"
-                                         OnClick="@(() => ToggleSection(stack.Id, "repos"))">Repositories</FlareButton>
+                                         OnClick="@(() => ToggleSection(stack.Id, "repos"))">@UiStrings.Stacks_Repositories</FlareButton>
                         </FlareStack>
                     </Action>
                 </FlareCardHeader>
@@ -40,14 +40,14 @@ else if (Result is not null)
                 @if (_expandedSection.TryGetValue(stack.Id, out var section) && section == "deps")
                 {
                     <FlareCardContent>
-                        <FlareText Typo="TypographyScale.TitleSmall">Add Dependency</FlareText>
+                        <FlareText Typo="TypographyScale.TitleSmall">@UiStrings.Stacks_AddDependency</FlareText>
                         <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" StretchFirst>
-                            <FlareSelect TValue="Guid?" Label="Target Stack" @bind-Value="_depTargetId"
+                            <FlareSelect TValue="Guid?" Label="@UiStrings.Stacks_TargetStack" @bind-Value="_depTargetId"
                                          Items="@Result.Items.Where(s => s.Id != stack.Id).Select(s => (Guid?)s.Id)"
                                          ItemLabel="@(id => StackName(id))" />
-                            <FlareSelect TValue="string" Label="Type" @bind-Value="_depType" Items="DependencyTypes" />
+                            <FlareSelect TValue="string" Label="@UiStrings.Common_Type" @bind-Value="_depType" Items="DependencyTypes" />
                             <FlareButton OnClick="@(() => AddDependency(stack.Id))"
-                                         Disabled="@(_depTargetId is null)">Add</FlareButton>
+                                         Disabled="@(_depTargetId is null)">@UiStrings.Common_Add</FlareButton>
                         </FlareStack>
                     </FlareCardContent>
                 }
@@ -55,7 +55,7 @@ else if (Result is not null)
                 @if (_expandedSection.TryGetValue(stack.Id, out var section2) && section2 == "repos")
                 {
                     <FlareCardContent>
-                        <FlareText Typo="TypographyScale.TitleSmall">Assign Repository</FlareText>
+                        <FlareText Typo="TypographyScale.TitleSmall">@UiStrings.Stacks_AssignRepository</FlareText>
                         @if (_repositories is null)
                         {
                             <FlareProgress Variant="ProgressVariant.Circular" />
@@ -63,11 +63,11 @@ else if (Result is not null)
                         else
                         {
                             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" StretchFirst>
-                                <FlareSelect TValue="Guid?" Label="Repository" @bind-Value="_repoId"
+                                <FlareSelect TValue="Guid?" Label="@UiStrings.Stacks_Repository" @bind-Value="_repoId"
                                              Items="@_repositories.Items.Select(r => (Guid?)r.Id)"
                                              ItemLabel="@(id => RepositoryName(id))" />
                                 <FlareButton OnClick="@(() => AssignRepo(stack.Id))"
-                                             Disabled="@(_repoId is null)">Assign</FlareButton>
+                                             Disabled="@(_repoId is null)">@UiStrings.Stacks_Assign</FlareButton>
                             </FlareStack>
                         }
                     </FlareCardContent>
@@ -83,14 +83,14 @@ else if (Result is not null)
     }
 }
 
-<FlareDialog Visible="ShowModal" Title="New Stack" VisibleChanged="OnDialogVisibleChanged">
+<FlareDialog Visible="ShowModal" Title="@UiStrings.Stacks_Dialog_New" VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
-        <FlareTextField Label="Stack Name" @bind-Value="_fName" />
+        <FlareTextField Label="@UiStrings.Stacks_Name" @bind-Value="_fName" />
     </ChildContent>
     <Actions>
-        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">Cancel</FlareButton>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
         <FlareButton OnClick="CreateStack" Loading="Saving"
-                     Disabled="@(string.IsNullOrWhiteSpace(_fName))">Create</FlareButton>
+                     Disabled="@(string.IsNullOrWhiteSpace(_fName))">@UiStrings.Common_Create</FlareButton>
     </Actions>
 </FlareDialog>
 
@@ -118,7 +118,7 @@ else if (Result is not null)
         return r is null ? "" : $"{r.Name} ({r.ConnectionName})";
     }
 
-    Task CreateStack() => SaveAsync(() => Api.CreateStackAsync(_fName), "Stack created.");
+    Task CreateStack() => SaveAsync(() => Api.CreateStackAsync(_fName), UiStrings.Stacks_Created);
 
     async Task ToggleSection(Guid stackId, string section)
     {
@@ -138,7 +138,7 @@ else if (Result is not null)
     {
         if (_depTargetId is not { } toStackId) return;
 
-        if (await RunAsync(() => Api.AddStackDependencyAsync(fromStackId, toStackId, _depType), "Dependency added."))
+        if (await RunAsync(() => Api.AddStackDependencyAsync(fromStackId, toStackId, _depType), UiStrings.Stacks_DependencyAdded))
             _depTargetId = null;
     }
 
@@ -146,7 +146,7 @@ else if (Result is not null)
     {
         if (_repoId is not { } repositoryId) return;
 
-        if (await RunAsync(() => Api.AssignRepositoryToStackAsync(stackId, repositoryId), "Repository assigned."))
+        if (await RunAsync(() => Api.AssignRepositoryToStackAsync(stackId, repositoryId), UiStrings.Stacks_RepositoryAssigned))
             _repoId = null;
     }
 }

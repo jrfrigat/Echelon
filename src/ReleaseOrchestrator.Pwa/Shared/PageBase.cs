@@ -1,5 +1,6 @@
 using Flare.Components;
 using Microsoft.AspNetCore.Components;
+using ReleaseOrchestrator.Pwa.Resources;
 using ReleaseOrchestrator.Pwa.Services;
 
 namespace ReleaseOrchestrator.Pwa.Shared;
@@ -12,7 +13,7 @@ namespace ReleaseOrchestrator.Pwa.Shared;
 /// the page with a "reload" bar and throws away the reason. That reason is the useful part —
 /// <see cref="ApiException"/> carries the server's own wording.
 /// </summary>
-public abstract class PageBase : ComponentBase
+public abstract class PageBase : LocalizedComponent
 {
     [Inject] protected ApiService Api { get; set; } = default!;
 
@@ -49,16 +50,18 @@ public abstract class PageBase : ComponentBase
     {
         if (ConfirmDialog is null) return false;
 
-        return await ConfirmDialog.ConfirmAsync(title, message, confirmLabel: "Delete") is true;
+        return await ConfirmDialog.ConfirmAsync(title, message, confirmLabel: UiStrings.Common_Delete) is true;
     }
 
     /// <summary>
-    /// An ApiException already reads as a sentence written for the operator. Anything else is a
-    /// transport or client fault, which needs framing to not look like a server rejection.
+    /// An ApiException already reads as a sentence written for the operator — and the server
+    /// picked its language from our Accept-Language, so it is already in the user's. Anything
+    /// else is a transport or client fault, which needs framing to not look like a server
+    /// rejection.
     /// </summary>
     protected static string Describe(Exception ex) => ex switch
     {
         ApiException api => api.Message,
-        _ => $"Could not reach the server: {ex.Message}"
+        _ => string.Format(UiStrings.Error_Unreachable, ex.Message)
     };
 }

@@ -3,11 +3,13 @@ using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
@@ -17,7 +19,8 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class StacksController(
     AppDbContext db,
     IPublishEndpoint publisher,
-    TimeProvider clock) : ControllerBase
+    TimeProvider clock,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -58,7 +61,7 @@ public class StacksController(
     public async Task<IActionResult> Create([FromBody] CreateStackRequest req, CancellationToken ct)
     {
         if (await db.Stacks.AnyAsync(s => s.Name == req.Name, ct))
-            return Conflict(new { error = $"A stack named '{req.Name}' already exists." });
+            return Conflict(new { error = localizer["Stack_NameTaken", req.Name].Value });
 
         var stack = new Stack { Id = Guid.NewGuid(), Name = req.Name };
         db.Stacks.Add(stack);
@@ -71,19 +74,19 @@ public class StacksController(
     public async Task<IActionResult> AddDependency(Guid id, [FromBody] AddStackDependencyRequest req, CancellationToken ct)
     {
         if (!Enum.TryParse<StackDependencyType>(req.Type, true, out var type))
-            return BadRequest(new { error = $"Unknown type '{req.Type}'. Valid: {string.Join(", ", Enum.GetNames<StackDependencyType>())}" });
+            return BadRequest(new { error = localizer["Stack_UnknownDependencyType", req.Type, string.Join(", ", Enum.GetNames<StackDependencyType>())].Value });
 
         if (id == req.ToStackId)
-            return BadRequest(new { error = "A stack cannot depend on itself." });
+            return BadRequest(new { error = localizer["Stack_SelfDependency"].Value });
 
         if (!await db.Stacks.AnyAsync(s => s.Id == id, ct))
-            return NotFound(new { error = $"Stack {id} not found." });
+            return NotFound(new { error = localizer["Stack_NotFound", id].Value });
 
         if (!await db.Stacks.AnyAsync(s => s.Id == req.ToStackId, ct))
-            return BadRequest(new { error = $"Stack {req.ToStackId} not found." });
+            return BadRequest(new { error = localizer["Stack_NotFound", req.ToStackId].Value });
 
         if (await db.StackDependencies.AnyAsync(d => d.FromStackId == id && d.ToStackId == req.ToStackId, ct))
-            return Conflict(new { error = "That dependency already exists." });
+            return Conflict(new { error = localizer["Stack_DependencyExists"].Value });
 
         db.StackDependencies.Add(new StackDependency
         {
@@ -117,13 +120,13 @@ public class StacksController(
     public async Task<IActionResult> AssignRepository(Guid id, [FromBody] AssignRepositoryRequest req, CancellationToken ct)
     {
         if (!await db.Stacks.AnyAsync(s => s.Id == id, ct))
-            return NotFound(new { error = $"Stack {id} not found." });
+            return NotFound(new { error = localizer["Stack_NotFound", id].Value });
 
         if (!await db.Repositories.AnyAsync(r => r.Id == req.RepositoryId, ct))
-            return BadRequest(new { error = $"Repository {req.RepositoryId} not found." });
+            return BadRequest(new { error = localizer["Stack_RepositoryNotFound", req.RepositoryId].Value });
 
         if (await db.RepositoryStacks.AnyAsync(rs => rs.StackId == id && rs.RepositoryId == req.RepositoryId, ct))
-            return Conflict(new { error = "That repository is already in the stack." });
+            return Conflict(new { error = localizer["Stack_RepositoryAlreadyIn"].Value });
 
         db.RepositoryStacks.Add(new RepositoryStack { StackId = id, RepositoryId = req.RepositoryId });
         await db.SaveChangesAsync(ct);

@@ -1,0 +1,51 @@
+using Microsoft.Extensions.DependencyInjection;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+
+namespace ReleaseOrchestrator.Providers.GitLab;
+
+/// <summary>Registers the GitLab adapter.</summary>
+public static class GitLabProviderExtensions
+{
+    /// <summary>
+    /// The provider type this adapter serves. Stored on <c>VcsConnection.ProviderType</c>.
+    /// </summary>
+    public const string ProviderType = "gitlab";
+
+    private static readonly TimeSpan ApiTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Adds the GitLab adapter to the container.</summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    /// <remarks>
+    /// <para>
+    /// Keyed by <see cref="ProviderType"/>, because the key the factory looks up arrives from the
+    /// database at runtime. That rules out <c>[FromKeyedServices]</c>, which binds a key at
+    /// compile time; the lookup is a <c>GetRequiredKeyedService</c> inside the factory instead.
+    /// </para>
+    /// <para>
+    /// The matching <see cref="VcsProviderRegistration"/> is what makes the adapter discoverable
+    /// rather than merely resolvable: keyed DI cannot enumerate its keys, so without it nothing
+    /// could list the providers that exist — neither the factory's error message nor the API's
+    /// validation of an operator's input.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddGitLabProvider(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<GitLabVersionDetector>();
+
+        // Typed client on the adapter: the timeout is then actually applied. Binding it to a
+        // concrete type nobody resolves is how these registrations went dead before.
+        services.AddHttpClient<GitLabProviderAdapter>(c => c.Timeout = ApiTimeout);
+
+        services.AddKeyedScoped<IVcsProviderAdapter>(
+            ProviderType,
+            (sp, _) => sp.GetRequiredService<GitLabProviderAdapter>());
+
+        services.AddSingleton(new VcsProviderRegistration(ProviderType));
+
+        return services;
+    }
+}

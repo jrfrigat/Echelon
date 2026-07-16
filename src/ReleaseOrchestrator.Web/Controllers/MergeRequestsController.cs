@@ -2,12 +2,14 @@ using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
@@ -17,7 +19,8 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class MergeRequestsController(
     AppDbContext db,
     IPublishEndpoint publisher,
-    TimeProvider clock) : ControllerBase
+    TimeProvider clock,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(
@@ -36,7 +39,7 @@ public class MergeRequestsController(
         if (!string.IsNullOrEmpty(status))
         {
             if (!Enum.TryParse<MergeRequestStatus>(status, true, out var parsed))
-                return BadRequest(new { error = $"Unknown status '{status}'. Valid: {string.Join(", ", Enum.GetNames<MergeRequestStatus>())}" });
+                return BadRequest(new { error = localizer["Mr_UnknownStatus", status, string.Join(", ", Enum.GetNames<MergeRequestStatus>())].Value });
 
             query = query.Where(mr => mr.Status == parsed);
         }
@@ -81,17 +84,17 @@ public class MergeRequestsController(
     public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetMrStatusRequest req, CancellationToken ct)
     {
         if (!Enum.TryParse<MergeRequestStatus>(req.Status, true, out var status))
-            return BadRequest(new { error = $"Unknown status '{req.Status}'. Valid: {string.Join(", ", Enum.GetNames<MergeRequestStatus>())}" });
+            return BadRequest(new { error = localizer["Mr_UnknownStatus", req.Status, string.Join(", ", Enum.GetNames<MergeRequestStatus>())].Value });
 
         // Merged/closed are facts reported by the VCS, not decisions an operator makes here.
         if (MergeRequestStatusResolver.IsTerminal(status))
-            return BadRequest(new { error = $"{status} is reported by the VCS and cannot be set manually." });
+            return BadRequest(new { error = localizer["Mr_StatusVcsOwned", status].Value });
 
         var mr = await db.MergeRequests.FirstOrDefaultAsync(m => m.Id == id, ct)
-            ?? throw new NotFoundException($"MergeRequest {id} not found");
+            ?? throw new NotFoundException(localizer["Mr_NotFound", id]);
 
         if (MergeRequestStatusResolver.IsTerminal(mr.Status))
-            return BadRequest(new { error = $"MR is already {mr.Status}; its status is final." });
+            return BadRequest(new { error = localizer["Mr_StatusFinal", mr.Status].Value });
 
         mr.Status = status;
         mr.IsStatusManual = true;

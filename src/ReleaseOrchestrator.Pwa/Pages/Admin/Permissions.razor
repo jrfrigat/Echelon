@@ -2,9 +2,9 @@
 @attribute [Authorize]
 @inherits PageBase
 
-<PageTitle>Permissions</PageTitle>
+<PageTitle>@UiStrings.Perms_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">Permissions</FlareText>
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Perms_Title</FlareText>
 
 <PageAlerts Error="@Error" Success="@Success"
             OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
@@ -18,11 +18,11 @@ else
     <FlareGrid>
         <FlareCol Xs="12" Md="5">
             <FlareCard Variant="CardVariant.Outlined">
-                <FlareCardHeader Title="Permission Claims" />
+                <FlareCardHeader Title="@UiStrings.Perms_Claims_Title" />
                 <FlareCardContent>
                     @if (_claims is null || _claims.Count == 0)
                     {
-                        <FlareEmptyState Title="No permission claims defined." Compact />
+                        <FlareEmptyState Title="@UiStrings.Perms_Claims_Empty" Compact />
                     }
                     else
                     {
@@ -39,11 +39,11 @@ else
 
         <FlareCol Xs="12" Md="7">
             <FlareCard Variant="CardVariant.Outlined">
-                <FlareCardHeader Title="Group Mappings">
+                <FlareCardHeader Title="@UiStrings.Perms_Mappings_Title">
                     <Action>
                         <FlareButton Size="ButtonSize.Sm" OnClick="@(() => _showAddMapping = !_showAddMapping)">
                             <LeadingIcon><FlareIcon Name="@FlareIcons.Add" /></LeadingIcon>
-                            <ChildContent>Add Mapping</ChildContent>
+                            <ChildContent>@UiStrings.Perms_AddMapping</ChildContent>
                         </FlareButton>
                     </Action>
                 </FlareCardHeader>
@@ -51,15 +51,15 @@ else
                     @if (_showAddMapping)
                     {
                         <FlareStack Gap="FlareSpacing.Small">
-                            <FlareTextField Label="AD Group SID" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
-                            <FlareSelect TValue="Guid?" Label="Permission Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
+                            <FlareTextField Label="@UiStrings.Perms_Sid" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
+                            <FlareSelect TValue="Guid?" Label="@UiStrings.Perms_Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
                                          Items="@(_claims?.Select(c => (Guid?)c.Id) ?? [])"
                                          ItemLabel="@(id => ClaimName(id))" />
                             <FlareStack Row Gap="FlareSpacing.Small">
                                 <FlareButton Size="ButtonSize.Sm" OnClick="AddMapping" Loading="_savingMapping"
-                                             Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">Add</FlareButton>
+                                             Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">@UiStrings.Common_Add</FlareButton>
                                 <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text"
-                                             OnClick="@(() => _showAddMapping = false)">Cancel</FlareButton>
+                                             OnClick="@(() => _showAddMapping = false)">@UiStrings.Common_Cancel</FlareButton>
                             </FlareStack>
                             <FlareDivider />
                         </FlareStack>
@@ -67,21 +67,21 @@ else
 
                     @if (_mappings is null || _mappings.Count == 0)
                     {
-                        <FlareEmptyState Title="No group mappings configured." Compact />
+                        <FlareEmptyState Title="@UiStrings.Perms_Mappings_Empty" Compact />
                     }
                     else
                     {
                         <FlareDataGrid TItem="GroupMappingDto" Items="_mappings" ShowPager="false">
                             <Columns>
-                                <FlareColumn TItem="GroupMappingDto" Title="AD Group SID">
+                                <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Sid">
                                     <Template>
                                         <FlareText Typo="TypographyScale.BodySmall" Mono>@context.AdGroupSid</FlareText>
                                     </Template>
                                 </FlareColumn>
-                                <FlareColumn TItem="GroupMappingDto" Title="Claim" Field="@(m => m.ClaimName)" />
+                                <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Col_Claim" Field="@(m => m.ClaimName)" />
                                 <FlareColumn TItem="GroupMappingDto" Title="" Align="ColumnAlign.End">
                                     <Template>
-                                        <FlareIconButton AriaLabel="@($"Remove {context.ClaimName}")" Color="FlareColor.Error"
+                                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Perms_Remove_Aria, context.ClaimName)" Color="FlareColor.Error"
                                                          OnClick="@(() => RemoveMapping(context))">
                                             <FlareIcon Name="@FlareIcons.Close" />
                                         </FlareIconButton>
@@ -127,7 +127,7 @@ else
         if (_fClaimId is not { } claimId) return;
 
         _savingMapping = true;
-        var added = await RunAsync(() => Api.AddGroupMappingAsync(_fSid, claimId), "Mapping added.");
+        var added = await RunAsync(() => Api.AddGroupMappingAsync(_fSid, claimId), UiStrings.Perms_MappingAdded);
         _savingMapping = false;
 
         if (!added) return;
@@ -139,10 +139,11 @@ else
 
     async Task RemoveMapping(GroupMappingDto m)
     {
-        if (!await ConfirmAsync("Remove mapping",
-                $"Remove '{m.ClaimName}' from group {m.AdGroupSid}? This cannot be undone.")) return;
+        if (!await ConfirmAsync(
+                UiStrings.Perms_Remove_Title,
+                string.Format(UiStrings.Perms_Remove_Message, m.ClaimName, m.AdGroupSid))) return;
 
-        if (await RunAsync(() => Api.RemoveGroupMappingAsync(m.Id), "Mapping removed."))
+        if (await RunAsync(() => Api.RemoveGroupMappingAsync(m.Id), UiStrings.Perms_MappingRemoved))
             await ReloadMappings();
     }
 

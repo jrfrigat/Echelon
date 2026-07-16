@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NotFound_Title" xml:space="preserve">
+    <value>Страница не найдена</value>
+  </data>
+  <data name="NotFound_Message" xml:space="preserve">
+    <value>По этому адресу ничего нет.</value>
+  </data>
+  <data name="Shell_Logout" xml:space="preserve">
+    <value>Выйти</value>
+  </data>
+  <data name="Language_Label" xml:space="preserve">
+    <value>Язык</value>
+  </data>
+  <data name="Auth_LoggingIn" xml:space="preserve">
+    <value>Проверяем, вошли ли вы...</value>
+  </data>
+  <data name="Auth_CompletingLoggingIn" xml:space="preserve">
+    <value>Завершаем вход...</value>
+  </data>
+  <data name="Auth_LogInFailed" xml:space="preserve">
+    <value>Не удалось войти: {0}</value>
+  </data>
+  <data name="Auth_LogOut" xml:space="preserve">
+    <value>Выходим...</value>
+  </data>
+  <data name="Auth_CompletingLogOut" xml:space="preserve">
+    <value>Завершаем выход...</value>
+  </data>
+  <data name="Auth_LogOutFailed" xml:space="preserve">
+    <value>Не удалось выйти: {0}</value>
+  </data>
+  <data name="Auth_LogOutSucceeded" xml:space="preserve">
+    <value>Вы вышли из системы.</value>
+  </data>
+  <data name="Auth_Registering" xml:space="preserve">
+    <value>Перенаправляем на регистрацию...</value>
+  </data>
+  <data name="Auth_UserProfile" xml:space="preserve">
+    <value>Загружаем профиль...</value>
+  </data>
+  <data name="Nav_Aria" xml:space="preserve">
+    <value>Основная навигация</value>
+  </data>
+  <data name="Nav_ReleasePlan" xml:space="preserve">
+    <value>План релиза</value>
+  </data>
+  <data name="Nav_YamlEditor" xml:space="preserve">
+    <value>Редактор YAML</value>
+  </data>
+  <data name="Nav_Administration" xml:space="preserve">
+    <value>Администрирование</value>
+  </data>
+  <data name="Nav_VcsConnections" xml:space="preserve">
+    <value>Подключения к VCS</value>
+  </data>
+  <data name="Nav_TrackerConnections" xml:space="preserve">
+    <value>Подключения к трекеру</value>
+  </data>
+  <data name="Nav_Repositories" xml:space="preserve">
+    <value>Репозитории</value>
+  </data>
+  <data name="Nav_Stacks" xml:space="preserve">
+    <value>Стеки</value>
+  </data>
+  <data name="Nav_Permissions" xml:space="preserve">
+    <value>Права доступа</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>Добавить</value>
+  </data>
+  <data name="Common_Create" xml:space="preserve">
+    <value>Создать</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="Common_Saved" xml:space="preserve">
+    <value>Сохранено.</value>
+  </data>
+  <data name="Common_Deleted" xml:space="preserve">
+    <value>Удалено.</value>
+  </data>
+  <data name="Common_Name" xml:space="preserve">
+    <value>Название</value>
+  </data>
+  <data name="Common_Type" xml:space="preserve">
+    <value>Тип</value>
+  </data>
+  <data name="Common_ApiUrl" xml:space="preserve">
+    <value>Адрес API</value>
+  </data>
+  <data name="Common_AccessToken" xml:space="preserve">
+    <value>Токен доступа</value>
+  </data>
+  <data name="Common_AccessToken_Keep" xml:space="preserve">
+    <value>Токен доступа (оставьте пустым, чтобы не менять)</value>
+  </data>
+  <data name="Common_Edit_Aria" xml:space="preserve">
+    <value>Изменить: {0}</value>
+  </data>
+  <data name="Common_Delete_Aria" xml:space="preserve">
+    <value>Удалить: {0}</value>
+  </data>
+  <data name="Confirm_Delete_Title" xml:space="preserve">
+    <value>Удаление</value>
+  </data>
+  <data name="Confirm_Delete_Message" xml:space="preserve">
+    <value>Удалить {0}? Это действие необратимо.</value>
+  </data>
+  <data name="Error_Unreachable" xml:space="preserve">
+    <value>Не удалось связаться с сервером: {0}</value>
+  </data>
+  <data name="Plan_Title" xml:space="preserve">
+    <value>План релиза</value>
+  </data>
+  <data name="Plan_Heading" xml:space="preserve">
+    <value>Активный план релиза</value>
+  </data>
+  <data name="Plan_Recalculate" xml:space="preserve">
+    <value>Пересчитать</value>
+  </data>
+  <data name="Plan_ExportYaml" xml:space="preserve">
+    <value>Выгрузить YAML</value>
+  </data>
+  <data name="Plan_Empty_Title" xml:space="preserve">
+    <value>Активного плана релиза нет</value>
+  </data>
+  <data name="Plan_Empty_Description" xml:space="preserve">
+    <value>Нажмите «Пересчитать», чтобы собрать план из merge-запросов, готовых к развёртыванию.</value>
+  </data>
+  <data name="Plan_Meta" xml:space="preserve">
+    <value>{0} v{1} — {2} — обновлён {3}</value>
+  </data>
+  <data name="Plan_Meta_Auto" xml:space="preserve">
+    <value>собран автоматически</value>
+  </data>
+  <data name="Plan_Meta_Manual" xml:space="preserve">
+    <value>изменён вручную</value>
+  </data>
+  <data name="Plan_Conflicts_Title" xml:space="preserve">
+    <value>Нарушенные зависимости: {0}</value>
+  </data>
+  <data name="Plan_Conflicts_Body" xml:space="preserve">
+    <value>Планировщик не смог учесть все ограничения и всё равно выстроил этапы. Развёртывание в этом порядке нарушит правила ниже — проверьте план перед релизом.</value>
+  </data>
+  <data name="Plan_Stage" xml:space="preserve">
+    <value>Этап {0}</value>
+  </data>
+  <data name="Plan_Stage_Manual" xml:space="preserve">
+    <value>Вручную</value>
+  </data>
+  <data name="Plan_Stage_DragHint" xml:space="preserve">
+    <value>перетащите, чтобы изменить порядок</value>
+  </data>
+  <data name="Plan_Stage_DropHint" xml:space="preserve">
+    <value>Перетащите сюда merge-запрос</value>
+  </data>
+  <data name="Plan_AddMr" xml:space="preserve">
+    <value>Добавить merge-запрос</value>
+  </data>
+  <data name="Plan_Item_ManualTooltip" xml:space="preserve">
+    <value>Добавлен вручную</value>
+  </data>
+  <data name="Plan_Item_Remove_Aria" xml:space="preserve">
+    <value>Убрать из плана</value>
+  </data>
+  <data name="Plan_Item_Remove_Title" xml:space="preserve">
+    <value>Удаление из плана</value>
+  </data>
+  <data name="Plan_Item_Remove_Message" xml:space="preserve">
+    <value>Убрать {0} !{1} из плана релиза?</value>
+  </data>
+  <data name="Plan_AddMr_Dialog_Title" xml:space="preserve">
+    <value>Добавить merge-запрос на этап</value>
+  </data>
+  <data name="Plan_Filter_Placeholder" xml:space="preserve">
+    <value>Фильтр по ветке или репозиторию...</value>
+  </data>
+  <data name="Plan_Col_Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Plan_Col_Branch" xml:space="preserve">
+    <value>Ветка</value>
+  </data>
+  <data name="Plan_Col_Task" xml:space="preserve">
+    <value>Задача</value>
+  </data>
+  <data name="Plan_Recalculated" xml:space="preserve">
+    <value>План пересчитан.</value>
+  </data>
+  <data name="Plan_ItemMoved" xml:space="preserve">
+    <value>Элемент перемещён.</value>
+  </data>
+  <data name="Plan_StagesReordered" xml:space="preserve">
+    <value>Порядок этапов изменён.</value>
+  </data>
+  <data name="Plan_ItemRemoved" xml:space="preserve">
+    <value>Элемент убран из плана.</value>
+  </data>
+  <data name="Plan_MrAdded" xml:space="preserve">
+    <value>Merge-запрос добавлен на этап.</value>
+  </data>
+  <data name="Yaml_Title" xml:space="preserve">
+    <value>Редактор YAML</value>
+  </data>
+  <data name="Yaml_Heading" xml:space="preserve">
+    <value>План релиза в YAML</value>
+  </data>
+  <data name="Yaml_ForceImport" xml:space="preserve">
+    <value>Импорт без проверок</value>
+  </data>
+  <data name="Yaml_ExportActive" xml:space="preserve">
+    <value>Выгрузить активный</value>
+  </data>
+  <data name="Yaml_Import" xml:space="preserve">
+    <value>Импортировать</value>
+  </data>
+  <data name="Yaml_ForceWarning" xml:space="preserve">
+    <value>Импорт без проверок пропускает контроль жёстких зависимостей. Загруженный порядок может их нарушить.</value>
+  </data>
+  <data name="Yaml_Placeholder" xml:space="preserve">
+    <value>Вставьте YAML сюда или нажмите «Выгрузить активный», чтобы загрузить текущий план...</value>
+  </data>
+  <data name="Yaml_NoActivePlan" xml:space="preserve">
+    <value>Активный план не найден.</value>
+  </data>
+  <data name="Yaml_Imported" xml:space="preserve">
+    <value>План «{0}» импортирован.</value>
+  </data>
+  <data name="Vcs_Title" xml:space="preserve">
+    <value>Подключения к VCS</value>
+  </data>
+  <data name="Vcs_New" xml:space="preserve">
+    <value>Новое подключение</value>
+  </data>
+  <data name="Vcs_Col_ReadyLabel" xml:space="preserve">
+    <value>Метка готовности к развёртыванию</value>
+  </data>
+  <data name="Vcs_Label_Disabled" xml:space="preserve">
+    <value>выключено</value>
+  </data>
+  <data name="Vcs_Dialog_Edit" xml:space="preserve">
+    <value>Изменение подключения к VCS</value>
+  </data>
+  <data name="Vcs_Dialog_New" xml:space="preserve">
+    <value>Новое подключение к VCS</value>
+  </data>
+  <data name="Vcs_ReadyLabel_Helper" xml:space="preserve">
+    <value>Merge-запросы с этой меткой в {0} попадают в план релиза автоматически. Оставьте поле пустым, чтобы отключить: тогда merge-запросы этого подключения будут попадать в план только вручную.</value>
+  </data>
+  <data name="Vcs_Delete_What" xml:space="preserve">
+    <value>подключение к VCS «{0}»</value>
+  </data>
+  <data name="Tracker_Title" xml:space="preserve">
+    <value>Подключения к трекеру</value>
+  </data>
+  <data name="Tracker_New" xml:space="preserve">
+    <value>Новое подключение</value>
+  </data>
+  <data name="Tracker_Col_OrgId" xml:space="preserve">
+    <value>ID организации</value>
+  </data>
+  <data name="Tracker_Dialog_Edit" xml:space="preserve">
+    <value>Изменение подключения к трекеру</value>
+  </data>
+  <data name="Tracker_Dialog_New" xml:space="preserve">
+    <value>Новое подключение к трекеру</value>
+  </data>
+  <data name="Tracker_OrgId_Label" xml:space="preserve">
+    <value>ID организации (необязательно)</value>
+  </data>
+  <data name="Tracker_OrgId_Placeholder" xml:space="preserve">
+    <value>ID организации в Яндексе</value>
+  </data>
+  <data name="Tracker_Delete_What" xml:space="preserve">
+    <value>подключение к трекеру «{0}»</value>
+  </data>
+  <data name="Repos_Title" xml:space="preserve">
+    <value>Репозитории</value>
+  </data>
+  <data name="Repos_New" xml:space="preserve">
+    <value>Новый репозиторий</value>
+  </data>
+  <data name="Repos_Col_ExternalId" xml:space="preserve">
+    <value>Внешний ID</value>
+  </data>
+  <data name="Repos_Col_Connection" xml:space="preserve">
+    <value>Подключение к VCS</value>
+  </data>
+  <data name="Repos_ExternalId_Placeholder" xml:space="preserve">
+    <value>ID или путь проекта в GitLab</value>
+  </data>
+  <data name="Repos_Created" xml:space="preserve">
+    <value>Репозиторий создан.</value>
+  </data>
+  <data name="Repos_Delete_What" xml:space="preserve">
+    <value>репозиторий «{0}»</value>
+  </data>
+  <data name="Stacks_Title" xml:space="preserve">
+    <value>Стеки</value>
+  </data>
+  <data name="Stacks_New" xml:space="preserve">
+    <value>Новый стек</value>
+  </data>
+  <data name="Stacks_Dependencies" xml:space="preserve">
+    <value>Зависимости</value>
+  </data>
+  <data name="Stacks_Repositories" xml:space="preserve">
+    <value>Репозитории</value>
+  </data>
+  <data name="Stacks_AddDependency" xml:space="preserve">
+    <value>Добавить зависимость</value>
+  </data>
+  <data name="Stacks_TargetStack" xml:space="preserve">
+    <value>Стек, от которого зависим</value>
+  </data>
+  <data name="Stacks_AssignRepository" xml:space="preserve">
+    <value>Привязать репозиторий</value>
+  </data>
+  <data name="Stacks_Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Stacks_Assign" xml:space="preserve">
+    <value>Привязать</value>
+  </data>
+  <data name="Stacks_Dialog_New" xml:space="preserve">
+    <value>Новый стек</value>
+  </data>
+  <data name="Stacks_Name" xml:space="preserve">
+    <value>Название стека</value>
+  </data>
+  <data name="Stacks_Created" xml:space="preserve">
+    <value>Стек создан.</value>
+  </data>
+  <data name="Stacks_DependencyAdded" xml:space="preserve">
+    <value>Зависимость добавлена.</value>
+  </data>
+  <data name="Stacks_RepositoryAssigned" xml:space="preserve">
+    <value>Репозиторий привязан.</value>
+  </data>
+  <data name="Perms_Title" xml:space="preserve">
+    <value>Права доступа</value>
+  </data>
+  <data name="Perms_Claims_Title" xml:space="preserve">
+    <value>Права</value>
+  </data>
+  <data name="Perms_Claims_Empty" xml:space="preserve">
+    <value>Права не заданы.</value>
+  </data>
+  <data name="Perms_Mappings_Title" xml:space="preserve">
+    <value>Сопоставления с группами</value>
+  </data>
+  <data name="Perms_AddMapping" xml:space="preserve">
+    <value>Добавить сопоставление</value>
+  </data>
+  <data name="Perms_Sid" xml:space="preserve">
+    <value>SID группы AD</value>
+  </data>
+  <data name="Perms_Claim" xml:space="preserve">
+    <value>Право</value>
+  </data>
+  <data name="Perms_Col_Claim" xml:space="preserve">
+    <value>Право</value>
+  </data>
+  <data name="Perms_Mappings_Empty" xml:space="preserve">
+    <value>Сопоставления с группами не настроены.</value>
+  </data>
+  <data name="Perms_Remove_Aria" xml:space="preserve">
+    <value>Убрать: {0}</value>
+  </data>
+  <data name="Perms_Remove_Title" xml:space="preserve">
+    <value>Удаление сопоставления</value>
+  </data>
+  <data name="Perms_Remove_Message" xml:space="preserve">
+    <value>Убрать право «{0}» у группы {1}? Это действие необратимо.</value>
+  </data>
+  <data name="Perms_MappingAdded" xml:space="preserve">
+    <value>Сопоставление добавлено.</value>
+  </data>
+  <data name="Perms_MappingRemoved" xml:space="preserve">
+    <value>Сопоставление удалено.</value>
+  </data>
+</root>

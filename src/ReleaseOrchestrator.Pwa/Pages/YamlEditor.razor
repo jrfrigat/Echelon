@@ -2,18 +2,18 @@
 @attribute [Authorize]
 @inherits PageBase
 
-<PageTitle>YAML Editor</PageTitle>
+<PageTitle>@UiStrings.Yaml_Title</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">YAML Release Plan</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Yaml_Heading</FlareText>
     <FlareSpacer />
-    <FlareSwitch @bind-Value="_force" Label="Force import" />
+    <FlareSwitch @bind-Value="_force" Label="@UiStrings.Yaml_ForceImport" />
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="LoadExport" Disabled="_busy">
-        Export Active
+        @UiStrings.Yaml_ExportActive
     </FlareButton>
     <FlareButton Size="ButtonSize.Sm" OnClick="ImportYaml"
                  Disabled="@(_busy || string.IsNullOrWhiteSpace(_yaml))">
-        Import
+        @UiStrings.Yaml_Import
     </FlareButton>
 </FlareStack>
 
@@ -22,7 +22,7 @@
 @if (_force)
 {
     <FlareAlert Severity="AlertSeverity.Warning">
-        Force skips validation against hard dependencies. The imported order may break them.
+        @UiStrings.Yaml_ForceWarning
     </FlareAlert>
 }
 
@@ -35,7 +35,7 @@
 }
 
 <FlareTextArea @bind-Value="_yaml" Rows="30" Monospace
-               Placeholder="Paste YAML here, or use 'Export Active' to load the current plan..." />
+               Placeholder="@UiStrings.Yaml_Placeholder" />
 
 @code {
     [SupplyParameterFromQuery] Guid? Id { get; set; }
@@ -62,7 +62,7 @@
             var plan = await Api.GetActivePlanAsync();
             if (plan is null)
             {
-                Error = "No active plan found.";
+                Error = UiStrings.Yaml_NoActivePlan;
                 return;
             }
             _yaml = await Api.ExportYamlAsync(plan.Id);
@@ -76,7 +76,7 @@
         await RunAsync(async () =>
         {
             var plan = await Api.ImportYamlAsync(_yaml ?? string.Empty, _force);
-            Success = $"Plan '{plan.Name}' imported successfully.";
+            Success = string.Format(UiStrings.Yaml_Imported, plan.Name);
         });
         _busy = false;
     }

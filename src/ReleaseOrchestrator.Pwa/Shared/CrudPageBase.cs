@@ -1,4 +1,5 @@
 using ReleaseOrchestrator.Pwa.Models;
+using ReleaseOrchestrator.Pwa.Resources;
 
 namespace ReleaseOrchestrator.Pwa.Shared;
 
@@ -50,10 +51,12 @@ public abstract class CrudPageBase<TItem> : PageBase
     }
 
     /// <summary>Saves via <paramref name="save"/>, then closes the modal and reloads the page on success.</summary>
-    protected async Task SaveAsync(Func<Task> save, string success = "Saved.")
+    /// <param name="success">Notice to show; the generic "Saved." when omitted. Not a default
+    /// parameter value: a resource lookup is not a compile-time constant.</param>
+    protected async Task SaveAsync(Func<Task> save, string? success = null)
     {
         Saving = true;
-        var saved = await RunAsync(save, success);
+        var saved = await RunAsync(save, success ?? UiStrings.Common_Saved);
         Saving = false;
 
         if (!saved) return;
@@ -65,8 +68,10 @@ public abstract class CrudPageBase<TItem> : PageBase
     /// <param name="what">Names the row in the prompt, e.g. "connection 'gitlab-prod'".</param>
     protected async Task DeleteAsync(string what, Func<Task> delete)
     {
-        if (!await ConfirmAsync("Delete", $"Delete {what}? This cannot be undone.")) return;
+        if (!await ConfirmAsync(
+                UiStrings.Confirm_Delete_Title,
+                string.Format(UiStrings.Confirm_Delete_Message, what))) return;
 
-        if (await RunAsync(delete, "Deleted.")) await LoadPage(Page);
+        if (await RunAsync(delete, UiStrings.Common_Deleted)) await LoadPage(Page);
     }
 }

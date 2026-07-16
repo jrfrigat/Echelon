@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Core.Entities;
-using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using ReleaseOrchestrator.Web.Resources;
 using ReleaseOrchestrator.Web.Validation;
 
 namespace ReleaseOrchestrator.Web.Controllers;
@@ -17,7 +20,9 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class VcsConnectionsController(
     AppDbContext db,
     TokenProtector protector,
-    IConfiguration config) : ControllerBase
+    IVcsProviderFactory providerFactory,
+    IConfiguration config,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     private string[] AllowedApiHosts => config.GetSection("Security:AllowedApiHosts").Get<string[]>() ?? [];
 
@@ -30,9 +35,13 @@ public class VcsConnectionsController(
 
         // OrderBy is required for paging to be stable: without it SQL Server may return rows
         // in any order, so entries can repeat or vanish between pages.
+        //
+        // The wire keeps saying "vcsType" while the column is now ProviderType. The name was
+        // never the problem — an enum in the domain was — and renaming the field would break
+        // every client for no gain.
         var items = await db.VcsConnections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
-            .Select(c => new { c.Id, c.Name, c.VcsType, c.ApiUrl, c.ReadyForDeployLabel })
+            .Select(c => new { c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
 
@@ -44,7 +53,7 @@ public class VcsConnectionsController(
     {
         var c = await db.VcsConnections
             .Where(x => x.Id == id)
-            .Select(x => new { x.Id, x.Name, x.VcsType, x.ApiUrl, x.ReadyForDeployLabel })
+            .Select(x => new { x.Id, x.Name, VcsType = x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel })
             .FirstOrDefaultAsync(ct);
 
         return c is null ? NotFound() : Ok(c);
@@ -54,20 +63,28 @@ public class VcsConnectionsController(
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] CreateVcsConnectionRequest req, CancellationToken ct)
     {
-        if (!Enum.TryParse<VcsType>(req.VcsType, true, out var vcsType))
-            return BadRequest(new { error = $"Unknown vcsType '{req.VcsType}'. Valid: {string.Join(", ", Enum.GetNames<VcsType>())}" });
+        // Validated against the adapters that are actually registered, not against an enum. The
+        // set of providers is a property of the composition root, and this is the last point at
+        // which an operator's typo can be rejected with the list of what would have worked —
+        // after this it is a stored row that fails on first use.
+        var providerType = ProviderKey.Normalize(req.VcsType);
+        if (!providerFactory.AvailableProviders.Contains(providerType))
+            return BadRequest(new
+            {
+                error = localizer["Vcs_UnknownType", req.VcsType, string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
 
-        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, out var urlError))
+        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
             return BadRequest(new { error = urlError });
 
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name, ct))
-            return Conflict(new { error = $"A VCS connection named '{req.Name}' already exists." });
+            return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
 
         var entity = new VcsConnection
         {
             Id = Guid.NewGuid(),
             Name = req.Name,
-            VcsType = vcsType,
+            ProviderType = providerType,
             ApiUrl = req.ApiUrl,
             ReadyForDeployLabel = req.ReadyForDeployLabel,
             EncryptedAccessToken = protector.Protect(req.AccessToken)
@@ -82,14 +99,14 @@ public class VcsConnectionsController(
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVcsConnectionRequest req, CancellationToken ct)
     {
-        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, out var urlError))
+        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
             return BadRequest(new { error = urlError });
 
         var entity = await db.VcsConnections.FindAsync([id], ct);
         if (entity is null) return NotFound();
 
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
-            return Conflict(new { error = $"A VCS connection named '{req.Name}' already exists." });
+            return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
@@ -113,7 +130,7 @@ public class VcsConnectionsController(
         if (entity is null) return NotFound();
 
         if (await db.Repositories.AnyAsync(r => r.ConnectionId == id, ct))
-            return Conflict(new { error = "Connection still has repositories; remove them first." });
+            return Conflict(new { error = localizer["Vcs_HasRepositories"].Value });
 
         db.VcsConnections.Remove(entity);
         await db.SaveChangesAsync(ct);

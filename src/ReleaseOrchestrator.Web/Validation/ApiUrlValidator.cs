@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Localization;
+using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Validation;
 
@@ -16,38 +18,46 @@ namespace ReleaseOrchestrator.Web.Validation;
 /// </summary>
 public static class ApiUrlValidator
 {
-    public static bool TryValidate(string? apiUrl, IReadOnlyCollection<string> allowedHosts, out string error)
+    /// <param name="localizer">
+    /// Supplies the rejection wording. Passed in rather than resolved here because this stays a
+    /// static helper: the callers are controllers, which already hold the localizer.
+    /// </param>
+    public static bool TryValidate(
+        string? apiUrl,
+        IReadOnlyCollection<string> allowedHosts,
+        IStringLocalizer<ApiStrings> localizer,
+        out string error)
     {
         error = string.Empty;
 
         if (string.IsNullOrWhiteSpace(apiUrl))
         {
-            error = "apiUrl is required.";
+            error = localizer["Url_Required"];
             return false;
         }
 
         if (!Uri.TryCreate(apiUrl, UriKind.Absolute, out var uri))
         {
-            error = "apiUrl must be an absolute URL.";
+            error = localizer["Url_MustBeAbsolute"];
             return false;
         }
 
         if (uri.Scheme != Uri.UriSchemeHttps)
         {
-            error = "apiUrl must use https.";
+            error = localizer["Url_MustBeHttps"];
             return false;
         }
 
         if (allowedHosts.Count > 0
             && !allowedHosts.Any(h => string.Equals(h, uri.Host, StringComparison.OrdinalIgnoreCase)))
         {
-            error = $"Host '{uri.Host}' is not in Security:AllowedApiHosts.";
+            error = localizer["Url_HostNotAllowed", uri.Host];
             return false;
         }
 
         if (IPAddress.TryParse(uri.Host, out var ip) && IsInternal(ip))
         {
-            error = $"apiUrl must not point at an internal address ({uri.Host}).";
+            error = localizer["Url_InternalAddress", uri.Host];
             return false;
         }
 

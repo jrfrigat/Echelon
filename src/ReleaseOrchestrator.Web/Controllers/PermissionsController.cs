@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
@@ -21,7 +23,8 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class PermissionsController(
     AppDbContext db,
     IDistributedCache cache,
-    ILogger<PermissionsController> logger) : ControllerBase
+    ILogger<PermissionsController> logger,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     private string ActorId => UserIdentifier.TryResolve(User, out var objectId)
         ? objectId
@@ -49,11 +52,11 @@ public class PermissionsController(
     {
         var claimName = await ClaimNameAsync(req.PermissionClaimId, ct);
         if (claimName is null)
-            return BadRequest(new { error = $"Permission claim '{req.PermissionClaimId}' does not exist." });
+            return BadRequest(new { error = localizer["Perm_ClaimNotFound", req.PermissionClaimId].Value });
 
         if (await db.GroupPermissionMappings.AnyAsync(
                 m => m.AdGroupSid == req.AdGroupSid && m.PermissionClaimId == req.PermissionClaimId, ct))
-            return Conflict(new { error = $"Group '{req.AdGroupSid}' already holds '{claimName}'." });
+            return Conflict(new { error = localizer["Perm_GroupAlreadyHolds", req.AdGroupSid, claimName].Value });
 
         db.GroupPermissionMappings.Add(new GroupPermissionMapping
         {
@@ -104,15 +107,15 @@ public class PermissionsController(
         // anything else an administrator might reach for — a UPN, an email, a display name — would
         // store a row that quietly never applies.
         if (!UserIdentifier.TryNormalize(req.UserId, out var userId))
-            return BadRequest(new { error = "userId must be the Entra ID object id (oid) — a GUID." });
+            return BadRequest(new { error = localizer["Perm_UserIdMustBeOid"].Value });
 
         var claimName = await ClaimNameAsync(req.PermissionClaimId, ct);
         if (claimName is null)
-            return BadRequest(new { error = $"Permission claim '{req.PermissionClaimId}' does not exist." });
+            return BadRequest(new { error = localizer["Perm_ClaimNotFound", req.PermissionClaimId].Value });
 
         if (await db.UserPermissionOverrides.AnyAsync(
                 o => o.UserId == userId && o.PermissionClaimId == req.PermissionClaimId, ct))
-            return Conflict(new { error = $"User '{userId}' already holds '{claimName}'." });
+            return Conflict(new { error = localizer["Perm_UserAlreadyHolds", userId, claimName].Value });
 
         db.UserPermissionOverrides.Add(new UserPermissionOverride
         {

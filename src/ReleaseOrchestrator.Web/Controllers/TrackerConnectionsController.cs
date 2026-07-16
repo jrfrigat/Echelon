@@ -1,12 +1,16 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Core.Entities;
-using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Tracker;
+using ReleaseOrchestrator.Web.Resources;
 using ReleaseOrchestrator.Web.Validation;
 
 namespace ReleaseOrchestrator.Web.Controllers;
@@ -17,8 +21,22 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class TrackerConnectionsController(
     AppDbContext db,
     TokenProtector protector,
-    IConfiguration config) : ControllerBase
+    ITrackerProviderFactory providerFactory,
+    IConfiguration config,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
+    /// <summary>
+    /// The settings key the wire's <c>orgId</c> field maps to.
+    /// </summary>
+    /// <remarks>
+    /// A compatibility shim, and the last place a provider's vocabulary appears outside its own
+    /// adapter. The entity now stores an opaque settings bag, but the HTTP contract still has an
+    /// <c>orgId</c> field and the PWA still sends it. Replacing that field with a generic
+    /// <c>providerSettings</c> object is a UI change, so it is deliberately not bundled here.
+    /// Nothing reads this key's meaning — only the Yandex.Tracker adapter does.
+    /// </remarks>
+    private const string OrgIdSettingKey = "orgId";
+
     private string[] AllowedApiHosts => config.GetSection("Security:AllowedApiHosts").Get<string[]>() ?? [];
 
     [HttpGet]
@@ -28,11 +46,17 @@ public class TrackerConnectionsController(
         var paging = Paging.From(page, pageSize);
         var total = await db.TrackerConnections.CountAsync(ct);
 
-        var items = await db.TrackerConnections
+        // Projected to the database, then reshaped in memory: the settings bag is JSON in a
+        // column, so orgId cannot be read out of it in SQL.
+        var rows = await db.TrackerConnections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
-            .Select(c => new { c.Id, c.Name, c.TrackerType, c.ApiUrl, c.OrgId })
+            .Select(c => new { c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ProviderSettingsJson })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
+
+        var items = rows
+            .Select(c => new { c.Id, c.Name, TrackerType = c.ProviderType, c.ApiUrl, OrgId = ReadOrgId(c.ProviderSettingsJson) })
+            .ToList();
 
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
@@ -40,34 +64,66 @@ public class TrackerConnectionsController(
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
-        var c = await db.TrackerConnections
+        var row = await db.TrackerConnections
             .Where(x => x.Id == id)
-            .Select(x => new { x.Id, x.Name, x.TrackerType, x.ApiUrl, x.OrgId })
+            .Select(x => new { x.Id, x.Name, x.ProviderType, x.ApiUrl, x.ProviderSettingsJson })
             .FirstOrDefaultAsync(ct);
 
-        return c is null ? NotFound() : Ok(c);
+        return row is null
+            ? NotFound()
+            : Ok(new { row.Id, row.Name, TrackerType = row.ProviderType, row.ApiUrl, OrgId = ReadOrgId(row.ProviderSettingsJson) });
     }
+
+    /// <summary>Reads the wire's orgId back out of the stored settings bag.</summary>
+    private static string? ReadOrgId(string? providerSettingsJson)
+    {
+        if (string.IsNullOrWhiteSpace(providerSettingsJson)) return null;
+
+        try
+        {
+            var settings = JsonSerializer.Deserialize<Dictionary<string, string?>>(providerSettingsJson);
+            return settings is not null && settings.TryGetValue(OrgIdSettingKey, out var orgId) ? orgId : null;
+        }
+        catch (JsonException)
+        {
+            // A row this endpoint cannot parse is still worth listing: swallowing the whole
+            // connection because one setting is malformed would hide the row an operator needs to
+            // fix. The provider factory raises the real error when the connection is used.
+            return null;
+        }
+    }
+
+    /// <summary>Writes the wire's orgId into the settings bag, dropping it when blank.</summary>
+    private static string? WriteOrgId(string? orgId) =>
+        string.IsNullOrWhiteSpace(orgId)
+            ? null
+            : JsonSerializer.Serialize(new Dictionary<string, string?> { [OrgIdSettingKey] = orgId.Trim() });
 
     [HttpPost]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] CreateTrackerConnectionRequest req, CancellationToken ct)
     {
-        if (!Enum.TryParse<TrackerType>(req.TrackerType, true, out var trackerType))
-            return BadRequest(new { error = $"Unknown trackerType '{req.TrackerType}'. Valid: {string.Join(", ", Enum.GetNames<TrackerType>())}" });
+        // See VcsConnectionsController.Create: validated against the registered adapters.
+        var providerType = ProviderKey.Normalize(req.TrackerType);
+        if (!providerFactory.AvailableProviders.Contains(providerType))
+            return BadRequest(new
+            {
+                error = localizer["Tracker_UnknownType", req.TrackerType, string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
 
-        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, out var urlError))
+        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
             return BadRequest(new { error = urlError });
 
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name, ct))
-            return Conflict(new { error = $"A tracker connection named '{req.Name}' already exists." });
+            return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
 
         var entity = new TrackerConnection
         {
             Id = Guid.NewGuid(),
             Name = req.Name,
-            TrackerType = trackerType,
+            ProviderType = providerType,
             ApiUrl = req.ApiUrl,
-            OrgId = req.OrgId,
+            ProviderSettingsJson = WriteOrgId(req.OrgId),
             EncryptedAccessToken = protector.Protect(req.AccessToken)
         };
 
@@ -80,18 +136,18 @@ public class TrackerConnectionsController(
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTrackerConnectionRequest req, CancellationToken ct)
     {
-        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, out var urlError))
+        if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
             return BadRequest(new { error = urlError });
 
         var entity = await db.TrackerConnections.FindAsync([id], ct);
         if (entity is null) return NotFound();
 
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
-            return Conflict(new { error = $"A tracker connection named '{req.Name}' already exists." });
+            return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
-        entity.OrgId = req.OrgId;
+        entity.ProviderSettingsJson = WriteOrgId(req.OrgId);
 
         // Blank keeps the stored token — see the UI's "leave blank to keep current".
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
@@ -109,7 +165,7 @@ public class TrackerConnectionsController(
         if (entity is null) return NotFound();
 
         if (await db.Tasks.AnyAsync(t => t.TrackerConnectionId == id, ct))
-            return Conflict(new { error = "Connection still has tasks; archive them first." });
+            return Conflict(new { error = localizer["Tracker_HasTasks"].Value });
 
         db.TrackerConnections.Remove(entity);
         await db.SaveChangesAsync(ct);

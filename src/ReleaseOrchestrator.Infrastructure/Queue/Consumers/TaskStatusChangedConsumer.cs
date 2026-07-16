@@ -2,13 +2,15 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Contracts.Messages;
-using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
+/// <summary>Applies a tracker status change to the local task, and replans when it matters.</summary>
 public class TaskStatusChangedConsumer(
     AppDbContext db,
+    ITrackerProviderFactory providerFactory,
     IPublishEndpoint publisher,
     TimeProvider clock,
     ILogger<TaskStatusChangedConsumer> logger) : IConsumer<TaskStatusChanged>
@@ -42,11 +44,15 @@ public class TaskStatusChangedConsumer(
 
         var wasClosed = task.ClosedAt is not null;
 
+        // Asked of the connection's provider rather than of a list held here, so the
+        // closed-status rule has exactly one owner per tracker: the ingress and this consumer
+        // used to keep lists that disagreed on "resolved", which left such tasks
+        // closed-but-unarchivable forever. The owner is now the adapter that knows the tracker's
+        // vocabulary, and both paths ask it.
+        var provider = await providerFactory.CreateAsync(conn, ct);
+
         task.Status = msg.NewStatus;
-        // Derived here rather than taken from the message, so the closed-status rule has one
-        // owner: the ingress and this consumer used to keep lists that disagreed on
-        // "resolved", which left such tasks closed-but-unarchivable forever.
-        task.ClosedAt = TaskStatusRules.IsClosed(msg.NewStatus)
+        task.ClosedAt = provider.IsClosedStatus(msg.NewStatus)
             ? msg.ClosedAt ?? clock.GetUtcNow().UtcDateTime
             : null;
 

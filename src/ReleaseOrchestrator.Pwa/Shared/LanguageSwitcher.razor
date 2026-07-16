@@ -1,0 +1,21 @@
+@inherits LocalizedComponent
+
+@* Lives in the app bar, so it is reachable from every screen — the app has no settings page. *@
+<FlareMenu Anchor="MenuAnchor.BottomRight" AriaLabel="@UiStrings.Language_Label">
+    <Activator>
+        <FlareIconButton Size="ButtonSize.Sm" AriaLabel="@UiStrings.Language_Label">
+            <FlareIcon Name="language" />
+        </FlareIconButton>
+    </Activator>
+    <ChildContent>
+        @foreach (var (code, displayName) in LanguageService.SupportedCultures)
+        {
+            @* Captured per iteration: the lambda would otherwise close over the loop variable. *@
+            var culture = code;
+            <FlareMenuItem Icon="@(Lang.CurrentCulture == culture ? "check" : "language")"
+                           OnClick="@(() => Lang.SetCultureAsync(culture))">
+                @displayName
+            </FlareMenuItem>
+        }
+    </ChildContent>
+</FlareMenu>

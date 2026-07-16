@@ -43,6 +43,12 @@ try
     builder.Services.AddExceptionHandler<DomainExceptionHandler>();
     builder.Services.AddInfrastructure(builder.Configuration);
 
+    // Resources/ApiStrings.resx + .ru.resx, reached through IStringLocalizer<ApiStrings>.
+    // No ResourcesPath on purpose: it would make the factory look for the resource under
+    // <root>.Resources.<type name minus root> — i.e. ...Resources.Resources.ApiStrings — while the
+    // resx actually compiles to the marker type's own full name. See ApiStrings for the details.
+    builder.Services.AddLocalization();
+
     // No-op unless an OTLP endpoint is configured. Exports over OTLP only: there is no
     // /metrics endpoint, so a collector has to translate for Prometheus (README §10).
     builder.Services.AddReleaseOrchestratorTelemetry(
@@ -103,6 +109,18 @@ try
     }
 
     app.UseForwardedHeaders();
+
+    // Ahead of UseExceptionHandler so DomainExceptionHandler, which runs upstream of the
+    // controllers, still resolves its title in the caller's language. Culture comes from the
+    // Accept-Language header (the PWA sets it from the language picked in the UI, not the
+    // browser's). Response bodies stay culture-invariant — System.Text.Json does not read
+    // CurrentCulture for numbers or dates.
+    string[] supportedCultures = ["en", "ru"];
+    app.UseRequestLocalization(new RequestLocalizationOptions()
+        .SetDefaultCulture("en")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures));
+
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
 

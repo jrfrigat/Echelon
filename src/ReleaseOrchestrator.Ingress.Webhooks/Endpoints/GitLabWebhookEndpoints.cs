@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Enums;
-using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Ingress.Webhooks.Models;
+using ReleaseOrchestrator.Providers.GitLab;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 
@@ -52,7 +52,9 @@ public static class GitLabWebhookEndpoints
                 error = "payload requires project.path_with_namespace, object_attributes.iid and object_attributes.state"
             });
 
-        var status = MergeRequestStatusResolver.FromVcsState(state);
+        // GitLab's own dictionary, from GitLab's adapter — the same one the sync path uses, so
+        // both arrival paths cannot disagree about what "merged" means.
+        var status = GitLabMergeRequestState.FromState(state);
         if (status is null)
             return Results.Ok();   // A state we do not model; nothing to record.
 
@@ -69,7 +71,7 @@ public static class GitLabWebhookEndpoints
                 ExternalMrId: externalMrId,
                 SourceBranch: attributes.SourceBranch ?? string.Empty,
                 TargetBranch: attributes.TargetBranch ?? string.Empty,
-                TaskExternalId: BranchTaskParser.ParseTaskId(attributes.SourceBranch),
+                TaskExternalId: GitLabBranchTaskParser.ParseTaskId(attributes.SourceBranch),
                 Labels: ExtractLabels(payload)), ct);
         }
         else

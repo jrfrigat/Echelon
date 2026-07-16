@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject LanguageService Lang
 
 <FlareLayout>
     <FlareLayoutAppBar DrawerToggle="true">
@@ -7,11 +9,13 @@
                 <FlareText Typo="TypographyScale.TitleMedium" Weight="FontWeight.Bold">Release Orchestrator</FlareText>
             </FlareLink>
             <FlareSpacer />
+            @* Outside AuthorizeView: the language is picked before signing in as readily as after. *@
+            <LanguageSwitcher />
             <AuthorizeView>
                 <Authorized>
                     <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" Href="authentication/logout">
                         <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
-                        <ChildContent>Logout</ChildContent>
+                        <ChildContent>@UiStrings.Shell_Logout</ChildContent>
                     </FlareButton>
                 </Authorized>
             </AuthorizeView>
@@ -35,4 +39,11 @@
 
 @code {
     bool _navOpen = true;
+
+    // LayoutComponentBase cannot inherit LocalizedComponent, so the subscription is by hand.
+    protected override void OnInitialized() => Lang.LanguageChanged += OnLanguageChanged;
+
+    void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Lang.LanguageChanged -= OnLanguageChanged;
 }

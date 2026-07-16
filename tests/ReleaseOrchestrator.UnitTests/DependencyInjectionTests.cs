@@ -2,8 +2,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Services;
+using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Infrastructure;
 using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Tracker;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 using Xunit;
 
 namespace ReleaseOrchestrator.UnitTests;
@@ -81,19 +85,116 @@ public class DependencyInjectionTests
     }
 
     /// <summary>
-    /// External API clients must come from the typed-client registrations, or the timeout
-    /// configured on them silently does not apply — they were bound to the concrete types
-    /// while every consumer resolves the interface.
+    /// The provider factories are how anything reaches an external API now — the typed clients
+    /// they replaced were resolved directly, and were bound to concrete types nobody asked for,
+    /// which left their timeout silently unapplied.
     /// </summary>
     [Theory]
-    [InlineData(typeof(IVcsApiClient))]
-    [InlineData(typeof(ITrackerApiClient))]
-    public void ApiClientResolves(Type clientType)
+    [InlineData(typeof(IVcsProviderFactory))]
+    [InlineData(typeof(ITrackerProviderFactory))]
+    public void ProviderFactoryResolves(Type factoryType)
     {
         using var provider = BuildProvider(Configuration());
         using var scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetRequiredService(clientType));
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService(factoryType));
+    }
+
+    /// <summary>
+    /// The registry, asserted from the composition root.
+    /// </summary>
+    /// <remarks>
+    /// Keyed services cannot be enumerated by key, so an adapter that is registered but not
+    /// declared would resolve and still be invisible to the API's validation and to the
+    /// factory's error message — a gap nothing else would catch, since both paths would simply
+    /// report the provider as unknown.
+    /// </remarks>
+    [Theory]
+    [InlineData("gitlab")]
+    public void VcsProviderIsRegisteredAndDiscoverable(string providerType)
+    {
+        using var provider = BuildProvider(Configuration());
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
+
+        Assert.Contains(providerType, factory.AvailableProviders);
+        Assert.NotNull(scope.ServiceProvider.GetRequiredKeyedService<IVcsProviderAdapter>(providerType));
+    }
+
+    [Theory]
+    [InlineData("yandextracker")]
+    public void TrackerProviderIsRegisteredAndDiscoverable(string providerType)
+    {
+        using var provider = BuildProvider(Configuration());
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<ITrackerProviderFactory>();
+
+        Assert.Contains(providerType, factory.AvailableProviders);
+        Assert.NotNull(scope.ServiceProvider.GetRequiredKeyedService<ITrackerProviderAdapter>(providerType));
+    }
+
+    /// <summary>
+    /// An unknown provider type must fail by naming the alternatives, and must do so before the
+    /// connection's token is decrypted — the type is wrong, not the credentials.
+    /// </summary>
+    [Fact]
+    public async Task UnknownVcsProviderFailsFastListingTheRegisteredOnes()
+    {
+        using var provider = BuildProvider(Configuration());
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
+
+        var connection = new VcsConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = "typo-connection",
+            ProviderType = "gitab",
+            ApiUrl = "https://gitlab.example.com"
+        };
+
+        var exception = await Assert.ThrowsAsync<UnknownProviderException>(
+            () => factory.CreateAsync(connection, CancellationToken.None));
+
+        Assert.Contains("gitab", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("gitlab", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The provider type is compared in canonical form, so what the UI sends ("GitLab") and what
+    /// the database stores ("gitlab") are the same provider.
+    /// </summary>
+    [Theory]
+    [InlineData("GitLab")]
+    [InlineData("  gitlab  ")]
+    public async Task VcsProviderTypeIsMatchedCaseInsensitively(string providerType)
+    {
+        using var provider = BuildProvider(Configuration());
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
+
+        var connection = new VcsConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = "gitlab-connection",
+            ProviderType = providerType,
+            ApiUrl = "https://gitlab.example.com"
+        };
+
+        // Only the lookup is under test. Binding goes on to fail on the empty token, which no
+        // data-protection stack reachable from a unit test can decrypt — so the assertion is the
+        // narrow one that can be made honestly: whatever went wrong, it was not "unknown
+        // provider". Asserting "throws something" would pass on the very failure this rules out.
+        var exception = await Record.ExceptionAsync(
+            () => factory.CreateAsync(connection, CancellationToken.None));
+
+        Assert.False(
+            exception is UnknownProviderException,
+            $"Provider type '{providerType}' should resolve to the registered gitlab adapter, "
+            + $"but the factory reported it as unknown: {exception?.Message}");
     }
 
     [Theory]

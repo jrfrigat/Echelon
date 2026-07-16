@@ -3,6 +3,22 @@
   <ItemGroup>
     <ProjectReference Include="..\ReleaseOrchestrator.Application\ReleaseOrchestrator.Application.csproj" />
     <ProjectReference Include="..\ReleaseOrchestrator.Core\ReleaseOrchestrator.Core.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
+
+    <!--
+      The concrete adapters are referenced only so AddInfrastructure can register them: this
+      assembly is where the container is composed, and it already played that role for the two
+      hard-wired clients these replace. Nothing outside AddInfrastructure may name a provider
+      type — everything else goes through the factories in Providers/, which resolve by a key
+      from the database.
+
+      Compile-time references, deliberately. Dynamic loading buys "add a provider without
+      rebuilding", which is worth nothing when the container image is rebuilt on every change,
+      and costs assembly-isolation faults that Orchard 1.x had and Orchard Core removed. Adding a
+      provider is a new project and one line here.
+    -->
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.YandexTracker\ReleaseOrchestrator.Providers.YandexTracker.csproj" />
   </ItemGroup>
 
   <ItemGroup>
