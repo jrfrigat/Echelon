@@ -22,12 +22,15 @@ public static class InfrastructureExtensions
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        var connectionString = config.GetConnectionString("Default")
-            ?? throw new InvalidOperationException(
-                "ConnectionStrings:Default is not configured. Set ConnectionStrings__Default in the environment.");
-        var archiveConnectionString = config.GetConnectionString("Archive")
-            ?? throw new InvalidOperationException(
-                "ConnectionStrings:Archive is not configured. Set ConnectionStrings__Archive in the environment.");
+        // Read every required setting here, before anything is registered. Checking inside the
+        // Redis or RabbitMQ configuration lambdas looks like fail-fast but is not: those run
+        // lazily, so a missing value surfaced at the first request or when the bus started,
+        // long after the deployment looked healthy.
+        var connectionString = Required(config, "ConnectionStrings:Default");
+        var archiveConnectionString = Required(config, "ConnectionStrings:Archive");
+        var redisConnectionString = Required(config, "Redis:ConnectionString");
+        var queueUsername = Required(config, "Queue:Username");
+        var queuePassword = Required(config, "Queue:Password");
 
         // EnableRetryOnFailure: transient faults (failover, deadlock victim, pool timeout) are
         // routine for SQL Server in containers, and without an execution strategy each one
@@ -60,11 +63,9 @@ public static class InfrastructureExtensions
         services.AddHttpClient<IVcsApiClient, GitLabApiClient>(c => c.Timeout = ExternalApiTimeout);
         services.AddHttpClient<ITrackerApiClient, YandexTrackerApiClient>(c => c.Timeout = ExternalApiTimeout);
 
-        services.AddStackExchangeRedisCache(opt =>
-            opt.Configuration = config["Redis:ConnectionString"]
-                ?? throw new InvalidOperationException(
-                    "Redis:ConnectionString is not configured. Set Redis__ConnectionString in the environment."));
+        services.AddStackExchangeRedisCache(opt => opt.Configuration = redisConnectionString);
 
+        services.Configure<PermissionBootstrapOptions>(config.GetSection("Authorization"));
         services.AddScoped<IClaimsTransformation, PermissionClaimsTransformation>();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
@@ -83,10 +84,8 @@ public static class InfrastructureExtensions
             {
                 cfg.Host(config["Queue:Host"] ?? "localhost", h =>
                 {
-                    h.Username(config["Queue:Username"]
-                        ?? throw new InvalidOperationException("Queue:Username is not configured."));
-                    h.Password(config["Queue:Password"]
-                        ?? throw new InvalidOperationException("Queue:Password is not configured."));
+                    h.Username(queueUsername);
+                    h.Password(queuePassword);
                 });
 
                 // Immediate retries cover the brief window where a status event overtakes its
@@ -108,4 +107,11 @@ public static class InfrastructureExtensions
 
         return services;
     }
+
+    /// <summary>Names the setting and its environment form, so the fix is obvious from the log line.</summary>
+    private static string Required(IConfiguration config, string key) =>
+        config[key] is { Length: > 0 } value
+            ? value
+            : throw new InvalidOperationException(
+                $"{key} is not configured. Set {key.Replace(':', '_').Replace("_", "__")} in the environment.");
 }

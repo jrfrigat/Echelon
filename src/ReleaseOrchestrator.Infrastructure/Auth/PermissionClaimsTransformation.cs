@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 public class PermissionClaimsTransformation(
     AppDbContext db,
     IDistributedCache cache,
-    IConfiguration config,
+    IOptions<PermissionBootstrapOptions> bootstrap,
     ILogger<PermissionClaimsTransformation> logger) : IClaimsTransformation
 {
     public const string PermissionClaimType = "permission";
@@ -116,14 +116,9 @@ public class PermissionClaimsTransformation(
         }
     }
 
-    /// <summary>Object ids listed in Authorization:BootstrapAdminObjectIds, normalised the same way overrides are.</summary>
-    private bool IsBootstrapAdmin(string userId)
-    {
-        var configured = config.GetSection("Authorization:BootstrapAdminObjectIds").Get<string[]>();
-        if (configured is null || configured.Length == 0) return false;
-
-        return configured
-            .Select(id => UserIdentifier.TryNormalize(id, out var normalized) ? normalized : null)
-            .Any(id => id is not null && string.Equals(id, userId, StringComparison.Ordinal));
-    }
+    /// <summary>Normalised the same way stored overrides are, so both ends compare identically.</summary>
+    private bool IsBootstrapAdmin(string userId) =>
+        bootstrap.Value.BootstrapAdminObjectIds
+            .Any(id => UserIdentifier.TryNormalize(id, out var normalized)
+                       && string.Equals(normalized, userId, StringComparison.Ordinal));
 }
