@@ -24,7 +24,7 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
         // in any order, so entries can repeat or vanish between pages.
         var items = await db.Repositories
             .OrderBy(r => r.Name).ThenBy(r => r.Id)
-            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name })
+            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name, r.TrackerConnectionId, TrackerConnectionName = r.TrackerConnection != null ? r.TrackerConnection.Name : null })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
 
@@ -36,7 +36,7 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
     {
         var repository = await db.Repositories
             .Where(r => r.Id == id)
-            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name })
+            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name, r.TrackerConnectionId, TrackerConnectionName = r.TrackerConnection != null ? r.TrackerConnection.Name : null })
             .FirstOrDefaultAsync(ct);
 
         return repository is null ? NotFound() : Ok(repository);
@@ -54,12 +54,16 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
         if (await db.Repositories.AnyAsync(r => r.ConnectionId == req.ConnectionId && r.ExternalId == req.ExternalId, ct))
             return Conflict(new { error = $"Repository '{req.ExternalId}' is already registered on this connection." });
 
+        if (await ValidateTrackerAsync(req.TrackerConnectionId, ct) is { } trackerError)
+            return BadRequest(new { error = trackerError });
+
         var entity = new Repository
         {
             Id = Guid.NewGuid(),
             Name = req.Name,
             ExternalId = req.ExternalId,
-            ConnectionId = req.ConnectionId
+            ConnectionId = req.ConnectionId,
+            TrackerConnectionId = req.TrackerConnectionId
         };
 
         db.Repositories.Add(entity);
@@ -81,11 +85,25 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
                 r => r.ConnectionId == req.ConnectionId && r.ExternalId == req.ExternalId && r.Id != id, ct))
             return Conflict(new { error = $"Repository '{req.ExternalId}' is already registered on this connection." });
 
+        if (await ValidateTrackerAsync(req.TrackerConnectionId, ct) is { } trackerError)
+            return BadRequest(new { error = trackerError });
+
         entity.Name = req.Name;
         entity.ExternalId = req.ExternalId;
         entity.ConnectionId = req.ConnectionId;
+        entity.TrackerConnectionId = req.TrackerConnectionId;
         await db.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    /// <returns>An error message, or null when the value is acceptable.</returns>
+    private async Task<string?> ValidateTrackerAsync(Guid? trackerConnectionId, CancellationToken ct)
+    {
+        if (trackerConnectionId is null) return null;
+
+        return await db.TrackerConnections.AnyAsync(c => c.Id == trackerConnectionId, ct)
+            ? null
+            : $"Tracker connection '{trackerConnectionId}' does not exist.";
     }
 
     [HttpDelete("{id:guid}")]
@@ -107,4 +125,6 @@ public class RepositoriesController(AppDbContext db) : ControllerBase
 public record CreateRepositoryRequest(
     [property: Required, MaxLength(300)] string Name,
     [property: Required, MaxLength(500)] string ExternalId,
-    [property: Required] Guid ConnectionId);
+    [property: Required] Guid ConnectionId,
+    /// <summary>Which tracker this repository's branch issue keys belong to. Null falls back to a global match.</summary>
+    Guid? TrackerConnectionId = null);

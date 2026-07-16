@@ -15,5 +15,11 @@ public class RepositoryConfiguration : IEntityTypeConfiguration<Repository>
             .WithMany(c => c.Repositories)
             .HasForeignKey(e => e.ConnectionId)
             .OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(e => e.TrackerConnection)
+            .WithMany(c => c.Repositories)
+            .HasForeignKey(e => e.TrackerConnectionId)
+            .OnDelete(DeleteBehavior.Restrict);
+        // Natural key: VcsService and the YAML import both resolve a repository by this pair.
+        b.HasIndex(e => new { e.ConnectionId, e.ExternalId }).IsUnique().HasDatabaseName("IX_Repository_ConnectionId_ExternalId");
     }
 }

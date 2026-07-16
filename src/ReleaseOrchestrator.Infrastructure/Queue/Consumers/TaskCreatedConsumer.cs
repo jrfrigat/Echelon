@@ -7,7 +7,10 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
-public class TaskCreatedConsumer(AppDbContext db, ILogger<TaskCreatedConsumer> logger) : IConsumer<TaskCreated>
+public class TaskCreatedConsumer(
+    AppDbContext db,
+    IPublishEndpoint publisher,
+    ILogger<TaskCreatedConsumer> logger) : IConsumer<TaskCreated>
 {
     public async Task Consume(ConsumeContext<TaskCreated> context)
     {
@@ -46,5 +49,11 @@ public class TaskCreatedConsumer(AppDbContext db, ILogger<TaskCreatedConsumer> l
         }
 
         await db.SaveChangesAsync(context.CancellationToken);
+
+        // The webhook carries the title and status but not the issue's links, and the links are
+        // the only thing that orders the plan — so they have to be pulled.
+        await publisher.Publish(
+            new TaskSyncRequested(msg.TrackerConnectionName, msg.ExternalId, "Task created"),
+            context.CancellationToken);
     }
 }

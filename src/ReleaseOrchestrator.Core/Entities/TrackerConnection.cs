@@ -12,4 +12,5 @@ public class TrackerConnection
     public string? OrgId { get; set; }
 
     public ICollection<TaskItem> Tasks { get; set; } = [];
+    public ICollection<Repository> Repositories { get; set; } = [];
 }

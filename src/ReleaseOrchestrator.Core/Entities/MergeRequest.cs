@@ -10,6 +10,16 @@ public class MergeRequest
     public string TargetBranch { get; set; } = string.Empty;
     public Guid RepositoryId { get; set; }
     public Guid? TaskId { get; set; }
+
+    /// <summary>
+    /// The issue key parsed from <see cref="SourceBranch"/>, kept whether or not the task exists.
+    ///
+    /// Events arrive in no particular order, so an MR routinely references a task that has not
+    /// been imported yet. Without recording the key, such an MR is stored with no task and nothing
+    /// ever links it: the branch would have to be re-parsed across the whole table to find it
+    /// again. With the key, linking is a lookup once the task lands.
+    /// </summary>
+    public string? TaskExternalId { get; set; }
     public MergeRequestStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? MergedAt { get; set; }

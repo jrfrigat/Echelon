@@ -25,6 +25,7 @@ public class MrOpenedConsumer(
 
         var repo = await db.Repositories
             .Include(r => r.Connection)
+            .Include(r => r.TrackerConnection)
             .FirstOrDefaultAsync(
                 r => r.Connection.Name == msg.ConnectionName && r.ExternalId == msg.RepositoryExternalId,
                 ct);
@@ -39,7 +40,7 @@ public class MrOpenedConsumer(
             return;
         }
 
-        var taskId = await ResolveTaskIdAsync(msg.TaskExternalId, msg.ExternalMrId, ct);
+        var taskId = await ResolveTaskIdAsync(repo, msg.TaskExternalId, msg.ExternalMrId, ct);
 
         var mr = await db.MergeRequests.FirstOrDefaultAsync(
             m => m.RepositoryId == repo.Id && m.ExternalId == msg.ExternalMrId, ct);
@@ -60,6 +61,9 @@ public class MrOpenedConsumer(
 
         mr.SourceBranch = msg.SourceBranch;
         mr.TargetBranch = msg.TargetBranch;
+        // Recorded even when the task is unknown, so TaskSyncConsumer can attach this MR once
+        // the task lands rather than leaving it unordered forever.
+        mr.TaskExternalId = msg.TaskExternalId;
         if (taskId is not null) mr.TaskId = taskId;
 
         // A reopened MR must shed its terminal timestamps, or archiving still claims it.
@@ -78,38 +82,57 @@ public class MrOpenedConsumer(
     }
 
     /// <summary>
-    /// Resolves a branch's issue key to a task.
+    /// Resolves a branch's issue key to a task, and asks for the task to be imported when it is
+    /// not stored yet.
     ///
-    /// Repositories hang off a VCS connection and tasks off a tracker connection, with no
-    /// link between them in the model (README defers TrackerProject), so a key can only be
-    /// matched globally. When it is ambiguous across trackers we link nothing rather than
-    /// pick arbitrarily: a missing link costs ordering, a wrong link corrupts it.
+    /// Scoped to the repository's tracker when one is configured. Without that scope a key can
+    /// only be matched globally, and when it is ambiguous across trackers we link nothing rather
+    /// than pick arbitrarily: a missing link costs ordering, a wrong link corrupts it.
     /// </summary>
-    private async Task<Guid?> ResolveTaskIdAsync(string? taskExternalId, string mrExternalId, CancellationToken ct)
+    private async Task<Guid?> ResolveTaskIdAsync(Repository repo, string? taskExternalId, string mrExternalId, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(taskExternalId)) return null;
 
-        var candidates = await db.Tasks
-            .Where(t => t.ExternalId == taskExternalId)
+        var query = db.Tasks.Where(t => t.ExternalId == taskExternalId);
+        if (repo.TrackerConnectionId is { } trackerId)
+            query = query.Where(t => t.TrackerConnectionId == trackerId);
+
+        var candidates = await query
             .Select(t => new { t.Id, t.TrackerConnectionId })
             .Take(2)
             .ToListAsync(ct);
 
-        switch (candidates.Count)
+        if (candidates.Count == 1) return candidates[0].Id;
+
+        if (candidates.Count > 1)
         {
-            case 1:
-                return candidates[0].Id;
-            case 0:
-                logger.LogInformation(
-                    "Task {Task} referenced by MR {Mr} is not known yet; linking deferred to VCS sync.",
-                    taskExternalId, mrExternalId);
-                return null;
-            default:
-                logger.LogWarning(
-                    "Task key {Task} exists in more than one tracker; leaving MR {Mr} unlinked rather than "
-                    + "guessing. Give the repository an unambiguous tracker to resolve this.",
-                    taskExternalId, mrExternalId);
-                return null;
+            logger.LogWarning(
+                "Task key {Task} exists in more than one tracker; leaving MR {Mr} unlinked rather than guessing. "
+                + "Set the repository's tracker connection to resolve this.",
+                taskExternalId, mrExternalId);
+            return null;
         }
+
+        // Unknown key. If the repository names its tracker, import the task instead of dropping
+        // the link: the plan needs the task's own dependencies either way, and waiting for the
+        // task's webhook would leave this MR unordered until something else happens to touch it.
+        if (repo.TrackerConnection is { } tracker)
+        {
+            logger.LogInformation(
+                "Task {Task} referenced by MR {Mr} is unknown; requesting a sync from tracker {Tracker}.",
+                taskExternalId, mrExternalId, tracker.Name);
+
+            await publisher.Publish(
+                new TaskSyncRequested(tracker.Name, taskExternalId, $"Referenced by MR {mrExternalId}"), ct);
+        }
+        else
+        {
+            logger.LogInformation(
+                "Task {Task} referenced by MR {Mr} is unknown and the repository has no tracker connection; "
+                + "the MR stays unlinked.",
+                taskExternalId, mrExternalId);
+        }
+
+        return null;
     }
 }

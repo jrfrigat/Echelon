@@ -9,6 +9,7 @@ using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Queue;
 using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 using ReleaseOrchestrator.Infrastructure.Tracker;
@@ -72,12 +73,16 @@ public static class InfrastructureExtensions
         services.Configure<ArchiveOptions>(config.GetSection("Archiving"));
         services.AddHostedService<ArchiveHostedService>();
 
+        services.Configure<TaskReconciliationOptions>(config.GetSection("TaskReconciliation"));
+        services.AddHostedService<TaskReconciliationService>();
+
         services.AddMassTransit(x =>
         {
             x.AddConsumer<MrOpenedConsumer>();
             x.AddConsumer<MrStatusChangedConsumer>();
             x.AddConsumer<TaskCreatedConsumer>();
             x.AddConsumer<TaskStatusChangedConsumer>();
+            x.AddConsumer<TaskSyncConsumer>();
             x.AddConsumer<ReleasePlanRecalculationConsumer>();
 
             x.UsingRabbitMq((ctx, cfg) =>

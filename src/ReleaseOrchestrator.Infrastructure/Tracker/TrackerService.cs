@@ -1,73 +1,159 @@
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Parsing;
+using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
-using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 
 namespace ReleaseOrchestrator.Infrastructure.Tracker;
 
-public class TrackerService(AppDbContext db, ITrackerApiClient apiClient, TokenProtector protector) : ITrackerService
+/// <summary>
+/// Reads tasks and their dependency links from a tracker into the local model.
+///
+/// This is the only source of TaskDependency rows, and therefore of every task edge in the
+/// release plan. It used to be unreachable — registered in DI and injected nowhere — so the
+/// table stayed empty and plans were ordered by stack links alone.
+/// </summary>
+public class TrackerService(
+    AppDbContext db,
+    ITrackerApiClient apiClient,
+    TokenProtector protector,
+    TimeProvider clock,
+    ILogger<TrackerService> logger) : ITrackerService
 {
-    public async Task SyncTaskAsync(Guid trackerConnectionId, string externalTaskId, CancellationToken ct)
+    public async Task<bool> SyncTaskAsync(Guid trackerConnectionId, string externalTaskId, CancellationToken ct)
     {
-        var conn = await db.TrackerConnections.FindAsync([trackerConnectionId], ct)
+        var conn = await db.TrackerConnections.FirstOrDefaultAsync(c => c.Id == trackerConnectionId, ct)
             ?? throw new InvalidOperationException($"TrackerConnection {trackerConnectionId} not found");
 
         var token = protector.Unprotect(conn.EncryptedAccessToken);
-        var info = await apiClient.GetIssueAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, externalTaskId, ct);
-        if (info is null) return;
 
-        var task = await db.Tasks.FirstOrDefaultAsync(t => t.TrackerConnectionId == trackerConnectionId && t.ExternalId == externalTaskId, ct);
+        var info = await apiClient.GetIssueAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, externalTaskId, ct);
+        if (info is null)
+        {
+            logger.LogInformation("Task {Task} does not exist in tracker {Tracker}", externalTaskId, conn.Name);
+            return false;
+        }
+
+        var task = await UpsertTaskAsync(conn.Id, info, ct);
+        var links = await apiClient.GetIssueDependenciesAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, externalTaskId, ct);
+
+        var changed = await ReplaceDependenciesAsync(conn, token, task, links, ct);
+
+        await db.SaveChangesAsync(ct);
+        return changed;
+    }
+
+    public Task<string?> ParseTaskIdFromBranchAsync(string branchName, CancellationToken ct)
+        => Task.FromResult(BranchTaskParser.ParseTaskId(branchName));
+
+    private async Task<TaskItem> UpsertTaskAsync(Guid connectionId, TrackerIssueInfo info, CancellationToken ct)
+    {
+        var task = await db.Tasks.FirstOrDefaultAsync(
+            t => t.TrackerConnectionId == connectionId && t.ExternalId == info.Key, ct);
 
         if (task is null)
         {
             task = new TaskItem
             {
                 Id = Guid.NewGuid(),
-                ExternalId = externalTaskId,
-                Title = info.Summary,
-                Status = info.StatusKey,
-                ClosedAt = info.ResolvedAt,
-                TrackerConnectionId = trackerConnectionId
+                ExternalId = info.Key,
+                TrackerConnectionId = connectionId
             };
             db.Tasks.Add(task);
         }
-        else
-        {
-            task.Status = info.StatusKey;
-            task.ClosedAt = info.ResolvedAt;
-        }
 
+        task.Title = info.Summary;
+        task.Status = info.StatusKey;
+        // Derived from the status rather than trusted from ResolvedAt: a tracker can report a
+        // resolution time for a status we do not treat as closed, and archiving keys off this.
+        task.ClosedAt = TaskStatusRules.IsClosed(info.StatusKey)
+            ? info.ResolvedAt ?? clock.GetUtcNow().UtcDateTime
+            : null;
+
+        // Flush so the row has an identity before edges reference it.
         await db.SaveChangesAsync(ct);
-
-        await SyncDependenciesAsync(conn, task, token, ct);
+        return task;
     }
 
-    public Task<string?> ParseTaskIdFromBranchAsync(string branchName, CancellationToken ct)
-        => Task.FromResult(BranchTaskParser.ParseTaskId(branchName));
-
-    private async Task SyncDependenciesAsync(TrackerConnection conn, TaskItem task, string token, CancellationToken ct)
+    /// <returns>True when the set of edges actually changed — the caller only replans then.</returns>
+    private async Task<bool> ReplaceDependenciesAsync(
+        TrackerConnection conn,
+        string token,
+        TaskItem task,
+        IReadOnlyList<TrackerIssueDependency> links,
+        CancellationToken ct)
     {
-        var deps = await apiClient.GetIssueDependenciesAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, task.ExternalId, ct);
-        var existing = await db.TaskDependencies.Where(d => d.DependentTaskId == task.Id).ToListAsync(ct);
-        db.TaskDependencies.RemoveRange(existing);
+        var wanted = new List<Guid>();
 
-        foreach (var dep in deps)
+        foreach (var key in links.Select(l => l.DependsOnKey).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var depTask = await db.Tasks.FirstOrDefaultAsync(t => t.TrackerConnectionId == conn.Id && t.ExternalId == dep.DependsOnKey, ct);
-            if (depTask is null) continue;
+            var dependsOnId = await ResolveOrFetchTaskAsync(conn, token, key, ct);
+            if (dependsOnId is null || dependsOnId == task.Id) continue;   // self-links carry no order
+            wanted.Add(dependsOnId.Value);
+        }
 
+        var existing = await db.TaskDependencies
+            .Where(d => d.DependentTaskId == task.Id)
+            .ToListAsync(ct);
+
+        var existingIds = existing.Select(d => d.DependsOnTaskId).ToHashSet();
+        var wantedIds = wanted.ToHashSet();
+
+        // Diff instead of delete-all-then-reinsert: rewriting every row on every sync churns the
+        // table and, on a failure between the two steps, leaves the task with no dependencies at
+        // all — silently dropping ordering constraints that do exist.
+        var toRemove = existing.Where(d => !wantedIds.Contains(d.DependsOnTaskId)).ToList();
+        var toAdd = wantedIds.Where(id => !existingIds.Contains(id)).ToList();
+
+        if (toRemove.Count == 0 && toAdd.Count == 0) return false;
+
+        db.TaskDependencies.RemoveRange(toRemove);
+        foreach (var dependsOnId in toAdd)
             db.TaskDependencies.Add(new TaskDependency
             {
                 Id = Guid.NewGuid(),
                 DependentTaskId = task.Id,
-                DependsOnTaskId = depTask.Id
+                DependsOnTaskId = dependsOnId
             });
-        }
 
-        await db.SaveChangesAsync(ct);
+        logger.LogInformation(
+            "Task {Task}: {Added} dependency link(s) added, {Removed} removed", task.ExternalId, toAdd.Count, toRemove.Count);
+
+        return true;
     }
 
+    /// <summary>
+    /// Finds the prerequisite task, fetching it from the tracker if it is not stored yet.
+    ///
+    /// Skipping an unknown prerequisite — as this used to — loses the edge permanently: nothing
+    /// revisits the dependent task once the prerequisite appears, so the plan silently omits a
+    /// constraint that the tracker states. Sync order is not something we control, so a task
+    /// referencing one we have not imported yet is ordinary, not exceptional.
+    ///
+    /// The fetch is deliberately shallow — the prerequisite's own links are left to its own sync,
+    /// which bounds this at one extra call per edge instead of walking the graph.
+    /// </summary>
+    private async Task<Guid?> ResolveOrFetchTaskAsync(TrackerConnection conn, string token, string key, CancellationToken ct)
+    {
+        var existingId = await db.Tasks
+            .Where(t => t.TrackerConnectionId == conn.Id && t.ExternalId == key)
+            .Select(t => (Guid?)t.Id)
+            .FirstOrDefaultAsync(ct);
+
+        if (existingId is not null) return existingId;
+
+        var info = await apiClient.GetIssueAsync(conn.ApiUrl, conn.OrgId ?? string.Empty, token, key, ct);
+        if (info is null)
+        {
+            logger.LogWarning(
+                "Task {Task} depends on {Missing}, which the tracker does not return; the link is skipped.",
+                key, key);
+            return null;
+        }
+
+        var fetched = await UpsertTaskAsync(conn.Id, info, ct);
+        return fetched.Id;
+    }
 }

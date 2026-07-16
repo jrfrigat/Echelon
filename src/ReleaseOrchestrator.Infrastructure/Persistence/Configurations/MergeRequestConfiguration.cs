@@ -17,6 +17,9 @@ public class MergeRequestConfiguration : IEntityTypeConfiguration<MergeRequest>
             .HasConversion(v => v.ToString(), v => Enum.Parse<MergeRequestStatus>(v))
             .HasMaxLength(50);
         b.Property(e => e.RowVersion).IsRowVersion();
+        b.Property(e => e.TaskExternalId).HasMaxLength(200);
+        // Linking an MR to a task that arrives later is a lookup on this.
+        b.HasIndex(e => e.TaskExternalId).HasDatabaseName("IX_MergeRequest_TaskExternalId");
         b.HasIndex(e => new { e.RepositoryId, e.Status }).HasDatabaseName("IX_MergeRequest_RepositoryId_Status");
         b.HasIndex(e => e.TaskId).HasDatabaseName("IX_MergeRequest_TaskId");
         // Natural key. Unique because consumers upsert via check-then-insert, which

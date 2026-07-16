@@ -57,6 +57,11 @@ public class TaskStatusChangedConsumer(
         if (wasClosed != (task.ClosedAt is not null))
             await publisher.Publish(new ReleasePlanRecalculationRequested(
                 clock.GetUtcNow().UtcDateTime, $"Task {msg.ExternalId} status changed to {msg.NewStatus}"), ct);
+
+        // Links are not carried by the status webhook and trackers do not raise an event when one
+        // changes, so any touch of the issue is the cheapest moment to re-read them.
+        await publisher.Publish(
+            new TaskSyncRequested(msg.TrackerConnectionName, msg.ExternalId, $"Task status changed to {msg.NewStatus}"), ct);
     }
 }
 
