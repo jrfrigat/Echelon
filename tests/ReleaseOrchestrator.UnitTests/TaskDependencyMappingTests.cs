@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using Xunit;
 

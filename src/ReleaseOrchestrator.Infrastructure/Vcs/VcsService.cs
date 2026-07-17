@@ -2,8 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Core.Parsing;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
@@ -37,7 +38,7 @@ public class VcsService(
             .FirstOrDefaultAsync(r => r.Id == repositoryId, ct)
             ?? throw new InvalidOperationException($"Repository {repositoryId} not found");
 
-        var provider = await providerFactory.CreateAsync(repo.Connection, ct);
+        var provider = await providerFactory.CreateAsync(repo.Connection.ToDescriptor(), ct);
         var info = await provider.GetMergeRequestAsync(repo.ExternalId, externalMrId, ct);
         if (info is null)
         {

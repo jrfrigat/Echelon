@@ -5,7 +5,7 @@ using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Application.ReleasePlanning;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
@@ -21,18 +21,13 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
         // Stamped before the read: anything committed before this instant is in the plan.
         var snapshotStartedAt = clock.GetUtcNow().UtcDateTime;
 
-        // AsSplitQuery: three collection Includes in one query multiply rows together,
-        // which at the documented 10k merge requests means millions of rows on the wire.
-        // The OrderBy is what makes the plan reproducible — ties inside a stage follow it.
+        // A projection, not Includes: it selects the columns the ordering needs and nothing else,
+        // and a missing one is a compile error rather than an empty navigation. The OrderBy is
+        // what makes the plan reproducible — ties inside a stage follow it.
         var readyMrs = await db.MergeRequests
-            .Include(mr => mr.Task)
-                .ThenInclude(t => t!.Dependencies)
-            .Include(mr => mr.Repository)
-                .ThenInclude(r => r.RepositoryStacks)
-                    .ThenInclude(rs => rs.Stack)
-                        .ThenInclude(s => s.DependentOn)
             .Where(mr => mr.Status == MergeRequestStatus.ReadyForDeploy)
             .OrderBy(mr => mr.CreatedAt).ThenBy(mr => mr.Id)
+            .Select(PlanInput.FromEntity)
             .AsSplitQuery()
             .AsNoTracking()
             .ToListAsync(ct);
@@ -335,11 +330,9 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
         }
 
         var mrs = await db.MergeRequests
-            .Include(mr => mr.Task).ThenInclude(t => t!.Dependencies)
-            .Include(mr => mr.Repository).ThenInclude(r => r.RepositoryStacks)
-                .ThenInclude(rs => rs.Stack).ThenInclude(s => s.DependentOn)
             .Where(mr => mrIds.Contains(mr.Id))
             .OrderBy(mr => mr.CreatedAt).ThenBy(mr => mr.Id)
+            .Select(PlanInput.FromEntity)
             .AsSplitQuery()
             .AsNoTracking()
             .ToListAsync(ct);
@@ -348,21 +341,38 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
             .SelectMany(s => s.Items.Select(i => (i.MergeRequestId, s.Sequence)))
             .ToDictionary(x => x.MergeRequestId, x => x.Sequence);
 
-        var conflicts = ReleasePlanGraph.ViolatedBy(mrs, stageOf)
+        var violated = ReleasePlanGraph.ViolatedBy(mrs, stageOf);
+        if (violated.Count == 0)
+        {
+            plan.ConflictsJson = null;
+            return;
+        }
+
+        // Labels are fetched only now, and only for the merge requests actually named. A plan that
+        // honours everything is the normal case and costs one query; naming a pair costs a second,
+        // small one — rather than carrying display text through the ordering algorithm, which has
+        // no use for it.
+        var named = violated.SelectMany(e => new[] { e.FromMrId, e.ToMrId }).Distinct().ToList();
+        var labels = await db.MergeRequests
+            .Where(mr => named.Contains(mr.Id))
+            .Select(mr => new { mr.Id, Label = mr.Repository.Name + "!" + mr.ExternalId })
+            .AsNoTracking()
+            .ToDictionaryAsync(x => x.Id, x => x.Label, ct);
+
+        var conflicts = violated
             .Select(e => new PlanConflict(
                 e.Kind,
                 e.FromMrId,
                 e.ToMrId,
-                $"{Describe(mrs, e.FromMrId)} must deploy before {Describe(mrs, e.ToMrId)}, "
+                $"{labels[e.FromMrId]} must deploy before {labels[e.ToMrId]}, "
                 + $"but this plan puts it in stage {stageOf[e.FromMrId]} against stage {stageOf[e.ToMrId]}."))
             .ToList();
 
-        if (conflicts.Count > 0)
-            logger.LogWarning(
-                "Plan {PlanId} violates {Count} mandatory constraint(s); recorded on the plan.",
-                plan.Id, conflicts.Count);
+        logger.LogWarning(
+            "Plan {PlanId} violates {Count} mandatory constraint(s); recorded on the plan.",
+            plan.Id, conflicts.Count);
 
-        plan.ConflictsJson = conflicts.Count == 0 ? null : JsonSerializer.Serialize(conflicts);
+        plan.ConflictsJson = JsonSerializer.Serialize(conflicts);
     }
 
     /// <summary>
@@ -377,11 +387,6 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
             .FirstOrDefaultAsync(p => p.Id == planId, ct)
         ?? throw new NotFoundException($"Plan {planId} not found");
 
-    private static string Describe(IEnumerable<MergeRequest> mrs, Guid mrId)
-    {
-        var mr = mrs.First(m => m.Id == mrId);
-        return $"{mr.Repository.Name}!{mr.ExternalId}";
-    }
 
     private async Task<ReleasePlan?> LoadFullPlanAsync(
         System.Linq.Expressions.Expression<Func<ReleasePlan, bool>> predicate,

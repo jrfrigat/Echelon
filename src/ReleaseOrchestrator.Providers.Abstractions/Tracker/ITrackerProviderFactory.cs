@@ -1,4 +1,3 @@
-using ReleaseOrchestrator.Core.Entities;
 
 namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
@@ -26,5 +25,5 @@ public interface ITrackerProviderFactory
     /// <exception cref="UnknownProviderException">
     /// No adapter is registered for the connection's provider type. The message lists those that are.
     /// </exception>
-    Task<ITrackerProvider> CreateAsync(TrackerConnection connection, CancellationToken ct);
+    Task<ITrackerProvider> CreateAsync(TrackerConnectionDescriptor connection, CancellationToken ct);
 }

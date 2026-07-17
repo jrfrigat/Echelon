@@ -1,4 +1,3 @@
-using ReleaseOrchestrator.Core.Entities;
 
 namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
@@ -37,5 +36,5 @@ public interface IVcsProviderFactory
     /// <exception cref="UnknownProviderException">
     /// No adapter is registered for the connection's provider type. The message lists those that are.
     /// </exception>
-    Task<IVcsProvider> CreateAsync(VcsConnection connection, CancellationToken ct);
+    Task<IVcsProvider> CreateAsync(VcsConnectionDescriptor connection, CancellationToken ct);
 }

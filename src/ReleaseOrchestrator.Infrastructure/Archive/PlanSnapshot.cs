@@ -1,4 +1,4 @@
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 namespace ReleaseOrchestrator.Infrastructure.Archive;
 

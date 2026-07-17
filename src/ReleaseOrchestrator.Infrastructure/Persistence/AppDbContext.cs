@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Persistence.Configurations;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence;

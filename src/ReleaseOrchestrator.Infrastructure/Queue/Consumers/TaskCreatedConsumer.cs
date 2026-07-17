@@ -2,7 +2,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Contracts.Messages;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;

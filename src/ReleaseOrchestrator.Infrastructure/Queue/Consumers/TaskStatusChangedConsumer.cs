@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
@@ -49,7 +50,7 @@ public class TaskStatusChangedConsumer(
         // used to keep lists that disagreed on "resolved", which left such tasks
         // closed-but-unarchivable forever. The owner is now the adapter that knows the tracker's
         // vocabulary, and both paths ask it.
-        var provider = await providerFactory.CreateAsync(conn, ct);
+        var provider = await providerFactory.CreateAsync(conn.ToDescriptor(), ct);
 
         task.Status = msg.NewStatus;
         task.ClosedAt = provider.IsClosedStatus(msg.NewStatus)

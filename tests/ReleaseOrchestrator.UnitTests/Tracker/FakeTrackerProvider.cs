@@ -1,4 +1,4 @@
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
@@ -66,6 +66,6 @@ internal sealed class FakeTrackerProviderFactory(ITrackerProvider provider) : IT
 
     public IReadOnlyList<ProviderSettingSchema> GetSettingsSchema(string providerType) => [];
 
-    public Task<ITrackerProvider> CreateAsync(TrackerConnection connection, CancellationToken ct) =>
+    public Task<ITrackerProvider> CreateAsync(TrackerConnectionDescriptor connection, CancellationToken ct) =>
         Task.FromResult(provider);
 }

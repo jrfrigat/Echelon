@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure;
 using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using ReleaseOrchestrator.Providers.Abstractions;
@@ -151,13 +151,12 @@ public class DependencyInjectionTests
 
         var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
 
-        var connection = new VcsConnection
-        {
-            Id = Guid.NewGuid(),
-            Name = "typo-connection",
-            ProviderType = "gitab",
-            ApiUrl = "https://gitlab.example.com"
-        };
+        var connection = new VcsConnectionDescriptor(
+            Name: "typo-connection",
+            ProviderType: "gitab",
+            ApiUrl: "https://gitlab.example.com",
+            EncryptedAccessToken: [],
+            ReadyForDeployLabel: null);
 
         var exception = await Assert.ThrowsAsync<UnknownProviderException>(
             () => factory.CreateAsync(connection, CancellationToken.None));
@@ -180,13 +179,12 @@ public class DependencyInjectionTests
 
         var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
 
-        var connection = new VcsConnection
-        {
-            Id = Guid.NewGuid(),
-            Name = "gitlab-connection",
-            ProviderType = providerType,
-            ApiUrl = "https://gitlab.example.com"
-        };
+        var connection = new VcsConnectionDescriptor(
+            Name: "gitlab-connection",
+            ProviderType: providerType,
+            ApiUrl: "https://gitlab.example.com",
+            EncryptedAccessToken: [],
+            ReadyForDeployLabel: null);
 
         // Only the lookup is under test. Binding goes on to fail on the empty token, which no
         // data-protection stack reachable from a unit test can decrypt — so the assertion is the

@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 
@@ -30,7 +31,7 @@ public class TrackerService(
         var conn = await db.TrackerConnections.FirstOrDefaultAsync(c => c.Id == trackerConnectionId, ct)
             ?? throw new InvalidOperationException($"TrackerConnection {trackerConnectionId} not found");
 
-        var provider = await providerFactory.CreateAsync(conn, ct);
+        var provider = await providerFactory.CreateAsync(conn.ToDescriptor(), ct);
 
         var info = await provider.GetIssueAsync(externalTaskId, ct);
         if (info is null)

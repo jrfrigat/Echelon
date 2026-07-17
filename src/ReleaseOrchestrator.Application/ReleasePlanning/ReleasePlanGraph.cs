@@ -1,4 +1,3 @@
-using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Core.Enums;
 
 namespace ReleaseOrchestrator.Application.ReleasePlanning;
@@ -31,11 +30,10 @@ public record PlanGraphResult(List<List<Guid>> Stages, List<PlanConflict> Confli
 public static class ReleasePlanGraph
 {
     /// <param name="mrs">
-    /// Deployable MRs. Callers must load <c>Task.Dependencies</c> and
-    /// <c>Repository.RepositoryStacks.Stack.DependentOn</c>, and pass the list in a
-    /// deterministic order — that order decides ties within a stage.
+    /// Deployable merge requests, in a deterministic order — that order decides ties within a
+    /// stage, so the same input has to give the same plan every time.
     /// </param>
-    public static PlanGraphResult Build(IReadOnlyList<MergeRequest> mrs)
+    public static PlanGraphResult Build(IReadOnlyList<PlanMergeRequest> mrs)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         var rank = new Dictionary<Guid, int>(mrs.Count);
@@ -53,7 +51,7 @@ public static class ReleasePlanGraph
     /// Soft stack links are advisory and excluded. Used to vet imported plans (README §6.2)
     /// against the same edge derivation the planner itself uses, so the two cannot drift.
     /// </summary>
-    public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<MergeRequest> mrs)
+    public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         return BuildEdges(mrs, ids)
@@ -65,9 +63,7 @@ public static class ReleasePlanGraph
     /// <summary>
     /// Mandatory constraints the given stage assignment does not honour.
     /// </summary>
-    /// <param name="mrs">
-    /// The plan's merge requests, loaded like <see cref="Build"/> requires.
-    /// </param>
+    /// <param name="mrs">The plan's merge requests.</param>
     /// <param name="stageOf">Stage sequence per merge request id.</param>
     /// <remarks>
     /// A plan may violate a constraint — an operator sometimes has to deploy against the declared
@@ -79,7 +75,7 @@ public static class ReleasePlanGraph
     /// which violates an ordering constraint exactly as surely as the reverse order does.
     /// </remarks>
     public static IReadOnlyList<PlanEdge> ViolatedBy(
-        IReadOnlyList<MergeRequest> mrs, IReadOnlyDictionary<Guid, int> stageOf) =>
+        IReadOnlyList<PlanMergeRequest> mrs, IReadOnlyDictionary<Guid, int> stageOf) =>
         MandatoryEdges(mrs)
             .Where(e => stageOf.TryGetValue(e.FromMrId, out var predecessorSeq)
                         && stageOf.TryGetValue(e.ToMrId, out var seq)
@@ -92,11 +88,11 @@ public static class ReleasePlanGraph
     /// can never make a hard constraint droppable.
     /// </summary>
     private static Dictionary<(Guid From, Guid To), PlanEdgeKind> BuildEdges(
-        IReadOnlyList<MergeRequest> mrs, HashSet<Guid> ids)
+        IReadOnlyList<PlanMergeRequest> mrs, HashSet<Guid> ids)
     {
         var byTask = mrs.Where(m => m.TaskId.HasValue).ToLookup(m => m.TaskId!.Value);
         var byStack = mrs
-            .SelectMany(m => m.Repository.RepositoryStacks.Select(rs => (rs.StackId, Mr: m)))
+            .SelectMany(m => m.Stacks.Select(s => (s.StackId, Mr: m)))
             .ToLookup(x => x.StackId, x => x.Mr);
 
         var edges = new Dictionary<(Guid, Guid), PlanEdgeKind>();
@@ -114,21 +110,20 @@ public static class ReleasePlanGraph
 
         foreach (var mr in mrs)
         {
-            // task.Dependencies == rows where DependentTaskId == task.Id, i.e. the tasks
-            // this one waits on. Every MR of a predecessor task deploys first — a task
-            // may span several repositories, so all of its MRs are predecessors.
-            foreach (var dep in mr.Task?.Dependencies ?? [])
-                foreach (var predecessor in byTask[dep.DependsOnTaskId])
+            // Every merge request of a task this one waits on deploys first — a task may span
+            // several repositories, so all of its merge requests are predecessors, not just one.
+            foreach (var dependsOnTaskId in mr.DependsOnTaskIds)
+                foreach (var predecessor in byTask[dependsOnTaskId])
                     AddEdge(predecessor.Id, mr.Id, PlanEdgeKind.TaskDependency);
 
-            foreach (var rs in mr.Repository.RepositoryStacks)
-                foreach (var stackDep in rs.Stack.DependentOn)
+            foreach (var stack in mr.Stacks)
+                foreach (var link in stack.DependsOn)
                 {
-                    var kind = stackDep.Type == StackDependencyType.Hard
+                    var kind = link.Type == StackDependencyType.Hard
                         ? PlanEdgeKind.StackHard
                         : PlanEdgeKind.StackSoft;
 
-                    foreach (var predecessor in byStack[stackDep.ToStackId])
+                    foreach (var predecessor in byStack[link.ToStackId])
                         AddEdge(predecessor.Id, mr.Id, kind);
                 }
         }

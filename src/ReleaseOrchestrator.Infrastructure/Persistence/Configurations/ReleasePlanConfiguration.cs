@@ -1,44 +1,27 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// The one thing about <see cref="ReleasePlan"/> that no attribute can say.
+/// </summary>
 public class ReleasePlanConfiguration : IEntityTypeConfiguration<ReleasePlan>
 {
+    /// <inheritdoc/>
     public void Configure(EntityTypeBuilder<ReleasePlan> b)
     {
-        b.HasKey(e => e.Id);
-        b.Property(e => e.Name).HasMaxLength(300).IsRequired();
-        b.Property(e => e.Version).HasMaxLength(50).IsRequired();
-        b.Property(e => e.YamlHash).HasMaxLength(64);
-        // Filtered unique index: at most one active plan, enforced by the database
-        // rather than by convention. Concurrent recalculations previously left two.
+        ArgumentNullException.ThrowIfNull(b);
+
+        // At most one active plan, enforced by the database rather than by convention: the planner
+        // deactivates the previous plan before inserting, but two concurrent recalculations both
+        // deactivate before either inserts, and that left two active. A plain unique index on a
+        // bool would also permit only one *inactive* plan ever, so the filter is what makes it
+        // work — and [Index] has no filter, so this cannot move onto the model.
         b.HasIndex(e => e.IsActive)
             .IsUnique()
             .HasFilter("[IsActive] = 1")
             .HasDatabaseName("IX_ReleasePlan_IsActive");
-        b.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_ReleasePlan_CreatedAt");
-    }
-}
-
-public class ReleaseStageConfiguration : IEntityTypeConfiguration<ReleaseStage>
-{
-    public void Configure(EntityTypeBuilder<ReleaseStage> b)
-    {
-        b.HasKey(e => e.Id);
-        b.Property(e => e.Name).HasMaxLength(300);
-        b.HasOne(e => e.Plan).WithMany(p => p.Stages).HasForeignKey(e => e.PlanId).OnDelete(DeleteBehavior.Cascade);
-    }
-}
-
-public class StageItemConfiguration : IEntityTypeConfiguration<StageItem>
-{
-    public void Configure(EntityTypeBuilder<StageItem> b)
-    {
-        b.HasKey(e => e.Id);
-        b.HasIndex(e => e.MergeRequestId).HasDatabaseName("IX_StageItem_MergeRequestId");
-        b.HasOne(e => e.Stage).WithMany(s => s.Items).HasForeignKey(e => e.StageId).OnDelete(DeleteBehavior.Cascade);
-        b.HasOne(e => e.MergeRequest).WithMany(mr => mr.StageItems).HasForeignKey(e => e.MergeRequestId).OnDelete(DeleteBehavior.Restrict);
     }
 }

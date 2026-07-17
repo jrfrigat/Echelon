@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
@@ -34,7 +34,7 @@ internal sealed class TrackerProviderFactory(
     }
 
     /// <inheritdoc/>
-    public async Task<ITrackerProvider> CreateAsync(TrackerConnection connection, CancellationToken ct)
+    public async Task<ITrackerProvider> CreateAsync(TrackerConnectionDescriptor connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);
 

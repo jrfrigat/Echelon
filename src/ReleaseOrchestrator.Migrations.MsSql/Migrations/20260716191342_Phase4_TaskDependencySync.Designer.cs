@@ -242,7 +242,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.GroupPermissionMapping", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.GroupPermissionMapping", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -263,7 +263,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("GroupPermissionMappings");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.MergeRequest", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -343,7 +343,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("MergeRequests");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.PermissionClaim", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -362,7 +362,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("PermissionClaims");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.ReleasePlan", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -413,7 +413,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("ReleasePlans");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.ReleaseStage", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleaseStage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -439,7 +439,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("ReleaseStages");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.Repository", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -472,7 +472,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("Repositories");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.RepositoryStack", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryStack", b =>
                 {
                     b.Property<Guid>("RepositoryId")
                         .HasColumnType("uniqueidentifier");
@@ -487,7 +487,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("RepositoryStacks");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.Stack", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -506,7 +506,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("Stacks");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.StackDependency", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StackDependency", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -530,7 +530,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("StackDependencies");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.StageItem", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StageItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -555,7 +555,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("StageItems");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TaskDependency", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskDependency", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -578,7 +578,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("TaskDependencies");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TaskItem", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -625,7 +625,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("Tasks");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TrackerConnection", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -657,7 +657,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("TrackerConnections");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.UserPermissionOverride", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.UserPermissionOverride", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -678,7 +678,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("UserPermissionOverrides");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.VcsConnection", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.VcsConnection", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -765,9 +765,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.GroupPermissionMapping", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.GroupPermissionMapping", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.PermissionClaim", "PermissionClaim")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", "PermissionClaim")
                         .WithMany("GroupMappings")
                         .HasForeignKey("PermissionClaimId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -776,15 +776,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("PermissionClaim");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.MergeRequest", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.Repository", "Repository")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
                         .WithMany("MergeRequests")
                         .HasForeignKey("RepositoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.TaskItem", "Task")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "Task")
                         .WithMany("MergeRequests")
                         .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -794,9 +794,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Task");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.ReleaseStage", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleaseStage", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.ReleasePlan", "Plan")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", "Plan")
                         .WithMany("Stages")
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -805,15 +805,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.Repository", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.VcsConnection", "Connection")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.VcsConnection", "Connection")
                         .WithMany("Repositories")
                         .HasForeignKey("ConnectionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.TrackerConnection", "TrackerConnection")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", "TrackerConnection")
                         .WithMany("Repositories")
                         .HasForeignKey("TrackerConnectionId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -823,15 +823,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("TrackerConnection");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.RepositoryStack", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryStack", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.Repository", "Repository")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
                         .WithMany("RepositoryStacks")
                         .HasForeignKey("RepositoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.Stack", "Stack")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", "Stack")
                         .WithMany("RepositoryStacks")
                         .HasForeignKey("StackId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -842,15 +842,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Stack");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.StackDependency", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StackDependency", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.Stack", "FromStack")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", "FromStack")
                         .WithMany("DependentOn")
                         .HasForeignKey("FromStackId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.Stack", "ToStack")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", "ToStack")
                         .WithMany("RequiredBy")
                         .HasForeignKey("ToStackId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -861,15 +861,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("ToStack");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.StageItem", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StageItem", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.MergeRequest", "MergeRequest")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
                         .WithMany("StageItems")
                         .HasForeignKey("MergeRequestId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.ReleaseStage", "Stage")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleaseStage", "Stage")
                         .WithMany("Items")
                         .HasForeignKey("StageId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -880,15 +880,15 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Stage");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TaskDependency", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskDependency", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.TaskItem", "DependentTask")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "DependentTask")
                         .WithMany("Dependencies")
                         .HasForeignKey("DependentTaskId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.TaskItem", "DependsOnTask")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "DependsOnTask")
                         .WithMany("Dependents")
                         .HasForeignKey("DependsOnTaskId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -899,9 +899,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("DependsOnTask");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TaskItem", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.TrackerConnection", "TrackerConnection")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", "TrackerConnection")
                         .WithMany("Tasks")
                         .HasForeignKey("TrackerConnectionId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -910,9 +910,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("TrackerConnection");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.UserPermissionOverride", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.UserPermissionOverride", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Core.Entities.PermissionClaim", "PermissionClaim")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", "PermissionClaim")
                         .WithMany("UserOverrides")
                         .HasForeignKey("PermissionClaimId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -921,36 +921,36 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("PermissionClaim");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.MergeRequest", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", b =>
                 {
                     b.Navigation("StageItems");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.PermissionClaim", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", b =>
                 {
                     b.Navigation("GroupMappings");
 
                     b.Navigation("UserOverrides");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.ReleasePlan", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", b =>
                 {
                     b.Navigation("Stages");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.ReleaseStage", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleaseStage", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.Repository", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
                     b.Navigation("MergeRequests");
 
                     b.Navigation("RepositoryStacks");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.Stack", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>
                 {
                     b.Navigation("DependentOn");
 
@@ -959,7 +959,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("RequiredBy");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TaskItem", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", b =>
                 {
                     b.Navigation("Dependencies");
 
@@ -968,14 +968,14 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("MergeRequests");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.TrackerConnection", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", b =>
                 {
                     b.Navigation("Repositories");
 
                     b.Navigation("Tasks");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Core.Entities.VcsConnection", b =>
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.VcsConnection", b =>
                 {
                     b.Navigation("Repositories");
                 });

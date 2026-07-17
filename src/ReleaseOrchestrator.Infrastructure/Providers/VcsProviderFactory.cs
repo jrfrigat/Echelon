@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
@@ -44,7 +44,7 @@ internal sealed class VcsProviderFactory(
     }
 
     /// <inheritdoc/>
-    public async Task<IVcsProvider> CreateAsync(VcsConnection connection, CancellationToken ct)
+    public async Task<IVcsProvider> CreateAsync(VcsConnectionDescriptor connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);
 

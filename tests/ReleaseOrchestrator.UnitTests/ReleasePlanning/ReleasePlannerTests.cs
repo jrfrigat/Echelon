@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Entities;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Core.Enums;
 using Xunit;
 
