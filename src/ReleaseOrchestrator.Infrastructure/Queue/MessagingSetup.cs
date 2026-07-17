@@ -58,14 +58,21 @@ public static class MessagingSetup
                 // for an operator to inspect or replay. This is where MassTransit's two retry tiers
                 // collapse into one, and the departures are deliberate:
                 //
-                //   - No exponential backoff. Immediate retries are immediate here. The race they
-                //     exist for — a status webhook overtaking its opened webhook — resolves in
+                //   - No exponential backoff. Immediate retries are immediate here. The realistic
+                //     race — a status webhook processed before its opened webhook, when both are
+                //     already queued and two workers take them out of order — resolves in
                 //     milliseconds, so a backoff would only slow the good case.
-                //   - No separate delayed-redelivery tier for a minutes-long tracker outage. Rebus
-                //     can do it (second-level retries + Defer), but it needs a timeout store, and
-                //     the backstop already exists: TaskReconciliationService re-syncs on a timer, so
-                //     a task that lands in the error queue during an outage is picked up on the next
-                //     sweep. The error queue plus that sweep is the safety net, not a lost edge.
+                //   - No separate delayed-redelivery tier. MassTransit configured one (1/5/15 min),
+                //     but on RabbitMQ that tier needs the delayed-message-exchange plugin, which is
+                //     not installed on the broker this runs against — so it was never functional
+                //     here. Matching it faithfully in Rebus would mean a durable timeout store
+                //     (Rebus.SqlServer / Rebus.PostgreSql, both providers), which is real surface
+                //     for an edge two backstops already cover: a TaskSyncRequested that dead-letters
+                //     during a tracker outage is re-sent by TaskReconciliationService on its next
+                //     sweep, and a status event that dead-letters because its opened/created event
+                //     was minutes behind waits in the error queue for replay rather than being lost.
+                //     Revisit with a timeout store if out-of-order webhooks separated by minutes
+                //     turn out to be common rather than pathological.
                 //   - No kill switch. Rebus has no circuit breaker, and at one replica with
                 //     idempotent handlers the failure it guards against — the whole pool hammering a
                 //     downed dependency — is a single worker set retrying, which the attempt cap and
