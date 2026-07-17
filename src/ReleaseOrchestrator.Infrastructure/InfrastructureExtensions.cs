@@ -34,24 +34,12 @@ public static class InfrastructureExtensions
         // Redis or RabbitMQ configuration lambdas looks like fail-fast but is not: those run
         // lazily, so a missing value surfaced at the first request or when the bus started,
         // long after the deployment looked healthy.
-        var connectionString = Required(config, "ConnectionStrings:Default");
-        var archiveConnectionString = Required(config, "ConnectionStrings:Archive");
         var queueUsername = Required(config, "Queue:Username");
         var queuePassword = Required(config, "Queue:Password");
 
-        // EnableRetryOnFailure: transient faults (failover, deadlock victim, pool timeout) are
-        // routine for SQL Server in containers, and without an execution strategy each one
-        // surfaces as a consumer exception and burns the message's retry budget.
-        services.AddDbContext<AppDbContext>(opt =>
-            opt.UseSqlServer(connectionString, sql =>
-            {
-                sql.MigrationsAssembly("ReleaseOrchestrator.Migrations.MsSql");
-                sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
-            }));
-
-        services.AddDbContext<ArchiveDbContext>(opt =>
-            opt.UseSqlServer(archiveConnectionString, sql =>
-                sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null)));
+        // Both contexts, against whichever database is configured. Connection strings and the
+        // provider name are validated in there, at startup, for the reason above.
+        services.AddDatabases(config);
 
         services.AddTokenProtection(config);
 

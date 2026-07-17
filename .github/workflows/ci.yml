@@ -100,16 +100,40 @@ jobs:
       # Editing an entity without adding a migration compiles, tests green, and then fails at
       # deployment against a schema that does not match — or worse, does not fail, and the column
       # is quietly missing. No database needed: this compares the model to the snapshot.
+      #
+      # Both providers, because a migration is per-provider: adding a column and remembering only
+      # SQL Server leaves PostgreSQL deployments broken, and nothing else would say so.
       - name: No pending model changes
         run: |
           set -euo pipefail
-          for context in AppDbContext ArchiveDbContext; do
-            echo "::group::$context"
-            dotnet ef migrations has-pending-model-changes \
-              --project src/ReleaseOrchestrator.Migrations.MsSql \
-              --context "$context"
-            echo "::endgroup::"
+          for project in MsSql Postgres; do
+            for context in AppDbContext ArchiveDbContext; do
+              echo "::group::$project / $context"
+              dotnet ef migrations has-pending-model-changes \
+                --project "src/ReleaseOrchestrator.Migrations.$project" \
+                --context "$context"
+              echo "::endgroup::"
+            done
           done
+
+      # The SQL is where the two databases actually differ, and a filter or a system column that is
+      # wrong scaffolds happily and fails only when applied. Generating it needs no server.
+      - name: Migrations script generates for both providers
+        run: |
+          set -euo pipefail
+          for project in MsSql Postgres; do
+            for context in AppDbContext ArchiveDbContext; do
+              dotnet ef migrations script --idempotent \
+                --project "src/ReleaseOrchestrator.Migrations.$project" \
+                --context "$context" \
+                -o "/tmp/$project-$context.sql"
+            done
+          done
+          # PostgreSQL has no bracket quoting; a stray one means SQL Server's dialect leaked in.
+          if grep -q '\[' /tmp/Postgres-*.sql; then
+            echo "::error::SQL Server bracket quoting reached the PostgreSQL script."
+            exit 1
+          fi
 
   hygiene:
     name: Repository hygiene

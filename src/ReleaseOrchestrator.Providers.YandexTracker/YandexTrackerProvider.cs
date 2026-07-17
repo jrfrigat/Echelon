@@ -37,7 +37,11 @@ internal sealed class YandexTrackerProvider(
 
         return dto is null
             ? null
-            : new TrackerIssue(dto.Key, dto.Summary ?? string.Empty, dto.Status?.Key ?? string.Empty, dto.ResolvedAt);
+            : new TrackerIssue(
+                dto.Key,
+                dto.Summary ?? string.Empty,
+                dto.Status?.Key ?? string.Empty,
+                dto.ResolvedAt?.UtcDateTime);
     }
 
     /// <inheritdoc/>
@@ -83,7 +87,12 @@ internal sealed class YandexTrackerProvider(
         [property: JsonPropertyName("key")] string Key,
         [property: JsonPropertyName("summary")] string? Summary,
         [property: JsonPropertyName("status")] YtStatus? Status,
-        [property: JsonPropertyName("resolvedAt")] DateTime? ResolvedAt);
+        // DateTimeOffset, not DateTime: the tracker stamps an offset, and deserialising that into a
+        // DateTime yields Kind=Local — which SQL Server stores without complaint and PostgreSQL
+        // refuses outright, since it maps DateTime to timestamptz and Npgsql writes only Kind=Utc.
+        // The ambiguity is removed here rather than compensated for later: an offset is exactly what
+        // DateTimeOffset is for, and the adapter is where the tracker's format is known.
+        [property: JsonPropertyName("resolvedAt")] DateTimeOffset? ResolvedAt);
 
     private sealed record YtStatus([property: JsonPropertyName("key")] string Key);
 

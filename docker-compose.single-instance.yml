@@ -28,13 +28,14 @@ services:
       # Nothing reads it in this mode, and leaving it set invites the belief that it is being used.
       Redis__ConnectionString: !reset null
 
-    # !override, not a merge: depends_on merges by key, so re-listing the two that remain would
-    # keep waiting for a redis service this file does not start.
-    depends_on: !override
-      mssql:
+    # Merged, not !override: overriding the whole map would drop what another override file put
+    # there, and the two are meant to combine — this plus postgres.yml is a valid deployment.
+    # `required: false` is what removes a dependency without erasing the map: the profiled-out
+    # service is not started, and Compose warns instead of refusing the project.
+    depends_on:
+      redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+        required: false
 
   # Declared with a profile nothing enables, so `up` does not start it. The service stays in the
   # model rather than being deleted, so `docker compose config` still describes the full stack and

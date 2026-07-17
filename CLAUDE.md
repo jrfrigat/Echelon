@@ -189,7 +189,13 @@ bash scripts/clean-empty-files.sh                        # before every commit
 - **Реестр Docker фильтруется** — образы не собрать, теги не проверить
 - **Тесты с БД пишутся — через EF SQLite** (`DataSource=:memory:`, соединение держать открытым: база живёт ровно столько, сколько последнее соединение). Провайдера EF in-memory по-прежнему нет и он не нужен. При EF 9 версии расходились и это было невозможно; переход на .NET 10 ограничение снял. Образец — `tests/.../ReleasePlanning/PlannerTestBase.cs`
 - **SQLite — не SQL Server.** Поведение FK и типов совпадает не во всём: цепочки `Include`, фильтрованные индексы и логика запросов проверяются, порядок каскадов — нет. Что не проверено, писать в тесте прямо
-- Миграции: `dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.MsSql --context AppDbContext`
+- **Миграции — на оба провайдера, всегда обе.** Добавить в MsSql и забыть Postgres — значит сломать вторую половину деплоев, и заметит это только CI:
+  ```bash
+  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.MsSql    --context AppDbContext
+  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.Postgres --context AppDbContext
+  ```
+- **Расхождения SQL Server и PostgreSQL живут в `ProviderSpecificMapping`** и больше нигде. Их два, и оба найдены не чтением, а сборкой модели: токен конкурентности (`rowversion` против системной `xmin` — Npgsql молча принимает `[Timestamp]` и делает `bytea`, который никогда не заполняется, то есть проверка конкурентности **не срабатывает вообще**) и фильтр индекса (`[IsActive] = 1` против `"IsActive"` — фильтр это кусок SQL, EF передаёт его дословно). Добавляете третье — туда же, с объяснением
+- **Даты: только `Kind=Utc`.** PostgreSQL кладёт `DateTime` в `timestamptz`, Npgsql пишет туда лишь `Utc` и бросает на `Local`/`Unspecified`; SQL Server проглатывает любой — поэтому баг невидим, пока не запустят вторую БД. В адаптерах разбирать даты через `DateTimeOffset` и отдавать `.UtcDateTime`
 
 ## CLI Quick Reference
 

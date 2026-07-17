@@ -31,7 +31,7 @@ Release Orchestrator помогает автоматически выстраи�
 
 **The application has never been run in a live environment.** The following have not been tested:
 
-- Application startup against live SQL Server, RabbitMQ, Redis
+- Application startup against a live database (SQL Server or PostgreSQL), RabbitMQ, Redis
 - Database migrations (on real instance)
 - Docker image builds (registry blocked in dev environment)
 - Behavior against real GitLab or Yandex Tracker instances
@@ -41,7 +41,7 @@ Release Orchestrator помогает автоматически выстраи�
 
 Before deploying to production:
 1. Test locally with Docker Compose (see [Getting Started](docs/en/getting-started.md))
-2. Verify migrations apply cleanly to SQL Server
+2. Verify migrations apply cleanly to your database — `Database__Provider` picks the assembly
 3. Build and test Docker images
 4. Test against staging instances of your VCS/tracker
 5. Load testing with expected traffic volume
@@ -76,13 +76,13 @@ VCS webhooks → Ingress → RabbitMQ → Core → Release Plan
 ## Architecture Layers
 
 ```
-Core                        domain entities; knows no provider, no database
+Core                        enums and pure parsing; zero dependencies, not one
   ↑
 Providers.Abstractions      provider contracts + normalized models
   ↑                    ↖
 Application            Providers.GitLab / Providers.YandexTracker
   ↑                    ↗       (adapters: see only Abstractions + Core)
-Infrastructure              EF Core, MassTransit, Redis — the composition root
+Infrastructure              EF models, DbContext, adapters — the composition root
   ↑
 Web / Ingress.Webhooks      HTTP
 ```
@@ -92,16 +92,17 @@ before and both cost real defects:
 
 - The planning algorithm lives in `Application` and touches no EF. It used to be a private method
   on a class built around `DbContext` — unreachable from a test, which is exactly why its
-  dependency edges were inverted for as long as they were.
-- No provider name appears in `Core`. Adding one is a project and a line of registration, not a
-  domain change and a migration.
+  dependency edges were inverted for as long as they were. It now takes `PlanMergeRequest`, so
+  the data it needs is a type rather than a comment asking callers to remember an `Include`.
+- No provider name appears in `Core`, and neither does an EF model. Adding a VCS, a tracker or a
+  database is a project and a line of registration, not a domain change.
 
 ---
 
 ## Tech Stack
 
 - **.NET 10** (C# 14)
-- **Database:** Microsoft SQL Server 2019+ (EF Core 10)
+- **Database:** Microsoft SQL Server 2019+ or PostgreSQL 13+ (EF Core 10) — see §7.2
 - **Message Queue:** RabbitMQ 3.8+ (MassTransit)
 - **Coordination:** Redis 6.0+ (StackExchange.Redis), or none — see §7.1
 - **Frontend:** Blazor WebAssembly (PWA, .NET 10)
@@ -125,7 +126,7 @@ dotnet test src/ReleaseOrchestrator.sln
 
 Unit tests only. They cover the pure logic — the graph algorithm, the EF model's shape, the
 provider registry, the composition root — and deliberately touch no database, broker or cache.
-There are no integration tests: the environment this was built in has no SQL Server, and no EF
+There are no integration tests: the environment this was built in has no database server, and no EF
 in-memory provider is available offline, so the paths that talk to one are **unverified**.
 
 ## Run Locally
@@ -194,6 +195,48 @@ docker compose -f docker-compose.yml -f docker-compose.single-instance.yml up -d
 | `Coordination__SingleInstance` | `true` / `false` | Required for `memory`. The operator's statement that the deployment is one replica. |
 | `Redis__ConnectionString` | connection string | Required for `redis`; unread otherwise. |
 
+### 7.2 SQL Server or PostgreSQL
+
+Unlike the coordination backend, the database *is* the source of truth — so this choice is only
+about which one you already run, never about doing without.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+```
+
+| Setting | Values | Meaning |
+|---|---|---|
+| `Database__Provider` | `sqlserver` (default), `postgresql` | Which database, and therefore which migrations assembly. |
+| `ConnectionStrings__Default` | connection string | Operational store, in that provider's own format. |
+| `ConnectionStrings__Archive` | connection string | Archive store. |
+
+Both are first-class: the same model, the same tests, the same CI checks. Migrations live in one
+assembly per provider, because a migration is generated SQL rather than a description of intent —
+`nvarchar(200)` and `character varying(200)` cannot share a file. The application picks the
+assembly from `Database__Provider` at startup, so a mismatch is a startup failure and not a
+half-applied schema.
+
+Two mappings genuinely differ, and both live in `ProviderSpecificMapping` where they are named
+rather than left to a convention:
+
+| | SQL Server | PostgreSQL | Why it matters |
+|---|---|---|---|
+| Concurrency token | `rowversion` | the `xmin` system column | Npgsql accepts `[Timestamp] byte[]` and maps it to a `bytea` PostgreSQL never fills. The model builds, the migration scaffolds, and the concurrency check **silently never fires**. |
+| One-active-plan index | `WHERE [IsActive] = 1` | `WHERE "IsActive"` | A filter is a fragment of SQL passed through verbatim. SQL Server's brackets are not quoting in PostgreSQL, and a boolean does not equal 1. |
+
+The override files compose, in any order:
+
+```bash
+# PostgreSQL, single replica, no Redis
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+               -f docker-compose.single-instance.yml up -d
+```
+
+**Neither database has ever been run.** See Known Limitations — this is the same "never started"
+that applies to SQL Server, and PostgreSQL does not change it in either direction.
+
+### 7.3 The single-instance caveat
+
 `memory` is correct for one process and **wrong for two**, and it cannot tell the difference: each
 process would hold its own lease and believe it leads, so every replica would run its own archive
 cycle, every one would sweep the tracker, and a revoked permission would linger in the others until
@@ -223,8 +266,8 @@ past one and Redis comes back.
 ## Known Limitations
 
 - **Never run at all.** Not "untested under load" — the application has never started against a
-  live SQL Server, RabbitMQ or Redis, and migrations have never been applied
-- No PostgreSQL support (SQL Server only)
+  live SQL Server, PostgreSQL, RabbitMQ or Redis, and migrations have never been applied
+- **Neither database has ever been run.** PostgreSQL is supported on the same terms as SQL Server: same model, same tests, same CI, and the same "никогда не запускался" above. Its mapping differences are covered by tests against the built model and by generated SQL, which is the strongest check possible without a server — it is not a substitute for one
 - No Prometheus exporter — telemetry leaves over OTLP, so scraping needs an OpenTelemetry
   collector in between
 - No buffering when RabbitMQ is down: webhooks answer **503**, which senders retry. Buffering in
