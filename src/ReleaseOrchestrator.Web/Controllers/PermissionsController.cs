@@ -64,7 +64,24 @@ public class PermissionsController(
             AdGroupSid = req.AdGroupSid,
             PermissionClaimId = req.PermissionClaimId
         });
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Lost the race with a concurrent grant. The check above is advisory — the unique index
+            // is the guarantee — so the answer is the one the check would have given, not a 500.
+            // Anything else that broke the write is not ours to swallow.
+            db.ChangeTracker.Clear();
+            if (!await db.GroupPermissionMappings.AnyAsync(
+                    m => m.AdGroupSid == req.AdGroupSid && m.PermissionClaimId == req.PermissionClaimId, ct))
+                throw;
+
+            return Conflict(new { error = localizer["Perm_GroupAlreadyHolds", req.AdGroupSid, claimName].Value });
+        }
+
         await PermissionVersionStore.InvalidateAsync(cache, ct);
 
         logger.LogInformation(
@@ -123,7 +140,22 @@ public class PermissionsController(
             UserId = userId,
             PermissionClaimId = req.PermissionClaimId
         });
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // See the group grant above: the index decides, and losing to it is a conflict.
+            db.ChangeTracker.Clear();
+            if (!await db.UserPermissionOverrides.AnyAsync(
+                    o => o.UserId == userId && o.PermissionClaimId == req.PermissionClaimId, ct))
+                throw;
+
+            return Conflict(new { error = localizer["Perm_UserAlreadyHolds", userId, claimName].Value });
+        }
+
         await PermissionVersionStore.InvalidateAsync(cache, ct);
 
         logger.LogInformation(

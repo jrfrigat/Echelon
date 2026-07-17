@@ -5,6 +5,13 @@ using Microsoft.EntityFrameworkCore;
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>Grants a claim to everyone in an AD group.</summary>
+/// <remarks>
+/// The pair is unique, and the index is the guarantee rather than the controller's
+/// check-then-insert, which races with itself: two admins granting the same claim at once both
+/// see nothing and both insert. Revocation then deletes one row by id, logs "revoked", and the
+/// group keeps the permission — a permission that survives its own revocation, reported as gone.
+/// </remarks>
+[Index(nameof(AdGroupSid), nameof(PermissionClaimId), IsUnique = true, Name = "IX_GroupPermissionMapping_AdGroupSid_PermissionClaimId")]
 public class GroupPermissionMapping
 {
     /// <summary>Primary key.</summary>
