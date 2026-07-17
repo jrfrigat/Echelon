@@ -34,28 +34,40 @@ These must be set or the application will not start.
 
 ### Message Queue (RabbitMQ)
 
-**`Queue__Username`** (REQUIRED)
+Give the broker either as a full connection string **or** as its parts. The parts are what
+`docker-compose.yml` sets; a connection string is for a deployment that would rather hand over one
+URI (TLS, a cluster, a non-default vhost).
+
+**`Queue__ConnectionString`** (optional — the connection string form)
+- **What:** A full AMQP URI, e.g. `amqps://user:pass@rabbit.company.com:5671/vhost`
+- **Behaviour:** When set, it is used verbatim and the parts below are ignored
+- **When to use:** TLS (`amqps`), a clustered host list, or a vhost you would rather not assemble
+
+**`Queue__Username`** (required unless `Queue__ConnectionString` is set)
 - **What:** RabbitMQ authentication username
 - **Example:** `guest`
-- **If missing:** Rebus fails on bus startup
+- **If missing:** `InvalidOperationException` at startup, before the bus connects
 - **Security note:** Never use `guest` in production
 
-**`Queue__Password`** (REQUIRED)
+**`Queue__Password`** (required unless `Queue__ConnectionString` is set)
 - **What:** RabbitMQ authentication password
-- **If missing:** Rebus connection fails
+- **If missing:** `InvalidOperationException` at startup
 - **Security note:** Use strong password in production
 
-**`Queue__Host`** (REQUIRED)
+**`Queue__Host`**
 - **What:** Hostname or IP of RabbitMQ broker
 - **Example:** `rabbitmq.company.com` or `localhost`
-- **If missing:** DNS resolution fails, Rebus startup fails
-- **Default:** Typically derived from Docker service name or localhost
+- **Default:** `localhost`
 
-**`Queue__Port`** (REQUIRED)
+**`Queue__Port`**
 - **What:** RabbitMQ AMQP port
 - **Example:** `5672` (standard)
 - **Default:** 5672
-- **If missing or invalid:** Connection refused
+
+**`Queue__VirtualHost`**
+- **What:** RabbitMQ virtual host
+- **Example:** `/` (the default vhost) or `release`
+- **Default:** `/`
 
 ### Cache (Redis)
 
