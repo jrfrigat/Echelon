@@ -51,7 +51,7 @@ public static class MessagingSetup
 
         services.AddRebus(configure => configure
             .Transport(t => t.UseRabbitMq(connectionString, InputQueue).Prefetch(prefetch))
-            .Routing(r => r.TypeBased().MapAssemblyOf<MrOpened>(InputQueue))
+            .Routing(r => r.TypeBased().MapAssemblyDerivedFrom<IMessage>(InputQueue))
             .Options(o =>
             {
                 // Five delivery attempts, then the error queue — the message is parked, never lost,

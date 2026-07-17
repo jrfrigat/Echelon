@@ -7,4 +7,4 @@ public record MrStatusChanged(
     string RepositoryExternalId,
     string ExternalMrId,
     MergeRequestStatus NewStatus,
-    DateTime ChangedAt);
+    DateTime ChangedAt) : IMessage;

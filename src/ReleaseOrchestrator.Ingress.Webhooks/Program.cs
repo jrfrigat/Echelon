@@ -68,7 +68,7 @@ try
     // an endpoint calls bus.Send and never names a destination.
     builder.Services.AddRebus(configure => configure
         .Transport(t => t.UseRabbitMqAsOneWayClient(IngressMessaging.RabbitMqConnectionString(builder.Configuration)))
-        .Routing(r => r.TypeBased().MapAssemblyOf<MrOpened>(MessageRouting.InputQueue)));
+        .Routing(r => r.TypeBased().MapAssemblyDerivedFrom<IMessage>(MessageRouting.InputQueue)));
 
     var app = builder.Build();
 

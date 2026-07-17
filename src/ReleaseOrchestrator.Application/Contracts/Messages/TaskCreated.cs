@@ -3,4 +3,4 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 public record TaskCreated(
     string TrackerConnectionName,
     string ExternalId,
-    string Title);
+    string Title) : IMessage;

@@ -12,4 +12,4 @@ public record MrOpened(
     string SourceBranch,
     string TargetBranch,
     string? TaskExternalId,
-    IReadOnlyList<string> Labels);
+    IReadOnlyList<string> Labels) : IMessage;

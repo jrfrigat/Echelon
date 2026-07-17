@@ -9,4 +9,4 @@ public record TaskStatusChanged(
     string TrackerConnectionName,
     string ExternalId,
     string NewStatus,
-    DateTime? ClosedAt);
+    DateTime? ClosedAt) : IMessage;

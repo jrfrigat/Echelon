@@ -11,4 +11,4 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 public record TaskSyncRequested(
     string TrackerConnectionName,
     string ExternalId,
-    string Reason);
+    string Reason) : IMessage;
