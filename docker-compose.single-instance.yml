@@ -1,0 +1,43 @@
+# Runs the stack without Redis, for a deployment that is one replica of `core`.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.single-instance.yml up -d
+#
+# Redis carries two things, and neither is a source of truth. The permission cache is stamped with
+# a hash of the stored rules, so losing it costs three reads and never correctness — the database
+# decides who may do what. The job lease stops every replica from running the same nightly archive
+# pass; the passes are idempotent, so it guards contention rather than data. With one replica both
+# collapse into this process, exactly and not approximately.
+#
+# The cost is the assumption. Scale `core` past one with this file and every replica leads its own
+# archive cycle, every one sweeps the tracker, and a revoked permission lingers in the others until
+# the stamp expires. Nothing can detect that from inside — each process would hold its own lease and
+# believe it leads — which is why Coordination__SingleInstance is a statement an operator makes
+# rather than a default. If you scale up, drop this file and bring Redis back.
+#
+# Verified as far as this environment allows, and no further. `docker compose config` renders the
+# merge: redis and its volume drop out of the model, Redis__ConnectionString is gone, and core is
+# left depending on mssql and rabbitmq alone. The application half is covered by tests — the
+# container builds and resolves with no Redis configured at all, and `memory` refuses to start
+# without the assertion above. What has NOT happened is the stack actually running: the Docker
+# registry is filtered here, so no image was ever pulled and no container ever started.
+services:
+  core:
+    environment:
+      Coordination__Provider: memory
+      Coordination__SingleInstance: "true"
+      # Nothing reads it in this mode, and leaving it set invites the belief that it is being used.
+      Redis__ConnectionString: !reset null
+
+    # !override, not a merge: depends_on merges by key, so re-listing the two that remain would
+    # keep waiting for a redis service this file does not start.
+    depends_on: !override
+      mssql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # Declared with a profile nothing enables, so `up` does not start it. The service stays in the
+  # model rather than being deleted, so `docker compose config` still describes the full stack and
+  # switching back is dropping this file.
+  redis:
+    profiles: ["never"]

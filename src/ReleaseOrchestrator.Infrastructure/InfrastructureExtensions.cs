@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Application.Services;
+using ReleaseOrchestrator.Infrastructure.Coordination;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
@@ -35,7 +36,6 @@ public static class InfrastructureExtensions
         // long after the deployment looked healthy.
         var connectionString = Required(config, "ConnectionStrings:Default");
         var archiveConnectionString = Required(config, "ConnectionStrings:Archive");
-        var redisConnectionString = Required(config, "Redis:ConnectionString");
         var queueUsername = Required(config, "Queue:Username");
         var queuePassword = Required(config, "Queue:Password");
 
@@ -74,14 +74,11 @@ public static class InfrastructureExtensions
         services.AddGitLabProvider();
         services.AddYandexTrackerProvider();
 
-        services.AddStackExchangeRedisCache(opt => opt.Configuration = redisConnectionString);
-
-        // A multiplexer of our own: AddStackExchangeRedisCache keeps its connection private, and
-        // IDistributedCache has no compare-and-set — which is the whole of a lease.
-        // Connect lazily so a Redis that is down delays the first lease, not startup.
-        services.AddSingleton<IConnectionMultiplexer>(_ =>
-            ConnectionMultiplexer.Connect(ConfigurationOptions.Parse(redisConnectionString, ignoreUnknown: true)));
-        services.AddSingleton<IDistributedLease, RedisDistributedLease>();
+        // The permission cache and the job lease, against whichever backend is configured. Redis is
+        // the default and the only one needing another service; a single-replica deployment can say
+        // so and keep both in this process. Validated here, at startup, for the reason at the top of
+        // this method.
+        services.AddCoordination(config);
 
         services.Configure<PermissionBootstrapOptions>(config.GetSection("Authorization"));
         services.AddScoped<IClaimsTransformation, PermissionClaimsTransformation>();

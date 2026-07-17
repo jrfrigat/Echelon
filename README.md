@@ -103,7 +103,7 @@ before and both cost real defects:
 - **.NET 10** (C# 14)
 - **Database:** Microsoft SQL Server 2019+ (EF Core 10)
 - **Message Queue:** RabbitMQ 3.8+ (MassTransit)
-- **Cache:** Redis 6.0+ (StackExchange.Redis)
+- **Coordination:** Redis 6.0+ (StackExchange.Redis), or none — see §7.1
 - **Frontend:** Blazor WebAssembly (PWA, .NET 10)
 - **Authentication:** OpenID Connect (external provider)
 - **Observability:** OpenTelemetry (optional)
@@ -166,12 +166,41 @@ Operational DB holds current MRs and plans. Archive DB (same server or separate)
 
 ### Why a Lease, Not Consensus?
 
-Archiving and reconciliation are registered in every replica, so both are gated on a Redis lease —
+Archiving and reconciliation are registered in every replica, so both are gated on a lease —
 one run per cycle across the deployment rather than one per replica. It is deliberately not a
 consensus algorithm: one Redis is one point of failure, and under a partition two replicas could
 briefly both believe they hold it. That is acceptable here because both jobs are idempotent, so
 the worst case is the double run that used to be the *normal* case. A job where a double run were
 a correctness bug would need fencing tokens instead.
+
+### 7.1 Running Without Redis
+
+Redis carries two things here, and neither is a source of truth:
+
+| | What it holds | What losing it costs |
+|---|---|---|
+| Permission cache | Computed permissions, keyed by a hash of the stored rules | Three reads. The database decides who may do what; a stamp that is evicted recomputes to the same value. |
+| Job lease | Which replica runs tonight's archive pass | The double run described above. Both jobs are idempotent. |
+
+So the backend is selectable, and a deployment that runs **one replica of `core`** can drop Redis:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.single-instance.yml up -d
+```
+
+| Setting | Values | Meaning |
+|---|---|---|
+| `Coordination__Provider` | `redis` (default), `memory` | Which backend carries the cache and the lease. |
+| `Coordination__SingleInstance` | `true` / `false` | Required for `memory`. The operator's statement that the deployment is one replica. |
+| `Redis__ConnectionString` | connection string | Required for `redis`; unread otherwise. |
+
+`memory` is correct for one process and **wrong for two**, and it cannot tell the difference: each
+process would hold its own lease and believe it leads, so every replica would run its own archive
+cycle, every one would sweep the tracker, and a revoked permission would linger in the others until
+the stamp expires. That is why the assertion is separate from the provider name — an unconfigured
+Redis fails at startup rather than quietly becoming a single-instance deployment, the same way
+`DataProtection:AllowUnprotectedKeys` makes an operator say the risky thing out loud. Scale `core`
+past one and Redis comes back.
 
 ---
 
@@ -184,7 +213,10 @@ a correctness bug would need fencing tokens instead.
 - **Authentication:** OpenID Connect (delegated to external provider)
 - **Authorization:** Claim-based permissions (no roles)
 - **HTTPS:** Assumed at reverse proxy (Nginx/Traefik)
-- **Redis cache:** Caches computed permissions; must be password-protected
+- **Redis cache:** Caches computed permissions; must be password-protected when used. Write access
+  to it is equivalent to granting yourself permissions, since a cache hit never reaches the
+  database. Not deployed under `Coordination__Provider=memory`, which removes the exposure along
+  with the service (§7.1)
 
 ---
 

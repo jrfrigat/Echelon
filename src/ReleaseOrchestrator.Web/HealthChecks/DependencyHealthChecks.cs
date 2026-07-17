@@ -47,8 +47,19 @@ public class ArchiveDatabaseHealthCheck(ArchiveDbContext db) : IHealthCheck
     }
 }
 
-public class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
+/// <summary>
+/// Probes whatever backs the permission cache, whichever backend that is.
+/// </summary>
+/// <remarks>
+/// Named for the port rather than for Redis: the backend is configuration
+/// (<c>Coordination:Provider</c>), and a check called "redis" would be a lie on a single-instance
+/// deployment that has no Redis. Under <c>memory</c> it is a process-local dictionary and this
+/// passes trivially — which is the honest answer, since a cache inside the process is reachable
+/// exactly when the process is.
+/// </remarks>
+public class CoordinationHealthCheck(IDistributedCache cache) : IHealthCheck
 {
+    /// <inheritdoc/>
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         try
@@ -58,8 +69,9 @@ public class RedisHealthCheck(IDistributedCache cache) : IHealthCheck
         }
         catch (Exception ex)
         {
-            // Permission claims fail closed when Redis is down, so every request 403s.
-            return HealthCheckResult.Unhealthy("Redis is unreachable; authorization would fail closed.", ex);
+            // Permission claims fail closed when the cache is unreachable, so every request 403s.
+            return HealthCheckResult.Unhealthy(
+                "The coordination cache is unreachable; authorization would fail closed.", ex);
         }
     }
 }

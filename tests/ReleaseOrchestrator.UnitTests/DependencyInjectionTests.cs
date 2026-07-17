@@ -63,6 +63,31 @@ public class DependencyInjectionTests
         Assert.NotNull(provider);
     }
 
+    /// <summary>
+    /// The whole composition root, with no Redis configured at all.
+    /// </summary>
+    /// <remarks>
+    /// Worth its own test rather than trusting the coordination unit tests: Redis was a required
+    /// setting read at the top of AddInfrastructure, so "runs without Redis" is a claim about
+    /// every registration downstream of it, not only about which cache is bound. ValidateOnBuild
+    /// is what makes it a real check — it resolves every constructor rather than waiting for the
+    /// first request to find one that still wants a multiplexer.
+    /// </remarks>
+    [Fact]
+    public void ContainerBuildsWithNoRedisWhenTheDeploymentSaysItIsASingleInstance()
+    {
+        var config = Configuration(new Dictionary<string, string?>
+        {
+            ["Redis:ConnectionString"] = null,
+            ["Coordination:Provider"] = "memory",
+            ["Coordination:SingleInstance"] = "true"
+        });
+
+        using var provider = BuildProvider(config);
+
+        Assert.NotNull(provider.GetRequiredService<IDistributedLease>());
+    }
+
     [Fact]
     public void PlannerResolves()
     {

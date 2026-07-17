@@ -57,7 +57,7 @@ try
     builder.Services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"])
         .AddCheck<ArchiveDatabaseHealthCheck>("archive-database", tags: ["ready"])
-        .AddCheck<RedisHealthCheck>("redis", tags: ["ready"]);
+        .AddCheck<CoordinationHealthCheck>("coordination", tags: ["ready"]);
 
     // TLS terminates at a reverse proxy, so the original scheme arrives in a header.
     // Without this the app believes every request is plain HTTP.
