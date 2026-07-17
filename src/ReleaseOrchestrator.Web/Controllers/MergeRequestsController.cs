@@ -1,4 +1,4 @@
-using MassTransit;
+using Rebus.Bus;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 [Authorize(Policy = Permissions.ReleasePlanView)]
 public class MergeRequestsController(
     AppDbContext db,
-    IPublishEndpoint publisher,
+    IBus bus,
     TimeProvider clock,
     IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
@@ -100,8 +100,8 @@ public class MergeRequestsController(
         mr.IsStatusManual = true;
         await db.SaveChangesAsync(ct);
 
-        await publisher.Publish(new ReleasePlanRecalculationRequested(
-            clock.GetUtcNow().UtcDateTime, $"MR {mr.ExternalId} status set manually to {status}"), ct);
+        await bus.Send(new ReleasePlanRecalculationRequested(
+            clock.GetUtcNow().UtcDateTime, $"MR {mr.ExternalId} status set manually to {status}"));
 
         return NoContent();
     }

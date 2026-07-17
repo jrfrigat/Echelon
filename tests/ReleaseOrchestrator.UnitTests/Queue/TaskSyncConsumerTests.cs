@@ -1,13 +1,11 @@
-using MassTransit;
-using MassTransit.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using Xunit;
 
@@ -19,9 +17,10 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// and nothing checked.
 /// </summary>
 /// <remarks>
-/// Run over MassTransit's own in-memory harness rather than a hand-written IPublishEndpoint: the
-/// interface has a dozen overloads, and stubbing them proves only that the stub was called. The
-/// harness ships in the MassTransit package, so this needs no dependency the proxy would block.
+/// The handler is called directly with a real SQLite database, a recording <see cref="ITrackerService"/>
+/// that reports whatever the test needs, and a <see cref="RecordingBus"/> that captures the replan.
+/// An unknown connection is not retryable and returns; a tracker outage throws, which is what makes
+/// Rebus redeliver.
 /// </remarks>
 public sealed class TaskSyncConsumerTests : IAsyncLifetime
 {
@@ -30,9 +29,9 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
-    private ServiceProvider _provider = null!;
-    private ITestHarness _harness = null!;
+    private RecordingBus _bus = null!;
     private RecordingTrackerService _tracker = null!;
+    private TaskSyncConsumer _handler = null!;
 
     private TrackerConnection _trackerConnection = null!;
     private VcsConnection _vcs = null!;
@@ -44,18 +43,9 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
         await _db.Database.EnsureCreatedAsync(Ct);
 
+        _bus = new RecordingBus();
         _tracker = new RecordingTrackerService();
-
-        _provider = new ServiceCollection()
-            .AddSingleton(_db)
-            .AddSingleton<ITrackerService>(_tracker)
-            .AddSingleton<TimeProvider>(new FakeTimeProvider(Now))
-            .AddLogging()
-            .AddMassTransitTestHarness(x => x.AddConsumer<TaskSyncConsumer>())
-            .BuildServiceProvider(true);
-
-        _harness = _provider.GetRequiredService<ITestHarness>();
-        await _harness.Start();
+        _handler = new TaskSyncConsumer(_db, _tracker, _bus, new FakeTimeProvider(Now), NullLogger<TaskSyncConsumer>.Instance);
 
         _trackerConnection = new TrackerConnection
         {
@@ -78,8 +68,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await _harness.Stop();
-        await _provider.DisposeAsync();
         await _db.DisposeAsync();
         await _connection.DisposeAsync();
     }
@@ -145,7 +133,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
     }
 
     private Task ConsumeAsync(string taskKey = "TASK-1", string connectionName = "tracker") =>
-        _harness.Bus.Publish(new TaskSyncRequested(connectionName, taskKey, "test"), Ct);
+        _handler.Handle(new TaskSyncRequested(connectionName, taskKey, "test"));
 
     private async Task<MergeRequest> ReloadAsync(MergeRequest mr) =>
         await _db.MergeRequests.AsNoTracking().FirstAsync(m => m.Id == mr.Id, Ct);
@@ -164,7 +152,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
         Assert.Equal(task.Id, (await ReloadAsync(waiting)).TaskId);
     }
@@ -192,7 +179,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
         Assert.Null((await ReloadAsync(foreignMr)).TaskId);
     }
@@ -210,7 +196,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
         Assert.Null((await ReloadAsync(mr)).TaskId);
     }
@@ -227,7 +212,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
         Assert.Equal(otherTask.Id, (await ReloadAsync(linked)).TaskId);
     }
@@ -247,7 +231,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
         await ConsumeAsync("TASK-1");
 
-        Assert.True(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+        Assert.True(_bus.AnySent<ReleasePlanRecalculationRequested>());
     }
 
     [Fact]
@@ -259,7 +243,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
         await ConsumeAsync("TASK-1");
 
-        Assert.True(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+        Assert.True(_bus.AnySent<ReleasePlanRecalculationRequested>());
     }
 
     /// <summary>
@@ -274,40 +258,39 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
-        Assert.False(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+        Assert.False(_bus.AnySent<ReleasePlanRecalculationRequested>());
     }
 
     /// <summary>
     /// A misconfigured connection name is not retryable — redelivering it forever only fills the
-    /// queue. The tracker must not be called at all, since there is no connection to call it on.
+    /// queue. It returns rather than throwing, and the tracker is not called at all, since there is
+    /// no connection to call it on.
     /// </summary>
     [Fact]
     public async Task AnUnknownTrackerConnectionIsDroppedRatherThanRetried()
     {
-        await ConsumeAsync("TASK-1", connectionName: "does-not-exist");
+        var exception = await Record.ExceptionAsync(() => ConsumeAsync("TASK-1", connectionName: "does-not-exist"));
 
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>(x => x.Exception is null));
+        Assert.Null(exception);
         Assert.Empty(_tracker.Syncs);
-        Assert.False(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+        Assert.False(_bus.AnySent<ReleasePlanRecalculationRequested>());
     }
 
     /// <summary>
-    /// A tracker outage is transient and must fault so the broker redelivers. Swallowing it drops
+    /// A tracker outage is transient and must throw so the broker redelivers. Swallowing it drops
     /// a dependency edge permanently: nothing revisits a task whose sync silently succeeded.
     /// </summary>
     [Fact]
-    public async Task ATrackerOutageFaultsSoTheMessageIsRedelivered()
+    public async Task ATrackerOutageThrowsSoTheMessageIsRedelivered()
     {
         _tracker.Throws = new HttpRequestException("tracker is down");
         AddTask("TASK-1");
         await _db.SaveChangesAsync(Ct);
 
-        await ConsumeAsync("TASK-1");
+        await Assert.ThrowsAsync<HttpRequestException>(() => ConsumeAsync("TASK-1"));
 
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>(x => x.Exception is not null));
-        Assert.False(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+        Assert.False(_bus.AnySent<ReleasePlanRecalculationRequested>());
     }
 
     [Fact]
@@ -317,7 +300,6 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await ConsumeAsync("TASK-1");
-        Assert.True(await _harness.Consumed.Any<TaskSyncRequested>());
 
         var sync = Assert.Single(_tracker.Syncs);
         Assert.Equal(_trackerConnection.Id, sync.ConnectionId);

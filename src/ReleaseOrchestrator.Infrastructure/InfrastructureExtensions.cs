@@ -1,4 +1,3 @@
-using MassTransit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,15 +29,12 @@ public static class InfrastructureExtensions
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        // Read every required setting here, before anything is registered. Checking inside the
-        // Redis or RabbitMQ configuration lambdas looks like fail-fast but is not: those run
-        // lazily, so a missing value surfaced at the first request or when the bus started,
-        // long after the deployment looked healthy.
-        var queueUsername = Required(config, "Queue:Username");
-        var queuePassword = Required(config, "Queue:Password");
+        // Each sub-setup validates its own required settings synchronously, right here, rather than
+        // inside a transport or provider lambda that runs lazily — a missing value has to fail the
+        // deployment at startup, not at the first request when it already looked healthy.
 
         // Both contexts, against whichever database is configured. Connection strings and the
-        // provider name are validated in there, at startup, for the reason above.
+        // provider name are validated in there.
         services.AddDatabases(config);
 
         services.AddTokenProtection(config);
@@ -78,39 +74,9 @@ public static class InfrastructureExtensions
         services.Configure<TaskReconciliationOptions>(config.GetSection("TaskReconciliation"));
         services.AddHostedService<TaskReconciliationService>();
 
-        services.AddMassTransit(x =>
-        {
-            x.AddConsumer<MrOpenedConsumer>();
-            x.AddConsumer<MrStatusChangedConsumer>();
-            x.AddConsumer<TaskCreatedConsumer>();
-            x.AddConsumer<TaskStatusChangedConsumer>();
-            x.AddConsumer<TaskSyncConsumer>();
-            x.AddConsumer<ReleasePlanRecalculationConsumer>();
-
-            x.UsingRabbitMq((ctx, cfg) =>
-            {
-                cfg.Host(config["Queue:Host"] ?? "localhost", h =>
-                {
-                    h.Username(queueUsername);
-                    h.Password(queuePassword);
-                });
-
-                // Immediate retries cover the brief window where a status event overtakes its
-                // opened event; scheduled redelivery covers longer outages of GitLab/Tracker.
-                cfg.UseMessageRetry(r => r.Exponential(5, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(5)));
-                cfg.UseDelayedRedelivery(r => r.Intervals(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15)));
-
-                // Stops a failing dependency from being hammered by the whole consumer pool.
-                cfg.UseKillSwitch(k => k
-                    .SetActivationThreshold(10)
-                    .SetTripThreshold(0.5)
-                    .SetRestartTimeout(TimeSpan.FromMinutes(1)));
-
-                cfg.PrefetchCount = config.GetValue("Queue:PrefetchCount", 16);
-
-                cfg.ConfigureEndpoints(ctx);
-            });
-        });
+        // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model
+        // and the retry policy.
+        services.AddMessaging(config);
 
         return services;
     }

@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using MassTransit;
+using Rebus.Bus;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 [Authorize(Policy = Permissions.ReleasePlanView)]
 public class StacksController(
     AppDbContext db,
-    IPublishEndpoint publisher,
+    IBus bus,
     TimeProvider clock,
     IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
@@ -154,7 +154,7 @@ public class StacksController(
     /// calls for a rebuild on this; nothing used to trigger one.
     /// </summary>
     private Task RequestRecalculationAsync(string reason, CancellationToken ct) =>
-        publisher.Publish(new ReleasePlanRecalculationRequested(clock.GetUtcNow().UtcDateTime, reason), ct);
+        bus.Send(new ReleasePlanRecalculationRequested(clock.GetUtcNow().UtcDateTime, reason));
 }
 
 public record CreateStackRequest([property: Required, MaxLength(200)] string Name);

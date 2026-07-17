@@ -1,8 +1,5 @@
-using MassTransit;
-using MassTransit.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using ReleaseOrchestrator.Application.Contracts.Messages;
@@ -18,7 +15,7 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.Queue;
 
 /// <summary>
-/// The consumer that replaced the debounce timer.
+/// The handler that replaced the debounce timer.
 /// </summary>
 /// <remarks>
 /// The old design handed the request to an in-process timer and acknowledged the message at once:
@@ -28,8 +25,10 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// one worth pinning, because if coalescing fails the service still works and merely rebuilds the
 /// plan once per webhook, which nothing would notice until the load did.
 ///
-/// The planner here is the real one over SQLite, not a stub: coalescing is a claim about what
-/// SnapshotStartedAt means, and a stub would only assert that the test knows its own answer.
+/// The handler is a plain class, so a test builds it and calls <c>Handle</c> directly — no broker,
+/// no harness. The planner behind it is the real one over SQLite, not a stub: coalescing is a claim
+/// about what SnapshotStartedAt means, and a stub would only assert that the test knows its own
+/// answer.
 /// </remarks>
 public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
 {
@@ -38,9 +37,8 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
 
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
-    private ServiceProvider _provider = null!;
-    private ITestHarness _harness = null!;
     private CountingPlanner _planner = null!;
+    private ReleasePlanRecalculationConsumer _handler = null!;
 
     public async Task InitializeAsync()
     {
@@ -51,21 +49,11 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
 
         _planner = new CountingPlanner(
             new ReleasePlanner(_db, new FakeTimeProvider(Now), NullLogger<ReleasePlanner>.Instance));
-
-        _provider = new ServiceCollection()
-            .AddSingleton<IReleasePlannerService>(_planner)
-            .AddLogging()
-            .AddMassTransitTestHarness(x => x.AddConsumer<ReleasePlanRecalculationConsumer>())
-            .BuildServiceProvider(true);
-
-        _harness = _provider.GetRequiredService<ITestHarness>();
-        await _harness.Start();
+        _handler = new ReleasePlanRecalculationConsumer(_planner, NullLogger<ReleasePlanRecalculationConsumer>.Instance);
     }
 
     public async Task DisposeAsync()
     {
-        await _harness.Stop();
-        await _provider.DisposeAsync();
         await _db.DisposeAsync();
         await _connection.DisposeAsync();
     }
@@ -129,7 +117,7 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
     }
 
     private Task RequestAsync(DateTime requestedAt) =>
-        _harness.Bus.Publish(new ReleasePlanRecalculationRequested(requestedAt, "test"), Ct);
+        _handler.Handle(new ReleasePlanRecalculationRequested(requestedAt, "test"));
 
     [Fact]
     public async Task ARequestWithNoPlanYetRebuilds()
@@ -137,7 +125,6 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         await AddReadyMergeRequestAsync();
 
         await RequestAsync(Now.AddSeconds(-1));
-        Assert.True(await _harness.Consumed.Any<ReleasePlanRecalculationRequested>());
 
         Assert.Equal(1, _planner.Recalculations);
         Assert.Single(await _db.ReleasePlans.ToListAsync(Ct));
@@ -156,8 +143,6 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         for (int i = 0; i < 5; i++)
             await RequestAsync(requestedAt);
 
-        await _harness.Consumed.SelectAsync<ReleasePlanRecalculationRequested>().Take(5).ToListAsync();
-
         Assert.Equal(1, _planner.Recalculations);
         Assert.Single(await _db.ReleasePlans.ToListAsync(Ct));
     }
@@ -174,11 +159,9 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         await AddReadyMergeRequestAsync();
 
         await RequestAsync(Now.AddSeconds(-1));
-        Assert.True(await _harness.Consumed.Any<ReleasePlanRecalculationRequested>());
         Assert.Equal(1, _planner.Recalculations);
 
         await RequestAsync(Now.AddSeconds(1));
-        await _harness.Consumed.SelectAsync<ReleasePlanRecalculationRequested>().Take(2).ToListAsync();
 
         Assert.Equal(2, _planner.Recalculations);
         Assert.Equal(2, await _db.ReleasePlans.CountAsync(Ct));
@@ -207,24 +190,23 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await RequestAsync(Now.AddSeconds(-1));
-        Assert.True(await _harness.Consumed.Any<ReleasePlanRecalculationRequested>());
 
         Assert.Equal(1, _planner.Recalculations);
     }
 
     /// <summary>
-    /// The work runs inside the consumer so the broker acknowledges only once the plan exists. If a
-    /// failure did not fault the message, the recalculation would be dropped silently — which is
-    /// exactly what the debounce timer did on restart.
+    /// The work runs inside the handler so the broker acknowledges only once the plan exists. If the
+    /// handler swallowed the failure the recalculation would be dropped silently — which is exactly
+    /// what the debounce timer did on restart. Letting it propagate is what makes Rebus fault the
+    /// message and redeliver it.
     /// </summary>
     [Fact]
-    public async Task AFailedRecalculationFaultsSoTheMessageIsRedelivered()
+    public async Task AFailedRecalculationPropagatesSoTheMessageIsRedelivered()
     {
         _planner.Throws = new InvalidOperationException("database is down");
 
-        await RequestAsync(Now.AddSeconds(-1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => RequestAsync(Now.AddSeconds(-1)));
 
-        Assert.True(await _harness.Consumed.Any<ReleasePlanRecalculationRequested>(x => x.Exception is not null));
         Assert.Empty(await _db.ReleasePlans.ToListAsync(Ct));
     }
 }

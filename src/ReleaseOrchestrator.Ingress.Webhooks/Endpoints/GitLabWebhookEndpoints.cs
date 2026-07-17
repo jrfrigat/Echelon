@@ -1,8 +1,8 @@
-using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using Rebus.Bus;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Ingress.Webhooks.Models;
@@ -26,7 +26,7 @@ public static class GitLabWebhookEndpoints
         string connectionName,
         GitLabMrPayload payload,
         HttpContext httpContext,
-        IPublishEndpoint publisher,
+        IBus bus,
         IConfiguration config,
         TimeProvider clock,
         CancellationToken ct)
@@ -65,23 +65,23 @@ public static class GitLabWebhookEndpoints
             // Published for every open-state event, not only the first. GitLab re-sends on
             // label changes, pushes and reopens; the consumer upserts, so a reopened MR
             // rejoins the plan and a newly labelled one enters it.
-            await publisher.Publish(new MrOpened(
+            await bus.Send(new MrOpened(
                 ConnectionName: connectionName,
                 RepositoryExternalId: repositoryExternalId,
                 ExternalMrId: externalMrId,
                 SourceBranch: attributes.SourceBranch ?? string.Empty,
                 TargetBranch: attributes.TargetBranch ?? string.Empty,
                 TaskExternalId: GitLabBranchTaskParser.ParseTaskId(attributes.SourceBranch),
-                Labels: ExtractLabels(payload)), ct);
+                Labels: ExtractLabels(payload)));
         }
         else
         {
-            await publisher.Publish(new MrStatusChanged(
+            await bus.Send(new MrStatusChanged(
                 ConnectionName: connectionName,
                 RepositoryExternalId: repositoryExternalId,
                 ExternalMrId: externalMrId,
                 NewStatus: status.Value,
-                ChangedAt: clock.GetUtcNow().UtcDateTime), ct);
+                ChangedAt: clock.GetUtcNow().UtcDateTime));
         }
 
         return Results.Ok();

@@ -37,18 +37,18 @@ These must be set or the application will not start.
 **`Queue__Username`** (REQUIRED)
 - **What:** RabbitMQ authentication username
 - **Example:** `guest`
-- **If missing:** MassTransit fails on bus startup
+- **If missing:** Rebus fails on bus startup
 - **Security note:** Never use `guest` in production
 
 **`Queue__Password`** (REQUIRED)
 - **What:** RabbitMQ authentication password
-- **If missing:** MassTransit connection fails
+- **If missing:** Rebus connection fails
 - **Security note:** Use strong password in production
 
 **`Queue__Host`** (REQUIRED)
 - **What:** Hostname or IP of RabbitMQ broker
 - **Example:** `rabbitmq.company.com` or `localhost`
-- **If missing:** DNS resolution fails, MassTransit startup fails
+- **If missing:** DNS resolution fails, Rebus startup fails
 - **Default:** Typically derived from Docker service name or localhost
 
 **`Queue__Port`** (REQUIRED)
@@ -296,11 +296,13 @@ Server=...;Max Pool Size=100;Min Pool Size=10;
 
 ### RabbitMQ Concurrency
 
-MassTransit consumers run concurrently. Tune via environment:
-```bash
-# Only at code level (in Program.cs currently — PRs welcome)
-// x.Concurrent = 10; // set in MassTransit config
-```
+Rebus handlers run concurrently, across a pool of workers each pulling from the input queue. Both
+are configurable:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `Queue__Workers` | 4 | Worker threads, each running one message at a time |
+| `Queue__PrefetchCount` | 16 | Messages prefetched from RabbitMQ, and the max parallelism |
 
 ### Redis Connection Pool
 

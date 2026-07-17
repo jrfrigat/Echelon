@@ -1,10 +1,11 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
+using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
-using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
@@ -14,14 +15,15 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// </summary>
 public class MrOpenedConsumer(
     AppDbContext db,
-    IPublishEndpoint publisher,
+    IBus bus,
     TimeProvider clock,
-    ILogger<MrOpenedConsumer> logger) : IConsumer<MrOpened>
+    ILogger<MrOpenedConsumer> logger) : IHandleMessages<MrOpened>
 {
-    public async Task Consume(ConsumeContext<MrOpened> context)
+    /// <inheritdoc/>
+    public async Task Handle(MrOpened message)
     {
-        var msg = context.Message;
-        var ct = context.CancellationToken;
+        var msg = message;
+        var ct = HandlerCancellation.Token;
 
         var repo = await db.Repositories
             .Include(r => r.Connection)
@@ -77,8 +79,8 @@ public class MrOpenedConsumer(
         // Requested unconditionally, including when the MR already existed. Returning early
         // on "exists" meant a redelivery after a crash stored the MR but never replanned it,
         // and a label change never reached the plan at all.
-        await publisher.Publish(
-            new ReleasePlanRecalculationRequested(now, $"MR {msg.ExternalMrId} opened or updated"), ct);
+        await bus.Send(
+            new ReleasePlanRecalculationRequested(now, $"MR {msg.ExternalMrId} opened or updated"));
     }
 
     /// <summary>
@@ -122,8 +124,8 @@ public class MrOpenedConsumer(
                 "Task {Task} referenced by MR {Mr} is unknown; requesting a sync from tracker {Tracker}.",
                 taskExternalId, mrExternalId, tracker.Name);
 
-            await publisher.Publish(
-                new TaskSyncRequested(tracker.Name, taskExternalId, $"Referenced by MR {mrExternalId}"), ct);
+            await bus.Send(
+                new TaskSyncRequested(tracker.Name, taskExternalId, $"Referenced by MR {mrExternalId}"));
         }
         else
         {

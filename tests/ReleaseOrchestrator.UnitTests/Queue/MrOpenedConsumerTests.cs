@@ -1,8 +1,6 @@
-using MassTransit;
-using MassTransit.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Enums;
@@ -14,13 +12,14 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.Queue;
 
 /// <summary>
-/// The front door: every merge request enters the system here, and what this consumer decides —
+/// The front door: every merge request enters the system here, and what this handler decides —
 /// deployable or not, linked to a task or not — is what the planner later orders.
 /// </summary>
 /// <remarks>
 /// MergeRequestStatusResolverTests already cover the label rule itself. These cover what the
-/// consumer does around it: the upsert, the task resolution, and the replan request. Run over
-/// MassTransit's own harness, so "published a message" is observed rather than stubbed.
+/// handler does around it: the upsert, the task resolution, and the replan request. It runs over a
+/// real SQLite database with a <see cref="RecordingBus"/> capturing what it forwards, so "sent a
+/// message" is observed rather than stubbed.
 /// </remarks>
 public sealed class MrOpenedConsumerTests : IAsyncLifetime
 {
@@ -31,8 +30,8 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
-    private ServiceProvider _provider = null!;
-    private ITestHarness _harness = null!;
+    private RecordingBus _bus = null!;
+    private MrOpenedConsumer _handler = null!;
 
     private VcsConnection _vcs = null!;
     private TrackerConnection _tracker = null!;
@@ -44,15 +43,8 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
         await _db.Database.EnsureCreatedAsync(Ct);
 
-        _provider = new ServiceCollection()
-            .AddSingleton(_db)
-            .AddSingleton<TimeProvider>(new FakeTimeProvider(Now))
-            .AddLogging()
-            .AddMassTransitTestHarness(x => x.AddConsumer<MrOpenedConsumer>())
-            .BuildServiceProvider(true);
-
-        _harness = _provider.GetRequiredService<ITestHarness>();
-        await _harness.Start();
+        _bus = new RecordingBus();
+        _handler = new MrOpenedConsumer(_db, _bus, new FakeTimeProvider(Now), NullLogger<MrOpenedConsumer>.Instance);
 
         _vcs = new VcsConnection
         {
@@ -76,8 +68,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await _harness.Stop();
-        await _provider.DisposeAsync();
         await _db.DisposeAsync();
         await _connection.DisposeAsync();
     }
@@ -115,12 +105,8 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         string mrId = "1",
         string? taskExternalId = null,
         params string[] labels) =>
-        _harness.Bus.Publish(
-            new MrOpened("gitlab", repositoryExternalId, mrId, $"feature/{taskExternalId ?? "x"}", "main", taskExternalId, labels),
-            Ct);
-
-    private async Task ConsumedAsync() =>
-        Assert.True(await _harness.Consumed.Any<MrOpened>());
+        _handler.Handle(
+            new MrOpened("gitlab", repositoryExternalId, mrId, $"feature/{taskExternalId ?? "x"}", "main", taskExternalId, labels));
 
     private Task<MergeRequest?> FindMrAsync(string externalId = "1") =>
         _db.MergeRequests.AsNoTracking().FirstOrDefaultAsync(m => m.ExternalId == externalId, Ct);
@@ -128,12 +114,11 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     [Fact]
     public async Task AnUnknownRepositoryIsIgnoredRatherThanFaulted()
     {
-        await OpenAsync(repositoryExternalId: "group/never-configured");
-        await ConsumedAsync();
-
-        // Redelivering will not conjure a repository, so this must not fault — but it must also
+        // Redelivering will not conjure a repository, so this must not throw — but it must also
         // not invent one.
-        Assert.False(await _harness.Consumed.Any<MrOpened>(x => x.Exception is not null));
+        var exception = await Record.ExceptionAsync(() => OpenAsync(repositoryExternalId: "group/never-configured"));
+
+        Assert.Null(exception);
         Assert.Empty(await _db.MergeRequests.ToListAsync(Ct));
     }
 
@@ -144,7 +129,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(labels: ReadyLabel);
-        await ConsumedAsync();
 
         Assert.Equal(MergeRequestStatus.ReadyForDeploy, (await FindMrAsync())!.Status);
     }
@@ -156,7 +140,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync();
-        await ConsumedAsync();
 
         Assert.Equal(MergeRequestStatus.Opened, (await FindMrAsync())!.Status);
     }
@@ -173,10 +156,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync();
-        await ConsumedAsync();
-
         await OpenAsync(labels: ReadyLabel);
-        await _harness.Consumed.SelectAsync<MrOpened>().Take(2).ToListAsync();
 
         var mr = Assert.Single(await _db.MergeRequests.ToListAsync(Ct));
         Assert.Equal(MergeRequestStatus.ReadyForDeploy, mr.Status);
@@ -184,7 +164,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// An operator's decision outranks a label: a webhook must not silently undo it. The resolver
-    /// owns the rule; this checks the consumer actually passes it the stored flag rather than a
+    /// owns the rule; this checks the handler actually passes it the stored flag rather than a
     /// fresh default.
     /// </summary>
     [Fact]
@@ -205,7 +185,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(labels: ReadyLabel);
-        await ConsumedAsync();
 
         Assert.Equal(MergeRequestStatus.Reviewed, (await FindMrAsync())!.Status);
     }
@@ -233,7 +212,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync();
-        await ConsumedAsync();
 
         var mr = (await FindMrAsync())!;
         Assert.Null(mr.ClosedAt);
@@ -252,7 +230,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
         var mr = (await FindMrAsync())!;
         Assert.Equal("TASK-1", mr.TaskExternalId);
@@ -267,7 +244,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
         Assert.Equal(task.Id, (await FindMrAsync())!.TaskId);
     }
@@ -284,16 +260,10 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
-        var published = Assert.Single(
-            await _harness.Published.SelectAsync<TaskSyncRequested>().ToListAsync());
-
-        var message = published?.Context?.Message;
-        Assert.NotNull(message);
-
-        Assert.Equal("TASK-1", message.ExternalId);
-        Assert.Equal("tracker", message.TrackerConnectionName);
+        var sync = _bus.SingleSent<TaskSyncRequested>();
+        Assert.Equal("TASK-1", sync.ExternalId);
+        Assert.Equal("tracker", sync.TrackerConnectionName);
     }
 
     /// <summary>
@@ -307,9 +277,8 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
-        Assert.False(await _harness.Published.Any<TaskSyncRequested>());
+        Assert.False(_bus.AnySent<TaskSyncRequested>());
         Assert.Equal("TASK-1", (await FindMrAsync())!.TaskExternalId);
     }
 
@@ -337,7 +306,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
         Assert.Null((await FindMrAsync())!.TaskId);
     }
@@ -363,7 +331,6 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(taskExternalId: "TASK-1");
-        await ConsumedAsync();
 
         Assert.Equal(ours.Id, (await FindMrAsync())!.TaskId);
     }
@@ -380,12 +347,8 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync();
-        await ConsumedAsync();
-
         await OpenAsync();
-        await _harness.Consumed.SelectAsync<MrOpened>().Take(2).ToListAsync();
 
-        var replans = await _harness.Published.SelectAsync<ReleasePlanRecalculationRequested>().ToListAsync();
-        Assert.Equal(2, replans.Count);
+        Assert.Equal(2, _bus.AllSent<ReleasePlanRecalculationRequested>().Count);
     }
 }

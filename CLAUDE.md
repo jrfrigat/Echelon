@@ -23,7 +23,7 @@ Onion / ports-adapters, зависимости **только внутрь** (э
 ```
 Core (enum'ы, чистый разбор; ноль зависимостей — ни одной)
   ← Application (порты, контракты сообщений, алгоритм планирования — без EF)
-      ← Infrastructure (EF-модели, DbContext, адаптеры: MassTransit, Redis, DataProtection)
+      ← Infrastructure (EF-модели, DbContext, адаптеры: Rebus, Redis, DataProtection)
       ← Providers.Abstractions (контракты провайдеров) ← Providers.GitLab / Providers.YandexTracker
           ← Web (корень композиции, API) / Ingress.Webhooks
 ```

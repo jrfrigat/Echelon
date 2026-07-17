@@ -1,23 +1,26 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
+using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
-using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
 public class TaskCreatedConsumer(
     AppDbContext db,
-    IPublishEndpoint publisher,
-    ILogger<TaskCreatedConsumer> logger) : IConsumer<TaskCreated>
+    IBus bus,
+    ILogger<TaskCreatedConsumer> logger) : IHandleMessages<TaskCreated>
 {
-    public async Task Consume(ConsumeContext<TaskCreated> context)
+    /// <inheritdoc/>
+    public async Task Handle(TaskCreated message)
     {
-        var msg = context.Message;
+        var msg = message;
+        var ct = HandlerCancellation.Token;
 
         var conn = await db.TrackerConnections
-            .FirstOrDefaultAsync(c => c.Name == msg.TrackerConnectionName, context.CancellationToken);
+            .FirstOrDefaultAsync(c => c.Name == msg.TrackerConnectionName, ct);
 
         if (conn is null)
         {
@@ -30,7 +33,7 @@ public class TaskCreatedConsumer(
         // now turns a lost race into a retryable violation instead of a duplicate task.
         var task = await db.Tasks.FirstOrDefaultAsync(
             t => t.TrackerConnectionId == conn.Id && t.ExternalId == msg.ExternalId,
-            context.CancellationToken);
+            ct);
 
         if (task is null)
         {
@@ -48,12 +51,11 @@ public class TaskCreatedConsumer(
             task.Title = msg.Title;
         }
 
-        await db.SaveChangesAsync(context.CancellationToken);
+        await db.SaveChangesAsync(ct);
 
         // The webhook carries the title and status but not the issue's links, and the links are
         // the only thing that orders the plan — so they have to be pulled.
-        await publisher.Publish(
-            new TaskSyncRequested(msg.TrackerConnectionName, msg.ExternalId, "Task created"),
-            context.CancellationToken);
+        await bus.Send(
+            new TaskSyncRequested(msg.TrackerConnectionName, msg.ExternalId, "Task created"));
     }
 }

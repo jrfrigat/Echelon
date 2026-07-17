@@ -1,6 +1,7 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
+using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Persistence;
@@ -17,14 +18,15 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 public class TaskSyncConsumer(
     AppDbContext db,
     ITrackerService tracker,
-    IPublishEndpoint publisher,
+    IBus bus,
     TimeProvider clock,
-    ILogger<TaskSyncConsumer> logger) : IConsumer<TaskSyncRequested>
+    ILogger<TaskSyncConsumer> logger) : IHandleMessages<TaskSyncRequested>
 {
-    public async Task Consume(ConsumeContext<TaskSyncRequested> context)
+    /// <inheritdoc/>
+    public async Task Handle(TaskSyncRequested message)
     {
-        var msg = context.Message;
-        var ct = context.CancellationToken;
+        var msg = message;
+        var ct = HandlerCancellation.Token;
 
         var connectionId = await db.TrackerConnections
             .Where(c => c.Name == msg.TrackerConnectionName)
@@ -46,8 +48,8 @@ public class TaskSyncConsumer(
         var linkedMergeRequests = await LinkWaitingMergeRequestsAsync(connectionId.Value, msg.ExternalId, ct);
 
         if (dependenciesChanged || linkedMergeRequests > 0)
-            await publisher.Publish(new ReleasePlanRecalculationRequested(
-                clock.GetUtcNow().UtcDateTime, $"Task {msg.ExternalId} synced"), ct);
+            await bus.Send(new ReleasePlanRecalculationRequested(
+                clock.GetUtcNow().UtcDateTime, $"Task {msg.ExternalId} synced"));
     }
 
     /// <summary>

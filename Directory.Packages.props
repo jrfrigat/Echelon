@@ -47,8 +47,10 @@
   </ItemGroup>
 
   <ItemGroup Label="Messaging">
-    <PackageVersion Include="MassTransit.Abstractions" Version="9.1.2" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="9.1.2" />
+    <PackageVersion Include="Rebus" Version="8.9.2" />
+    <PackageVersion Include="Rebus.RabbitMq" Version="10.1.1" />
+    <PackageVersion Include="Rebus.ServiceProvider" Version="10.7.2" />
+    <PackageVersion Include="Rebus.OpenTelemetry" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup Label="Auth">

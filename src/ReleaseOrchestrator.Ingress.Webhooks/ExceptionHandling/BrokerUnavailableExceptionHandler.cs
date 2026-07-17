@@ -1,7 +1,8 @@
-using MassTransit;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using RabbitMQ.Client.Exceptions;
+using Rebus.Exceptions;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 
@@ -51,15 +52,19 @@ public sealed class BrokerUnavailableExceptionHandler(
     }
 
     /// <summary>
-    /// Recognises a broker outage. MassTransit surfaces transport failures as
-    /// <see cref="MassTransitException"/> (RabbitMqConnectionException among them); a broker that
-    /// accepts TCP but never completes the handshake surfaces as a timeout instead.
+    /// Recognises a broker outage. Rebus sends through the RabbitMQ client, whose connection
+    /// failures are <see cref="BrokerUnreachableException"/> when it cannot connect and the broader
+    /// <see cref="OperationInterruptedException"/> (which <c>AlreadyClosedException</c> derives
+    /// from) when the connection drops mid-publish; a broker that accepts TCP but never completes
+    /// the handshake surfaces as a timeout instead. Rebus may wrap any of these in a
+    /// <see cref="RebusApplicationException"/>, so the inner chain is walked.
     /// </summary>
     private static bool IsBrokerUnavailable(Exception exception) => exception switch
     {
-        MassTransitException => true,
+        BrokerUnreachableException => true,
+        OperationInterruptedException => true,
+        RebusApplicationException => true,
         TimeoutException => true,
-        // MassTransit wraps the RabbitMQ client's own failures rather than rethrowing them.
         _ => exception.InnerException is not null && IsBrokerUnavailable(exception.InnerException)
     };
 }

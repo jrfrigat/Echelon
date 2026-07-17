@@ -20,6 +20,15 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <!--
+      Rebus.OpenTelemetry stitches the Ingress to RabbitMQ to Core path into one trace. It depends
+      transitively on OpenTelemetry.Api 1.6.0, which carries a moderate advisory
+      (GHSA-g94r-2vxg-569j) — but the three OpenTelemetry 1.17.x references above pull Api 1.17.x,
+      which wins the version conflict, so the vulnerable one never resolves. No pin is needed; the
+      CI vulnerable-package audit confirms it. If those OTel packages are ever downgraded below 1.9,
+      the advisory comes back and this needs a direct OpenTelemetry.Api pin.
+    -->
+    <PackageReference Include="Rebus.OpenTelemetry" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,5 @@
-using MassTransit;
 using Microsoft.Extensions.Logging;
+using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
 
@@ -18,19 +18,20 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// </summary>
 public class ReleasePlanRecalculationConsumer(
     IReleasePlannerService planner,
-    ILogger<ReleasePlanRecalculationConsumer> logger) : IConsumer<ReleasePlanRecalculationRequested>
+    ILogger<ReleasePlanRecalculationConsumer> logger) : IHandleMessages<ReleasePlanRecalculationRequested>
 {
-    public async Task Consume(ConsumeContext<ReleasePlanRecalculationRequested> context)
+    /// <inheritdoc/>
+    public async Task Handle(ReleasePlanRecalculationRequested message)
     {
-        var msg = context.Message;
+        var ct = HandlerCancellation.Token;
 
-        if (await planner.IsPlanCurrentAsync(msg.RequestedAt, context.CancellationToken))
+        if (await planner.IsPlanCurrentAsync(message.RequestedAt, ct))
         {
-            logger.LogDebug("Skipping recalculation for {Reason}: the current plan already covers it.", msg.Reason);
+            logger.LogDebug("Skipping recalculation for {Reason}: the current plan already covers it.", message.Reason);
             return;
         }
 
-        await planner.RecalculateAsync(context.CancellationToken);
-        logger.LogInformation("Release plan recalculated. Reason: {Reason}", msg.Reason);
+        await planner.RecalculateAsync(ct);
+        logger.LogInformation("Release plan recalculated. Reason: {Reason}", message.Reason);
     }
 }

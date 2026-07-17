@@ -1,9 +1,9 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Rebus.Bus;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Parsing;
@@ -91,7 +91,7 @@ public class TaskReconciliationService(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var publisher = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
+        var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 
         // Only open tasks: a closed task's links can no longer change the plan, and re-reading
         // every task ever imported would grow without bound.
@@ -106,8 +106,8 @@ public class TaskReconciliationService(
         if (stale.Count == 0) return;
 
         foreach (var task in stale)
-            await publisher.Publish(
-                new TaskSyncRequested(task.TrackerName, task.ExternalId, "Periodic reconciliation"), ct);
+            await bus.Send(
+                new TaskSyncRequested(task.TrackerName, task.ExternalId, "Periodic reconciliation"));
 
         logger.LogInformation("Requested reconciliation of {Count} open task(s)", stale.Count);
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Rebus.OpenTelemetry.Configuration;
 
 namespace ReleaseOrchestrator.Observability;
 
@@ -14,18 +15,6 @@ namespace ReleaseOrchestrator.Observability;
 /// </summary>
 public static class TelemetryExtensions
 {
-    /// <summary>
-    /// MassTransit's own <see cref="System.Diagnostics.ActivitySource"/> name
-    /// (<c>MassTransit.Logging.DiagnosticHeaders.DefaultListenerName</c>). Without this source the
-    /// Ingress → RabbitMQ → Core path breaks into disconnected traces, which is the single thing
-    /// this telemetry exists to fix. Spelled as a literal so the shared file stays free of a
-    /// MassTransit reference, which Web only has transitively.
-    /// </summary>
-    private const string MassTransitSource = "MassTransit";
-
-    /// <summary>MassTransit's meter name (<c>MassTransit.Monitoring.InstrumentationOptions.MeterName</c>).</summary>
-    private const string MassTransitMeter = "MassTransit";
-
     /// <summary>
     /// Registers OTLP export when an endpoint is configured, otherwise does nothing at all.
     /// </summary>
@@ -56,7 +45,12 @@ public static class TelemetryExtensions
                     instrumentation.Filter = context => !IsInfrastructureRequest(context.Request.Path);
                     instrumentation.RecordException = true;
                 })
-                .AddSource(MassTransitSource)
+                // Rebus's own instrumentation. It emits a span per send and per handle and
+                // propagates W3C trace context through the message headers, so the
+                // Ingress → RabbitMQ → Core path stays one trace instead of three — the single
+                // thing this telemetry exists to fix. Rebus core does not do this; the
+                // Rebus.OpenTelemetry package is what registers the source.
+                .AddRebusInstrumentation()
                 .AddOtlpExporter(exporter =>
                 {
                     exporter.Endpoint = options.Endpoint;
@@ -64,7 +58,7 @@ public static class TelemetryExtensions
                 }))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
-                .AddMeter(MassTransitMeter)
+                .AddRebusInstrumentation()
                 .AddOtlpExporter(exporter =>
                 {
                     exporter.Endpoint = options.Endpoint;

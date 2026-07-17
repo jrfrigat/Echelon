@@ -126,7 +126,7 @@ This allows extracting the Release Planning service to a separate microservice (
 - Providers are registered at composition time (no plugin discovery)
 
 **Queue** (`Infrastructure/Queue`):
-- MassTransit as the message bus abstraction
+- Rebus as the message bus
 - Consumers for: MR opened/status changed, task created/status changed, task sync, plan recalculation
 - Coalescing: redundant recalculation requests are deduplicated before `SaveChangesAsync`
 
@@ -353,7 +353,7 @@ PWA browser → BFF API (Web) ←→ Core Logic (Application) ←→ AppDbContex
                                                               ↓
                                                           ArchiveDbContext ↔ SQL Server (Archive)
           
-          Ingress (separate pod) → RabbitMQ ↔ Core (MassTransit consumer)
+          Ingress (separate pod) → RabbitMQ ↔ Core (Rebus handler)
 ```
 
 **Multiple Replicas (Kubernetes, Docker Swarm, etc.):**
@@ -371,7 +371,7 @@ PWA browser → BFF API (Web) ←→ Core Logic (Application) ←→ AppDbContex
                
    Ingress1 ───┐
    Ingress2 ───┼─→ RabbitMQ ←── Core1, Core2, Core3 (all Cores consume same queue)
-   Ingress3 ───┘   (Competing consumers, MassTransit handles)
+   Ingress3 ───┘   (Competing consumers, Rebus handles)
                
          Archive service in every Core pod (gated on Redis lease)
 ```

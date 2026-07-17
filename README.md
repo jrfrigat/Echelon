@@ -104,7 +104,7 @@ before and both cost real defects:
 
 - **.NET 10** (C# 14)
 - **Database:** Microsoft SQL Server 2019+ or PostgreSQL 13+ (EF Core 10) — see §7.2
-- **Message Queue:** RabbitMQ 3.8+ (MassTransit)
+- **Message Queue:** RabbitMQ 3.8+ (Rebus)
 - **Coordination:** Redis 6.0+ (StackExchange.Redis), or none — see §7.1
 - **Frontend:** Blazor WebAssembly (PWA, .NET 10)
 - **Authentication:** OpenID Connect (external provider)

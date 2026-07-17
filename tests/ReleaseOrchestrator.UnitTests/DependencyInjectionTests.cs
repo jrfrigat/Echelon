@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Rebus.Handlers;
+using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
-using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure;
-using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
@@ -97,20 +97,31 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IReleasePlannerService>());
     }
 
+    /// <summary>
+    /// Every message has a handler registered. Rebus registers handlers by the message they handle,
+    /// not by their concrete type, so this checks the <see cref="IHandleMessages{T}"/> registration.
+    /// </summary>
+    /// <remarks>
+    /// It inspects the registration rather than resolving it, on purpose. Resolving the handler
+    /// pulls in the bus, and resolving the bus opens a real RabbitMQ connection — which, with the
+    /// throwaway credentials this test uses, hangs on a retry loop before failing. The registration
+    /// is what proves the handler is wired; the connection is not this test's concern.
+    /// </remarks>
     [Theory]
-    [InlineData(typeof(MrOpenedConsumer))]
-    [InlineData(typeof(MrStatusChangedConsumer))]
-    [InlineData(typeof(TaskCreatedConsumer))]
-    [InlineData(typeof(TaskStatusChangedConsumer))]
-    [InlineData(typeof(ReleasePlanRecalculationConsumer))]
-    public async Task ConsumerResolves(Type consumerType)
+    [InlineData(typeof(MrOpened))]
+    [InlineData(typeof(MrStatusChanged))]
+    [InlineData(typeof(TaskCreated))]
+    [InlineData(typeof(TaskStatusChanged))]
+    [InlineData(typeof(TaskSyncRequested))]
+    [InlineData(typeof(ReleasePlanRecalculationRequested))]
+    public void EveryMessageHasARegisteredHandler(Type messageType)
     {
-        // Async disposal throughout: resolving a consumer pulls in MassTransit services that
-        // implement only IAsyncDisposable, and a synchronous scope teardown throws on them.
-        await using var provider = BuildProvider(Configuration());
-        await using var scope = provider.CreateAsyncScope();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddInfrastructure(Configuration());
 
-        Assert.NotNull(scope.ServiceProvider.GetRequiredService(consumerType));
+        var handlerType = typeof(IHandleMessages<>).MakeGenericType(messageType);
+        Assert.Contains(services, descriptor => descriptor.ServiceType == handlerType);
     }
 
     /// <summary>

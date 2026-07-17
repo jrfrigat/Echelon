@@ -126,7 +126,7 @@ Release Orchestrator превращает набор merge request'ов в уп�
 - Провайдеры регистрируются на этапе компиляции (нет plug-in discovery)
 
 **Queue** (`Infrastructure/Queue`):
-- MassTransit как абстракция очереди
+- Rebus как шина сообщений
 - Consumers для: MR opened/status changed, task created/status changed, task sync, plan recalculation
 - Коалесинг: дублирующиеся запросы на пересчёт дедублируются перед `SaveChangesAsync`
 
@@ -353,7 +353,7 @@ PWA браузер → BFF API (Web) ←→ Core Logic (Application) ←→ AppD
                                                               ↓
                                                           ArchiveDbContext ↔ SQL Server (Архив)
           
-          Ingress (отдельный под) → RabbitMQ ↔ Core (MassTransit consumer)
+          Ingress (отдельный под) → RabbitMQ ↔ Core (Rebus handler)
 ```
 
 **Несколько реплик (Kubernetes, Docker Swarm и т.д.):**
@@ -371,7 +371,7 @@ PWA браузер → BFF API (Web) ←→ Core Logic (Application) ←→ AppD
                
    Ingress1 ───┐
    Ingress2 ───┼─→ RabbitMQ ←── Core1, Core2, Core3 (все Core'ы потребляют одну очередь)
-   Ingress3 ───┘   (Competing consumers, MassTransit управляет)
+   Ingress3 ───┘   (Competing consumers, Rebus управляет)
                
          Archive service в каждом Core поде (гейтится Redis-арендой)
 ```

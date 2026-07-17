@@ -1,4 +1,4 @@
-using MassTransit;
+using Rebus.Bus;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -24,7 +24,7 @@ public static class YandexTrackerWebhookEndpoints
         string connectionName,
         YandexTrackerEventPayload payload,
         HttpContext httpContext,
-        IPublishEndpoint publisher,
+        IBus bus,
         IConfiguration config,
         TimeProvider clock,
         CancellationToken ct)
@@ -42,10 +42,10 @@ public static class YandexTrackerWebhookEndpoints
         switch (payload.Event)
         {
             case "issue:created":
-                await publisher.Publish(new TaskCreated(
+                await bus.Send(new TaskCreated(
                     TrackerConnectionName: connectionName,
                     ExternalId: issueKey,
-                    Title: payload.Issue.Summary ?? string.Empty), ct);
+                    Title: payload.Issue.Summary ?? string.Empty));
                 break;
 
             case "issue:updated":
@@ -53,11 +53,11 @@ public static class YandexTrackerWebhookEndpoints
                 if (payload.Issue.Status?.Key is not { Length: > 0 } statusKey)
                     return Results.BadRequest(new { error = "status update requires issue.status.key" });
 
-                await publisher.Publish(new TaskStatusChanged(
+                await bus.Send(new TaskStatusChanged(
                     TrackerConnectionName: connectionName,
                     ExternalId: issueKey,
                     NewStatus: statusKey,
-                    ClosedAt: YandexTrackerStatusRules.IsClosed(statusKey) ? clock.GetUtcNow().UtcDateTime : null), ct);
+                    ClosedAt: YandexTrackerStatusRules.IsClosed(statusKey) ? clock.GetUtcNow().UtcDateTime : null));
                 break;
         }
 

@@ -1,6 +1,7 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
+using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Core.Parsing;
@@ -10,14 +11,15 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
 public class MrStatusChangedConsumer(
     AppDbContext db,
-    IPublishEndpoint publisher,
+    IBus bus,
     TimeProvider clock,
-    ILogger<MrStatusChangedConsumer> logger) : IConsumer<MrStatusChanged>
+    ILogger<MrStatusChangedConsumer> logger) : IHandleMessages<MrStatusChanged>
 {
-    public async Task Consume(ConsumeContext<MrStatusChanged> context)
+    /// <inheritdoc/>
+    public async Task Handle(MrStatusChanged message)
     {
-        var msg = context.Message;
-        var ct = context.CancellationToken;
+        var msg = message;
+        var ct = HandlerCancellation.Token;
 
         var repo = await db.Repositories
             .Include(r => r.Connection)
@@ -66,8 +68,8 @@ public class MrStatusChangedConsumer(
 
         await db.SaveChangesAsync(ct);
 
-        await publisher.Publish(new ReleasePlanRecalculationRequested(
-            clock.GetUtcNow().UtcDateTime, $"MR {msg.ExternalMrId} status changed to {msg.NewStatus}"), ct);
+        await bus.Send(new ReleasePlanRecalculationRequested(
+            clock.GetUtcNow().UtcDateTime, $"MR {msg.ExternalMrId} status changed to {msg.NewStatus}"));
     }
 }
 

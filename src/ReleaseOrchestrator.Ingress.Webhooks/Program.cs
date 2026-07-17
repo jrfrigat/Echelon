@@ -1,7 +1,11 @@
 using System.Threading.RateLimiting;
-using MassTransit;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Rebus.Config;
+using Rebus.Routing.TypeBased;
+using Rebus.ServiceProvider;
+using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Ingress.Webhooks;
 using ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 using ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 using ReleaseOrchestrator.Observability;
@@ -59,19 +63,12 @@ try
                 }));
     });
 
-    builder.Services.AddMassTransit(x =>
-    {
-        x.UsingRabbitMq((_, cfg) =>
-        {
-            cfg.Host(builder.Configuration["Queue:Host"] ?? "localhost", h =>
-            {
-                h.Username(builder.Configuration["Queue:Username"]
-                    ?? throw new InvalidOperationException("Queue:Username is not configured."));
-                h.Password(builder.Configuration["Queue:Password"]
-                    ?? throw new InvalidOperationException("Queue:Password is not configured."));
-            });
-        });
-    });
+    // A send-only bus: the ingress validates a webhook and forwards it to Core, and reads nothing
+    // back, so it has no input queue of its own. Every message type is routed to Core's queue, so
+    // an endpoint calls bus.Send and never names a destination.
+    builder.Services.AddRebus(configure => configure
+        .Transport(t => t.UseRabbitMqAsOneWayClient(IngressMessaging.RabbitMqConnectionString(builder.Configuration)))
+        .Routing(r => r.TypeBased().MapAssemblyOf<MrOpened>(MessageRouting.InputQueue)));
 
     var app = builder.Build();
 
