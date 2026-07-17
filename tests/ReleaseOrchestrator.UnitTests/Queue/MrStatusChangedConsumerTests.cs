@@ -1,0 +1,249 @@
+using MassTransit;
+using MassTransit.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
+using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
+using Xunit;
+
+namespace ReleaseOrchestrator.UnitTests.Queue;
+
+/// <summary>
+/// Where a merge request leaves the plan. Everything here is about a merged merge request
+/// staying merged: the status it lands on decides whether the planner still deploys it and
+/// whether archiving will ever be allowed to remove it.
+/// </summary>
+public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
+{
+    private static readonly DateTime Now = new(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
+    private static CancellationToken Ct => CancellationToken.None;
+
+    private SqliteConnection _connection = null!;
+    private AppDbContext _db = null!;
+    private ServiceProvider _provider = null!;
+    private ITestHarness _harness = null!;
+
+    private VcsConnection _vcs = null!;
+    private Repository _repo = null!;
+
+    public async Task InitializeAsync()
+    {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        await _connection.OpenAsync(Ct);
+        _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
+        await _db.Database.EnsureCreatedAsync(Ct);
+
+        _provider = new ServiceCollection()
+            .AddSingleton(_db)
+            .AddSingleton<TimeProvider>(new FakeTimeProvider(Now))
+            .AddLogging()
+            .AddMassTransitTestHarness(x => x.AddConsumer<MrStatusChangedConsumer>())
+            .BuildServiceProvider(true);
+
+        _harness = _provider.GetRequiredService<ITestHarness>();
+        await _harness.Start();
+
+        _vcs = new VcsConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = "gitlab",
+            ProviderType = "gitlab",
+            ApiUrl = "https://gitlab.example.com"
+        };
+        _repo = new Repository
+        {
+            Id = Guid.NewGuid(),
+            Name = "api",
+            ExternalId = "group/api",
+            ConnectionId = _vcs.Id
+        };
+        _db.VcsConnections.Add(_vcs);
+        _db.Repositories.Add(_repo);
+        await _db.SaveChangesAsync(Ct);
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _harness.Stop();
+        await _provider.DisposeAsync();
+        await _db.DisposeAsync();
+        await _connection.DisposeAsync();
+    }
+
+    private MergeRequest AddMergeRequest(MergeRequestStatus status, bool isStatusManual = false)
+    {
+        var mr = new MergeRequest
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "1",
+            SourceBranch = "feature/x",
+            TargetBranch = "main",
+            RepositoryId = _repo.Id,
+            Status = status,
+            IsStatusManual = isStatusManual,
+            CreatedAt = Now.AddDays(-1)
+        };
+        _db.MergeRequests.Add(mr);
+        return mr;
+    }
+
+    private Task ChangeAsync(
+        MergeRequestStatus newStatus,
+        string repositoryExternalId = "group/api",
+        string mrId = "1",
+        DateTime? changedAt = null) =>
+        _harness.Bus.Publish(
+            new MrStatusChanged("gitlab", repositoryExternalId, mrId, newStatus, changedAt ?? Now), Ct);
+
+    private async Task ConsumedAsync() =>
+        Assert.True(await _harness.Consumed.Any<MrStatusChanged>());
+
+    private Task<MergeRequest> ReloadAsync() =>
+        _db.MergeRequests.AsNoTracking().FirstAsync(m => m.ExternalId == "1", Ct);
+
+    [Fact]
+    public async Task MergingRecordsTheMergeTimeAndTheStatus()
+    {
+        AddMergeRequest(MergeRequestStatus.ReadyForDeploy);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Merged, changedAt: Now.AddMinutes(-5));
+        await ConsumedAsync();
+
+        var mr = await ReloadAsync();
+        Assert.Equal(MergeRequestStatus.Merged, mr.Status);
+        Assert.Equal(Now.AddMinutes(-5), mr.MergedAt);
+        Assert.Null(mr.ClosedAt);
+    }
+
+    /// <summary>
+    /// A closed merge request never gets a merge time, so archiving keys off this column instead —
+    /// leave it unset and the row is ineligible for archiving forever.
+    /// </summary>
+    [Fact]
+    public async Task ClosingRecordsTheCloseTimeInItsOwnColumn()
+    {
+        AddMergeRequest(MergeRequestStatus.Opened);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Closed, changedAt: Now.AddMinutes(-5));
+        await ConsumedAsync();
+
+        var mr = await ReloadAsync();
+        Assert.Equal(Now.AddMinutes(-5), mr.ClosedAt);
+        Assert.Null(mr.MergedAt);
+    }
+
+    /// <summary>
+    /// The claim this consumer exists to keep. Deliveries are concurrent and unordered, so an
+    /// "opened" raised before a merge can arrive after it — and applying it would put a merged
+    /// merge request back in the deploy plan.
+    /// </summary>
+    [Theory]
+    [InlineData(MergeRequestStatus.Opened)]
+    [InlineData(MergeRequestStatus.Reviewed)]
+    [InlineData(MergeRequestStatus.ReadyForDeploy)]
+    public async Task ANonTerminalStatusCannotResurrectAMergedMergeRequest(MergeRequestStatus late)
+    {
+        AddMergeRequest(MergeRequestStatus.Merged);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(late);
+        await ConsumedAsync();
+
+        Assert.Equal(MergeRequestStatus.Merged, (await ReloadAsync()).Status);
+    }
+
+    /// <summary>
+    /// Terminal to terminal still applies: a merge request can be closed after merging in the
+    /// VCS's own telling, and refusing every change once terminal would freeze the first one.
+    /// </summary>
+    [Fact]
+    public async Task OneTerminalStatusMayFollowAnother()
+    {
+        AddMergeRequest(MergeRequestStatus.Merged);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Closed, changedAt: Now.AddMinutes(-1));
+        await ConsumedAsync();
+
+        Assert.Equal(MergeRequestStatus.Closed, (await ReloadAsync()).Status);
+    }
+
+    /// <summary>
+    /// An operator's pin holds against labels, not against the VCS reporting the merge request
+    /// actually merged. Keeping the pin would leave a merged MR pinned into the plan by hand.
+    /// </summary>
+    [Fact]
+    public async Task ATerminalStatusClearsAManualPin()
+    {
+        AddMergeRequest(MergeRequestStatus.ReadyForDeploy, isStatusManual: true);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Merged);
+        await ConsumedAsync();
+
+        var mr = await ReloadAsync();
+        Assert.Equal(MergeRequestStatus.Merged, mr.Status);
+        Assert.False(mr.IsStatusManual);
+    }
+
+    /// <summary>
+    /// The opened event is probably still in flight, and this is what retry is for. Swallowing it
+    /// discarded the merge event for good, leaving a merged merge request in the plan forever.
+    /// </summary>
+    [Fact]
+    public async Task AnUnknownMergeRequestFaultsSoTheEventIsRetriedRatherThanLost()
+    {
+        await ChangeAsync(MergeRequestStatus.Merged);
+
+        Assert.True(await _harness.Consumed.Any<MrStatusChanged>(x => x.Exception is not null));
+        Assert.False(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+    }
+
+    /// <summary>
+    /// An absent repository is configuration, not a race: redelivering will not conjure one, so
+    /// this is the one "not found" here that must not fault.
+    /// </summary>
+    [Fact]
+    public async Task AnUnknownRepositoryIsIgnoredRatherThanRetriedForever()
+    {
+        await ChangeAsync(MergeRequestStatus.Merged, repositoryExternalId: "group/never-configured");
+        await ConsumedAsync();
+
+        Assert.False(await _harness.Consumed.Any<MrStatusChanged>(x => x.Exception is not null));
+    }
+
+    [Fact]
+    public async Task AnAppliedChangeAsksForAReplan()
+    {
+        AddMergeRequest(MergeRequestStatus.ReadyForDeploy);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Merged);
+        await ConsumedAsync();
+
+        Assert.True(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+    }
+
+    /// <summary>
+    /// A change that was refused changed nothing, so there is nothing to replan — and asking anyway
+    /// would rebuild the plan on every out-of-order delivery.
+    /// </summary>
+    [Fact]
+    public async Task ARefusedChangeAsksForNothing()
+    {
+        AddMergeRequest(MergeRequestStatus.Merged);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Opened);
+        await ConsumedAsync();
+
+        Assert.False(await _harness.Published.Any<ReleasePlanRecalculationRequested>());
+    }
+}
