@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using Xunit;
 
 namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
@@ -12,6 +13,27 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// </summary>
 public sealed class ReleasePlannerTests : PlannerTestBase
 {
+    /// <summary>
+    /// A clock that moves a second at every reading, so a recalculation cannot stamp its snapshot
+    /// and its plan with the same instant.
+    /// </summary>
+    /// <remarks>
+    /// A frozen clock makes SnapshotStartedAt and CreatedAt equal, which is precisely the case
+    /// where confusing the two is harmless — so every test using one is blind to the confusion.
+    /// Time passing during the read is the whole reason the column exists.
+    /// </remarks>
+    private sealed class TickingTimeProvider(DateTime start) : TimeProvider
+    {
+        private DateTime _now = start;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            var reading = _now;
+            _now = _now.AddSeconds(1);
+            return new DateTimeOffset(reading, TimeSpan.Zero);
+        }
+    }
+
     [Fact]
     public async Task OnlyReadyForDeployMergeRequestsEnterThePlan()
     {
@@ -191,6 +213,31 @@ public sealed class ReleasePlannerTests : PlannerTestBase
 
         Assert.True(await planner.IsPlanCurrentAsync(Now.AddSeconds(-1), Ct));
         Assert.False(await planner.IsPlanCurrentAsync(Now.AddSeconds(1), Ct));
+    }
+
+    /// <summary>
+    /// The reason the column is SnapshotStartedAt and not CreatedAt: a merge request committed
+    /// while the planner was reading is not in the resulting plan, however new that plan looks.
+    /// Comparing against CreatedAt would report it covered and the change would sit unplanned until
+    /// some unrelated event happened to trigger the next rebuild.
+    /// </summary>
+    [Fact]
+    public async Task APlanIsNotCurrentForAChangeThatArrivedWhileItWasBeingBuilt()
+    {
+        var repo = AddRepository("api");
+        AddMergeRequest(repo);
+        await Db.SaveChangesAsync(Ct);
+
+        // The read starts at Now; the plan is stored a second later.
+        var planner = new Infrastructure.ReleasePlanning.ReleasePlanner(
+            Db, new TickingTimeProvider(Now), NullLogger<Infrastructure.ReleasePlanning.ReleasePlanner>.Instance);
+        await planner.RecalculateAsync(Ct);
+
+        var stored = await Db.ReleasePlans.AsNoTracking().SingleAsync(Ct);
+        Assert.True(stored.SnapshotStartedAt < stored.CreatedAt);
+
+        // Committed mid-read: after the snapshot began, before the plan was written.
+        Assert.False(await planner.IsPlanCurrentAsync(stored.SnapshotStartedAt.AddMilliseconds(500), Ct));
     }
 
     /// <summary>
