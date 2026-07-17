@@ -256,7 +256,7 @@
     <value>Broken dependencies: {0}</value>
   </data>
   <data name="Plan_Conflicts_Body" xml:space="preserve">
-    <value>The planner could not satisfy every constraint and ordered the stages anyway. Deploying in this order will violate the rules below — review before releasing.</value>
+    <value>This plan does not satisfy every constraint — either the planner could not, or an edit overrode one. Deploying in this order will violate the rules below; review before releasing.</value>
   </data>
   <data name="Plan_Stage" xml:space="preserve">
     <value>Stage {0}</value>

@@ -36,8 +36,10 @@ else
                        _plan.UpdatedAt.ToString("g"))
     </FlareText>
 
-    @* A conflict means the stage order below contradicts a declared dependency. The plan still
-       renders as an ordinary ordering, so without this banner it looks deployable when it is not.
+    @* A conflict means the stage order below contradicts a declared dependency — because the
+       planner could not honour it, or because someone dragged an item past it. Either is allowed;
+       neither may be silent. The plan still renders as an ordinary ordering, so without this
+       banner it looks deployable when it is not.
        `is { Count: > 0 }` rather than .Count: Conflicts is a positional record parameter with no
        default, so an older server that omits the field leaves it null despite the annotation. *@
     @if (_plan.Conflicts is { Count: > 0 } conflicts)

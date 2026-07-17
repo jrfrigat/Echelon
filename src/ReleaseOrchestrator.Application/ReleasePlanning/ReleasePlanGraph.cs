@@ -63,6 +63,30 @@ public static class ReleasePlanGraph
     }
 
     /// <summary>
+    /// Mandatory constraints the given stage assignment does not honour.
+    /// </summary>
+    /// <param name="mrs">
+    /// The plan's merge requests, loaded like <see cref="Build"/> requires.
+    /// </param>
+    /// <param name="stageOf">Stage sequence per merge request id.</param>
+    /// <remarks>
+    /// A plan may violate a constraint — an operator sometimes has to deploy against the declared
+    /// order — but it may never do so silently, so this is what turns an edit into a recorded
+    /// conflict. Soft links are excluded: the planner drops them itself to break cycles, so
+    /// reporting them would flag the operator for a choice the planner makes unprompted.
+    ///
+    /// Comparison is <c>>=</c>, not <c>></c>: merge requests in the same stage deploy together,
+    /// which violates an ordering constraint exactly as surely as the reverse order does.
+    /// </remarks>
+    public static IReadOnlyList<PlanEdge> ViolatedBy(
+        IReadOnlyList<MergeRequest> mrs, IReadOnlyDictionary<Guid, int> stageOf) =>
+        MandatoryEdges(mrs)
+            .Where(e => stageOf.TryGetValue(e.FromMrId, out var predecessorSeq)
+                        && stageOf.TryGetValue(e.ToMrId, out var seq)
+                        && predecessorSeq >= seq)
+            .ToList();
+
+    /// <summary>
     /// Collects every ordering constraint, deduplicated. When the same pair is
     /// implied by several links the most critical one wins, so a soft duplicate
     /// can never make a hard constraint droppable.

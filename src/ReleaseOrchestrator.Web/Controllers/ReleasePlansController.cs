@@ -103,6 +103,12 @@ public class ReleasePlansController(IReleasePlannerService planner) : Controller
     }
 }
 
+/// <param name="Yaml">The plan document.</param>
+/// <param name="Force">
+/// Skip <c>mr_id</c>s that resolve to nothing instead of refusing the document. It does not
+/// override dependency checks: a plan that breaks one is accepted either way and reports the
+/// violation in its conflicts.
+/// </param>
 public record ImportYamlRequest(
     // Kestrel's 30 MB default body limit is far too generous for a plan document, and the
     // parser holds the whole thing in memory.

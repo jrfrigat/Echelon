@@ -69,11 +69,13 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
     }
 
     /// <summary>
-    /// README §6.2. An operator may reorder freely, but not past a hard stack link: deploying a
-    /// backend before the database migration it needs is an outage, not a preference.
+    /// An operator may deploy against a hard stack link — a release sometimes has to — so the
+    /// import is accepted. What it may not do is come out looking clean: the violation is recorded
+    /// on the plan, naming both sides, because a plan nobody can see is broken is the one outcome
+    /// nobody can act on.
     /// </summary>
     [Fact]
-    public async Task AnImportThatInvertsAHardStackDependencyIsRejected()
+    public async Task AnImportThatInvertsAHardStackDependencyIsAcceptedAndTheViolationRecorded()
     {
         var database = AddRepository("db");
         var backend = AddRepository("backend");
@@ -82,24 +84,26 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
             to: AddStack("database", database),
             StackDependencyType.Hard);
 
-        AddMergeRequest(database, externalId: "10");
-        AddMergeRequest(backend, externalId: "20");
+        var databaseMr = AddMergeRequest(database, externalId: "10");
+        var backendMr = AddMergeRequest(backend, externalId: "20");
         await Db.SaveChangesAsync(Ct);
 
         // Backend first, database second — exactly backwards.
-        var yaml = Yaml(Stage(1, "vcs:group/backend!20"), Stage(2, "vcs:group/db!10"));
+        var plan = await Planner().ImportFromYamlAsync(
+            Yaml(Stage(1, "vcs:group/backend!20"), Stage(2, "vcs:group/db!10")), ct: Ct);
 
-        var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Planner().ImportFromYamlAsync(yaml, ct: Ct));
+        Assert.Equal([backendMr.Id], StageItems(plan, 1));
 
-        // The operator has to be told which pair is wrong, not merely that something is.
-        Assert.Contains("db!10", ex.Message);
-        Assert.Contains("backend!20", ex.Message);
-        Assert.Empty(await Db.ReleasePlans.ToListAsync(Ct));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(nameof(Application.ReleasePlanning.PlanEdgeKind.StackHard), conflict.Kind);
+        Assert.Equal(databaseMr.Id, conflict.FromMergeRequestId);
+        Assert.Equal(backendMr.Id, conflict.ToMergeRequestId);
+        Assert.Contains("db!10", conflict.Reason);
+        Assert.Contains("backend!20", conflict.Reason);
     }
 
     [Fact]
-    public async Task ATaskDependencyIsAlsoAHardConstraintOnAnImport()
+    public async Task AnInvertedTaskDependencyIsRecordedToo()
     {
         var repo = AddRepository("api");
         var first = AddTask("TASK-1");
@@ -109,10 +113,11 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
         AddMergeRequest(repo, second, externalId: "20");
         await Db.SaveChangesAsync(Ct);
 
-        var yaml = Yaml(Stage(1, "vcs:group/api!20"), Stage(2, "vcs:group/api!10"));
+        var plan = await Planner().ImportFromYamlAsync(
+            Yaml(Stage(1, "vcs:group/api!20"), Stage(2, "vcs:group/api!10")), ct: Ct);
 
-        await Assert.ThrowsAsync<DomainValidationException>(
-            () => Planner().ImportFromYamlAsync(yaml, ct: Ct));
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(nameof(Application.ReleasePlanning.PlanEdgeKind.TaskDependency), conflict.Kind);
     }
 
     /// <summary>
@@ -120,7 +125,7 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
     /// violated just as surely as by the wrong order. `predSeq >= seq`, not `>`.
     /// </summary>
     [Fact]
-    public async Task AnImportPuttingBothSidesOfAHardConstraintInOneStageIsRejected()
+    public async Task BothSidesOfAConstraintInOneStageIsAViolation()
     {
         var repo = AddRepository("api");
         var first = AddTask("TASK-1");
@@ -130,18 +135,40 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
         AddMergeRequest(repo, second, externalId: "20");
         await Db.SaveChangesAsync(Ct);
 
-        var yaml = Yaml(Stage(1, "vcs:group/api!10", "vcs:group/api!20"));
+        var plan = await Planner().ImportFromYamlAsync(
+            Yaml(Stage(1, "vcs:group/api!10", "vcs:group/api!20")), ct: Ct);
 
-        await Assert.ThrowsAsync<DomainValidationException>(
-            () => Planner().ImportFromYamlAsync(yaml, ct: Ct));
+        Assert.Single(plan.Conflicts);
     }
 
     /// <summary>
-    /// A soft link is advisory: the planner honours it when it can and drops it to break a cycle,
-    /// so it cannot be grounds for rejecting an operator's deliberate order.
+    /// The recorded conflicts describe the plan as stored, so an import that honours everything
+    /// must not carry any — otherwise "conflicts" degrades into decoration nobody reads.
     /// </summary>
     [Fact]
-    public async Task AnImportMayOverrideASoftStackDependency()
+    public async Task AnImportThatHonoursEveryConstraintRecordsNoConflicts()
+    {
+        var repo = AddRepository("api");
+        var first = AddTask("TASK-1");
+        var second = AddTask("TASK-2");
+        AddTaskDependency(dependent: second, dependsOn: first);
+        AddMergeRequest(repo, first, externalId: "10");
+        AddMergeRequest(repo, second, externalId: "20");
+        await Db.SaveChangesAsync(Ct);
+
+        var plan = await Planner().ImportFromYamlAsync(
+            Yaml(Stage(1, "vcs:group/api!10"), Stage(2, "vcs:group/api!20")), ct: Ct);
+
+        Assert.Empty(plan.Conflicts);
+    }
+
+    /// <summary>
+    /// A soft link is advisory and the planner drops it itself to break cycles, so overriding one
+    /// is not a violation and must not be recorded as a conflict — flagging the operator for a
+    /// choice the planner makes unprompted would train them to ignore the list.
+    /// </summary>
+    [Fact]
+    public async Task OverridingASoftStackDependencyIsNotAConflict()
     {
         var database = AddRepository("db");
         var backend = AddRepository("backend");
@@ -158,26 +185,7 @@ public sealed class ReleasePlanImportTests : PlannerTestBase
             Yaml(Stage(1, "vcs:group/backend!20"), Stage(2, "vcs:group/db!10")), ct: Ct);
 
         Assert.Equal([backendMr.Id], StageItems(plan, 1));
-    }
-
-    [Fact]
-    public async Task ForceAcceptsAPlanThatViolatesAHardDependency()
-    {
-        var database = AddRepository("db");
-        var backend = AddRepository("backend");
-        AddStackDependency(
-            from: AddStack("backend", backend),
-            to: AddStack("database", database),
-            StackDependencyType.Hard);
-
-        AddMergeRequest(database, externalId: "10");
-        var backendMr = AddMergeRequest(backend, externalId: "20");
-        await Db.SaveChangesAsync(Ct);
-
-        var plan = await Planner().ImportFromYamlAsync(
-            Yaml(Stage(1, "vcs:group/backend!20"), Stage(2, "vcs:group/db!10")), force: true, ct: Ct);
-
-        Assert.Equal([backendMr.Id], StageItems(plan, 1));
+        Assert.Empty(plan.Conflicts);
     }
 
     /// <summary>

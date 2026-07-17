@@ -62,10 +62,7 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
 
     public async Task<ReleasePlanDto> ReorderStagesAsync(Guid planId, List<Guid> orderedStageIds, CancellationToken ct = default)
     {
-        var plan = await db.ReleasePlans
-            .Include(p => p.Stages)
-            .FirstOrDefaultAsync(p => p.Id == planId, ct)
-            ?? throw new NotFoundException($"Plan {planId} not found");
+        var plan = await LoadPlanForEditAsync(planId, ct);
 
         var stageMap = plan.Stages.ToDictionary(s => s.Id);
 
@@ -86,39 +83,43 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
             stage.IsManualOverride = true;
         }
 
-        plan.UpdatedAt = clock.GetUtcNow().UtcDateTime;
-        await db.SaveChangesAsync(ct);
+        await FinishEditAsync(plan, ct);
         return MapToDto((await LoadFullPlanAsync(p => p.Id == planId, ct))!);
     }
 
     public async Task<ReleasePlanDto> MoveItemAsync(Guid planId, Guid itemId, Guid targetStageId, CancellationToken ct = default)
     {
-        var item = await db.StageItems
-            .Include(i => i.Stage)
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.Stage.PlanId == planId, ct)
-            ?? throw new NotFoundException($"Item {itemId} not found in plan {planId}");
+        var plan = await LoadPlanForEditAsync(planId, ct);
 
-        var targetStage = await db.ReleaseStages
-            .FirstOrDefaultAsync(s => s.Id == targetStageId && s.PlanId == planId, ct)
+        var item = plan.Stages.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId)
+            ?? throw new NotFoundException($"Item {itemId} not found in plan {planId}");
+        var targetStage = plan.Stages.FirstOrDefault(s => s.Id == targetStageId)
             ?? throw new NotFoundException($"Stage {targetStageId} not found in plan {planId}");
 
+        var sourceStage = plan.Stages.First(s => s.Id == item.StageId);
+        sourceStage.Items.Remove(item);
+        targetStage.Items.Add(item);
         item.StageId = targetStageId;
         targetStage.IsManualOverride = true;
 
-        await TouchPlanAsync(planId, ct);
-        await db.SaveChangesAsync(ct);
+        await FinishEditAsync(plan, ct);
         return MapToDto((await LoadFullPlanAsync(p => p.Id == planId, ct))!);
     }
 
     public async Task<ReleasePlanDto> AddItemAsync(Guid planId, Guid stageId, Guid mrId, CancellationToken ct = default)
     {
-        var stage = await db.ReleaseStages
-            .FirstOrDefaultAsync(s => s.Id == stageId && s.PlanId == planId, ct)
+        var plan = await LoadPlanForEditAsync(planId, ct);
+
+        var stage = plan.Stages.FirstOrDefault(s => s.Id == stageId)
             ?? throw new NotFoundException($"Stage {stageId} not found in plan {planId}");
 
         if (!await db.MergeRequests.AnyAsync(mr => mr.Id == mrId, ct))
             throw new NotFoundException($"MergeRequest {mrId} not found");
 
+        // Add through the set, not through stage.Items: an entity discovered via a navigation
+        // with its key already assigned is tracked as Modified, not Added, and EF then issues an
+        // UPDATE against a row that does not exist. Tracking it here marks it Added, and fixup
+        // puts it in stage.Items — which is what the conflict recomputation below reads.
         db.StageItems.Add(new StageItem
         {
             Id = Guid.NewGuid(),
@@ -128,22 +129,32 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
         });
         stage.IsManualOverride = true;
 
-        await TouchPlanAsync(planId, ct);
-        await db.SaveChangesAsync(ct);
+        await FinishEditAsync(plan, ct);
         return MapToDto((await LoadFullPlanAsync(p => p.Id == planId, ct))!);
     }
 
     public async Task<ReleasePlanDto> RemoveItemAsync(Guid planId, Guid itemId, CancellationToken ct = default)
     {
-        var item = await db.StageItems
-            .Include(i => i.Stage)
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.Stage.PlanId == planId, ct)
+        var plan = await LoadPlanForEditAsync(planId, ct);
+
+        var item = plan.Stages.SelectMany(s => s.Items).FirstOrDefault(i => i.Id == itemId)
             ?? throw new NotFoundException($"Item {itemId} not found in plan {planId}");
 
+        plan.Stages.First(s => s.Id == item.StageId).Items.Remove(item);
         db.StageItems.Remove(item);
-        await TouchPlanAsync(planId, ct);
-        await db.SaveChangesAsync(ct);
+
+        // Removing an item can only satisfy constraints, never break one — but the recorded
+        // conflicts still have to stop mentioning it, or they describe a plan that no longer exists.
+        await FinishEditAsync(plan, ct);
         return MapToDto((await LoadFullPlanAsync(p => p.Id == planId, ct))!);
+    }
+
+    /// <summary>Rescores the edited plan against the graph and commits it in one write.</summary>
+    private async Task FinishEditAsync(ReleasePlan plan, CancellationToken ct)
+    {
+        await RecordConflictsAsync(plan, ct);
+        plan.UpdatedAt = clock.GetUtcNow().UtcDateTime;
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<ReleasePlanDto> ImportFromYamlAsync(string yaml, bool force = false, CancellationToken ct = default)
@@ -192,7 +203,7 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
             plan.Stages.Add(stage);
         }
 
-        await ValidateHardDependenciesAsync(plan, force, ct);
+        await RecordConflictsAsync(plan, ct);
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.ReleasePlans
@@ -303,15 +314,25 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
     }
 
     /// <summary>
-    /// README §6.2: an import must not violate a hard dependency. Rebuilds the graph for
-    /// the imported merge requests and checks the YAML stage order against it.
+    /// Records, on the plan itself, every mandatory constraint its stage order does not honour.
     /// </summary>
-    private async Task ValidateHardDependenciesAsync(ReleasePlan plan, bool force, CancellationToken ct)
+    /// <remarks>
+    /// An operator may deploy against the declared order — a release sometimes has to — so this
+    /// does not reject. What it refuses to allow is a plan that violates a constraint and reports
+    /// itself as clean, which is the one outcome nobody can act on.
+    ///
+    /// Every edit path routes through here, and it reuses ReleasePlanGraph's own edge derivation,
+    /// so import, manual editing and recalculation cannot drift into disagreeing about what a
+    /// constraint is or which plan breaks one.
+    /// </remarks>
+    private async Task RecordConflictsAsync(ReleasePlan plan, CancellationToken ct)
     {
-        if (force) return;
-
         var mrIds = plan.Stages.SelectMany(s => s.Items).Select(i => i.MergeRequestId).ToList();
-        if (mrIds.Count == 0) return;
+        if (mrIds.Count == 0)
+        {
+            plan.ConflictsJson = null;
+            return;
+        }
 
         var mrs = await db.MergeRequests
             .Include(mr => mr.Task).ThenInclude(t => t!.Dependencies)
@@ -327,33 +348,39 @@ public class ReleasePlanner(AppDbContext db, TimeProvider clock, ILogger<Release
             .SelectMany(s => s.Items.Select(i => (i.MergeRequestId, s.Sequence)))
             .ToDictionary(x => x.MergeRequestId, x => x.Sequence);
 
-        // Reuse the planner's own edge derivation so import and recalculation can never
-        // disagree about what a hard dependency is.
-        var violations = ReleasePlanGraph.MandatoryEdges(mrs)
-            .Where(e => stageOf.TryGetValue(e.FromMrId, out var predSeq)
-                        && stageOf.TryGetValue(e.ToMrId, out var seq)
-                        && predSeq >= seq)
-            .Select(e => $"{Describe(mrs, e.FromMrId)} must deploy before {Describe(mrs, e.ToMrId)}, "
-                         + $"but sits in stage {stageOf[e.FromMrId]} against stage {stageOf[e.ToMrId]}")
-            .Distinct()
+        var conflicts = ReleasePlanGraph.ViolatedBy(mrs, stageOf)
+            .Select(e => new PlanConflict(
+                e.Kind,
+                e.FromMrId,
+                e.ToMrId,
+                $"{Describe(mrs, e.FromMrId)} must deploy before {Describe(mrs, e.ToMrId)}, "
+                + $"but this plan puts it in stage {stageOf[e.FromMrId]} against stage {stageOf[e.ToMrId]}."))
             .ToList();
 
-        if (violations.Count > 0)
-            throw new DomainValidationException(
-                "Imported plan violates hard dependencies; pass force=true to override. "
-                + string.Join("; ", violations.Take(10)));
+        if (conflicts.Count > 0)
+            logger.LogWarning(
+                "Plan {PlanId} violates {Count} mandatory constraint(s); recorded on the plan.",
+                plan.Id, conflicts.Count);
+
+        plan.ConflictsJson = conflicts.Count == 0 ? null : JsonSerializer.Serialize(conflicts);
     }
+
+    /// <summary>
+    /// Reloads a plan's stages and items so a manual edit can be scored against the graph, then
+    /// stamps it. Edits mutate the tracked entities, so conflicts are recomputed before the single
+    /// SaveChanges rather than after — otherwise a crash in between leaves a plan whose recorded
+    /// conflicts describe the version before the edit.
+    /// </summary>
+    private async Task<ReleasePlan> LoadPlanForEditAsync(Guid planId, CancellationToken ct) =>
+        await db.ReleasePlans
+            .Include(p => p.Stages).ThenInclude(s => s.Items)
+            .FirstOrDefaultAsync(p => p.Id == planId, ct)
+        ?? throw new NotFoundException($"Plan {planId} not found");
 
     private static string Describe(IEnumerable<MergeRequest> mrs, Guid mrId)
     {
         var mr = mrs.First(m => m.Id == mrId);
         return $"{mr.Repository.Name}!{mr.ExternalId}";
-    }
-
-    private async Task TouchPlanAsync(Guid planId, CancellationToken ct)
-    {
-        var plan = await db.ReleasePlans.FirstOrDefaultAsync(p => p.Id == planId, ct);
-        if (plan is not null) plan.UpdatedAt = clock.GetUtcNow().UtcDateTime;
     }
 
     private async Task<ReleasePlan?> LoadFullPlanAsync(
