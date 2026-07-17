@@ -1,0 +1,42 @@
+{
+  "//": [
+    "Copy to appsettings.Development.json and fill in. That name is gitignored, because this",
+    "file is where a real server, a real login and a real password go.",
+    "",
+    "Create the databases and the login first:",
+    "  sqlcmd -S <server> -E -i scripts/mssql-create-databases.sql -v AppPassword=\"<password>\" -v AppLogin=\"release_user\" -v DbName=\"ReleaseOrchestrator\" -v ArchiveDbName=\"ReleaseOrchestratorArchive\"",
+    "",
+    "Trusted_Connection=True instead of User Id/Password also works against a local server, and",
+    "is one fewer secret on your disk.",
+    "",
+    "TrustServerCertificate=True accepts a self-signed certificate. Fine for a local server,",
+    "wrong for anything holding real tokens."
+  ],
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "Default": "Server=<server>;Database=ReleaseOrchestrator;User Id=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=True",
+    "Archive": "Server=<server>;Database=ReleaseOrchestratorArchive;User Id=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
+  },
+  "Queue": {
+    "Host": "localhost",
+    "Username": "guest",
+    "Password": "guest"
+  },
+  "Redis": {
+    "ConnectionString": "localhost:6379"
+  },
+  "Database": {
+    "//": "sqlserver or postgresql. MigrateOnStartup is on here and off by default elsewhere: it needs standing DDL rights, and with more than one replica concurrent Migrate() calls race.",
+    "Provider": "sqlserver",
+    "MigrateOnStartup": true
+  },
+  "Coordination": {
+    "//": "Drop Redis entirely with Provider=memory + SingleInstance=true. Correct for one process, wrong for more.",
+    "Provider": "redis"
+  }
+}

@@ -37,6 +37,12 @@ packages/
 *.p12
 appsettings.*.local.json
 
+# A developer's own machine: a real server, a real login, a real password. It used to be tracked
+# and was safe only because it used Trusted_Connection and named no password — the moment anyone
+# pointed it at a SQL login, the password would have been committed. Copy the .example beside it
+# and fill it in; that one is tracked and holds placeholders.
+appsettings.Development.json
+
 # Tooling artifacts (ruflo / claude-flow)
 ruvector.db
 *.db-shm

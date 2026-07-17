@@ -1,0 +1,28 @@
+{
+  "//": [
+    "Copy to appsettings.Development.json and fill in. That name is gitignored.",
+    "",
+    "The ingress holds no database connection: it validates a webhook's signature and publishes to",
+    "the queue. Webhook tokens belong here and nowhere tracked."
+  ],
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "Queue": {
+    "Host": "localhost",
+    "Username": "guest",
+    "Password": "guest"
+  },
+  "Webhooks": {
+    "//": "Per-connection shared secrets, keyed by the connection name the provider posts to.",
+    "GitLab": {
+      "default": { "Token": "<gitlab-webhook-token>" }
+    },
+    "Tracker": {
+      "default": { "Token": "<tracker-webhook-token>" }
+    }
+  }
+}
