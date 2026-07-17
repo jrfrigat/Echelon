@@ -19,8 +19,13 @@ namespace ReleaseOrchestrator.UnitTests.Archive;
 /// <remarks>
 /// SQLite is not SQL Server. It does not reproduce the FK behaviour that broke archiving in the
 /// first place, so what these assert is the runner's own logic: what it selects, what it leaves
-/// alone, and that a second pass over already-archived rows does not throw. The FK ordering itself
-/// stays unverified until this runs against a real SQL Server.
+/// alone, and that a second pass over already-archived rows does not throw.
+///
+/// The FK itself was checked against a real SQL Server on 2026-07-17, by hand rather than by a
+/// test here: deleting a merge request a plan still refers to fails with error 547, so the
+/// Restrict that <see cref="MergeRequestStillInAPlanIsNotArchived"/> relies on is real and not
+/// merely modelled. That check is not automated — nothing in CI has a database — so it is a
+/// point-in-time fact, not a guard.
 /// </remarks>
 public sealed class ArchiveRunnerTests : IAsyncLifetime
 {

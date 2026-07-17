@@ -32,7 +32,8 @@ Release Orchestrator помогает автоматически выстраи�
 **The application has never been run in a live environment.** The following have not been tested:
 
 - Application startup against a live database (SQL Server or PostgreSQL), RabbitMQ, Redis
-- Database migrations (on real instance)
+- ~~Database migrations (on real instance)~~ — done for SQL Server on 2026-07-17, see Known
+  Limitations. Not for PostgreSQL
 - Docker image builds (registry blocked in dev environment)
 - Behavior against real GitLab or Yandex Tracker instances
 - Concurrency and load testing
@@ -266,7 +267,18 @@ past one and Redis comes back.
 ## Known Limitations
 
 - **Never run at all.** Not "untested under load" — the application has never started against a
-  live SQL Server, PostgreSQL, RabbitMQ or Redis, and migrations have never been applied
+  live SQL Server, PostgreSQL, RabbitMQ or Redis.
+
+  Migrations are the one part of that which is no longer true. On 2026-07-17 all six applied
+  cleanly to a real SQL Server 2022, and the archive's to its own database, from empty. What that
+  bought is small but it is not nothing: it is the first time anything here met a real database,
+  and it settled two claims that SQLite had left open — the filtered unique index really does
+  reject a second active plan (error 2601), and `Restrict` really does block deleting a merge
+  request a plan still refers to (error 547). Both were previously marked unverifiable in
+  `ArchiveRunnerTests` and CLAUDE.md.
+
+  Everything else on this list stands. The application still has not started; PostgreSQL's
+  migrations still have not been applied to anything
 - **Neither database has ever been run.** PostgreSQL is supported on the same terms as SQL Server: same model, same tests, same CI, and the same "никогда не запускался" above. Its mapping differences are covered by tests against the built model and by generated SQL, which is the strongest check possible without a server — it is not a substitute for one
 - No Prometheus exporter — telemetry leaves over OTLP, so scraping needs an OpenTelemetry
   collector in between
