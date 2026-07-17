@@ -1,11 +1,6 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Time.Testing;
 using ReleaseOrchestrator.Core.Entities;
 using ReleaseOrchestrator.Core.Enums;
-using ReleaseOrchestrator.Infrastructure.Persistence;
-using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 using Xunit;
 
 namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
@@ -15,137 +10,8 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// hands it the right edges and stores the answer — the half that was never covered, and the half
 /// that actually broke: the algorithm was right the whole time while the data never arrived.
 /// </summary>
-/// <remarks>
-/// The Include chain in RecalculateAsync is the load-bearing part. Drop one ThenInclude and the
-/// navigation is simply empty: no exception, no warning, a plan that is wrong and looks fine. That
-/// is invisible to a test that feeds the graph an in-memory list, which is why these go through a
-/// database.
-/// </remarks>
-public sealed class ReleasePlannerTests : IAsyncLifetime
+public sealed class ReleasePlannerTests : PlannerTestBase
 {
-    private static readonly DateTime Now = new(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
-    private static CancellationToken Ct => CancellationToken.None;
-
-    private SqliteConnection _connection = null!;
-    private AppDbContext _db = null!;
-    private TrackerConnection _tracker = null!;
-    private VcsConnection _vcs = null!;
-
-    public async Task InitializeAsync()
-    {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        await _connection.OpenAsync(Ct);
-
-        _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
-        await _db.Database.EnsureCreatedAsync(Ct);
-
-        _tracker = new TrackerConnection
-        {
-            Id = Guid.NewGuid(),
-            Name = "tracker",
-            ProviderType = "fake",
-            ApiUrl = "https://tracker.example.com"
-        };
-        _vcs = new VcsConnection
-        {
-            Id = Guid.NewGuid(),
-            Name = "vcs",
-            ProviderType = "gitlab",
-            ApiUrl = "https://gitlab.example.com"
-        };
-        _db.TrackerConnections.Add(_tracker);
-        _db.VcsConnections.Add(_vcs);
-        await _db.SaveChangesAsync(Ct);
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _db.DisposeAsync();
-        await _connection.DisposeAsync();
-    }
-
-    private ReleasePlanner Planner() =>
-        new(_db, new FakeTimeProvider(Now), NullLogger<ReleasePlanner>.Instance);
-
-    private Repository AddRepository(string name)
-    {
-        var repo = new Repository
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            ExternalId = $"group/{name}",
-            ConnectionId = _vcs.Id
-        };
-        _db.Repositories.Add(repo);
-        return repo;
-    }
-
-    private TaskItem AddTask(string externalId)
-    {
-        var task = new TaskItem
-        {
-            Id = Guid.NewGuid(),
-            ExternalId = externalId,
-            Title = externalId,
-            Status = "open",
-            TrackerConnectionId = _tracker.Id
-        };
-        _db.Tasks.Add(task);
-        return task;
-    }
-
-    /// <summary>Records that <paramref name="dependent"/> waits on <paramref name="dependsOn"/>.</summary>
-    private void AddTaskDependency(TaskItem dependent, TaskItem dependsOn) =>
-        _db.TaskDependencies.Add(new TaskDependency
-        {
-            Id = Guid.NewGuid(),
-            DependentTaskId = dependent.Id,
-            DependsOnTaskId = dependsOn.Id
-        });
-
-    private Stack AddStack(string name, params Repository[] repositories)
-    {
-        var stack = new Stack { Id = Guid.NewGuid(), Name = name };
-        _db.Stacks.Add(stack);
-        foreach (var repo in repositories)
-            _db.Set<RepositoryStack>().Add(new RepositoryStack { RepositoryId = repo.Id, StackId = stack.Id });
-        return stack;
-    }
-
-    /// <summary>Records that <paramref name="from"/> deploys after <paramref name="to"/>.</summary>
-    private void AddStackDependency(Stack from, Stack to, StackDependencyType type) =>
-        _db.Set<StackDependency>().Add(new StackDependency
-        {
-            Id = Guid.NewGuid(),
-            FromStackId = from.Id,
-            ToStackId = to.Id,
-            Type = type
-        });
-
-    private MergeRequest AddMergeRequest(
-        Repository repository,
-        TaskItem? task = null,
-        MergeRequestStatus status = MergeRequestStatus.ReadyForDeploy,
-        DateTime? createdAt = null)
-    {
-        var mr = new MergeRequest
-        {
-            Id = Guid.NewGuid(),
-            ExternalId = $"{_db.MergeRequests.Local.Count + 1}",
-            SourceBranch = task is null ? "feature/x" : $"feature/{task.ExternalId}",
-            TargetBranch = "main",
-            RepositoryId = repository.Id,
-            TaskId = task?.Id,
-            Status = status,
-            CreatedAt = createdAt ?? Now.AddDays(-1)
-        };
-        _db.MergeRequests.Add(mr);
-        return mr;
-    }
-
-    private static List<Guid> StageItems(Application.DTOs.ReleasePlanDto plan, int sequence) =>
-        plan.Stages.Single(s => s.Sequence == sequence).Items.Select(i => i.MergeRequestId).ToList();
-
     [Fact]
     public async Task OnlyReadyForDeployMergeRequestsEnterThePlan()
     {
@@ -154,7 +20,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
         AddMergeRequest(repo, status: MergeRequestStatus.Opened);
         AddMergeRequest(repo, status: MergeRequestStatus.Reviewed);
         AddMergeRequest(repo, status: MergeRequestStatus.Merged);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var plan = await Planner().RecalculateAsync(Ct);
 
@@ -178,7 +44,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
 
         var firstMr = AddMergeRequest(repo, first);
         var secondMr = AddMergeRequest(repo, second);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var plan = await Planner().RecalculateAsync(Ct);
 
@@ -203,7 +69,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
 
         var databaseMr = AddMergeRequest(database);
         var backendMr = AddMergeRequest(backend);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var plan = await Planner().RecalculateAsync(Ct);
 
@@ -218,7 +84,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
         var web = AddRepository("web");
         AddMergeRequest(api);
         AddMergeRequest(web);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var plan = await Planner().RecalculateAsync(Ct);
 
@@ -236,16 +102,16 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
     {
         var repo = AddRepository("api");
         AddMergeRequest(repo);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var planner = Planner();
         var first = await planner.RecalculateAsync(Ct);
         var second = await planner.RecalculateAsync(Ct);
 
         Assert.NotEqual(first.Id, second.Id);
-        var active = Assert.Single(await _db.ReleasePlans.Where(p => p.IsActive).ToListAsync(Ct));
+        var active = Assert.Single(await Db.ReleasePlans.Where(p => p.IsActive).ToListAsync(Ct));
         Assert.Equal(second.Id, active.Id);
-        Assert.Equal(2, await _db.ReleasePlans.CountAsync(Ct));
+        Assert.Equal(2, await Db.ReleasePlans.CountAsync(Ct));
     }
 
     /// <summary>
@@ -269,13 +135,13 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
             UpdatedAt = Now.AddHours(-1),
             SnapshotStartedAt = Now.AddHours(-1)
         };
-        _db.ReleasePlans.Add(manual);
-        await _db.SaveChangesAsync(Ct);
+        Db.ReleasePlans.Add(manual);
+        await Db.SaveChangesAsync(Ct);
 
         var recalculated = await Planner().RecalculateAsync(Ct);
 
         Assert.False(recalculated.IsActive);
-        var active = Assert.Single(await _db.ReleasePlans.Where(p => p.IsActive).ToListAsync(Ct));
+        var active = Assert.Single(await Db.ReleasePlans.Where(p => p.IsActive).ToListAsync(Ct));
         Assert.Equal(manual.Id, active.Id);
     }
 
@@ -294,7 +160,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
 
         AddMergeRequest(repo, first);
         AddMergeRequest(repo, second);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var plan = await Planner().RecalculateAsync(Ct);
 
@@ -318,7 +184,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
     {
         var repo = AddRepository("api");
         AddMergeRequest(repo);
-        await _db.SaveChangesAsync(Ct);
+        await Db.SaveChangesAsync(Ct);
 
         var planner = Planner();
         await planner.RecalculateAsync(Ct);
@@ -337,7 +203,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
     {
         async Task AddActivePlanAsync(string name)
         {
-            _db.ReleasePlans.Add(new ReleasePlan
+            Db.ReleasePlans.Add(new ReleasePlan
             {
                 Id = Guid.NewGuid(),
                 Name = name,
@@ -348,7 +214,7 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
                 UpdatedAt = Now,
                 SnapshotStartedAt = Now
             });
-            await _db.SaveChangesAsync(Ct);
+            await Db.SaveChangesAsync(Ct);
         }
 
         await AddActivePlanAsync("first");
@@ -363,6 +229,6 @@ public sealed class ReleasePlannerTests : IAsyncLifetime
 
         Assert.Empty(plan.Stages);
         Assert.True(plan.IsActive);
-        Assert.NotNull(await _db.ReleasePlans.FindAsync([plan.Id], Ct));
+        Assert.NotNull(await Db.ReleasePlans.FindAsync([plan.Id], Ct));
     }
 }
