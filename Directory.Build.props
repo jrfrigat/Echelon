@@ -50,10 +50,13 @@
   <PropertyGroup Label="NuGet audit">
     <!--
       NU1900 means NuGet could not reach the feed to check packages for known vulnerabilities.
-      That is a statement about the network, not the code, so it stays a visible warning rather
-      than a fatal error: behind a proxy that blocks nuget.org it would make every restore fail.
+      That is a statement about the network, not the code, so it stays a warning rather than a
+      fatal error — a restore must not fail because a feed is briefly unreachable.
+
+      It is deliberately NOT suppressed. It used to be, back when the feed was unreachable here
+      and the warning was constant noise; now it is the signal that the audit below did not
+      actually run, and an audit that silently checked nothing is worse than no audit.
     -->
-    <NoWarn>$(NoWarn);NU1900</NoWarn>
 
     <!--
       Audit the whole graph, not just direct references. Kept explicit rather than relying on the
@@ -61,12 +64,16 @@
       advisory in a transitively pulled package until a .NET 10 restore reported it. A
       vulnerability we cannot see is worse than one we can.
 
-      NU1902/NU1903 stay warnings rather than errors only because a fix is not always reachable
-      from a developer machine — nuget.org is proxy-blocked here, so a patched package whose
-      dependencies are not already cached cannot be restored. CI has network and MUST fail on them.
+      NU1902/NU1903 are errors, here as well as in CI. They were warnings locally for one stated
+      reason — nuget.org was proxy-blocked, so a patched package could not be restored and the
+      build would have failed with no way out. That is no longer true: the feed and the advisory
+      database are both reachable. With the reason gone the exemption goes with it, rather than
+      outliving it as a security control nobody remembers loosening.
+
+      The cost is real and intended: an advisory published overnight breaks the build before the
+      first commit of the day. That is the same thing CI does, one PR earlier.
     -->
     <NuGetAuditMode>all</NuGetAuditMode>
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1902;NU1903</WarningsNotAsErrors>
   </PropertyGroup>
 
 </Project>
