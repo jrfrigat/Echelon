@@ -177,12 +177,16 @@ GET /api/discovery/dependency-kinds     -> [{ key: "Hard" }, { key: "Soft" }]
 
 **Цель.** Убрать допущение глобального плана отовсюду и добить UX.
 
-**Работы.**
-- Удалить глобальные `ReleasePlan`/`ReleaseStage`/`StageItem` + `ReleasePlansController` + глобальный YAML; сбросить старый фильтрованный индекс; мигрировать схему архива с `ArchivedReleasePlan`/`PlanSnapshot` на `ArchivedRollout`.
-- Локализовать `LocalLogin`; сделать каждый выпадающий список PWA серверным.
-- `bash scripts/clean-empty-files.sh` перед коммитом; финальные зеркальные миграции на обоих провайдерах.
+**Работы (сделано).**
+- Удалены глобальные `ReleasePlan`/`ReleaseStage`/`StageItem` и стеки `Stack`/`RepositoryStack`/`StackDependency`: сущности, `ReleasePlansController`/`StacksController`, страницы PWA (`ReleasePlan`, `YamlEditor`, `Stacks`) и глобальный YAML; старый фильтрованный индекс убран; из чистого `ReleasePlanGraph` вырезаны рёбра стеков (`StackHard`/`StackSoft`) -- упорядочивание репозиториев (`RepoHard`/`RepoSoft`) осталось единственным механизмом. `RolloutPlan` -- единственный агрегат плана. Домашняя страница PWA теперь список задач (P5a).
+- Консьюмер пересчёта перенацелен, а не удалён: `ReleasePlanRecalculationRequested` теперь перестраивает КАЖДЫЙ активный per-task план (издатели ingestion не тронуты), заменив пересчёт единственного глобального.
+- Архив: удалены `ArchivedReleasePlan`/`PlanSnapshot`; фаза архивации MR больше не гейтит на `StageItem`, а на ссылки движка исполнения (`PlanItem`/`RolloutStep`/`MrDeploymentState`/`MrDeployClaim`, все `Restrict`). Отдельной схемы `ArchivedRollout` не заводили: истории роллаутов пока никто не архивирует, поэтому MR с такой историей ждёт её очистки (follow-up), а не FK-падает.
+- Локализован `LocalLogin` + тест паритета resx (en/ru/Designer) как страховка от расхождения трёх файлов (P5a).
+- Зеркальные миграции на обоих провайдерах: `RetireGlobalPlanAndStacks` (`AppDbContext`) и `RetireArchivedReleasePlan` (`ArchiveDbContext`); `has-pending-model-changes` пусто во всех четырёх сочетаниях контекст×провайдер; полная цепочка из 14 миграций накатана начисто на живой LocalDB, включая drop.
 
-**Риск.** Миграция данных холодного архива легко откладывается навсегда, оставляя несогласованные двойные формы. Стеки к этой фазе уже удалены (P2, безопасно из-за отсутствия боевых данных, [001](001-current-state.md)), поэтому ломающей миграции стеков здесь нет.
+**Осталось (follow-up, безвредно).** Мёртвые ключи resx старого плана (`Plan_*`, `Nav_Stacks`/`Nav_YamlEditor`/`Nav_ReleasePlan`) -- симметричны, под тестом паритета; server-driven выпадающие списки PWA; архивация истории роллаутов, освобождающая `Restrict`-ссылки MR.
+
+**Риск.** Стеки к этой фазе уже удалены из данных (P2, безопасно из-за отсутствия боевых данных, [001](001-current-state.md)), поэтому ломающей миграции стеков здесь нет -- этот drop лишь убирает пустые таблицы.
 
 ## 6. Дисциплина "каждая фаза собирается и зелена"
 
