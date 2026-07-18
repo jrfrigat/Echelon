@@ -3,7 +3,9 @@
 @* Auth gating and the logout action live in MainLayout, which owns the drawer this sits in.
    Icon names with no FlareIcons constant are passed as literals, which FlareIcon also accepts. *@
 <FlareNavMenu AriaLabel="@UiStrings.Nav_Aria">
-    <FlareNavLink Href="/tasks">
+    @* Tasks is the home page. Exact only for "/", which would otherwise prefix-match every route
+       and always look active. *@
+    <FlareNavLink Href="/" Match="NavMatchMode.Exact">
         <Icon><FlareIcon Name="checklist" /></Icon>
         <ChildContent>@UiStrings.Nav_Tasks</ChildContent>
     </FlareNavLink>
@@ -11,8 +13,7 @@
         <Icon><FlareIcon Name="rocket_launch" /></Icon>
         <ChildContent>@UiStrings.Nav_Rollouts</ChildContent>
     </FlareNavLink>
-    @* Exact only for "/", which would otherwise prefix-match every route and always look active. *@
-    <FlareNavLink Href="/" Match="NavMatchMode.Exact">
+    <FlareNavLink Href="/global-plan">
         <Icon><FlareIcon Name="list_alt" /></Icon>
         <ChildContent>@UiStrings.Nav_ReleasePlan</ChildContent>
     </FlareNavLink>

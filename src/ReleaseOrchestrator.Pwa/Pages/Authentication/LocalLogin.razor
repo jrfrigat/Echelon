@@ -3,25 +3,23 @@
 @inject LocalAuthService Auth
 @inject NavigationManager Navigation
 
-@* Plain strings, not UiStrings: the Local provider is a dev / single-operator path and its login
-   page is not localised yet. Adding resx entries for it is a follow-up. *@
-<PageTitle>Sign in</PageTitle>
+<PageTitle>@UiStrings.Login_Title</PageTitle>
 
 <div style="display:flex; justify-content:center; margin-top:4rem;">
     <FlareCard Style="width: 100%; max-width: 22rem;">
         <FlareCardContent>
             <div style="display:flex; flex-direction:column; gap:1rem;">
-                <FlareText Typo="TypographyScale.HeadlineSmall">Sign in</FlareText>
+                <FlareText Typo="TypographyScale.HeadlineSmall">@UiStrings.Login_Title</FlareText>
 
                 @if (_failed)
                 {
-                    <FlareAlert Severity="AlertSeverity.Error">Wrong username or password.</FlareAlert>
+                    <FlareAlert Severity="AlertSeverity.Error">@UiStrings.Login_Failed</FlareAlert>
                 }
 
-                <FlareTextField Label="Username" @bind-Value="_username" />
-                <FlarePasswordField Label="Password" @bind-Value="_password" />
+                <FlareTextField Label="@UiStrings.Login_Username" @bind-Value="_username" />
+                <FlarePasswordField Label="@UiStrings.Login_Password" @bind-Value="_password" />
 
-                <FlareButton OnClick="SubmitAsync" Loading="_busy">Sign in</FlareButton>
+                <FlareButton OnClick="SubmitAsync" Loading="_busy">@UiStrings.Login_Title</FlareButton>
             </div>
         </FlareCardContent>
     </FlareCard>

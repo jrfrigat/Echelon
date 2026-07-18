@@ -181,7 +181,7 @@ else
 
     string KeyOf(Guid taskId) => _keyById.TryGetValue(taskId, out var k) ? k : taskId.ToString()[..8];
 
-    void Back() => Nav.NavigateTo("/tasks");
+    void Back() => Nav.NavigateTo("/");
 
     // Mirrors the server-side MergeRequestStatus enum, which the PWA does not reference.
     static FlareColor StatusColor(string status) => status switch

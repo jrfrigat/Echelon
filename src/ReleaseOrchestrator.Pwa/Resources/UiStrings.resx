@@ -741,4 +741,16 @@
   <data name="Actions_EventHint" xml:space="preserve">
     <value>e.g. RolloutSucceeded, RolloutFailed</value>
   </data>
+  <data name="Login_Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login_Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Login_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Login_Failed" xml:space="preserve">
+    <value>Wrong username or password.</value>
+  </data>
 </root>

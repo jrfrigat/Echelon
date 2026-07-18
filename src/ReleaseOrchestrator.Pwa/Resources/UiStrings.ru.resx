@@ -741,4 +741,16 @@
   <data name="Actions_EventHint" xml:space="preserve">
     <value>напр. RolloutSucceeded, RolloutFailed</value>
   </data>
+  <data name="Login_Title" xml:space="preserve">
+    <value>Вход</value>
+  </data>
+  <data name="Login_Username" xml:space="preserve">
+    <value>Имя пользователя</value>
+  </data>
+  <data name="Login_Password" xml:space="preserve">
+    <value>Пароль</value>
+  </data>
+  <data name="Login_Failed" xml:space="preserve">
+    <value>Неверное имя пользователя или пароль.</value>
+  </data>
 </root>
