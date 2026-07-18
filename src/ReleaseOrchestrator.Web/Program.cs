@@ -11,6 +11,7 @@ using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Observability;
+using ReleaseOrchestrator.Web.Auth;
 using ReleaseOrchestrator.Web.ExceptionHandling;
 using ReleaseOrchestrator.Web.HealthChecks;
 using Serilog;
@@ -86,7 +87,8 @@ try
                 }));
     });
 
-    builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AD");
+    // The authentication scheme the deployment selected with Auth:Provider (AzureAd | Oidc | Local).
+    builder.Services.AddConfiguredAuthentication(builder.Configuration);
 
     builder.Services.AddAuthorization(opts =>
     {
@@ -159,6 +161,10 @@ try
 
     // /metrics for Prometheus (anonymous, un-throttled). No-op when Prometheus is disabled.
     app.MapReleaseOrchestratorMetrics(app.Configuration);
+
+    // The Local provider issues its own tokens at /auth/login; map it only when Local is selected.
+    if (string.Equals(app.Configuration["Auth:Provider"], "Local", StringComparison.OrdinalIgnoreCase))
+        app.MapLocalAuthEndpoints();
 
     // The SPA shell must load anonymously — the fallback policy above requires an authenticated
     // user, which would 401 the Blazor host page and every deep link, so the admin UI never boots.
