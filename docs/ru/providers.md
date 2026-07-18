@@ -126,7 +126,7 @@ EOF
 Добавьте проект в решение:
 
 ```bash
-dotnet sln src/ReleaseOrchestrator.sln add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
+dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
 ```
 
 ### Шаг 2: Реализация `IVcsProviderAdapter`
@@ -285,7 +285,7 @@ public static IServiceCollection AddInfrastructure(
 
 ```bash
 mkdir src/ReleaseOrchestrator.Providers.Jira
-dotnet sln src/ReleaseOrchestrator.sln add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
+dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
 ```
 
 ### Шаг 2: Реализация `ITrackerProviderAdapter`

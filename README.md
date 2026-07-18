@@ -122,7 +122,7 @@ dotnet build
 ## Test
 
 ```bash
-dotnet test src/ReleaseOrchestrator.sln
+dotnet test ReleaseOrchestrator.slnx
 ```
 
 Unit tests only. They cover the pure logic — the graph algorithm, the EF model's shape, the

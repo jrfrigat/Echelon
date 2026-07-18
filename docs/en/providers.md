@@ -127,10 +127,10 @@ cat > src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.Git
 EOF
 ```
 
-Add the project to `src/ReleaseOrchestrator.sln`:
+Add the project to `ReleaseOrchestrator.slnx`:
 
 ```bash
-dotnet sln src/ReleaseOrchestrator.sln add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
+dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
 ```
 
 ### Step 2: Implement `IVcsProviderAdapter`
@@ -360,7 +360,7 @@ public class GitHubProviderTests
 
 ```bash
 mkdir src/ReleaseOrchestrator.Providers.Jira
-dotnet sln src/ReleaseOrchestrator.sln add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
+dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
 ```
 
 ### Step 2: Implement `ITrackerProviderAdapter`

@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ReleaseOrchestrator.Application/ReleaseOrchestrator.Application.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Core/ReleaseOrchestrator.Core.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Infrastructure/ReleaseOrchestrator.Infrastructure.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Migrations.MsSql/ReleaseOrchestrator.Migrations.MsSql.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Migrations.Postgres/ReleaseOrchestrator.Migrations.Postgres.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Providers.Abstractions/ReleaseOrchestrator.Providers.Abstractions.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Providers.GitLab/ReleaseOrchestrator.Providers.GitLab.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Providers.YandexTracker/ReleaseOrchestrator.Providers.YandexTracker.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Pwa/ReleaseOrchestrator.Pwa.csproj" />
+    <Project Path="src/ReleaseOrchestrator.Web/ReleaseOrchestrator.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ReleaseOrchestrator.UnitTests/ReleaseOrchestrator.UnitTests.csproj" />
+  </Folder>
+</Solution>

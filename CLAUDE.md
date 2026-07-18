@@ -175,8 +175,8 @@ Any string works as a custom agent type.
 - ALWAYS verify build succeeds before committing
 
 ```bash
-dotnet build src/ReleaseOrchestrator.sln -v q --nologo   # must be 0 errors, 0 warnings
-dotnet test src/ReleaseOrchestrator.sln
+dotnet build ReleaseOrchestrator.slnx -v q --nologo   # must be 0 errors, 0 warnings
+dotnet test ReleaseOrchestrator.slnx
 bash scripts/clean-empty-files.sh                        # before every commit
 ```
 

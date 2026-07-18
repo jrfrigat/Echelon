@@ -35,13 +35,13 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
 
       - name: Restore
-        run: dotnet restore src/ReleaseOrchestrator.sln
+        run: dotnet restore ReleaseOrchestrator.slnx
 
       - name: Build (Release)
-        run: dotnet build src/ReleaseOrchestrator.sln -c Release --no-restore
+        run: dotnet build ReleaseOrchestrator.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test src/ReleaseOrchestrator.sln -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test ReleaseOrchestrator.slnx -c Release --no-build --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: always()
@@ -73,8 +73,8 @@ jobs:
       - name: Audit dependencies
         run: |
           set -euo pipefail
-          dotnet restore src/ReleaseOrchestrator.sln
-          dotnet list src/ReleaseOrchestrator.sln package --vulnerable --include-transitive \
+          dotnet restore ReleaseOrchestrator.slnx
+          dotnet list ReleaseOrchestrator.slnx package --vulnerable --include-transitive \
             | tee audit.txt
           if grep -qiE '\b(Critical|High|Moderate|Low)\b' audit.txt; then
             echo "::error::Vulnerable packages found — see the table above."
