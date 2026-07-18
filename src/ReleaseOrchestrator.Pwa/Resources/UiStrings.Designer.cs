@@ -1798,5 +1798,168 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+
+        /// <summary>
+        ///   Looks up a localized string similar to Action handlers.
+        /// </summary>
+        public static string Nav_ActionHandlers {
+            get {
+                return ResourceManager.GetString("Nav_ActionHandlers", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Action handlers.
+        /// </summary>
+        public static string Actions_Title {
+            get {
+                return ResourceManager.GetString("Actions_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Action handlers.
+        /// </summary>
+        public static string Actions_Heading {
+            get {
+                return ResourceManager.GetString("Actions_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No action handlers.
+        /// </summary>
+        public static string Actions_Empty_Title {
+            get {
+                return ResourceManager.GetString("Actions_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add a binding to run an action (Telegram, tracker status/comment) when an event fires..
+        /// </summary>
+        public static string Actions_Empty_Description {
+            get {
+                return ResourceManager.GetString("Actions_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Event.
+        /// </summary>
+        public static string Actions_Col_Event {
+            get {
+                return ResourceManager.GetString("Actions_Col_Event", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Action.
+        /// </summary>
+        public static string Actions_Col_Action {
+            get {
+                return ResourceManager.GetString("Actions_Col_Action", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Scope.
+        /// </summary>
+        public static string Actions_Col_Scope {
+            get {
+                return ResourceManager.GetString("Actions_Col_Scope", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enabled.
+        /// </summary>
+        public static string Actions_Col_Enabled {
+            get {
+                return ResourceManager.GetString("Actions_Col_Enabled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Event type.
+        /// </summary>
+        public static string Actions_Event {
+            get {
+                return ResourceManager.GetString("Actions_Event", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Action type.
+        /// </summary>
+        public static string Actions_Action {
+            get {
+                return ResourceManager.GetString("Actions_Action", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Scope (optional).
+        /// </summary>
+        public static string Actions_Scope {
+            get {
+                return ResourceManager.GetString("Actions_Scope", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add binding.
+        /// </summary>
+        public static string Actions_Add {
+            get {
+                return ResourceManager.GetString("Actions_Add", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Binding created..
+        /// </summary>
+        public static string Actions_Created {
+            get {
+                return ResourceManager.GetString("Actions_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Binding deleted..
+        /// </summary>
+        public static string Actions_Deleted {
+            get {
+                return ResourceManager.GetString("Actions_Deleted", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete binding.
+        /// </summary>
+        public static string Actions_Delete_Title {
+            get {
+                return ResourceManager.GetString("Actions_Delete_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete this action binding?.
+        /// </summary>
+        public static string Actions_Delete_Message {
+            get {
+                return ResourceManager.GetString("Actions_Delete_Message", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to e.g. RolloutSucceeded, RolloutFailed.
+        /// </summary>
+        public static string Actions_EventHint {
+            get {
+                return ResourceManager.GetString("Actions_EventHint", resourceCulture);
+            }
+        }
+
     }
 }

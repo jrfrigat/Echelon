@@ -78,3 +78,11 @@ public record RolloutStepDto(
 public record RolloutSummaryDto(
     Guid Id, Guid TargetTaskId, string TargetTaskKey, string EnvironmentKey,
     string Status, DateTime StartedAt, DateTime? FinishedAt, int StepCount, int SucceededCount);
+
+// ---- action bindings (mirrors ActionBindingsController) ----
+
+public record ActionBindingDto(Guid Id, string EventType, string ActionType, string? Scope, int Order, bool Enabled);
+
+public record ActionTypeDto(string ActionType, List<ActionSettingDto> Settings);
+
+public record ActionSettingDto(string Key, string Label, string? Description, bool Required, bool Secret);
