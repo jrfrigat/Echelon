@@ -52,6 +52,17 @@ public class Repository
     [InverseProperty(nameof(MergeRequest.Repository))]
     public ICollection<MergeRequest> MergeRequests { get; set; } = [];
 
+    /// <summary>
+    /// How this repository is deployed -- the key of an <c>IDeployStrategy</c> (e.g. <c>gitlab-merge</c>
+    /// or <c>gitlab-pipeline</c>). Null until an operator picks one; a rollout step cannot deploy
+    /// the repository without it. Overridable per plan item.
+    /// </summary>
+    [MaxLength(100)]
+    public string? DeployStrategyKey { get; set; }
+
+    /// <summary>Strategy-specific settings for this repository, as JSON (schema-declared by the strategy).</summary>
+    public string? DeployStrategySettingsJson { get; set; }
+
     /// <summary>The stacks this repository belongs to.</summary>
     [InverseProperty(nameof(RepositoryStack.Repository))]
     public ICollection<RepositoryStack> RepositoryStacks { get; set; } = [];

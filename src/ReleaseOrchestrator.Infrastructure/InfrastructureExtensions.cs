@@ -15,6 +15,7 @@ using ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 using ReleaseOrchestrator.Infrastructure.Tracker;
 using ReleaseOrchestrator.Infrastructure.Vcs;
+using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 using StackExchange.Redis;
@@ -53,10 +54,12 @@ public static class InfrastructureExtensions
         // container validation.
         services.AddScoped<IVcsProviderFactory, VcsProviderFactory>();
         services.AddScoped<ITrackerProviderFactory, TrackerProviderFactory>();
+        services.AddScoped<IDeployStrategyFactory, DeployStrategyFactory>();
 
         // The registry, in full. Adding a provider is a project plus a line here — no dynamic
         // loading, no discovery by reflection: see the note in this project's .csproj.
         services.AddGitLabProvider();
+        services.AddGitLabDeployStrategies();
         services.AddYandexTrackerProvider();
 
         // The permission cache and the job lease, against whichever backend is configured. Redis is

@@ -597,6 +597,13 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<Guid>("ConnectionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DeployStrategyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DeployStrategySettingsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(500)

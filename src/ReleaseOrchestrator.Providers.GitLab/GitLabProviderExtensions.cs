@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
 namespace ReleaseOrchestrator.Providers.GitLab;
@@ -45,6 +46,34 @@ public static class GitLabProviderExtensions
             (sp, _) => sp.GetRequiredService<GitLabProviderAdapter>());
 
         services.AddSingleton(new VcsProviderRegistration(ProviderType));
+
+        return services;
+    }
+
+    /// <summary>The deploy strategy key that merges the merge request.</summary>
+    public const string MergeStrategyKey = "gitlab-merge";
+
+    /// <summary>The deploy strategy key that triggers a pipeline.</summary>
+    public const string PipelineStrategyKey = "gitlab-pipeline";
+
+    /// <summary>
+    /// Adds the GitLab deploy strategies (merge and pipeline). Each is keyed and paired with a
+    /// <see cref="DeployStrategyRegistration"/> so the factory can enumerate and validate the keys,
+    /// exactly as the read provider is registered.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddGitLabDeployStrategies(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHttpClient<GitLabMergeStrategy>(c => c.Timeout = ApiTimeout);
+        services.AddKeyedScoped<IDeployStrategy>(MergeStrategyKey, (sp, _) => sp.GetRequiredService<GitLabMergeStrategy>());
+        services.AddSingleton(new DeployStrategyRegistration(MergeStrategyKey));
+
+        services.AddHttpClient<GitLabPipelineStrategy>(c => c.Timeout = ApiTimeout);
+        services.AddKeyedScoped<IDeployStrategy>(PipelineStrategyKey, (sp, _) => sp.GetRequiredService<GitLabPipelineStrategy>());
+        services.AddSingleton(new DeployStrategyRegistration(PipelineStrategyKey));
 
         return services;
     }
