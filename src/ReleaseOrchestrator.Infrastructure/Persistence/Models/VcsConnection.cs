@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using ReleaseOrchestrator.Core.Enums;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
@@ -45,6 +46,15 @@ public class VcsConnection
 
     /// <summary>The label assumed when a connection does not name one.</summary>
     public const string DefaultReadyForDeployLabel = "ready-for-deploy";
+
+    /// <summary>
+    /// How merge-request events reach the service: pushed by webhook (the default), or polled by the
+    /// service for a setup that cannot send webhooks.
+    /// </summary>
+    public IngestionMode IngestionMode { get; set; } = IngestionMode.Push;
+
+    /// <summary>How often the poller lists this connection's merge requests, in seconds (poll mode only).</summary>
+    public int PollIntervalSeconds { get; set; } = 300;
 
     /// <summary>Repositories served by this connection.</summary>
     [InverseProperty(nameof(Repository.Connection))]

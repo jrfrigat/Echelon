@@ -1163,10 +1163,16 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                         .IsRequired()
                         .HasColumnType("bytea");
 
+                    b.Property<int>("IngestionMode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PollIntervalSeconds")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ProviderType")
                         .IsRequired()

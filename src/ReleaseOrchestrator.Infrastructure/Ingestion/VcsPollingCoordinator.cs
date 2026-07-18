@@ -1,0 +1,136 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Rebus.Bus;
+using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Application.Services;
+using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Infrastructure.Providers;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+
+namespace ReleaseOrchestrator.Infrastructure.Ingestion;
+
+/// <summary>Tunables for the VCS poller.</summary>
+public class VcsPollingOptions
+{
+    /// <summary>Whether the poller runs. Off in tests.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>How often the poller wakes and sweeps the poll-mode connections, in seconds.</summary>
+    public int IntervalSeconds { get; set; } = 60;
+}
+
+/// <summary>
+/// Polls the merge requests of connections set to <see cref="IngestionMode.Poll"/> and emits the same
+/// <see cref="MrOpened"/> events the webhook front door does -- the pull half of the symmetric
+/// ingestion seam (docs/issues/008-ingestion-and-messaging.md).
+/// </summary>
+/// <remarks>
+/// Reuses the read provider (<see cref="IVcsProvider.GetOpenMergeRequestsAsync"/>): no provider-side
+/// polling code is needed. Each observation carries a deterministic event id, so the dedup inbox
+/// drops an unchanged merge request and only a change (status, labels) is processed. Leased, so one
+/// replica polls at a time.
+///
+/// NOT VERIFIED against a live GitLab. Limitations for this cut: it lists OPEN merge requests, so a
+/// transition to merged/closed (the merge request leaving the open list) is not emitted here -- that
+/// still comes via a webhook; and the per-connection <c>PollIntervalSeconds</c> is stored but not yet
+/// honoured (every poll-mode connection is swept each pass). Both are follow-ups.
+/// </remarks>
+public class VcsPollingCoordinator(
+    IServiceScopeFactory scopeFactory,
+    IDistributedLease lease,
+    TimeProvider clock,
+    IOptions<VcsPollingOptions> options,
+    ILogger<VcsPollingCoordinator> logger) : BackgroundService
+{
+    private const string LeaseName = "vcs-polling";
+
+    /// <inheritdoc/>
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!options.Value.Enabled)
+        {
+            logger.LogInformation("VCS polling is disabled");
+            return;
+        }
+
+        var interval = TimeSpan.FromSeconds(Math.Max(options.Value.IntervalSeconds, 5));
+        using var timer = new PeriodicTimer(interval, clock);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
+
+                await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
+                if (held is null) continue;
+
+                await PollAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "VCS polling pass failed");
+            }
+        }
+    }
+
+    private async Task PollAsync(CancellationToken ct)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
+        var bus = scope.ServiceProvider.GetRequiredService<IBus>();
+
+        var connections = await db.VcsConnections
+            .Where(c => c.IngestionMode == IngestionMode.Poll)
+            .Include(c => c.Repositories)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        foreach (var connection in connections)
+        {
+            try
+            {
+                var provider = await factory.CreateAsync(connection.ToDescriptor(), ct);
+                var source = $"{ProviderKey.Normalize(connection.ProviderType)}/{connection.Name}";
+                var emitted = 0;
+
+                foreach (var repository in connection.Repositories)
+                {
+                    var mrs = await provider.GetOpenMergeRequestsAsync(repository.ExternalId, ct);
+                    foreach (var mr in mrs)
+                    {
+                        await bus.Send(new MrOpened(
+                            ConnectionName: connection.Name,
+                            RepositoryExternalId: repository.ExternalId,
+                            ExternalMrId: mr.Id,
+                            SourceBranch: mr.SourceBranch,
+                            TargetBranch: mr.TargetBranch,
+                            TaskExternalId: provider.ParseTaskKeyFromBranch(mr.SourceBranch),
+                            Labels: mr.Labels,
+                            Source: source,
+                            EventId: PollingEventId.For(source, repository.ExternalId, mr.Id, mr.Status?.ToString() ?? string.Empty, mr.Labels)));
+                        emitted++;
+                    }
+                }
+
+                if (emitted > 0)
+                    logger.LogDebug("Polled {Count} open merge request(s) from {Connection}", emitted, connection.Name);
+            }
+            catch (Exception ex)
+            {
+                // One connection's failure must not stop the others.
+                logger.LogError(ex, "Polling connection {Connection} failed", connection.Name);
+            }
+        }
+    }
+}

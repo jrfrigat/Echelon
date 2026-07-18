@@ -9,6 +9,7 @@ using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Coordination;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Execution;
+using ReleaseOrchestrator.Infrastructure.Ingestion;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Providers;
@@ -84,6 +85,9 @@ public static class InfrastructureExtensions
 
         services.Configure<RolloutExecutionOptions>(config.GetSection("RolloutExecution"));
         services.AddHostedService<RolloutCoordinator>();
+
+        services.Configure<VcsPollingOptions>(config.GetSection("VcsPolling"));
+        services.AddHostedService<VcsPollingCoordinator>();
 
         // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model
         // and the retry policy.
