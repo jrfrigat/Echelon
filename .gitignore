@@ -58,3 +58,6 @@ ruvector.db
 # OS
 Thumbs.db
 .DS_Store
+
+# Machine-specific PWA config mount (Local auth testing)
+pwa-appsettings.json

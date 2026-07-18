@@ -21,10 +21,28 @@ services:
       ConnectionStrings__Default: "Server=host.docker.internal;Database=ReleaseOrchestrator;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
       ConnectionStrings__Archive: "Server=host.docker.internal;Database=ReleaseOrchestratorArchive;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
 
+      # ---- Authentication ---------------------------------------------------------------------
+      # Auth__Provider selects the scheme, fixed at deploy time (not runtime):
+      #   AzureAd  the default — Microsoft Entra ID. Set AD__TenantId / AD__ClientId / AD__Audience.
+      #   Oidc     any OpenID Connect provider. Set Auth__Oidc__Authority (and __Audience).
+      #   Local    no external IdP — the service issues its own tokens at /auth/login. The admin
+      #            below is granted every permission, so it can be used to test without Azure AD.
+      Auth__Provider: Local
+      Auth__Local__Username: admin
+      Auth__Local__Password: "<local-admin-password>"
+      # At least 32 characters; signs the issued tokens.
+      Auth__Local__SigningKey: "<32+ char random secret>"
+
     # Makes host.docker.internal resolvable from inside the container to the host machine. Required
     # on Linux; harmless on Docker Desktop, where the name already resolves.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+    # The PWA (Blazor) is baked with Auth:Provider=AzureAd. Point it at the provider you chose above
+    # without rebuilding by mounting a small appsettings over its own — see pwa-appsettings.json.
+    # For Local:  { "Auth": { "Provider": "Local" } }
+    volumes:
+      - ./pwa-appsettings.json:/app/wwwroot/appsettings.json:ro
 
     # The containerized mssql is not started in this mode, so core must not wait on it.
     depends_on:
