@@ -66,9 +66,19 @@ public static class ProviderSpecificMapping
         builder.Entity<TaskItem>().Property<uint>("xmin").IsRowVersion();
 
         // Every new RowVersion entity needs its own entry here, or Npgsql silently maps [Timestamp]
-        // to an unwritten bytea and optimistic concurrency never fires on PostgreSQL.
+        // to an unwritten bytea and optimistic concurrency never fires on PostgreSQL. Moving to a
+        // per-(MR, environment) claim and state doubles how many of these there are -- each is here.
         builder.Entity<RolloutPlan>().Ignore(e => e.RowVersion);
         builder.Entity<RolloutPlan>().Property<uint>("xmin").IsRowVersion();
+
+        builder.Entity<Rollout>().Ignore(e => e.RowVersion);
+        builder.Entity<Rollout>().Property<uint>("xmin").IsRowVersion();
+
+        builder.Entity<RolloutStep>().Ignore(e => e.RowVersion);
+        builder.Entity<RolloutStep>().Property<uint>("xmin").IsRowVersion();
+
+        builder.Entity<MrDeploymentState>().Ignore(e => e.RowVersion);
+        builder.Entity<MrDeploymentState>().Property<uint>("xmin").IsRowVersion();
     }
 
     /// <summary>

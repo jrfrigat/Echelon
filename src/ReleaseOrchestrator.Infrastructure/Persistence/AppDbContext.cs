@@ -29,6 +29,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<PlanTaskNode> PlanTaskNodes => Set<PlanTaskNode>();
     public DbSet<PlanItem> PlanItems => Set<PlanItem>();
     public DbSet<PlanOverride> PlanOverrides => Set<PlanOverride>();
+    public DbSet<MrDeploymentState> MrDeploymentStates => Set<MrDeploymentState>();
+    public DbSet<Rollout> Rollouts => Set<Rollout>();
+    public DbSet<RolloutStep> RolloutSteps => Set<RolloutStep>();
+    public DbSet<MrDeployClaim> MrDeployClaims => Set<MrDeployClaim>();
+    public DbSet<RolloutStepAttempt> RolloutStepAttempts => Set<RolloutStepAttempt>();
+    public DbSet<RolloutEvent> RolloutEvents => Set<RolloutEvent>();
     public DbSet<PermissionClaim> PermissionClaims => Set<PermissionClaim>();
     public DbSet<GroupPermissionMapping> GroupPermissionMappings => Set<GroupPermissionMapping>();
     public DbSet<UserPermissionOverride> UserPermissionOverrides => Set<UserPermissionOverride>();

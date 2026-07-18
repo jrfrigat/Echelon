@@ -366,6 +366,56 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("MergeRequests");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeployClaim", b =>
+                {
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("OwnerRolloutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.HasKey("MergeRequestId", "EnvironmentId");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.ToTable("MrDeployClaims");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeploymentState", b =>
+                {
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MergeRequestId", "EnvironmentId");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.ToTable("MrDeploymentStates");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", b =>
                 {
                     b.Property<Guid>("Id")
@@ -610,6 +660,89 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("RepositoryStacks");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LaunchedByOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PlanSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RolloutPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TargetTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.HasIndex("RolloutPlanId");
+
+                    b.HasIndex(new[] { "IdempotencyKey" }, "IX_Rollout_IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "TargetTaskId" }, "IX_Rollout_TargetTaskId");
+
+                    b.ToTable("Rollouts");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RolloutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RolloutId");
+
+                    b.ToTable("RolloutEvents");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -664,6 +797,99 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.HasIndex(new[] { "CreatedAt" }, "IX_RolloutPlan_CreatedAt");
 
                     b.ToTable("RolloutPlans");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DeployStrategyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ExternalRef")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MergeShaAtSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("RolloutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Wave")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MergeRequestId");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex(new[] { "RolloutId", "MergeRequestId" }, "IX_RolloutStep_Rollout_Mr")
+                        .IsUnique();
+
+                    b.ToTable("RolloutSteps");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStepAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("AttemptNo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("RolloutStepId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RolloutStepId");
+
+                    b.ToTable("RolloutStepAttempts");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>
@@ -974,6 +1200,44 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeployClaim", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
+                        .WithMany()
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
+                        .WithMany()
+                        .HasForeignKey("MergeRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("MergeRequest");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeploymentState", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
+                        .WithMany()
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
+                        .WithMany()
+                        .HasForeignKey("MergeRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("MergeRequest");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanItem", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
@@ -1090,6 +1354,44 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Stack");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
+                        .WithMany()
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", "RolloutPlan")
+                        .WithMany()
+                        .HasForeignKey("RolloutPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "TargetTask")
+                        .WithMany()
+                        .HasForeignKey("TargetTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("RolloutPlan");
+
+                    b.Navigation("TargetTask");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutEvent", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", "Rollout")
+                        .WithMany()
+                        .HasForeignKey("RolloutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Rollout");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "TargetTask")
@@ -1099,6 +1401,44 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired();
 
                     b.Navigation("TargetTask");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStep", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
+                        .WithMany()
+                        .HasForeignKey("MergeRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", "Rollout")
+                        .WithMany("Steps")
+                        .HasForeignKey("RolloutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MergeRequest");
+
+                    b.Navigation("Rollout");
+
+                    b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStepAttempt", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStep", "RolloutStep")
+                        .WithMany("Attempts")
+                        .HasForeignKey("RolloutStepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RolloutStep");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StackDependency", b =>
@@ -1218,11 +1558,21 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("RequiredBy");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
                 {
                     b.Navigation("Nodes");
 
                     b.Navigation("Overrides");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStep", b =>
+                {
+                    b.Navigation("Attempts");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>
