@@ -33,5 +33,11 @@ internal static class PlanInput
                     rs.Stack.DependentOn
                         .Select(sd => new PlanStackLink(sd.ToStackId, sd.Type))
                         .ToList()))
+                .ToList(),
+            mr.RepositoryId,
+            // Repository-ordering links: the editable replacement for stacks. Same failure mode if a
+            // link is missing (an ordering built from half the constraints), so it is named here too.
+            mr.Repository.DependsOn
+                .Select(rd => new PlanRepositoryLink(rd.ToRepositoryId, rd.Type))
                 .ToList());
 }

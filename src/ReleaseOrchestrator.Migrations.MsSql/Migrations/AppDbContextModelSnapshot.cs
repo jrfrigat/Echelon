@@ -463,6 +463,31 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("Repositories");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDependency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FromRepositoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ToRepositoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ToRepositoryId");
+
+                    b.HasIndex(new[] { "FromRepositoryId", "ToRepositoryId" }, "IX_RepositoryDependency_From_To")
+                        .IsUnique();
+
+                    b.ToTable("RepositoryDependencies");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryStack", b =>
                 {
                     b.Property<Guid>("RepositoryId")
@@ -815,6 +840,25 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("TrackerConnection");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDependency", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "FromRepository")
+                        .WithMany("DependsOn")
+                        .HasForeignKey("FromRepositoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "ToRepository")
+                        .WithMany("RequiredBy")
+                        .HasForeignKey("ToRepositoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromRepository");
+
+                    b.Navigation("ToRepository");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryStack", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
@@ -937,9 +981,13 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
+                    b.Navigation("DependsOn");
+
                     b.Navigation("MergeRequests");
 
                     b.Navigation("RepositoryStacks");
+
+                    b.Navigation("RequiredBy");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>

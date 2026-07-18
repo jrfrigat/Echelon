@@ -10,10 +10,14 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 public enum PlanEdgeKind
 {
     /// <summary>An operator-added edge. Most protected: dropped last when a cycle must be broken.</summary>
-    Manual = -1,
+    Manual = -2,
+    /// <summary>A hard repository-ordering link. Never dropped to break a cycle.</summary>
+    RepoHard = -1,
     StackHard = 0,
     TaskDependency = 1,
-    StackSoft = 2
+    StackSoft = 2,
+    /// <summary>A soft repository-ordering link. Advisory: dropped first to break a cycle.</summary>
+    RepoSoft = 3
 }
 
 /// <summary>A "deploy <see cref="FromMrId"/> before <see cref="ToMrId"/>" constraint.</summary>
@@ -136,7 +140,7 @@ public static class ReleasePlanGraph
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         return BuildEdges(mrs, ids)
-            .Where(kv => kv.Value != PlanEdgeKind.StackSoft)
+            .Where(kv => kv.Value != PlanEdgeKind.StackSoft && kv.Value != PlanEdgeKind.RepoSoft)
             .Select(kv => new PlanEdge(kv.Key.From, kv.Key.To, kv.Value))
             .ToList();
     }
@@ -175,6 +179,7 @@ public static class ReleasePlanGraph
         var byStack = mrs
             .SelectMany(m => m.Stacks.Select(s => (s.StackId, Mr: m)))
             .ToLookup(x => x.StackId, x => x.Mr);
+        var byRepo = mrs.ToLookup(m => m.RepositoryId);
 
         var edges = new Dictionary<(Guid, Guid), PlanEdgeKind>();
 
@@ -207,6 +212,19 @@ public static class ReleasePlanGraph
                     foreach (var predecessor in byStack[link.ToStackId])
                         AddEdge(predecessor.Id, mr.Id, kind);
                 }
+
+            // Repository-ordering edges: every merge request in a repository this one's repository
+            // waits on deploys first. This is the editable replacement for stack ordering, and it is
+            // also what orders merge requests within a single task -- task dependencies never do.
+            foreach (var link in mr.RepositoryDependsOn)
+            {
+                var kind = link.Type == StackDependencyType.Hard
+                    ? PlanEdgeKind.RepoHard
+                    : PlanEdgeKind.RepoSoft;
+
+                foreach (var predecessor in byRepo[link.ToRepositoryId])
+                    AddEdge(predecessor.Id, mr.Id, kind);
+            }
         }
 
         return edges;
@@ -241,9 +259,9 @@ public static class ReleasePlanGraph
                 victim.Kind,
                 victim.FromMrId,
                 victim.ToMrId,
-                victim.Kind == PlanEdgeKind.StackHard
+                victim.Kind is PlanEdgeKind.StackHard or PlanEdgeKind.RepoHard
                     ? "Dependency cycle consists only of hard links and cannot be satisfied. "
-                      + "This link was dropped to produce an ordered plan; fix the stack configuration."
+                      + "This link was dropped to produce an ordered plan; fix the ordering configuration."
                     : $"Dropped to break a dependency cycle ({victim.Kind})."));
         }
 

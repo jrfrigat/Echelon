@@ -1,4 +1,5 @@
 using ReleaseOrchestrator.Application.ReleasePlanning;
+using ReleaseOrchestrator.Core.Enums;
 using Xunit;
 
 namespace ReleaseOrchestrator.UnitTests;
@@ -20,11 +21,17 @@ public class ReleasePlanForTaskTests
     private static Dictionary<Guid, IReadOnlyList<Guid>> DependsOn(params (Guid Dependent, Guid[] Prerequisites)[] edges) =>
         edges.ToDictionary(e => e.Dependent, e => (IReadOnlyList<Guid>)e.Prerequisites);
 
-    private static PlanMergeRequest Mr(Guid taskId, IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> dependsOn) =>
+    private static PlanMergeRequest Mr(
+        Guid taskId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> dependsOn,
+        Guid? repositoryId = null,
+        IReadOnlyList<PlanRepositoryLink>? repoDependsOn = null) =>
         new(Guid.NewGuid(),
             taskId,
             dependsOn.TryGetValue(taskId, out var deps) ? deps : [],
-            []);
+            [],
+            repositoryId ?? Guid.NewGuid(),
+            repoDependsOn ?? []);
 
     private static int StageOf(PlanGraphResult result, PlanMergeRequest mr) =>
         result.Stages.FindIndex(stage => stage.Contains(mr.Id));
@@ -181,5 +188,26 @@ public class ReleasePlanForTaskTests
 
         Assert.Single(result.Stages);
         Assert.NotEqual(-1, StageOf(result, a));
+    }
+
+    // ---- repository ordering --------------------------------------------------
+
+    [Fact]
+    public void Build_OrdersMergeRequestsByRepositoryDependency_WithinASingleTask()
+    {
+        // Two merge requests of the SAME task, in two repositories where the backend deploys after
+        // the database. Task dependency never orders same-task MRs; the repository policy does.
+        var task = NewTask();
+        var dbRepo = Guid.NewGuid();
+        var backendRepo = Guid.NewGuid();
+        var empty = new Dictionary<Guid, IReadOnlyList<Guid>>();
+
+        var dbMr = Mr(task, empty, repositoryId: dbRepo);
+        var backendMr = Mr(task, empty, repositoryId: backendRepo,
+            repoDependsOn: [new PlanRepositoryLink(dbRepo, StackDependencyType.Hard)]);
+
+        var result = ReleasePlanGraph.Build([dbMr, backendMr]);
+
+        Assert.True(StageOf(result, dbMr) < StageOf(result, backendMr));
     }
 }

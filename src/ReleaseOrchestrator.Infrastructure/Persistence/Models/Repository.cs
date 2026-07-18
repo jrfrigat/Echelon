@@ -55,4 +55,12 @@ public class Repository
     /// <summary>The stacks this repository belongs to.</summary>
     [InverseProperty(nameof(RepositoryStack.Repository))]
     public ICollection<RepositoryStack> RepositoryStacks { get; set; } = [];
+
+    /// <summary>Repository-ordering links where this repository waits (it deploys after their targets).</summary>
+    [InverseProperty(nameof(RepositoryDependency.FromRepository))]
+    public ICollection<RepositoryDependency> DependsOn { get; set; } = [];
+
+    /// <summary>Repository-ordering links where this repository is waited on.</summary>
+    [InverseProperty(nameof(RepositoryDependency.ToRepository))]
+    public ICollection<RepositoryDependency> RequiredBy { get; set; } = [];
 }

@@ -51,7 +51,9 @@ public class ReleasePlanGraphTests
         new(Guid.NewGuid(),
             task?.Id,
             task?.DependsOn ?? [],
-            [.. stacks.Select(s => new PlanRepositoryStack(s.Id, s.DependsOn))]);
+            [.. stacks.Select(s => new PlanRepositoryStack(s.Id, s.DependsOn))],
+            Guid.NewGuid(),   // a distinct repository per merge request unless a test says otherwise
+            []);
 
     private static int StageOf(PlanGraphResult result, PlanMergeRequest mr) =>
         result.Stages.FindIndex(stage => stage.Contains(mr.Id));
