@@ -207,23 +207,49 @@ curl http://localhost:5000/health/ready
 - **"Archive batch failed"** — Проверьте foreign key constraints, disk space
 - **"Permissions cache error"** — Проверьте Redis availability
 
-### Observability с OpenTelemetry
+### Метрики через Prometheus
 
-Если конфигурирован (`OTEL_EXPORTER_OTLP_ENDPOINT` установлен):
+Оба хоста отдают метрики на `/metrics` в текстовом формате Prometheus — включено по умолчанию и не
+требует коллектора, Prometheus скрейпит их напрямую. Что экспортируется:
+
+- **ASP.NET Core** — частота, длительность и число активных запросов (API Core, вебхуки Ingress)
+- **.NET runtime** — GC, куча, thread pool, число исключений, CPU и working set
+- **HTTP-клиент** — исходящие вызовы к GitLab и трекеру
+- **Rebus** — тайминги отправки, приёма и обработки сообщений
+
+Отключить endpoint — `Prometheus__Enabled=false`. Он анонимный и вне rate-лимитера, как health-пробы:
+scrape доходит до процесса независимо от аутентификации и не тратит бюджет запросов API.
+
+Готовый стек лежит рядом с compose-файлами:
 
 ```bash
-# Пример: Отправите traces в Jaeger
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger-collector:4317
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+# Prometheus на http://localhost:9090 (уже скрейпит core и ingress)
+# Grafana на http://localhost:3000 (Prometheus подключён как источник данных по умолчанию)
+```
+
+Цели скрейпа — в `observability/prometheus.yml`.
+
+### Traces через OpenTelemetry
+
+Traces уходят по OTLP при настроенном коллекторе (`OTEL_EXPORTER_OTLP_ENDPOINT` установлен); метрики
+туда же дублируются, оставаясь при этом доступными для скрейпа:
+
+```bash
+# Пример: отправить traces и метрики в коллектор
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 dotnet run --project src/ReleaseOrchestrator.Web
 ```
 
 Traces захватывают:
 - Webhook ingestion (Ingress)
-- Message queue consumption
+- Отправку и обработку сообщений (Rebus проносит W3C trace context через RabbitMQ, поэтому путь
+  Ingress → queue → Core остаётся одним trace)
 - Database operations (EF Core)
 - Release plan calculations
 
-**Ограничение:** Без OTEL асинхронные пути (webhook → queue → processing) не имеют distributed tracing.
+**Ограничение:** Prometheus хранит только метрики. Без OTLP-коллектора нет distributed tracing —
+счётчик Prometheus скажет, *что* обработка вебхуков замедлилась, но не *какой* span.
 
 ---
 

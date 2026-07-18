@@ -1,0 +1,14 @@
+# Auto-provisions Prometheus as Grafana's default data source, so the stack is usable the moment it
+# is up — open Grafana, go to Explore, and the release-orchestrator metrics are already queryable
+# with no manual setup. Grafana reads this on startup from its provisioning directory.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    # The prometheus service on the compose network, not localhost — Grafana runs in its own
+    # container.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

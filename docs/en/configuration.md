@@ -246,15 +246,36 @@ All operational events are logged as JSON. Example:
 }
 ```
 
-### OpenTelemetry
+### Metrics (Prometheus)
 
-**OTEL_EXPORTER_OTLP_ENDPOINT** (optional)
-- **What:** gRPC endpoint of an OpenTelemetry collector
+**`Prometheus__Enabled`**
+- **What:** Whether to expose the `/metrics` scrape endpoint
+- **Valid values:** `true`, `false`
+- **Default:** `true`
+- **Endpoint:** `GET /metrics` on both hosts, Prometheus text format, anonymous and not rate-limited
+- **Exports:** ASP.NET Core request metrics, the .NET runtime (GC, thread pool, memory), outbound
+  HTTP client calls, and Rebus message timings
+- **If false:** No `/metrics` endpoint and no meters are registered for it
+
+### Traces and metrics export (OpenTelemetry / OTLP)
+
+**`OTEL_EXPORTER_OTLP_ENDPOINT`** (optional)
+- **What:** Endpoint of an OpenTelemetry collector (also settable as `Otel__Endpoint`)
 - **Example:** `http://localhost:4317`
-- **If set:** Traces and metrics are exported to the collector
-- **If not set:** No tracing (app does not emit traces locally)
+- **If set:** Traces are exported to the collector, and metrics are pushed there in addition to
+  being scrapeable at `/metrics`
+- **If not set:** No traces are emitted; metrics still work over Prometheus
 
-**Known limitation:** The app instruments async paths (webhooks → queue → processing) but without OTEL, observability is limited to logs and `/health` endpoints.
+**`Otel__Enabled`**
+- **What:** A kill switch for OTLP export that wins over a configured endpoint
+- **Default:** `true`
+- **If false:** OTLP export is off even when an endpoint is set; Prometheus is unaffected
+
+**`OTEL_EXPORTER_OTLP_PROTOCOL`** (optional)
+- **What:** `grpc` (default) or `http/protobuf`, following the OTLP spec's names
+
+**Known limitation:** Prometheus stores metrics only. Without an OTLP collector there is no
+distributed tracing across the webhook → queue → processing path.
 
 ---
 

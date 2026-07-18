@@ -36,7 +36,9 @@ try
     // A downed broker must answer 503, not 500: senders treat 500 as permanent and drop the event.
     builder.Services.AddExceptionHandler<BrokerUnavailableExceptionHandler>();
 
-    // No-op unless an OTLP endpoint is configured. Carries the trace across the queue into Core.
+    // Metrics for Prometheus to scrape at /metrics (on by default); when an OTLP endpoint is set it
+    // also pushes to a collector and carries the trace across the queue into Core. /metrics is
+    // mapped below.
     builder.Services.AddReleaseOrchestratorTelemetry(
         builder.Configuration, "release-orchestrator-ingress", builder.Environment.EnvironmentName);
 
@@ -90,6 +92,9 @@ try
     // AllowAnonymous for symmetry with the core host: this endpoint must stay reachable if
     // authentication is ever added here.
     app.MapHealthChecks("/health").AllowAnonymous();
+
+    // /metrics for Prometheus (anonymous, un-throttled). No-op when Prometheus is disabled.
+    app.MapReleaseOrchestratorMetrics(app.Configuration);
 
     app.Run();
     return 0;

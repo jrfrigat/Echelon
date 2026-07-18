@@ -1,0 +1,49 @@
+# Prometheus + Grafana, for scraping and viewing the metrics the apps expose at /metrics.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# Opt-in via -f, like the postgres and single-instance variants — most runs do not need a metrics
+# stack, and the apps expose /metrics whether or not anything scrapes it (Prometheus is on by
+# default in the app; set Prometheus__Enabled=false to turn the endpoint off). Because a -f run does
+# not auto-load docker-compose.override.yml, add it to the list when you also want the datastore
+# ports published:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.override.yml up
+#
+# The two services publish ports and hold no secrets worth guarding here, so they are workstation
+# tools. Prometheus scrapes core:8080/metrics and ingress:8080/metrics over the compose network
+# (see observability/prometheus.yml); Grafana comes up with Prometheus already wired as its default
+# data source (see observability/grafana/provisioning), so Explore works with no manual setup.
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    ports:
+      - "9090:9090"        # Prometheus UI and API at http://localhost:9090
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"        # Grafana at http://localhost:3000
+    environment:
+      # Local-only defaults. Grafana insists on a non-default admin password or it warns on every
+      # start; this stack publishes to localhost alone, so a fixed dev password is the right trade.
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      # Nobody signs up to a local metrics viewer.
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheusdata:
+  grafanadata:

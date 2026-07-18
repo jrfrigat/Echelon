@@ -21,7 +21,10 @@
   <ItemGroup Label="Telemetry">
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
     <!-- See ReleaseOrchestrator.Web.csproj for why the transitive OpenTelemetry.Api advisory is
          not a pin here. -->
     <PackageReference Include="Rebus.OpenTelemetry" />

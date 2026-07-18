@@ -246,15 +246,36 @@ LOGLEVEL_Microsoft.EntityFrameworkCore=Warning
 }
 ```
 
-### OpenTelemetry
+### Метрики (Prometheus)
 
-**OTEL_EXPORTER_OTLP_ENDPOINT** (опционально)
-- **Что:** gRPC endpoint OpenTelemetry collector
+**`Prometheus__Enabled`**
+- **Что:** Выставлять ли endpoint скрейпа `/metrics`
+- **Допустимые значения:** `true`, `false`
+- **По умолчанию:** `true`
+- **Endpoint:** `GET /metrics` на обоих хостах, текстовый формат Prometheus, анонимный и без rate-лимита
+- **Экспортирует:** метрики запросов ASP.NET Core, .NET runtime (GC, thread pool, память), исходящие
+  вызовы HTTP-клиента и тайминги сообщений Rebus
+- **Если false:** нет endpoint `/metrics` и не регистрируются связанные с ним счётчики
+
+### Экспорт traces и метрик (OpenTelemetry / OTLP)
+
+**`OTEL_EXPORTER_OTLP_ENDPOINT`** (опционально)
+- **Что:** Endpoint OpenTelemetry collector (также задаётся как `Otel__Endpoint`)
 - **Пример:** `http://localhost:4317`
-- **Если установлено:** Traces и metrics экспортируются в collector
-- **Если не установлено:** Никаких traces (приложение не излучает traces локально)
+- **Если установлено:** traces экспортируются в collector, а метрики дублируются туда в дополнение к
+  скрейпу на `/metrics`
+- **Если не установлено:** traces не излучаются; метрики продолжают работать через Prometheus
 
-**Известное ограничение:** Приложение инструментирует асинхронные пути (webhooks → queue → processing) но без OTEL видимость ограничена логами и `/health` endpoints.
+**`Otel__Enabled`**
+- **Что:** Выключатель OTLP-экспорта, приоритетнее заданного endpoint
+- **По умолчанию:** `true`
+- **Если false:** OTLP-экспорт выключен даже при заданном endpoint; на Prometheus не влияет
+
+**`OTEL_EXPORTER_OTLP_PROTOCOL`** (опционально)
+- **Что:** `grpc` (по умолчанию) или `http/protobuf`, по именам из спецификации OTLP
+
+**Известное ограничение:** Prometheus хранит только метрики. Без OTLP-коллектора нет distributed
+tracing по пути webhook → queue → processing.
 
 ---
 

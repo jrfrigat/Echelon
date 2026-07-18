@@ -70,7 +70,7 @@ VCS webhooks → Ingress → RabbitMQ → Core → Release Plan
 - Multi-repository support (GitLab, Yandex Tracker, extensible to others)
 - Permission-based access control (claim-based, integrates with OIDC)
 - 90-day archival for data retention
-- OpenTelemetry-ready observability
+- Prometheus metrics at `/metrics`, plus OpenTelemetry OTLP for traces and metrics
 
 ---
 
@@ -108,7 +108,7 @@ before and both cost real defects:
 - **Coordination:** Redis 6.0+ (StackExchange.Redis), or none — see §7.1
 - **Frontend:** Blazor WebAssembly (PWA, .NET 10)
 - **Authentication:** OpenID Connect (external provider)
-- **Observability:** OpenTelemetry (optional)
+- **Observability:** Prometheus `/metrics` (on by default) + OpenTelemetry OTLP (optional)
 
 ---
 
@@ -280,8 +280,11 @@ past one and Redis comes back.
   Everything else on this list stands. The application still has not started; PostgreSQL's
   migrations still have not been applied to anything
 - **Neither database has ever been run.** PostgreSQL is supported on the same terms as SQL Server: same model, same tests, same CI, and the same "никогда не запускался" above. Its mapping differences are covered by tests against the built model and by generated SQL, which is the strongest check possible without a server — it is not a substitute for one
-- No Prometheus exporter — telemetry leaves over OTLP, so scraping needs an OpenTelemetry
-  collector in between
+- Metrics are exposed for Prometheus at `/metrics` on both hosts (ASP.NET Core, .NET runtime,
+  outbound HTTP and Rebus), scraped directly with no collector in between; OTLP export of traces
+  and metrics stays available for a collector when one is configured. `docker compose -f
+  docker-compose.yml -f docker-compose.observability.yml up` brings up Prometheus and Grafana wired
+  to it
 - No buffering when RabbitMQ is down: webhooks answer **503**, which senders retry. Buffering in
   memory was considered and rejected — it answers 200 while the event exists only in RAM, so a
   restart loses it silently. Not losing events across an outage needs a persistent outbox

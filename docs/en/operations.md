@@ -207,23 +207,50 @@ Look for these in logs:
 - **"Archive batch failed"** — Check foreign key constraints, disk space
 - **"Permissions cache error"** — Check Redis availability
 
-### Observability with OpenTelemetry
+### Metrics with Prometheus
 
-If configured (`OTEL_EXPORTER_OTLP_ENDPOINT` set):
+Both hosts expose metrics at `/metrics` in the Prometheus text format, on by default and needing no
+collector — Prometheus scrapes them directly. What is exported:
+
+- **ASP.NET Core** — request rate, duration and active requests (Core's API, the Ingress webhooks)
+- **.NET runtime** — GC, heap, thread pool, exception count, CPU and working set
+- **HTTP client** — outbound calls to GitLab and the tracker
+- **Rebus** — message send, receive and handle timings
+
+Turn the endpoint off with `Prometheus__Enabled=false`. It is anonymous and exempt from the rate
+limiter, like the health probes, so a scrape reaches the process regardless of auth and does not
+spend the API request budget.
+
+A ready-to-run stack lives alongside the compose files:
 
 ```bash
-# Example: Send traces to Jaeger
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger-collector:4317
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+# Prometheus at http://localhost:9090 (already scraping core and ingress)
+# Grafana at http://localhost:3000 (Prometheus wired as the default data source)
+```
+
+The scrape targets are in `observability/prometheus.yml`.
+
+### Traces with OpenTelemetry
+
+Traces go out over OTLP when a collector is configured (`OTEL_EXPORTER_OTLP_ENDPOINT` set); metrics
+are pushed there too, in addition to being scrapeable:
+
+```bash
+# Example: send traces and metrics to a collector
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 dotnet run --project src/ReleaseOrchestrator.Web
 ```
 
 Traces capture:
 - Webhook ingestion (Ingress)
-- Message queue consumption
+- Message queue send and handling (Rebus propagates W3C trace context across RabbitMQ, so the
+  Ingress → queue → Core path is one trace)
 - Database operations (EF Core)
 - Release plan calculations
 
-**Limitation:** Without OTEL, async paths (webhook → queue → processing) have no distributed tracing.
+**Limitation:** Prometheus stores metrics only. Without an OTLP collector there is no distributed
+tracing — a Prometheus counter tells you *that* webhook processing slowed, not *which* span.
 
 ---
 

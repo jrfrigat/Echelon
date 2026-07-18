@@ -49,8 +49,9 @@ try
     // resx actually compiles to the marker type's own full name. See ApiStrings for the details.
     builder.Services.AddLocalization();
 
-    // No-op unless an OTLP endpoint is configured. Exports over OTLP only: there is no
-    // /metrics endpoint, so a collector has to translate for Prometheus (README §10).
+    // Metrics for Prometheus to scrape at /metrics (on by default) and, when an OTLP endpoint is
+    // configured, traces and metrics pushed to a collector as well. The /metrics endpoint itself is
+    // mapped below.
     builder.Services.AddReleaseOrchestratorTelemetry(
         builder.Configuration, "release-orchestrator-core", builder.Environment.EnvironmentName);
 
@@ -155,6 +156,9 @@ try
     // Liveness: the process is up. Readiness: it can actually serve.
     app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
     app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
+
+    // /metrics for Prometheus (anonymous, un-throttled). No-op when Prometheus is disabled.
+    app.MapReleaseOrchestratorMetrics(app.Configuration);
 
     app.MapFallbackToFile("index.html");
 

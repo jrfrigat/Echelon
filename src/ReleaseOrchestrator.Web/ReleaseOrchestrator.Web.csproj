@@ -19,7 +19,10 @@
   <ItemGroup Label="Telemetry">
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
     <!--
       Rebus.OpenTelemetry stitches the Ingress to RabbitMQ to Core path into one trace. It depends
       transitively on OpenTelemetry.Api 1.6.0, which carries a moderate advisory
