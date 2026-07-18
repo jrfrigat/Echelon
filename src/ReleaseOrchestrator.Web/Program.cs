@@ -160,7 +160,11 @@ try
     // /metrics for Prometheus (anonymous, un-throttled). No-op when Prometheus is disabled.
     app.MapReleaseOrchestratorMetrics(app.Configuration);
 
-    app.MapFallbackToFile("index.html");
+    // The SPA shell must load anonymously — the fallback policy above requires an authenticated
+    // user, which would 401 the Blazor host page and every deep link, so the admin UI never boots.
+    // Auth happens inside the SPA (OIDC), and the data behind it stays protected by the API's own
+    // policies; serving the static shell to anyone is the standard hosted-WASM setup.
+    app.MapFallbackToFile("index.html").AllowAnonymous();
 
     app.Run();
     return 0;
