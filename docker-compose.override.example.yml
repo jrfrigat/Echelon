@@ -1,0 +1,50 @@
+# Template for running the stack in Docker against a SQL Server on your own machine, instead of the
+# containerized one in docker-compose.yml. Copy it and fill in your connection:
+#
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   # edit the connection string, then:
+#   docker compose up -d --build
+#
+# docker-compose.override.yml is git-ignored (it holds a real password); this .example is tracked
+# and holds placeholders. A .env is still required for the other secrets — copy .env.example to
+# .env. In this mode MSSQL_SA_PASSWORD is only there to satisfy the base file's interpolation; the
+# mssql container is not started, so any non-empty value will do.
+#
+# Authentication: a Linux container has no Windows identity, so Trusted_Connection (Windows auth)
+# does NOT work here — use a SQL login (User Id / Password). If SQL logins are not enabled yet,
+# enable "SQL Server and Windows Authentication mode" and make sure the server accepts TCP on 1433.
+services:
+  core:
+    environment:
+      # host.docker.internal resolves to the Docker host (see extra_hosts below). Point these at
+      # your databases; both must exist (EF applies migrations into them on startup).
+      ConnectionStrings__Default: "Server=host.docker.internal;Database=ReleaseOrchestrator;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Archive: "Server=host.docker.internal;Database=ReleaseOrchestratorArchive;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
+
+    # Makes host.docker.internal resolvable from inside the container to the host machine. Required
+    # on Linux; harmless on Docker Desktop, where the name already resolves.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # The containerized mssql is not started in this mode, so core must not wait on it.
+    depends_on:
+      mssql:
+        condition: service_healthy
+        required: false
+
+  # Declared with a profile nothing enables, so it does not start — the host's SQL Server is used
+  # instead. Kept in the model so `docker compose config` still describes the full stack.
+  mssql:
+    profiles: ["never"]
+
+  # The remaining datastores still run in containers; publish their ports for local inspection.
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI at http://localhost:15672
+  redis:
+    ports:
+      - "6379:6379"
+  seq:
+    ports:
+      - "8341:80"       # log viewer at http://localhost:8341

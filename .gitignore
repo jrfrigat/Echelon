@@ -43,6 +43,11 @@ appsettings.*.local.json
 # and fill it in; that one is tracked and holds placeholders.
 appsettings.Development.json
 
+# Same reasoning for the compose override: it points the stack at a developer's own SQL Server and
+# carries that login's password, so it is machine-specific and never committed (as in Weir). The
+# tracked .example beside it holds placeholders — copy it and fill in your connection.
+docker-compose.override.yml
+
 # Tooling artifacts (ruflo / claude-flow)
 ruvector.db
 *.db-shm
