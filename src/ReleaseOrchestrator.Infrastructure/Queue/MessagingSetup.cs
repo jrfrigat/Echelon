@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rebus.Config;
+using Rebus.Pipeline;
+using Rebus.Pipeline.Receive;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.ServiceProvider;
@@ -48,12 +51,21 @@ public static class MessagingSetup
         services.AddRebusHandler<TaskStatusChangedConsumer>();
         services.AddRebusHandler<TaskSyncConsumer>();
         services.AddRebusHandler<ReleasePlanRecalculationConsumer>();
+        services.AddScoped<ProcessedEventInbox>();
 
-        services.AddRebus(configure => configure
+        services.AddRebus((configure, provider) => configure
             .Transport(t => t.UseRabbitMq(connectionString, InputQueue).Prefetch(prefetch))
             .Routing(r => r.TypeBased().MapAssemblyDerivedFrom<IMessage>(InputQueue))
             .Options(o =>
             {
+                // Drop already-processed ingestion events before dispatch. Inert until the ingestion
+                // records adopt IHasEventIdentity; mandatory once push and poll can both see a change.
+                o.Decorate<IPipeline>(c => new PipelineStepInjector(c.Get<IPipeline>())
+                    .OnReceive(
+                        new EventDedupStep(provider, provider.GetRequiredService<ILogger<EventDedupStep>>()),
+                        PipelineRelativePosition.Before,
+                        typeof(DispatchIncomingMessageStep)));
+
                 // Five delivery attempts, then the error queue — the message is parked, never lost,
                 // for an operator to inspect or replay. This is where MassTransit's two retry tiers
                 // collapse into one, and the departures are deliberate:
