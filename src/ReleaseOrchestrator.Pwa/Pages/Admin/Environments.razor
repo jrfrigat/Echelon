@@ -1,0 +1,95 @@
+@page "/admin/environments"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@UiStrings.Env_Title</PageTitle>
+
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Env_Heading</FlareText>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+<FlareCard>
+    <FlareCardContent>
+        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+            <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
+            <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
+            <FlareTextField Label="@UiStrings.Env_Col_Order" @bind-Value="_order" />
+            <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+        </FlareStack>
+    </FlareCardContent>
+</FlareCard>
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_envs is null || _envs.Count == 0)
+{
+    <FlareEmptyState Title="@UiStrings.Env_Empty_Title" Description="@UiStrings.Env_Empty_Description" />
+}
+else
+{
+    <FlareTable TItem="EnvironmentDto" Items="_envs">
+        <HeaderContent>
+            <tr>
+                <th>@UiStrings.Env_Col_Key</th>
+                <th>@UiStrings.Env_Col_Name</th>
+                <th>@UiStrings.Env_Col_Order</th>
+                <th>@UiStrings.Env_Col_Enabled</th>
+                <th></th>
+            </tr>
+        </HeaderContent>
+        <RowTemplate Context="env">
+            <td>@env.Key</td>
+            <td>@env.Name</td>
+            <td>@env.Order</td>
+            <td>
+                <FlareChip Size="ChipSize.Sm" Color="@(env.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
+                    @(env.IsEnabled ? "+" : "-")
+                </FlareChip>
+            </td>
+            <td>
+                <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error" OnClick="@(() => Delete(env))">
+                    <FlareIcon Name="@FlareIcons.Close" />
+                </FlareIconButton>
+            </td>
+        </RowTemplate>
+    </FlareTable>
+}
+
+@code {
+    List<EnvironmentDto>? _envs;
+    bool _loading = true;
+    bool _busy;
+    string _key = "";
+    string _name = "";
+    string _order = "0";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    async Task Load()
+    {
+        await RunAsync(async () => _envs = await Api.GetEnvironmentsAsync());
+        _loading = false;
+    }
+
+    async Task Create()
+    {
+        if (!int.TryParse(_order, out var order)) order = 0;
+        _busy = true;
+        if (await RunAsync(async () => await Api.CreateEnvironmentAsync(_key.Trim(), _name.Trim(), order, isEnabled: true), UiStrings.Env_Created))
+        {
+            _key = ""; _name = ""; _order = "0";
+            await Load();
+        }
+        _busy = false;
+    }
+
+    async Task Delete(EnvironmentDto env)
+    {
+        if (!await ConfirmAsync(UiStrings.Env_Delete_Title, string.Format(UiStrings.Env_Delete_Message, env.Key))) return;
+        if (await RunAsync(async () => await Api.DeleteEnvironmentAsync(env.Id), UiStrings.Env_Deleted))
+            await Load();
+    }
+}

@@ -149,6 +149,39 @@ public class ApiService(HttpClient http)
     public Task<RolloutPlanDto> RecalculateTaskPlanAsync(Guid taskId, CancellationToken ct = default) =>
         SendAsync<RolloutPlanDto>(() => http.PostAsync($"api/tasks/{taskId}/plan/recalculate", null, ct), ct);
 
+    // ---- environments ---------------------------------------------------------
+
+    public Task<List<EnvironmentDto>> GetEnvironmentsAsync(CancellationToken ct = default) =>
+        GetAsync<List<EnvironmentDto>>("api/environments", ct);
+
+    public Task CreateEnvironmentAsync(string key, string name, int order, bool isEnabled, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsJsonAsync("api/environments",
+            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled }, ct), ct);
+
+    public Task DeleteEnvironmentAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.DeleteAsync($"api/environments/{id}", ct), ct);
+
+    // ---- rollouts -------------------------------------------------------------
+
+    public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, CancellationToken ct = default) =>
+        SendAsync<RolloutDto>(
+            () => http.PostAsJsonAsync($"api/tasks/{taskId}/rollouts", new { EnvironmentId = environmentId }, ct), ct);
+
+    public Task<RolloutDto?> GetRolloutAsync(Guid id, CancellationToken ct = default) =>
+        GetOrNullAsync<RolloutDto>($"api/rollouts/{id}", ct);
+
+    public Task<List<RolloutSummaryDto>> GetRolloutsAsync(Guid? taskId = null, CancellationToken ct = default) =>
+        GetAsync<List<RolloutSummaryDto>>($"api/rollouts{(taskId is null ? "" : $"?taskId={taskId}")}", ct);
+
+    public Task CancelRolloutAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsync($"api/rollouts/{id}/cancel", null, ct), ct);
+
+    public Task RetryRolloutStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsync($"api/rollouts/{rolloutId}/steps/{stepId}/retry", null, ct), ct);
+
+    public Task SkipRolloutStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsync($"api/rollouts/{rolloutId}/steps/{stepId}/skip", null, ct), ct);
+
     // ---- permissions ----------------------------------------------------------
 
     public Task<List<PermissionClaimDto>> GetPermissionClaimsAsync(CancellationToken ct = default) =>

@@ -573,4 +573,118 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Wave {0}</value>
   </data>
+  <data name="Nav_Rollouts" xml:space="preserve">
+    <value>Rollouts</value>
+  </data>
+  <data name="Nav_Environments" xml:space="preserve">
+    <value>Environments</value>
+  </data>
+  <data name="TaskDetail_Environment" xml:space="preserve">
+    <value>Environment</value>
+  </data>
+  <data name="TaskDetail_Launch" xml:space="preserve">
+    <value>Launch rollout</value>
+  </data>
+  <data name="TaskDetail_Launched" xml:space="preserve">
+    <value>Rollout launched.</value>
+  </data>
+  <data name="TaskDetail_NoEnvironments" xml:space="preserve">
+    <value>Create an environment first (Administration -&gt; Environments).</value>
+  </data>
+  <data name="Rollouts_Title" xml:space="preserve">
+    <value>Rollouts</value>
+  </data>
+  <data name="Rollouts_Heading" xml:space="preserve">
+    <value>Rollouts</value>
+  </data>
+  <data name="Rollouts_Empty_Title" xml:space="preserve">
+    <value>No rollouts yet</value>
+  </data>
+  <data name="Rollouts_Empty_Description" xml:space="preserve">
+    <value>Launch a rollout from a task to see it here.</value>
+  </data>
+  <data name="Rollouts_Col_Task" xml:space="preserve">
+    <value>Task</value>
+  </data>
+  <data name="Rollouts_Col_Env" xml:space="preserve">
+    <value>Environment</value>
+  </data>
+  <data name="Rollouts_Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Rollouts_Col_Progress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="Rollouts_Col_Started" xml:space="preserve">
+    <value>Started</value>
+  </data>
+  <data name="Rollouts_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Rollout_Back" xml:space="preserve">
+    <value>Back to rollouts</value>
+  </data>
+  <data name="Rollout_Cancel" xml:space="preserve">
+    <value>Cancel rollout</value>
+  </data>
+  <data name="Rollout_Cancelled" xml:space="preserve">
+    <value>Cancellation requested.</value>
+  </data>
+  <data name="Rollout_Meta" xml:space="preserve">
+    <value>Task {0} into {1}, started {2}</value>
+  </data>
+  <data name="Rollout_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Rollout_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="Rollout_Retried" xml:space="preserve">
+    <value>Step queued for retry.</value>
+  </data>
+  <data name="Rollout_StepSkipped" xml:space="preserve">
+    <value>Step skipped.</value>
+  </data>
+  <data name="Rollout_Steps_Title" xml:space="preserve">
+    <value>Steps</value>
+  </data>
+  <data name="Env_Title" xml:space="preserve">
+    <value>Environments</value>
+  </data>
+  <data name="Env_Heading" xml:space="preserve">
+    <value>Environments</value>
+  </data>
+  <data name="Env_Empty_Title" xml:space="preserve">
+    <value>No environments</value>
+  </data>
+  <data name="Env_Empty_Description" xml:space="preserve">
+    <value>Add an environment (staging, prod, ...) to launch rollouts into.</value>
+  </data>
+  <data name="Env_Col_Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="Env_Col_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Env_Col_Order" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="Env_Col_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Env_Add" xml:space="preserve">
+    <value>Add environment</value>
+  </data>
+  <data name="Env_Created" xml:space="preserve">
+    <value>Environment created.</value>
+  </data>
+  <data name="Env_Deleted" xml:space="preserve">
+    <value>Environment deleted.</value>
+  </data>
+  <data name="Env_Delete_Title" xml:space="preserve">
+    <value>Delete environment</value>
+  </data>
+  <data name="Env_Delete_Message" xml:space="preserve">
+    <value>Delete environment {0}?</value>
+  </data>
 </root>

@@ -7,6 +7,10 @@
         <Icon><FlareIcon Name="checklist" /></Icon>
         <ChildContent>@UiStrings.Nav_Tasks</ChildContent>
     </FlareNavLink>
+    <FlareNavLink Href="/rollouts">
+        <Icon><FlareIcon Name="rocket_launch" /></Icon>
+        <ChildContent>@UiStrings.Nav_Rollouts</ChildContent>
+    </FlareNavLink>
     @* Exact only for "/", which would otherwise prefix-match every route and always look active. *@
     <FlareNavLink Href="/" Match="NavMatchMode.Exact">
         <Icon><FlareIcon Name="list_alt" /></Icon>
@@ -33,6 +37,10 @@
         <FlareNavLink Href="/admin/stacks">
             <Icon><FlareIcon Name="layers" /></Icon>
             <ChildContent>@UiStrings.Nav_Stacks</ChildContent>
+        </FlareNavLink>
+        <FlareNavLink Href="/admin/environments">
+            <Icon><FlareIcon Name="dns" /></Icon>
+            <ChildContent>@UiStrings.Nav_Environments</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/permissions">
             <Icon><FlareIcon Name="@FlareIcons.Lock" /></Icon>

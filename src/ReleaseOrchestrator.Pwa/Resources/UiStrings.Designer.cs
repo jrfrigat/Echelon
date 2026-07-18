@@ -1455,5 +1455,348 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollouts.
+        /// </summary>
+        public static string Nav_Rollouts {
+            get {
+                return ResourceManager.GetString("Nav_Rollouts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environments.
+        /// </summary>
+        public static string Nav_Environments {
+            get {
+                return ResourceManager.GetString("Nav_Environments", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environment.
+        /// </summary>
+        public static string TaskDetail_Environment {
+            get {
+                return ResourceManager.GetString("TaskDetail_Environment", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Launch rollout.
+        /// </summary>
+        public static string TaskDetail_Launch {
+            get {
+                return ResourceManager.GetString("TaskDetail_Launch", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollout launched..
+        /// </summary>
+        public static string TaskDetail_Launched {
+            get {
+                return ResourceManager.GetString("TaskDetail_Launched", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Create an environment first (Administration -> Environments)..
+        /// </summary>
+        public static string TaskDetail_NoEnvironments {
+            get {
+                return ResourceManager.GetString("TaskDetail_NoEnvironments", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollouts.
+        /// </summary>
+        public static string Rollouts_Title {
+            get {
+                return ResourceManager.GetString("Rollouts_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollouts.
+        /// </summary>
+        public static string Rollouts_Heading {
+            get {
+                return ResourceManager.GetString("Rollouts_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No rollouts yet.
+        /// </summary>
+        public static string Rollouts_Empty_Title {
+            get {
+                return ResourceManager.GetString("Rollouts_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Launch a rollout from a task to see it here..
+        /// </summary>
+        public static string Rollouts_Empty_Description {
+            get {
+                return ResourceManager.GetString("Rollouts_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Task.
+        /// </summary>
+        public static string Rollouts_Col_Task {
+            get {
+                return ResourceManager.GetString("Rollouts_Col_Task", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environment.
+        /// </summary>
+        public static string Rollouts_Col_Env {
+            get {
+                return ResourceManager.GetString("Rollouts_Col_Env", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string Rollouts_Col_Status {
+            get {
+                return ResourceManager.GetString("Rollouts_Col_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Progress.
+        /// </summary>
+        public static string Rollouts_Col_Progress {
+            get {
+                return ResourceManager.GetString("Rollouts_Col_Progress", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Started.
+        /// </summary>
+        public static string Rollouts_Col_Started {
+            get {
+                return ResourceManager.GetString("Rollouts_Col_Started", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        public static string Rollouts_Open {
+            get {
+                return ResourceManager.GetString("Rollouts_Open", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Back to rollouts.
+        /// </summary>
+        public static string Rollout_Back {
+            get {
+                return ResourceManager.GetString("Rollout_Back", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel rollout.
+        /// </summary>
+        public static string Rollout_Cancel {
+            get {
+                return ResourceManager.GetString("Rollout_Cancel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancellation requested..
+        /// </summary>
+        public static string Rollout_Cancelled {
+            get {
+                return ResourceManager.GetString("Rollout_Cancelled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Task {0} into {1}, started {2}.
+        /// </summary>
+        public static string Rollout_Meta {
+            get {
+                return ResourceManager.GetString("Rollout_Meta", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Retry.
+        /// </summary>
+        public static string Rollout_Retry {
+            get {
+                return ResourceManager.GetString("Rollout_Retry", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Skip.
+        /// </summary>
+        public static string Rollout_Skip {
+            get {
+                return ResourceManager.GetString("Rollout_Skip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Step queued for retry..
+        /// </summary>
+        public static string Rollout_Retried {
+            get {
+                return ResourceManager.GetString("Rollout_Retried", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Step skipped..
+        /// </summary>
+        public static string Rollout_StepSkipped {
+            get {
+                return ResourceManager.GetString("Rollout_StepSkipped", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Steps.
+        /// </summary>
+        public static string Rollout_Steps_Title {
+            get {
+                return ResourceManager.GetString("Rollout_Steps_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environments.
+        /// </summary>
+        public static string Env_Title {
+            get {
+                return ResourceManager.GetString("Env_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environments.
+        /// </summary>
+        public static string Env_Heading {
+            get {
+                return ResourceManager.GetString("Env_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No environments.
+        /// </summary>
+        public static string Env_Empty_Title {
+            get {
+                return ResourceManager.GetString("Env_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add an environment (staging, prod, ...) to launch rollouts into..
+        /// </summary>
+        public static string Env_Empty_Description {
+            get {
+                return ResourceManager.GetString("Env_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Key.
+        /// </summary>
+        public static string Env_Col_Key {
+            get {
+                return ResourceManager.GetString("Env_Col_Key", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string Env_Col_Name {
+            get {
+                return ResourceManager.GetString("Env_Col_Name", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Order.
+        /// </summary>
+        public static string Env_Col_Order {
+            get {
+                return ResourceManager.GetString("Env_Col_Order", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enabled.
+        /// </summary>
+        public static string Env_Col_Enabled {
+            get {
+                return ResourceManager.GetString("Env_Col_Enabled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add environment.
+        /// </summary>
+        public static string Env_Add {
+            get {
+                return ResourceManager.GetString("Env_Add", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environment created..
+        /// </summary>
+        public static string Env_Created {
+            get {
+                return ResourceManager.GetString("Env_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Environment deleted..
+        /// </summary>
+        public static string Env_Deleted {
+            get {
+                return ResourceManager.GetString("Env_Deleted", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete environment.
+        /// </summary>
+        public static string Env_Delete_Title {
+            get {
+                return ResourceManager.GetString("Env_Delete_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Delete environment {0}?.
+        /// </summary>
+        public static string Env_Delete_Message {
+            get {
+                return ResourceManager.GetString("Env_Delete_Message", resourceCulture);
+            }
+        }
+
     }
 }

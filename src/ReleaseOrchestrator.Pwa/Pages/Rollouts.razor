@@ -1,0 +1,67 @@
+@page "/rollouts"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@UiStrings.Rollouts_Title</PageTitle>
+
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Rollouts_Heading</FlareText>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_rollouts is null || _rollouts.Count == 0)
+{
+    <FlareEmptyState Title="@UiStrings.Rollouts_Empty_Title" Description="@UiStrings.Rollouts_Empty_Description" />
+}
+else
+{
+    <FlareTable TItem="RolloutSummaryDto" Items="_rollouts">
+        <HeaderContent>
+            <tr>
+                <th>@UiStrings.Rollouts_Col_Task</th>
+                <th>@UiStrings.Rollouts_Col_Env</th>
+                <th>@UiStrings.Rollouts_Col_Status</th>
+                <th>@UiStrings.Rollouts_Col_Progress</th>
+                <th>@UiStrings.Rollouts_Col_Started</th>
+                <th></th>
+            </tr>
+        </HeaderContent>
+        <RowTemplate Context="r">
+            <td>@r.TargetTaskKey</td>
+            <td>@r.EnvironmentKey</td>
+            <td><FlareChip Size="ChipSize.Sm" Color="@StatusColor(r.Status)">@r.Status</FlareChip></td>
+            <td>@r.SucceededCount / @r.StepCount</td>
+            <td>@r.StartedAt.ToString("g")</td>
+            <td><FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(r.Id))">@UiStrings.Rollouts_Open</FlareButton></td>
+        </RowTemplate>
+    </FlareTable>
+}
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    List<RolloutSummaryDto>? _rollouts;
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _rollouts = await Api.GetRolloutsAsync());
+        _loading = false;
+    }
+
+    void Open(Guid id) => Nav.NavigateTo($"/rollouts/{id}");
+
+    static FlareColor StatusColor(string status) => status switch
+    {
+        "Succeeded" => FlareColor.Success,
+        "Running" => FlareColor.Primary,
+        "Paused" => FlareColor.Warning,
+        "Failed" => FlareColor.Error,
+        "Cancelled" or "Cancelling" => FlareColor.OnSurfaceVariant,
+        _ => FlareColor.Default
+    };
+}

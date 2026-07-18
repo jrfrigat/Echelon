@@ -61,3 +61,20 @@ public record PlanItemDto(
     string SourceBranch, string TargetBranch, string MrStatus, int Wave);
 
 public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);
+
+// ---- environments and rollouts (mirrors Application.DTOs.RolloutDto + EnvironmentsController) ----
+
+public record EnvironmentDto(Guid Id, string Key, string Name, int Order, bool IsEnabled);
+
+public record RolloutDto(
+    Guid Id, Guid TargetTaskId, string TargetTaskKey, Guid EnvironmentId, string EnvironmentKey,
+    string Status, DateTime StartedAt, DateTime? FinishedAt, List<RolloutStepDto> Steps);
+
+public record RolloutStepDto(
+    Guid Id, Guid MergeRequestId, string MrExternalId, string RepositoryName,
+    Guid TaskId, string TaskKey, int Wave, string State, int AttemptCount,
+    string? ExternalRef, string? LastError);
+
+public record RolloutSummaryDto(
+    Guid Id, Guid TargetTaskId, string TargetTaskKey, string EnvironmentKey,
+    string Status, DateTime StartedAt, DateTime? FinishedAt, int StepCount, int SucceededCount);

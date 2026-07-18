@@ -573,4 +573,118 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Волна {0}</value>
   </data>
+  <data name="Nav_Rollouts" xml:space="preserve">
+    <value>Выкатки</value>
+  </data>
+  <data name="Nav_Environments" xml:space="preserve">
+    <value>Окружения</value>
+  </data>
+  <data name="TaskDetail_Environment" xml:space="preserve">
+    <value>Окружение</value>
+  </data>
+  <data name="TaskDetail_Launch" xml:space="preserve">
+    <value>Запустить выкатку</value>
+  </data>
+  <data name="TaskDetail_Launched" xml:space="preserve">
+    <value>Выкатка запущена.</value>
+  </data>
+  <data name="TaskDetail_NoEnvironments" xml:space="preserve">
+    <value>Сначала создайте окружение (Администрирование -&gt; Окружения).</value>
+  </data>
+  <data name="Rollouts_Title" xml:space="preserve">
+    <value>Выкатки</value>
+  </data>
+  <data name="Rollouts_Heading" xml:space="preserve">
+    <value>Выкатки</value>
+  </data>
+  <data name="Rollouts_Empty_Title" xml:space="preserve">
+    <value>Пока нет выкаток</value>
+  </data>
+  <data name="Rollouts_Empty_Description" xml:space="preserve">
+    <value>Запустите выкатку задачи, чтобы увидеть её здесь.</value>
+  </data>
+  <data name="Rollouts_Col_Task" xml:space="preserve">
+    <value>Задача</value>
+  </data>
+  <data name="Rollouts_Col_Env" xml:space="preserve">
+    <value>Окружение</value>
+  </data>
+  <data name="Rollouts_Col_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Rollouts_Col_Progress" xml:space="preserve">
+    <value>Прогресс</value>
+  </data>
+  <data name="Rollouts_Col_Started" xml:space="preserve">
+    <value>Начата</value>
+  </data>
+  <data name="Rollouts_Open" xml:space="preserve">
+    <value>Открыть</value>
+  </data>
+  <data name="Rollout_Back" xml:space="preserve">
+    <value>К списку выкаток</value>
+  </data>
+  <data name="Rollout_Cancel" xml:space="preserve">
+    <value>Отменить выкатку</value>
+  </data>
+  <data name="Rollout_Cancelled" xml:space="preserve">
+    <value>Запрошена отмена.</value>
+  </data>
+  <data name="Rollout_Meta" xml:space="preserve">
+    <value>Задача {0} в окружение {1}, начата {2}</value>
+  </data>
+  <data name="Rollout_Retry" xml:space="preserve">
+    <value>Повторить</value>
+  </data>
+  <data name="Rollout_Skip" xml:space="preserve">
+    <value>Пропустить</value>
+  </data>
+  <data name="Rollout_Retried" xml:space="preserve">
+    <value>Шаг поставлен на повтор.</value>
+  </data>
+  <data name="Rollout_StepSkipped" xml:space="preserve">
+    <value>Шаг пропущен.</value>
+  </data>
+  <data name="Rollout_Steps_Title" xml:space="preserve">
+    <value>Шаги</value>
+  </data>
+  <data name="Env_Title" xml:space="preserve">
+    <value>Окружения</value>
+  </data>
+  <data name="Env_Heading" xml:space="preserve">
+    <value>Окружения</value>
+  </data>
+  <data name="Env_Empty_Title" xml:space="preserve">
+    <value>Нет окружений</value>
+  </data>
+  <data name="Env_Empty_Description" xml:space="preserve">
+    <value>Добавьте окружение (staging, prod, ...), чтобы запускать в него выкатки.</value>
+  </data>
+  <data name="Env_Col_Key" xml:space="preserve">
+    <value>Ключ</value>
+  </data>
+  <data name="Env_Col_Name" xml:space="preserve">
+    <value>Название</value>
+  </data>
+  <data name="Env_Col_Order" xml:space="preserve">
+    <value>Порядок</value>
+  </data>
+  <data name="Env_Col_Enabled" xml:space="preserve">
+    <value>Включено</value>
+  </data>
+  <data name="Env_Add" xml:space="preserve">
+    <value>Добавить окружение</value>
+  </data>
+  <data name="Env_Created" xml:space="preserve">
+    <value>Окружение создано.</value>
+  </data>
+  <data name="Env_Deleted" xml:space="preserve">
+    <value>Окружение удалено.</value>
+  </data>
+  <data name="Env_Delete_Title" xml:space="preserve">
+    <value>Удалить окружение</value>
+  </data>
+  <data name="Env_Delete_Message" xml:space="preserve">
+    <value>Удалить окружение {0}?</value>
+  </data>
 </root>

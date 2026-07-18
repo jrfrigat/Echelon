@@ -1,0 +1,159 @@
+@page "/rollouts/{Id:guid}"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@UiStrings.Rollouts_Title</PageTitle>
+
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">
+        <LeadingIcon><FlareIcon Name="arrow_back" /></LeadingIcon>
+        <ChildContent>@UiStrings.Rollout_Back</ChildContent>
+    </FlareButton>
+    @if (_rollout is not null)
+    {
+        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(_rollout.Status)">@_rollout.Status</FlareChip>
+    }
+    <FlareSpacer />
+    @if (_rollout is not null && !IsTerminal)
+    {
+        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" Color="FlareColor.Error" OnClick="Cancel" Disabled="_busy">
+            @UiStrings.Rollout_Cancel
+        </FlareButton>
+    }
+</FlareStack>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_rollout is null)
+{
+    <FlareEmptyState Title="@UiStrings.Rollouts_Empty_Title" Description="@UiStrings.Rollouts_Empty_Description" />
+}
+else
+{
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+        @string.Format(UiStrings.Rollout_Meta, _rollout.TargetTaskKey, _rollout.EnvironmentKey, _rollout.StartedAt.ToString("g"))
+    </FlareText>
+
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Rollout_Steps_Title</FlareText>
+    <FlareStack Gap="FlareSpacing.XSmall">
+        @foreach (var step in _rollout.Steps)
+        {
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center" StretchFirst>
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                    <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Plan_Wave, step.Wave)</FlareChip>
+                    <FlareChip Size="ChipSize.Sm" Color="@StepColor(step.State)">@step.State</FlareChip>
+                    <FlareStack Gap="FlareSpacing.None">
+                        <FlareText Typo="TypographyScale.BodyMedium">@step.RepositoryName !@step.MrExternalId</FlareText>
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                            @step.TaskKey@(string.IsNullOrEmpty(step.ExternalRef) ? "" : $" · {step.ExternalRef}")
+                        </FlareText>
+                        @if (!string.IsNullOrEmpty(step.LastError))
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Error">@step.LastError</FlareText>
+                        }
+                    </FlareStack>
+                </FlareStack>
+                @if (step.State == "Failed")
+                {
+                    <FlareStack Row Gap="FlareSpacing.XSmall">
+                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="@(() => Retry(step.Id))" Disabled="_busy">@UiStrings.Rollout_Retry</FlareButton>
+                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="@(() => Skip(step.Id))" Disabled="_busy">@UiStrings.Rollout_Skip</FlareButton>
+                    </FlareStack>
+                }
+            </FlareStack>
+        }
+    </FlareStack>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    RolloutDto? _rollout;
+    bool _loading = true;
+    bool _busy;
+    CancellationTokenSource? _poll;
+
+    bool IsTerminal => _rollout?.Status is "Succeeded" or "Failed" or "Cancelled";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _loading = false;
+        _ = PollAsync();
+    }
+
+    async Task Load() => await RunAsync(async () => _rollout = await Api.GetRolloutAsync(Id));
+
+    // A running rollout advances in the background; poll so the timeline stays live without a reload.
+    async Task PollAsync()
+    {
+        _poll = new CancellationTokenSource();
+        try
+        {
+            while (!_poll.IsCancellationRequested && !IsTerminal)
+            {
+                await Task.Delay(4000, _poll.Token);
+                await Load();
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException) { /* navigated away */ }
+    }
+
+    async Task Cancel()
+    {
+        _busy = true;
+        await RunAsync(async () => await Api.CancelRolloutAsync(Id), UiStrings.Rollout_Cancelled);
+        await Load();
+        _busy = false;
+    }
+
+    async Task Retry(Guid stepId)
+    {
+        _busy = true;
+        await RunAsync(async () => await Api.RetryRolloutStepAsync(Id, stepId), UiStrings.Rollout_Retried);
+        await Load();
+        _busy = false;
+    }
+
+    async Task Skip(Guid stepId)
+    {
+        _busy = true;
+        await RunAsync(async () => await Api.SkipRolloutStepAsync(Id, stepId), UiStrings.Rollout_StepSkipped);
+        await Load();
+        _busy = false;
+    }
+
+    void Back() => Nav.NavigateTo("/rollouts");
+
+    public override void Dispose()
+    {
+        _poll?.Cancel();
+        base.Dispose();
+    }
+
+    static FlareColor StatusColor(string status) => status switch
+    {
+        "Succeeded" => FlareColor.Success,
+        "Running" => FlareColor.Primary,
+        "Paused" => FlareColor.Warning,
+        "Failed" => FlareColor.Error,
+        "Cancelled" or "Cancelling" => FlareColor.OnSurfaceVariant,
+        _ => FlareColor.Default
+    };
+
+    static FlareColor StepColor(string state) => state switch
+    {
+        "Succeeded" => FlareColor.Success,
+        "Deploying" or "Awaiting" or "Claimed" => FlareColor.Primary,
+        "Failed" => FlareColor.Error,
+        "Skipped" => FlareColor.OnSurfaceVariant,
+        _ => FlareColor.Default
+    };
+}

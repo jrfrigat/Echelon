@@ -35,6 +35,26 @@ else
         @string.Format(UiStrings.TaskDetail_Meta, _plan.Version, _plan.Source, _plan.UpdatedAt.ToString("g"))
     </FlareText>
 
+    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+        @if (_environments is { Count: > 0 })
+        {
+            <div>
+                <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_Environment</FlareText>
+                <select @bind="_selectedEnvironmentId">
+                    @foreach (var env in _environments.Where(e => e.IsEnabled))
+                    {
+                        <option value="@env.Id">@env.Name (@env.Key)</option>
+                    }
+                </select>
+            </div>
+            <FlareButton OnClick="Launch" Loading="_busy" Disabled="@(_plan.Conflicts.Count > 0)">@UiStrings.TaskDetail_Launch</FlareButton>
+        }
+        else
+        {
+            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_NoEnvironments</FlareText>
+        }
+    </FlareStack>
+
     @if (_plan.Conflicts.Count > 0)
     {
         <FlareAlert Severity="AlertSeverity.Warning"
@@ -116,6 +136,8 @@ else
     [Inject] NavigationManager Nav { get; set; } = default!;
 
     RolloutPlanDto? _plan;
+    List<EnvironmentDto>? _environments;
+    Guid _selectedEnvironmentId;
     bool _loading = true;
     bool _busy;
     Dictionary<Guid, string> _keyById = [];
@@ -126,9 +148,25 @@ else
     {
         _loading = true;
         // A null plan is a legitimate answer (nothing built yet), not a failure.
-        await RunAsync(async () => _plan = await Api.GetTaskPlanAsync(Id));
+        await RunAsync(async () =>
+        {
+            _plan = await Api.GetTaskPlanAsync(Id);
+            _environments = await Api.GetEnvironmentsAsync();
+        });
+        var first = _environments?.FirstOrDefault(e => e.IsEnabled);
+        if (first is not null && _selectedEnvironmentId == Guid.Empty) _selectedEnvironmentId = first.Id;
         RebuildKeyMap();
         _loading = false;
+    }
+
+    async Task Launch()
+    {
+        if (_selectedEnvironmentId == Guid.Empty) return;
+        _busy = true;
+        RolloutDto? rollout = null;
+        var ok = await RunAsync(async () => rollout = await Api.LaunchRolloutAsync(Id, _selectedEnvironmentId), UiStrings.TaskDetail_Launched);
+        _busy = false;
+        if (ok && rollout is not null) Nav.NavigateTo($"/rollouts/{rollout.Id}");
     }
 
     async Task Recalculate()
