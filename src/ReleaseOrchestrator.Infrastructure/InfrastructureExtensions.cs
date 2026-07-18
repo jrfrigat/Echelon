@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Coordination;
 using ReleaseOrchestrator.Infrastructure.Archive;
+using ReleaseOrchestrator.Infrastructure.Execution;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Providers;
@@ -45,6 +46,7 @@ public static class InfrastructureExtensions
         services.AddScoped<TokenProtector>();
         services.AddScoped<IReleasePlannerService, ReleasePlanner>();
         services.AddScoped<IRolloutPlannerService, RolloutPlanner>();
+        services.AddScoped<IRolloutService, RolloutService>();
         services.AddScoped<IVcsService, VcsService>();
         services.AddScoped<ITrackerService, TrackerService>();
 
@@ -77,6 +79,9 @@ public static class InfrastructureExtensions
 
         services.Configure<TaskReconciliationOptions>(config.GetSection("TaskReconciliation"));
         services.AddHostedService<TaskReconciliationService>();
+
+        services.Configure<RolloutExecutionOptions>(config.GetSection("RolloutExecution"));
+        services.AddHostedService<RolloutCoordinator>();
 
         // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model
         // and the retry policy.

@@ -70,7 +70,7 @@ public class PermissionClaimsTransformation(
                 "User {UserId} is granted every permission by Authorization:BootstrapAdminObjectIds. "
                 + "This is a bootstrap-only setting — grant the permissions properly and remove it.",
                 userId);
-            return [Permissions.ConfigEdit, Permissions.ReleasePlanApprove, Permissions.ReleasePlanView];
+            return [Permissions.ConfigEdit, Permissions.ReleasePlanApprove, Permissions.ReleasePlanView, Permissions.ReleaseExecute];
         }
 
         var groupSids = principal.FindAll(GroupClaimType).Select(c => c.Value).ToList();

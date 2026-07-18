@@ -95,6 +95,7 @@ try
         opts.AddPolicy(Permissions.ReleasePlanApprove, p => p.AddRequirements(new PermissionRequirement(Permissions.ReleasePlanApprove)));
         opts.AddPolicy(Permissions.ConfigEdit, p => p.AddRequirements(new PermissionRequirement(Permissions.ConfigEdit)));
         opts.AddPolicy(Permissions.ReleasePlanView, p => p.AddRequirements(new PermissionRequirement(Permissions.ReleasePlanView)));
+        opts.AddPolicy(Permissions.ReleaseExecute, p => p.AddRequirements(new PermissionRequirement(Permissions.ReleaseExecute)));
         opts.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     });
 

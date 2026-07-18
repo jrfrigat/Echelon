@@ -26,4 +26,7 @@ public static class Permissions
     public const string ReleasePlanApprove = "release.plan.approve";
     public const string ConfigEdit = "config.edit";
     public const string ReleasePlanView = "release.plan.view";
+
+    /// <summary>Launching, cancelling, retrying or skipping a rollout. Separate from plan editing.</summary>
+    public const string ReleaseExecute = "release.execute";
 }

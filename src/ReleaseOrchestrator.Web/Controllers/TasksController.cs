@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Auth;
 
@@ -7,12 +8,12 @@ namespace ReleaseOrchestrator.Web.Controllers;
 
 /// <summary>
 /// Tasks and their rollout plans -- the object the pivoted product is built around. An operator
-/// lists tasks, opens one, sees its dependency tree, and (later) launches its rollout.
+/// lists tasks, opens one, sees its dependency tree, and launches its rollout.
 /// </summary>
 [ApiController]
 [Route("api/tasks")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class TasksController(IRolloutPlannerService planner) : ControllerBase
+public class TasksController(IRolloutPlannerService planner, IRolloutService rollouts) : ControllerBase
 {
     /// <summary>Lists tasks, paged.</summary>
     /// <param name="page">1-based page number.</param>
@@ -48,4 +49,21 @@ public class TasksController(IRolloutPlannerService planner) : ControllerBase
         var plan = await planner.RecalculateAsync(id, ct);
         return Ok(plan);
     }
+
+    /// <summary>Launches a rollout of this task into an environment.</summary>
+    /// <param name="id">The target task id.</param>
+    /// <param name="req">The launch request (target environment).</param>
+    /// <param name="ct">Cancellation token.</param>
+    [HttpPost("{id:guid}/rollouts")]
+    [Authorize(Policy = Permissions.ReleaseExecute)]
+    public async Task<IActionResult> Launch(Guid id, [FromBody] LaunchRolloutRequest req, CancellationToken ct)
+    {
+        var launchedByOid = UserIdentifier.TryResolve(User, out var oid) ? oid : null;
+        var rollout = await rollouts.LaunchAsync(id, req.EnvironmentId, launchedByOid, ct);
+        return Ok(rollout);
+    }
 }
+
+/// <summary>Request to launch a rollout.</summary>
+/// <param name="EnvironmentId">The target environment.</param>
+public record LaunchRolloutRequest([property: Required] Guid EnvironmentId);
