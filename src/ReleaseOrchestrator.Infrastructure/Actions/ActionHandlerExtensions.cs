@@ -21,6 +21,7 @@ public static class ActionHandlerExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddScoped<IActionHandlerFactory, ActionHandlerFactory>();
+        services.AddScoped<ActionDispatcher>();
 
         services.AddHttpClient<TelegramActionHandler>(c => c.Timeout = HttpTimeout);
         services.AddKeyedScoped<IActionHandler>(TelegramActionHandler.ActionType, (sp, _) => sp.GetRequiredService<TelegramActionHandler>());

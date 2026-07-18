@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -103,6 +104,8 @@ public class RolloutCoordinator(
             .FirstOrDefaultAsync(r => r.Id == rolloutId, ct);
         if (rollout is null) return;
 
+        var statusBefore = rollout.Status;
+
         // Poll in-flight async deploys first, so a wave can advance in the same tick it settles.
         foreach (var step in rollout.Steps.Where(s => s.State == RolloutStepState.Awaiting).ToList())
             await PollAsync(sp, db, rollout, step, ct);
@@ -112,6 +115,45 @@ public class RolloutCoordinator(
 
         await SettleRolloutAsync(db, rollout, ct);
         await db.SaveChangesAsync(ct);
+
+        // On a terminal transition, run the matching action bindings -- off the deploy path, so a
+        // failing notification never affects the rollout.
+        if (rollout.Status != statusBefore
+            && rollout.Status is RolloutStatus.Succeeded or RolloutStatus.Paused or RolloutStatus.Cancelled)
+            await DispatchRolloutEventAsync(sp, rollout, ct);
+    }
+
+    private static async Task DispatchRolloutEventAsync(IServiceProvider sp, Rollout rollout, CancellationToken ct)
+    {
+        var db = sp.GetRequiredService<AppDbContext>();
+        var dispatcher = sp.GetRequiredService<ActionDispatcher>();
+
+        var task = await db.Tasks
+            .Where(t => t.Id == rollout.TargetTaskId)
+            .Select(t => new { t.ExternalId, TrackerName = t.TrackerConnection != null ? t.TrackerConnection.Name : "" })
+            .FirstOrDefaultAsync(ct);
+        var environmentKey = await db.DeploymentEnvironments
+            .Where(e => e.Id == rollout.EnvironmentId)
+            .Select(e => e.Key)
+            .FirstOrDefaultAsync(ct);
+
+        var payload = new Dictionary<string, string>
+        {
+            ["task"] = task?.ExternalId ?? string.Empty,
+            ["trackerConnectionName"] = task?.TrackerName ?? string.Empty,
+            ["environment"] = environmentKey ?? string.Empty,
+            ["status"] = rollout.Status.ToString()
+        };
+
+        var eventType = rollout.Status switch
+        {
+            RolloutStatus.Succeeded => "RolloutSucceeded",
+            RolloutStatus.Paused => "RolloutFailed",
+            RolloutStatus.Cancelled => "RolloutCancelled",
+            _ => "RolloutChanged"
+        };
+
+        await dispatcher.DispatchAsync(eventType, payload, ct);
     }
 
     private async Task DispatchWaveAsync(IServiceProvider sp, AppDbContext db, Rollout rollout, CancellationToken ct)
