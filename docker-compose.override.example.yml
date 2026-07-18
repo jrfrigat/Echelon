@@ -33,6 +33,21 @@ services:
       # At least 32 characters; signs the issued tokens.
       Auth__Local__SigningKey: "<32+ char random secret>"
 
+      # ---- Rollout execution (optional) -------------------------------------------------------
+      # The rollout coordinator runs inside this host as a leased background service; these are its
+      # tunables (all have sensible code defaults, shown here). RolloutExecution__Enabled=false turns
+      # the coordinator off (plans and launches still work; nothing drives the steps).
+      #   RolloutExecution__IntervalSeconds: "15"
+      #   RolloutExecution__WaveConcurrency: "4"
+      #   RolloutExecution__MaxAttempts: "3"
+      #   RolloutExecution__EnvironmentProgressionGate: "true"   # prod requires staging first
+      #
+      # The Local/bootstrap admin is granted release.execute automatically, so it can launch rollouts.
+      # Environments (staging/prod), per-repository deploy strategies (gitlab-merge / gitlab-pipeline)
+      # and repository-ordering rules are runtime configuration -- set them in the admin UI
+      # (Administration -> Environments / Repositories / Repository Ordering), not here. The new
+      # execution tables are created by the migrations that run on startup (Database__MigrateOnStartup).
+
     # Makes host.docker.internal resolvable from inside the container to the host machine. Required
     # on Linux; harmless on Docker Desktop, where the name already resolves.
     extra_hosts:
