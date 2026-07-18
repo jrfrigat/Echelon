@@ -9,6 +9,8 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// </summary>
 public enum PlanEdgeKind
 {
+    /// <summary>An operator-added edge. Most protected: dropped last when a cycle must be broken.</summary>
+    Manual = -1,
     StackHard = 0,
     TaskDependency = 1,
     StackSoft = 2
@@ -33,17 +35,96 @@ public static class ReleasePlanGraph
     /// Deployable merge requests, in a deterministic order — that order decides ties within a
     /// stage, so the same input has to give the same plan every time.
     /// </param>
-    public static PlanGraphResult Build(IReadOnlyList<PlanMergeRequest> mrs)
+    /// <param name="addEdges">
+    /// Operator-added "deploy From before To" edges (a plan override). Endpoints outside
+    /// <paramref name="mrs"/> and self-edges are ignored, as with derived edges.
+    /// </param>
+    /// <param name="removeEdges">
+    /// Derived edges an operator dropped (a plan override). Removal runs before additions.
+    /// </param>
+    public static PlanGraphResult Build(
+        IReadOnlyList<PlanMergeRequest> mrs,
+        IReadOnlyList<(Guid From, Guid To)>? addEdges = null,
+        IReadOnlyList<(Guid From, Guid To)>? removeEdges = null)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         var rank = new Dictionary<Guid, int>(mrs.Count);
         for (int i = 0; i < mrs.Count; i++) rank[mrs[i].Id] = i;
 
         var edges = BuildEdges(mrs, ids);
+        ApplyOverrides(edges, ids, addEdges, removeEdges);
         var conflicts = BreakCycles(edges, ids, rank);
         var stages = TopoSort(edges, ids, rank);
 
         return new PlanGraphResult(stages, conflicts);
+    }
+
+    /// <summary>
+    /// Orders the rollout of one target task: the closure of the target and its prerequisites,
+    /// restricted to their merge requests, run through the same <see cref="Build"/> as the global plan.
+    /// </summary>
+    /// <param name="targetTaskId">The task to roll out.</param>
+    /// <param name="taskDependsOn">
+    /// Task-dependency adjacency (see <see cref="PlanClosureBuilder"/>): for each task, the tasks it
+    /// deploys after.
+    /// </param>
+    /// <param name="allMergeRequests">
+    /// Every candidate merge request, in a deterministic order -- that order breaks ties within a
+    /// stage, exactly as in <see cref="Build"/>. Only those whose task is in the closure are kept.
+    /// </param>
+    /// <returns>Ordered deploy stages for the target's rollout, plus any constraint dropped to order them.</returns>
+    /// <remarks>
+    /// A projection, not a second algorithm: the per-task plan is the global graph cut down to one
+    /// target's closure. Edges to merge requests outside the closure need no special handling --
+    /// <see cref="Build"/> already ignores an edge whose endpoints it was not given.
+    /// </remarks>
+    public static PlanGraphResult BuildForTask(
+        Guid targetTaskId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> taskDependsOn,
+        IReadOnlyList<PlanMergeRequest> allMergeRequests,
+        IReadOnlyList<(Guid From, Guid To)>? addEdges = null,
+        IReadOnlyList<(Guid From, Guid To)>? removeEdges = null)
+    {
+        var closure = PlanClosureBuilder.Closure(targetTaskId, taskDependsOn).ToHashSet();
+
+        // Filtering preserves the input order, so ties inside a stage resolve the same way as Build.
+        var inClosure = allMergeRequests
+            .Where(mr => mr.TaskId.HasValue && closure.Contains(mr.TaskId.Value))
+            .ToList();
+
+        return Build(inClosure, addEdges, removeEdges);
+    }
+
+    /// <summary>
+    /// Applies operator overrides to the derived edge set: <paramref name="removeEdges"/> drops a
+    /// derived ordering, <paramref name="addEdges"/> adds a manual one. Removal runs first, so an
+    /// operator can drop a derived edge and add a different one between the same pair in one pass.
+    /// </summary>
+    /// <remarks>
+    /// The override changes the ordering the plan is BUILT from, not what <see cref="MandatoryEdges"/>
+    /// reports: dropping a task or hard edge here reorders the plan, and <see cref="ViolatedBy"/> --
+    /// which recomputes from <see cref="BuildEdges"/> -- still records it as a violation. That is the
+    /// rule: a plan may deploy against a constraint, but never silently
+    /// (docs/issues/006-per-task-planning.md).
+    /// </remarks>
+    private static void ApplyOverrides(
+        Dictionary<(Guid From, Guid To), PlanEdgeKind> edges,
+        HashSet<Guid> ids,
+        IReadOnlyList<(Guid From, Guid To)>? addEdges,
+        IReadOnlyList<(Guid From, Guid To)>? removeEdges)
+    {
+        if (removeEdges is not null)
+            foreach (var edge in removeEdges)
+                edges.Remove(edge);
+
+        if (addEdges is not null)
+            foreach (var (from, to) in addEdges)
+            {
+                // Same guard as the derived edges: a self-edge, or an endpoint we were not given,
+                // carries no ordering and would only risk a deadlock in Kahn's algorithm.
+                if (from == to || !ids.Contains(from) || !ids.Contains(to)) continue;
+                edges[(from, to)] = PlanEdgeKind.Manual;
+            }
     }
 
     /// <summary>
