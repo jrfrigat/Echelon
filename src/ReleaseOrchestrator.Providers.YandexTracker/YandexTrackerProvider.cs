@@ -17,7 +17,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 internal sealed class YandexTrackerProvider(
     HttpClient http,
     TrackerProviderContext context,
-    YandexTrackerOptions options) : ITrackerProvider, ITrackerDependencySource
+    YandexTrackerOptions options) : ITrackerProvider, ITrackerDependencySource, ITrackerMutator
 {
     /// <inheritdoc/>
     public TrackerCapabilities Capabilities => TrackerCapabilities.None;
@@ -73,6 +73,41 @@ internal sealed class YandexTrackerProvider(
             .ToList() ?? [];
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Yandex.Tracker changes status through a transition, not a status field: this lists the
+    /// available transitions, finds the one whose target is the requested status, and executes it.
+    /// NOT VERIFIED against a live tracker.
+    /// </remarks>
+    public async Task SetStatusAsync(string issueKey, string statusKey, CancellationToken ct)
+    {
+        using var listRequest = Authorized(HttpMethod.Get, Url($"v2/issues/{Uri.EscapeDataString(issueKey)}/transitions"));
+        var listResponse = await http.SendAsync(listRequest, ct).ConfigureAwait(false);
+        listResponse.EnsureSuccessStatusCode();
+
+        var transitions = await listResponse.Content
+            .ReadFromJsonAsync<List<YtTransitionDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
+        var match = transitions.FirstOrDefault(t => string.Equals(t.To?.Key, statusKey, StringComparison.OrdinalIgnoreCase));
+        if (match?.Id is not { Length: > 0 } transitionId)
+            throw new InvalidOperationException($"No transition to status '{statusKey}' is available on issue {issueKey}.");
+
+        using var executeRequest = Authorized(HttpMethod.Post,
+            Url($"v2/issues/{Uri.EscapeDataString(issueKey)}/transitions/{Uri.EscapeDataString(transitionId)}/_execute"));
+        var executeResponse = await http.SendAsync(executeRequest, ct).ConfigureAwait(false);
+        executeResponse.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>NOT VERIFIED against a live tracker.</remarks>
+    public async Task AddCommentAsync(string issueKey, string comment, CancellationToken ct)
+    {
+        using var request = Authorized(HttpMethod.Post, Url($"v2/issues/{Uri.EscapeDataString(issueKey)}/comments"));
+        request.Content = JsonContent.Create(new { text = comment });
+
+        var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
+
     private Uri Url(string relative) => new($"{context.ApiUrl.ToString().TrimEnd('/')}/{relative}");
 
     private HttpRequestMessage Authorized(HttpMethod method, Uri url)
@@ -103,4 +138,10 @@ internal sealed class YandexTrackerProvider(
     private sealed record YtLinkType([property: JsonPropertyName("id")] string Id);
 
     private sealed record YtLinkObject([property: JsonPropertyName("key")] string Key);
+
+    private sealed record YtTransitionDto(
+        [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("to")] YtTransitionTo? To);
+
+    private sealed record YtTransitionTo([property: JsonPropertyName("key")] string? Key);
 }

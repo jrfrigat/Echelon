@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Application.Services;
+using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Coordination;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Execution;
@@ -63,6 +64,7 @@ public static class InfrastructureExtensions
         services.AddGitLabProvider();
         services.AddGitLabDeployStrategies();
         services.AddYandexTrackerProvider();
+        services.AddActionHandlers();
 
         // The permission cache and the job lease, against whichever backend is configured. Redis is
         // the default and the only one needing another service; a single-replica deployment can say

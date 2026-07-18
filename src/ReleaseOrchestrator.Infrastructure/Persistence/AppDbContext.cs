@@ -36,6 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RolloutStepAttempt> RolloutStepAttempts => Set<RolloutStepAttempt>();
     public DbSet<RolloutEvent> RolloutEvents => Set<RolloutEvent>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
+    public DbSet<ActionBinding> ActionBindings => Set<ActionBinding>();
     public DbSet<PermissionClaim> PermissionClaims => Set<PermissionClaim>();
     public DbSet<GroupPermissionMapping> GroupPermissionMappings => Set<GroupPermissionMapping>();
     public DbSet<UserPermissionOverride> UserPermissionOverrides => Set<UserPermissionOverride>();
