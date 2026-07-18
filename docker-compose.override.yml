@@ -1,0 +1,52 @@
+# Local single-machine testing. Merged automatically — `docker compose up` reads this on top of
+# docker-compose.yml with no `-f`, so it is the file that makes the stack convenient to poke at
+# from the host, and only on a developer's machine.
+#
+#   docker compose up -d --build          # base + this override
+#
+# The base file deliberately publishes ports for `ingress` and `core` alone and leaves the
+# datastores reachable only over the compose network — that is the right shape for a deployment,
+# where nothing outside the stack should reach the database or the broker directly. This override
+# is the explicit local opt-out named in that file's header: it maps each datastore's port to the
+# host so you can attach SSMS/psql, the RabbitMQ management UI, redis-cli and the Seq log viewer
+# while a test runs. Because it publishes an unauthenticated-by-default surface to localhost, it is
+# for a workstation and must never be part of a real deployment.
+#
+# It changes nothing else. One replica of `core` and one of `ingress` — the same single instance
+# the base file already describes — talking to a full set of datastores including Redis. It is not
+# docker-compose.single-instance.yml, which drops Redis and switches coordination to in-memory;
+# here Redis is present and used, so the permission cache and the job lease behave exactly as they
+# do in a multi-replica deployment, which is what you want a local test to exercise.
+#
+# A `.env` is still required. The base file's secrets use `${VAR:?}`, and interpolation is resolved
+# against the environment before any override is merged, so this file cannot supply defaults for
+# them — copy .env.example to .env first, as run-docker-compose.bat checks.
+services:
+  # 1433 is the SQL Server port. Attach with:
+  #   sqlcmd -S localhost,1433 -U sa -P "$MSSQL_SA_PASSWORD" -C
+  #
+  # Only the base file's services appear here, and PostgreSQL is not one of them — it exists only in
+  # docker-compose.postgres.yml. Naming a `postgres` service here would define an imageless service
+  # in the default `docker compose up` path and fail it; and a `-f`-selected postgres run does not
+  # auto-load this override anyway. To expose PostgreSQL, list this file explicitly and add the port:
+  #   docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.override.yml up
+  # with a postgres `ports: ["5432:5432"]` block added under that run.
+  mssql:
+    ports:
+      - "1433:1433"
+
+  rabbitmq:
+    ports:
+      - "5672:5672"     # AMQP — the port the apps connect to, published for an external client
+      - "15672:15672"   # Management UI at http://localhost:15672 (log in with RABBITMQ_USER/PASSWORD)
+
+  redis:
+    ports:
+      - "6379:6379"     # redis-cli -a "$REDIS_PASSWORD"
+
+  # Seq's web UI listens on port 80 inside the container; browse the logs at http://localhost:8341.
+  # Ingestion stays on the internal network — the apps write to it over the compose network, not
+  # from the host.
+  seq:
+    ports:
+      - "8341:80"
