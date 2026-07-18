@@ -64,6 +64,11 @@ public static class ProviderSpecificMapping
 
         builder.Entity<TaskItem>().Ignore(e => e.RowVersion);
         builder.Entity<TaskItem>().Property<uint>("xmin").IsRowVersion();
+
+        // Every new RowVersion entity needs its own entry here, or Npgsql silently maps [Timestamp]
+        // to an unwritten bytea and optimistic concurrency never fires on PostgreSQL.
+        builder.Entity<RolloutPlan>().Ignore(e => e.RowVersion);
+        builder.Entity<RolloutPlan>().Property<uint>("xmin").IsRowVersion();
     }
 
     /// <summary>
@@ -82,5 +87,14 @@ public static class ProviderSpecificMapping
             .IsUnique()
             .HasFilter("\"IsActive\"")
             .HasDatabaseName("IX_ReleasePlan_IsActive");
+
+        // One active rollout plan per target task -- the SQL Server filter "[IsActive] = 1" from
+        // RolloutPlanConfiguration reaches PostgreSQL as-is otherwise, where the brackets are not
+        // quoting and a boolean does not equal 1. Same rewrite as ReleasePlan above.
+        builder.Entity<RolloutPlan>()
+            .HasIndex(e => e.TargetTaskId)
+            .IsUnique()
+            .HasFilter("\"IsActive\"")
+            .HasDatabaseName("IX_RolloutPlan_TargetTaskId_Active");
     }
 }

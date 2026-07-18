@@ -237,6 +237,36 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "Key" }, "IX_DeploymentEnvironment_Key")
+                        .IsUnique();
+
+                    b.ToTable("DeploymentEnvironments");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.GroupPermissionMapping", b =>
                 {
                     b.Property<Guid>("Id")
@@ -352,6 +382,83 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                         .IsUnique();
 
                     b.ToTable("PermissionClaims");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeployStrategyKeyOverride")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("IntraTaskOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ManualInclusion")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlanTaskNodeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "MergeRequestId" }, "IX_PlanItem_MergeRequestId");
+
+                    b.HasIndex(new[] { "PlanTaskNodeId", "MergeRequestId" }, "IX_PlanItem_Node_Mr")
+                        .IsUnique();
+
+                    b.ToTable("PlanItems");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RolloutPlanId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RolloutPlanId");
+
+                    b.ToTable("PlanOverrides");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RolloutPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId");
+
+                    b.HasIndex(new[] { "RolloutPlanId", "TaskId" }, "IX_PlanTaskNode_Plan_Task")
+                        .IsUnique();
+
+                    b.ToTable("PlanTaskNodes");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", b =>
@@ -500,6 +607,63 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.HasIndex("StackId");
 
                     b.ToTable("RepositoryStacks");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConflictsJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("SnapshotStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TargetTaskId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("YamlHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetTaskId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RolloutPlan_TargetTaskId_Active")
+                        .HasFilter("\"IsActive\"");
+
+                    b.HasIndex(new[] { "CreatedAt" }, "IX_RolloutPlan_CreatedAt");
+
+                    b.ToTable("RolloutPlans");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>
@@ -811,6 +975,55 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanItem", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
+                        .WithMany()
+                        .HasForeignKey("MergeRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", "PlanTaskNode")
+                        .WithMany("Items")
+                        .HasForeignKey("PlanTaskNodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MergeRequest");
+
+                    b.Navigation("PlanTaskNode");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanOverride", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", "RolloutPlan")
+                        .WithMany("Overrides")
+                        .HasForeignKey("RolloutPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RolloutPlan");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", "RolloutPlan")
+                        .WithMany("Nodes")
+                        .HasForeignKey("RolloutPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "Task")
+                        .WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RolloutPlan");
+
+                    b.Navigation("Task");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleaseStage", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", "Plan")
@@ -876,6 +1089,17 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("Repository");
 
                     b.Navigation("Stack");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "TargetTask")
+                        .WithMany()
+                        .HasForeignKey("TargetTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TargetTask");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.StackDependency", b =>
@@ -969,6 +1193,11 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("UserOverrides");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReleasePlan", b =>
                 {
                     b.Navigation("Stages");
@@ -988,6 +1217,13 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("RepositoryStacks");
 
                     b.Navigation("RequiredBy");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
+                {
+                    b.Navigation("Nodes");
+
+                    b.Navigation("Overrides");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Stack", b =>

@@ -43,6 +43,7 @@ public static class InfrastructureExtensions
 
         services.AddScoped<TokenProtector>();
         services.AddScoped<IReleasePlannerService, ReleasePlanner>();
+        services.AddScoped<IRolloutPlannerService, RolloutPlanner>();
         services.AddScoped<IVcsService, VcsService>();
         services.AddScoped<ITrackerService, TrackerService>();
 

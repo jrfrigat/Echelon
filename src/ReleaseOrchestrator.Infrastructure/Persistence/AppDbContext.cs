@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<VcsConnection> VcsConnections => Set<VcsConnection>();
     public DbSet<TrackerConnection> TrackerConnections => Set<TrackerConnection>();
     public DbSet<Repository> Repositories => Set<Repository>();
+    public DbSet<DeploymentEnvironment> DeploymentEnvironments => Set<DeploymentEnvironment>();
     public DbSet<Stack> Stacks => Set<Stack>();
     public DbSet<RepositoryStack> RepositoryStacks => Set<RepositoryStack>();
     public DbSet<StackDependency> StackDependencies => Set<StackDependency>();
@@ -24,6 +25,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ReleasePlan> ReleasePlans => Set<ReleasePlan>();
     public DbSet<ReleaseStage> ReleaseStages => Set<ReleaseStage>();
     public DbSet<StageItem> StageItems => Set<StageItem>();
+    public DbSet<RolloutPlan> RolloutPlans => Set<RolloutPlan>();
+    public DbSet<PlanTaskNode> PlanTaskNodes => Set<PlanTaskNode>();
+    public DbSet<PlanItem> PlanItems => Set<PlanItem>();
+    public DbSet<PlanOverride> PlanOverrides => Set<PlanOverride>();
     public DbSet<PermissionClaim> PermissionClaims => Set<PermissionClaim>();
     public DbSet<GroupPermissionMapping> GroupPermissionMappings => Set<GroupPermissionMapping>();
     public DbSet<UserPermissionOverride> UserPermissionOverrides => Set<UserPermissionOverride>();
