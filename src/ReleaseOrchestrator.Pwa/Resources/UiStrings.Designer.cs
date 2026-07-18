@@ -1220,5 +1220,240 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Perms_MappingRemoved", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Tasks.
+        /// </summary>
+        public static string Nav_Tasks {
+            get {
+                return ResourceManager.GetString("Nav_Tasks", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Tasks.
+        /// </summary>
+        public static string Tasks_Title {
+            get {
+                return ResourceManager.GetString("Tasks_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Tasks.
+        /// </summary>
+        public static string Tasks_Heading {
+            get {
+                return ResourceManager.GetString("Tasks_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No tasks yet.
+        /// </summary>
+        public static string Tasks_Empty_Title {
+            get {
+                return ResourceManager.GetString("Tasks_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Tasks appear here once they are ingested from a tracker..
+        /// </summary>
+        public static string Tasks_Empty_Description {
+            get {
+                return ResourceManager.GetString("Tasks_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Key.
+        /// </summary>
+        public static string Tasks_Col_Key {
+            get {
+                return ResourceManager.GetString("Tasks_Col_Key", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Title.
+        /// </summary>
+        public static string Tasks_Col_Title {
+            get {
+                return ResourceManager.GetString("Tasks_Col_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string Tasks_Col_Status {
+            get {
+                return ResourceManager.GetString("Tasks_Col_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to MRs.
+        /// </summary>
+        public static string Tasks_Col_Mrs {
+            get {
+                return ResourceManager.GetString("Tasks_Col_Mrs", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Plan.
+        /// </summary>
+        public static string Tasks_Col_Plan {
+            get {
+                return ResourceManager.GetString("Tasks_Col_Plan", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Built.
+        /// </summary>
+        public static string Tasks_PlanBuilt {
+            get {
+                return ResourceManager.GetString("Tasks_PlanBuilt", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to None.
+        /// </summary>
+        public static string Tasks_PlanNone {
+            get {
+                return ResourceManager.GetString("Tasks_PlanNone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        public static string Tasks_Open {
+            get {
+                return ResourceManager.GetString("Tasks_Open", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Back to tasks.
+        /// </summary>
+        public static string TaskDetail_Back {
+            get {
+                return ResourceManager.GetString("TaskDetail_Back", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Recalculate plan.
+        /// </summary>
+        public static string TaskDetail_Recalculate {
+            get {
+                return ResourceManager.GetString("TaskDetail_Recalculate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Plan recalculated..
+        /// </summary>
+        public static string TaskDetail_Recalculated {
+            get {
+                return ResourceManager.GetString("TaskDetail_Recalculated", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No plan yet.
+        /// </summary>
+        public static string TaskDetail_NoPlan_Title {
+            get {
+                return ResourceManager.GetString("TaskDetail_NoPlan_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Recalculate to build the rollout plan for this task..
+        /// </summary>
+        public static string TaskDetail_NoPlan_Description {
+            get {
+                return ResourceManager.GetString("TaskDetail_NoPlan_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Build plan.
+        /// </summary>
+        public static string TaskDetail_Build {
+            get {
+                return ResourceManager.GetString("TaskDetail_Build", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Version {0}, source {1}, updated {2}.
+        /// </summary>
+        public static string TaskDetail_Meta {
+            get {
+                return ResourceManager.GetString("TaskDetail_Meta", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Dependency tree.
+        /// </summary>
+        public static string TaskDetail_Tree_Title {
+            get {
+                return ResourceManager.GetString("TaskDetail_Tree_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Execution waves.
+        /// </summary>
+        public static string TaskDetail_Waves_Title {
+            get {
+                return ResourceManager.GetString("TaskDetail_Waves_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to target.
+        /// </summary>
+        public static string TaskDetail_Target {
+            get {
+                return ResourceManager.GetString("TaskDetail_Target", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No merge requests.
+        /// </summary>
+        public static string TaskDetail_NoItems {
+            get {
+                return ResourceManager.GetString("TaskDetail_NoItems", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to depends on.
+        /// </summary>
+        public static string TaskDetail_DependsOn {
+            get {
+                return ResourceManager.GetString("TaskDetail_DependsOn", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Wave {0}.
+        /// </summary>
+        public static string Plan_Wave {
+            get {
+                return ResourceManager.GetString("Plan_Wave", resourceCulture);
+            }
+        }
+
     }
 }

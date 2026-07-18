@@ -495,4 +495,82 @@
   <data name="Perms_MappingRemoved" xml:space="preserve">
     <value>Mapping removed.</value>
   </data>
+  <data name="Nav_Tasks" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="Tasks_Title" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="Tasks_Heading" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="Tasks_Empty_Title" xml:space="preserve">
+    <value>No tasks yet</value>
+  </data>
+  <data name="Tasks_Empty_Description" xml:space="preserve">
+    <value>Tasks appear here once they are ingested from a tracker.</value>
+  </data>
+  <data name="Tasks_Col_Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="Tasks_Col_Title" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Tasks_Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Tasks_Col_Mrs" xml:space="preserve">
+    <value>MRs</value>
+  </data>
+  <data name="Tasks_Col_Plan" xml:space="preserve">
+    <value>Plan</value>
+  </data>
+  <data name="Tasks_PlanBuilt" xml:space="preserve">
+    <value>Built</value>
+  </data>
+  <data name="Tasks_PlanNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Tasks_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="TaskDetail_Back" xml:space="preserve">
+    <value>Back to tasks</value>
+  </data>
+  <data name="TaskDetail_Recalculate" xml:space="preserve">
+    <value>Recalculate plan</value>
+  </data>
+  <data name="TaskDetail_Recalculated" xml:space="preserve">
+    <value>Plan recalculated.</value>
+  </data>
+  <data name="TaskDetail_NoPlan_Title" xml:space="preserve">
+    <value>No plan yet</value>
+  </data>
+  <data name="TaskDetail_NoPlan_Description" xml:space="preserve">
+    <value>Recalculate to build the rollout plan for this task.</value>
+  </data>
+  <data name="TaskDetail_Build" xml:space="preserve">
+    <value>Build plan</value>
+  </data>
+  <data name="TaskDetail_Meta" xml:space="preserve">
+    <value>Version {0}, source {1}, updated {2}</value>
+  </data>
+  <data name="TaskDetail_Tree_Title" xml:space="preserve">
+    <value>Dependency tree</value>
+  </data>
+  <data name="TaskDetail_Waves_Title" xml:space="preserve">
+    <value>Execution waves</value>
+  </data>
+  <data name="TaskDetail_Target" xml:space="preserve">
+    <value>target</value>
+  </data>
+  <data name="TaskDetail_NoItems" xml:space="preserve">
+    <value>No merge requests</value>
+  </data>
+  <data name="TaskDetail_DependsOn" xml:space="preserve">
+    <value>depends on</value>
+  </data>
+  <data name="Plan_Wave" xml:space="preserve">
+    <value>Wave {0}</value>
+  </data>
 </root>

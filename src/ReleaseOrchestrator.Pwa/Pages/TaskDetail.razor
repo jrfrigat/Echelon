@@ -1,0 +1,157 @@
+@page "/tasks/{Id:guid}"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@(_plan?.TargetTaskKey ?? UiStrings.Tasks_Title)</PageTitle>
+
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">
+        <LeadingIcon><FlareIcon Name="arrow_back" /></LeadingIcon>
+        <ChildContent>@UiStrings.TaskDetail_Back</ChildContent>
+    </FlareButton>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@(_plan?.TargetTaskKey ?? "")</FlareText>
+    <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="Recalculate" Disabled="_busy">
+        <LeadingIcon><FlareIcon Name="@FlareIcons.Refresh" /></LeadingIcon>
+        <ChildContent>@UiStrings.TaskDetail_Recalculate</ChildContent>
+    </FlareButton>
+</FlareStack>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_plan is null)
+{
+    <FlareEmptyState Title="@UiStrings.TaskDetail_NoPlan_Title" Description="@UiStrings.TaskDetail_NoPlan_Description" />
+    <FlareButton OnClick="Recalculate" Loading="_busy">@UiStrings.TaskDetail_Build</FlareButton>
+}
+else
+{
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+        @string.Format(UiStrings.TaskDetail_Meta, _plan.Version, _plan.Source, _plan.UpdatedAt.ToString("g"))
+    </FlareText>
+
+    @if (_plan.Conflicts.Count > 0)
+    {
+        <FlareAlert Severity="AlertSeverity.Warning"
+                    Title="@string.Format(UiStrings.Plan_Conflicts_Title, _plan.Conflicts.Count)">
+            <FlareStack Gap="FlareSpacing.XSmall">
+                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Plan_Conflicts_Body</FlareText>
+                @foreach (var c in _plan.Conflicts)
+                {
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning">@c.Kind</FlareChip>
+                        <FlareText Typo="TypographyScale.BodySmall">@c.Reason</FlareText>
+                    </FlareStack>
+                }
+            </FlareStack>
+        </FlareAlert>
+    }
+
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.TaskDetail_Tree_Title</FlareText>
+    <FlareStack Gap="FlareSpacing.Medium">
+        @foreach (var node in _plan.Nodes)
+        {
+            <FlareCard Variant="CardVariant.Outlined">
+                <FlareCardHeader>
+                    <ChildContent>
+                        <FlareStack Gap="FlareSpacing.XSmall">
+                            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                                <FlareText Typo="TypographyScale.TitleSmall">@node.TaskKey</FlareText>
+                                @if (node.IsTarget)
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@UiStrings.TaskDetail_Target</FlareChip>
+                                }
+                                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@node.TaskTitle</FlareText>
+                            </FlareStack>
+                            @if (node.DependsOnTaskIds.Count > 0)
+                            {
+                                <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                                    <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_DependsOn</FlareText>
+                                    @foreach (var dep in node.DependsOnTaskIds)
+                                    {
+                                        <FlareChip Size="ChipSize.Sm">@KeyOf(dep)</FlareChip>
+                                    }
+                                </FlareStack>
+                            }
+                        </FlareStack>
+                    </ChildContent>
+                </FlareCardHeader>
+
+                <FlareCardContent>
+                    @if (node.Items.Count == 0)
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_NoItems</FlareText>
+                    }
+                    else
+                    {
+                        <FlareStack Gap="FlareSpacing.XSmall">
+                            @foreach (var item in node.Items)
+                            {
+                                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                                    <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Plan_Wave, item.Wave)</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Color="@StatusColor(item.MrStatus)">@item.MrStatus</FlareChip>
+                                    <FlareStack Gap="FlareSpacing.None">
+                                        <FlareText Typo="TypographyScale.BodyMedium">@item.RepositoryName !@item.MrExternalId</FlareText>
+                                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                            @item.SourceBranch -> @item.TargetBranch
+                                        </FlareText>
+                                    </FlareStack>
+                                </FlareStack>
+                            }
+                        </FlareStack>
+                    }
+                </FlareCardContent>
+            </FlareCard>
+        }
+    </FlareStack>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    RolloutPlanDto? _plan;
+    bool _loading = true;
+    bool _busy;
+    Dictionary<Guid, string> _keyById = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    async Task Load()
+    {
+        _loading = true;
+        // A null plan is a legitimate answer (nothing built yet), not a failure.
+        await RunAsync(async () => _plan = await Api.GetTaskPlanAsync(Id));
+        RebuildKeyMap();
+        _loading = false;
+    }
+
+    async Task Recalculate()
+    {
+        _busy = true;
+        await RunAsync(async () => _plan = await Api.RecalculateTaskPlanAsync(Id), UiStrings.TaskDetail_Recalculated);
+        RebuildKeyMap();
+        _busy = false;
+    }
+
+    void RebuildKeyMap() => _keyById = _plan?.Nodes.ToDictionary(n => n.TaskId, n => n.TaskKey) ?? [];
+
+    string KeyOf(Guid taskId) => _keyById.TryGetValue(taskId, out var k) ? k : taskId.ToString()[..8];
+
+    void Back() => Nav.NavigateTo("/tasks");
+
+    // Mirrors the server-side MergeRequestStatus enum, which the PWA does not reference.
+    static FlareColor StatusColor(string status) => status switch
+    {
+        "ReadyForDeploy" => FlareColor.Success,
+        "Merged" => FlareColor.Primary,
+        "Opened" => FlareColor.Secondary,
+        "Closed" => FlareColor.OnSurfaceVariant,
+        _ => FlareColor.Default
+    };
+}

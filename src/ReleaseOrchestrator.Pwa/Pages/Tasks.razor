@@ -1,0 +1,70 @@
+@page "/tasks"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@UiStrings.Tasks_Title</PageTitle>
+
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Tasks_Heading</FlareText>
+</FlareStack>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_tasks is null || _tasks.Items.Count == 0)
+{
+    <FlareEmptyState Title="@UiStrings.Tasks_Empty_Title" Description="@UiStrings.Tasks_Empty_Description" />
+}
+else
+{
+    <FlareTable TItem="TaskListItemDto" Items="_tasks.Items">
+        <HeaderContent>
+            <tr>
+                <th>@UiStrings.Tasks_Col_Key</th>
+                <th>@UiStrings.Tasks_Col_Title</th>
+                <th>@UiStrings.Tasks_Col_Status</th>
+                <th>@UiStrings.Tasks_Col_Mrs</th>
+                <th>@UiStrings.Tasks_Col_Plan</th>
+                <th></th>
+            </tr>
+        </HeaderContent>
+        <RowTemplate Context="t">
+            <td>@t.ExternalId</td>
+            <td>@t.Title</td>
+            <td>@t.Status</td>
+            <td>@t.MergeRequestCount</td>
+            <td>
+                @if (t.HasActivePlan)
+                {
+                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
+                }
+                else
+                {
+                    <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
+                }
+            </td>
+            <td>
+                <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(t.Id))">@UiStrings.Tasks_Open</FlareButton>
+            </td>
+        </RowTemplate>
+    </FlareTable>
+}
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    PagedResult<TaskListItemDto>? _tasks;
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _tasks = await Api.GetTasksAsync());
+        _loading = false;
+    }
+
+    void Open(Guid id) => Nav.NavigateTo($"/tasks/{id}");
+}

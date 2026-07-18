@@ -495,4 +495,82 @@
   <data name="Perms_MappingRemoved" xml:space="preserve">
     <value>Сопоставление удалено.</value>
   </data>
+  <data name="Nav_Tasks" xml:space="preserve">
+    <value>Задачи</value>
+  </data>
+  <data name="Tasks_Title" xml:space="preserve">
+    <value>Задачи</value>
+  </data>
+  <data name="Tasks_Heading" xml:space="preserve">
+    <value>Задачи</value>
+  </data>
+  <data name="Tasks_Empty_Title" xml:space="preserve">
+    <value>Пока нет задач</value>
+  </data>
+  <data name="Tasks_Empty_Description" xml:space="preserve">
+    <value>Задачи появятся здесь после загрузки из трекера.</value>
+  </data>
+  <data name="Tasks_Col_Key" xml:space="preserve">
+    <value>Ключ</value>
+  </data>
+  <data name="Tasks_Col_Title" xml:space="preserve">
+    <value>Заголовок</value>
+  </data>
+  <data name="Tasks_Col_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Tasks_Col_Mrs" xml:space="preserve">
+    <value>MR</value>
+  </data>
+  <data name="Tasks_Col_Plan" xml:space="preserve">
+    <value>План</value>
+  </data>
+  <data name="Tasks_PlanBuilt" xml:space="preserve">
+    <value>Построен</value>
+  </data>
+  <data name="Tasks_PlanNone" xml:space="preserve">
+    <value>Нет</value>
+  </data>
+  <data name="Tasks_Open" xml:space="preserve">
+    <value>Открыть</value>
+  </data>
+  <data name="TaskDetail_Back" xml:space="preserve">
+    <value>К списку задач</value>
+  </data>
+  <data name="TaskDetail_Recalculate" xml:space="preserve">
+    <value>Пересчитать план</value>
+  </data>
+  <data name="TaskDetail_Recalculated" xml:space="preserve">
+    <value>План пересчитан.</value>
+  </data>
+  <data name="TaskDetail_NoPlan_Title" xml:space="preserve">
+    <value>Плана пока нет</value>
+  </data>
+  <data name="TaskDetail_NoPlan_Description" xml:space="preserve">
+    <value>Нажмите пересчитать, чтобы построить план выкатки для этой задачи.</value>
+  </data>
+  <data name="TaskDetail_Build" xml:space="preserve">
+    <value>Построить план</value>
+  </data>
+  <data name="TaskDetail_Meta" xml:space="preserve">
+    <value>Версия {0}, источник {1}, обновлён {2}</value>
+  </data>
+  <data name="TaskDetail_Tree_Title" xml:space="preserve">
+    <value>Дерево зависимостей</value>
+  </data>
+  <data name="TaskDetail_Waves_Title" xml:space="preserve">
+    <value>Волны выполнения</value>
+  </data>
+  <data name="TaskDetail_Target" xml:space="preserve">
+    <value>цель</value>
+  </data>
+  <data name="TaskDetail_NoItems" xml:space="preserve">
+    <value>Нет merge request'ов</value>
+  </data>
+  <data name="TaskDetail_DependsOn" xml:space="preserve">
+    <value>зависит от</value>
+  </data>
+  <data name="Plan_Wave" xml:space="preserve">
+    <value>Волна {0}</value>
+  </data>
 </root>

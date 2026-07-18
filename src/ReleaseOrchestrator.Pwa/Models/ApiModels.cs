@@ -40,3 +40,24 @@ public record PagedResult<T>(int Total, int Page, int PageSize, List<T> Items);
 
 public record PermissionClaimDto(Guid Id, string Name);
 public record GroupMappingDto(Guid Id, string AdGroupSid, string ClaimName);
+
+// ---- per-task rollout plans (mirrors Application.DTOs.RolloutPlanDto) ----
+
+public record TaskListItemDto(
+    Guid Id, string ExternalId, string Title, string Status,
+    int MergeRequestCount, bool HasActivePlan);
+
+public record RolloutPlanDto(
+    Guid Id, Guid TargetTaskId, string TargetTaskKey, string Version,
+    string Source, string Status, bool IsActive, DateTime CreatedAt, DateTime UpdatedAt,
+    List<PlanTaskNodeDto> Nodes, List<PlanWaveDto> Waves, List<PlanConflictDto> Conflicts);
+
+public record PlanTaskNodeDto(
+    Guid TaskId, string TaskKey, string TaskTitle, bool IsTarget,
+    List<Guid> DependsOnTaskIds, List<PlanItemDto> Items);
+
+public record PlanItemDto(
+    Guid MergeRequestId, string MrExternalId, string RepositoryName,
+    string SourceBranch, string TargetBranch, string MrStatus, int Wave);
+
+public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);

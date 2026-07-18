@@ -138,6 +138,17 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PostAsJsonAsync($"api/stacks/{stackId}/repositories",
             new { RepositoryId = repositoryId }, ct), ct);
 
+    // ---- tasks (per-task rollout plans) ---------------------------------------
+
+    public Task<PagedResult<TaskListItemDto>> GetTasksAsync(int page = 1, CancellationToken ct = default) =>
+        GetAsync<PagedResult<TaskListItemDto>>($"api/tasks?page={page}&pageSize=50", ct);
+
+    public Task<RolloutPlanDto?> GetTaskPlanAsync(Guid taskId, CancellationToken ct = default) =>
+        GetOrNullAsync<RolloutPlanDto>($"api/tasks/{taskId}/plan", ct);
+
+    public Task<RolloutPlanDto> RecalculateTaskPlanAsync(Guid taskId, CancellationToken ct = default) =>
+        SendAsync<RolloutPlanDto>(() => http.PostAsync($"api/tasks/{taskId}/plan/recalculate", null, ct), ct);
+
     // ---- permissions ----------------------------------------------------------
 
     public Task<List<PermissionClaimDto>> GetPermissionClaimsAsync(CancellationToken ct = default) =>
