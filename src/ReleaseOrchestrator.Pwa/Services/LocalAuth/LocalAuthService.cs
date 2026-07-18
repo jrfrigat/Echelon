@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.JSInterop;
 
 namespace ReleaseOrchestrator.Pwa.Services.LocalAuth;
@@ -9,23 +10,28 @@ namespace ReleaseOrchestrator.Pwa.Services.LocalAuth;
 /// </summary>
 public sealed class LocalAuthService(HttpClient http, IJSRuntime js, LocalAuthStateProvider stateProvider)
 {
-    private record LoginRequest(string Username, string Password);
-    private record LoginResponse(string Token, DateTime ExpiresAtUtc);
-
     /// <summary>Exchanges credentials for a token. Returns true on success.</summary>
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
     public async Task<bool> LoginAsync(string username, string password)
     {
-        var response = await http.PostAsJsonAsync("auth/login", new LoginRequest(username, password));
+        // The body is written as a JsonObject rather than a typed record: WASM trimming strips the
+        // reflection metadata a record needs to deserialize, so a typed read silently yields an empty
+        // token even on a 200. JsonDocument reads by name with no reflection.
+        var request = new Dictionary<string, string> { ["username"] = username, ["password"] = password };
+        var response = await http.PostAsJsonAsync("auth/login", request);
         if (!response.IsSuccessStatusCode)
             return false;
 
-        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        if (body is null || string.IsNullOrWhiteSpace(body.Token))
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        if (!doc.RootElement.TryGetProperty("token", out var tokenElement))
             return false;
 
-        await js.InvokeVoidAsync("localStorage.setItem", LocalAuthStateProvider.TokenStorageKey, body.Token);
+        var token = tokenElement.GetString();
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        await js.InvokeVoidAsync("localStorage.setItem", LocalAuthStateProvider.TokenStorageKey, token);
         stateProvider.NotifyChanged();
         return true;
     }

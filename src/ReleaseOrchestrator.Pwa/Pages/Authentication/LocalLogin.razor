@@ -41,7 +41,9 @@
         _failed = false;
 
         if (await Auth.LoginAsync(_username, _password))
-            Navigation.NavigateTo(ReturnUrl ?? "/");
+            // forceLoad so the app re-boots with the token already in storage: the auth state is read
+            // fresh on startup, which sidesteps a race between NotifyChanged and the router.
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
         else
             _failed = true;
 
