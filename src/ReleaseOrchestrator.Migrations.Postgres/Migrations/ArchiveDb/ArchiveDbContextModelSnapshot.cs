@@ -77,39 +77,6 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations.ArchiveDb
                     b.ToTable("ArchivedMergeRequests");
                 });
 
-            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Archive.Entities.ArchivedReleasePlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ArchivedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("PlanJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.ToTable("ArchivedReleasePlans");
-                });
-
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Archive.Entities.ArchivedTask", b =>
                 {
                     b.Property<Guid>("Id")

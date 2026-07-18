@@ -20,43 +20,6 @@ public class ApiException(string message, HttpStatusCode statusCode) : Exception
 /// </summary>
 public class ApiService(HttpClient http)
 {
-    // ---- release plans --------------------------------------------------------
-
-    public Task<ReleasePlanDto?> GetActivePlanAsync(CancellationToken ct = default) =>
-        GetOrNullAsync<ReleasePlanDto>("api/release-plans/active", ct);
-
-    public Task<ReleasePlanDto?> GetPlanByIdAsync(Guid id, CancellationToken ct = default) =>
-        GetOrNullAsync<ReleasePlanDto>($"api/release-plans/{id}", ct);
-
-    public Task<ReleasePlanDto> RecalculatePlanAsync(CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(() => http.PostAsync("api/release-plans/recalculate", null, ct), ct);
-
-    public async Task<string> ExportYamlAsync(Guid planId, CancellationToken ct = default)
-    {
-        var response = await http.GetAsync($"api/release-plans/{planId}/export", ct);
-        await EnsureSuccessAsync(response, ct);
-        return await response.Content.ReadAsStringAsync(ct);
-    }
-
-    public Task<ReleasePlanDto> ImportYamlAsync(string yaml, bool force = false, CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(
-            () => http.PostAsJsonAsync("api/release-plans/import", new { Yaml = yaml, Force = force }, ct), ct);
-
-    public Task<ReleasePlanDto> ReorderStagesAsync(Guid planId, List<Guid> stageIds, CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(
-            () => http.PatchAsJsonAsync($"api/release-plans/{planId}/stages/reorder", new { StageIds = stageIds }, ct), ct);
-
-    public Task<ReleasePlanDto> MoveItemAsync(Guid planId, Guid itemId, Guid targetStageId, CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(
-            () => http.PostAsJsonAsync($"api/release-plans/{planId}/items/{itemId}/move", new { TargetStageId = targetStageId }, ct), ct);
-
-    public Task<ReleasePlanDto> AddItemAsync(Guid planId, Guid stageId, Guid mrId, CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(
-            () => http.PostAsJsonAsync($"api/release-plans/{planId}/stages/{stageId}/items", new { MergeRequestId = mrId }, ct), ct);
-
-    public Task<ReleasePlanDto> RemoveItemAsync(Guid planId, Guid itemId, CancellationToken ct = default) =>
-        SendAsync<ReleasePlanDto>(() => http.DeleteAsync($"api/release-plans/{planId}/items/{itemId}", ct), ct);
-
     // ---- merge requests -------------------------------------------------------
 
     public Task<PagedResult<MrDto>> GetMergeRequestsAsync(
@@ -121,22 +84,6 @@ public class ApiService(HttpClient http)
 
     public Task DeleteRepositoryAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/repositories/{id}", ct), ct);
-
-    // ---- stacks ---------------------------------------------------------------
-
-    public Task<PagedResult<StackDto>> GetStacksAsync(int page = 1, CancellationToken ct = default) =>
-        GetAsync<PagedResult<StackDto>>($"api/stacks?page={page}&pageSize=50", ct);
-
-    public Task CreateStackAsync(string name, CancellationToken ct = default) =>
-        SendAsync(() => http.PostAsJsonAsync("api/stacks", new { Name = name }, ct), ct);
-
-    public Task AddStackDependencyAsync(Guid fromStackId, Guid toStackId, string type, CancellationToken ct = default) =>
-        SendAsync(() => http.PostAsJsonAsync($"api/stacks/{fromStackId}/dependencies",
-            new { ToStackId = toStackId, Type = type }, ct), ct);
-
-    public Task AssignRepositoryToStackAsync(Guid stackId, Guid repositoryId, CancellationToken ct = default) =>
-        SendAsync(() => http.PostAsJsonAsync($"api/stacks/{stackId}/repositories",
-            new { RepositoryId = repositoryId }, ct), ct);
 
     // ---- tasks (per-task rollout plans) ---------------------------------------
 

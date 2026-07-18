@@ -71,16 +71,16 @@ public class ModelMappingTests
     [Theory]
     [InlineData(DatabaseProviders.SqlServer, "TaskDependency", "DependentTask")]
     [InlineData(DatabaseProviders.SqlServer, "TaskDependency", "DependsOnTask")]
-    [InlineData(DatabaseProviders.SqlServer, "StageItem", "MergeRequest")]
     [InlineData(DatabaseProviders.SqlServer, "MergeRequest", "Repository")]
-    [InlineData(DatabaseProviders.SqlServer, "StackDependency", "FromStack")]
-    [InlineData(DatabaseProviders.SqlServer, "StackDependency", "ToStack")]
+    [InlineData(DatabaseProviders.SqlServer, "PlanItem", "MergeRequest")]
+    [InlineData(DatabaseProviders.SqlServer, "RolloutStep", "MergeRequest")]
+    [InlineData(DatabaseProviders.SqlServer, "MrDeploymentState", "MergeRequest")]
     [InlineData(DatabaseProviders.PostgreSql, "TaskDependency", "DependentTask")]
     [InlineData(DatabaseProviders.PostgreSql, "TaskDependency", "DependsOnTask")]
-    [InlineData(DatabaseProviders.PostgreSql, "StageItem", "MergeRequest")]
     [InlineData(DatabaseProviders.PostgreSql, "MergeRequest", "Repository")]
-    [InlineData(DatabaseProviders.PostgreSql, "StackDependency", "FromStack")]
-    [InlineData(DatabaseProviders.PostgreSql, "StackDependency", "ToStack")]
+    [InlineData(DatabaseProviders.PostgreSql, "PlanItem", "MergeRequest")]
+    [InlineData(DatabaseProviders.PostgreSql, "RolloutStep", "MergeRequest")]
+    [InlineData(DatabaseProviders.PostgreSql, "MrDeploymentState", "MergeRequest")]
     public void RelationshipRefusesToCascade(string provider, string entityName, string navigationName)
     {
         var entity = BuildModel(provider).GetEntityTypes().Single(e => e.ClrType.Name == entityName);
@@ -90,29 +90,30 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// The one active plan is enforced by a filtered unique index, and a filter is a fragment of
-    /// SQL that EF passes through verbatim — so it is the mapping most obviously not portable.
+    /// The one active plan PER task is enforced by a filtered unique index, and a filter is a
+    /// fragment of SQL that EF passes through verbatim — so it is the mapping most obviously not
+    /// portable.
     /// </summary>
     /// <remarks>
     /// SQL Server's <c>[IsActive] = 1</c> reaching PostgreSQL is a syntax error twice over: the
     /// brackets are not quoting there, and a boolean does not compare to 1. It fails when the
     /// migration is applied, which is late but loud. The index itself is not optional — without it
-    /// two concurrent recalculations leave two active plans — so it is rewritten per provider
-    /// rather than dropped.
+    /// two concurrent recalculations leave two active plans for one task — so it is rewritten per
+    /// provider rather than dropped.
     /// </remarks>
     [Theory]
     [InlineData(DatabaseProviders.SqlServer, "[IsActive] = 1")]
     [InlineData(DatabaseProviders.PostgreSql, "\"IsActive\"")]
-    public void TheOneActivePlanIndexIsFilteredInEachDatabasesOwnDialect(string provider, string expectedFilter)
+    public void TheOneActivePlanPerTaskIndexIsFilteredInEachDatabasesOwnDialect(string provider, string expectedFilter)
     {
         var index = BuildModel(provider)
-            .FindEntityType(typeof(ReleasePlan))!
+            .FindEntityType(typeof(RolloutPlan))!
             .GetIndexes()
-            .Single(i => i.Properties.Any(p => p.Name == nameof(ReleasePlan.IsActive)));
+            .Single(i => i.GetDatabaseName() == "IX_RolloutPlan_TargetTaskId_Active");
 
         Assert.True(index.IsUnique);
         Assert.Equal(expectedFilter, index.GetFilter());
-        Assert.Equal("IX_ReleasePlan_IsActive", index.GetDatabaseName());
+        Assert.Equal("IX_RolloutPlan_TargetTaskId_Active", index.GetDatabaseName());
     }
 
     /// <summary>

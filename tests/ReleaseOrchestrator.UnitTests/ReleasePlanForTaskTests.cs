@@ -29,7 +29,6 @@ public class ReleasePlanForTaskTests
         new(Guid.NewGuid(),
             taskId,
             dependsOn.TryGetValue(taskId, out var deps) ? deps : [],
-            [],
             repositoryId ?? Guid.NewGuid(),
             repoDependsOn ?? []);
 

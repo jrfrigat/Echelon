@@ -90,8 +90,4 @@ public class MergeRequest
     [InverseProperty(nameof(TaskItem.MergeRequests))]
     [DeleteBehavior(DeleteBehavior.SetNull)]
     public TaskItem? Task { get; set; }
-
-    /// <summary>Every plan stage this merge request sits in.</summary>
-    [InverseProperty(nameof(StageItem.MergeRequest))]
-    public ICollection<StageItem> StageItems { get; set; } = [];
 }

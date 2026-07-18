@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// <summary>
 /// Why one merge request must be deployed before another, and how readily the
 /// link may be dropped to break a cycle. Higher value = dropped first
-/// (README §5.3: soft stack links yield before task links; hard links never yield).
+/// (README §5.3: soft repository links yield before task links; hard links never yield).
 /// </summary>
 public enum PlanEdgeKind
 {
@@ -13,9 +13,8 @@ public enum PlanEdgeKind
     Manual = -2,
     /// <summary>A hard repository-ordering link. Never dropped to break a cycle.</summary>
     RepoHard = -1,
-    StackHard = 0,
+    /// <summary>A task-dependency edge: every merge request of a prerequisite task deploys first.</summary>
     TaskDependency = 1,
-    StackSoft = 2,
     /// <summary>A soft repository-ordering link. Advisory: dropped first to break a cycle.</summary>
     RepoSoft = 3
 }
@@ -132,15 +131,15 @@ public static class ReleasePlanGraph
     }
 
     /// <summary>
-    /// Constraints an operator may not violate: hard stack links and task dependencies.
-    /// Soft stack links are advisory and excluded. Used to vet imported plans (README §6.2)
+    /// Constraints an operator may not violate: hard repository links and task dependencies.
+    /// Soft repository links are advisory and excluded. Used to vet imported plans (README §6.2)
     /// against the same edge derivation the planner itself uses, so the two cannot drift.
     /// </summary>
     public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         return BuildEdges(mrs, ids)
-            .Where(kv => kv.Value != PlanEdgeKind.StackSoft && kv.Value != PlanEdgeKind.RepoSoft)
+            .Where(kv => kv.Value != PlanEdgeKind.RepoSoft)
             .Select(kv => new PlanEdge(kv.Key.From, kv.Key.To, kv.Value))
             .ToList();
     }
@@ -176,9 +175,6 @@ public static class ReleasePlanGraph
         IReadOnlyList<PlanMergeRequest> mrs, HashSet<Guid> ids)
     {
         var byTask = mrs.Where(m => m.TaskId.HasValue).ToLookup(m => m.TaskId!.Value);
-        var byStack = mrs
-            .SelectMany(m => m.Stacks.Select(s => (s.StackId, Mr: m)))
-            .ToLookup(x => x.StackId, x => x.Mr);
         var byRepo = mrs.ToLookup(m => m.RepositoryId);
 
         var edges = new Dictionary<(Guid, Guid), PlanEdgeKind>();
@@ -186,7 +182,7 @@ public static class ReleasePlanGraph
         void AddEdge(Guid from, Guid to, PlanEdgeKind kind)
         {
             // A self-edge means the same MR sits on both ends of a constraint (e.g. its
-            // repository is in two stacks that depend on each other). It carries no
+            // repository declares a dependency that resolves back to itself). It carries no
             // ordering information and would deadlock Kahn's algorithm.
             if (from == to || !ids.Contains(from) || !ids.Contains(to)) return;
 
@@ -202,20 +198,9 @@ public static class ReleasePlanGraph
                 foreach (var predecessor in byTask[dependsOnTaskId])
                     AddEdge(predecessor.Id, mr.Id, PlanEdgeKind.TaskDependency);
 
-            foreach (var stack in mr.Stacks)
-                foreach (var link in stack.DependsOn)
-                {
-                    var kind = link.Type == StackDependencyType.Hard
-                        ? PlanEdgeKind.StackHard
-                        : PlanEdgeKind.StackSoft;
-
-                    foreach (var predecessor in byStack[link.ToStackId])
-                        AddEdge(predecessor.Id, mr.Id, kind);
-                }
-
             // Repository-ordering edges: every merge request in a repository this one's repository
-            // waits on deploys first. This is the editable replacement for stack ordering, and it is
-            // also what orders merge requests within a single task -- task dependencies never do.
+            // waits on deploys first. This is the editable ordering policy that replaced stacks, and
+            // it is also what orders merge requests within a single task -- task dependencies never do.
             foreach (var link in mr.RepositoryDependsOn)
             {
                 var kind = link.Type == StackDependencyType.Hard
@@ -259,7 +244,7 @@ public static class ReleasePlanGraph
                 victim.Kind,
                 victim.FromMrId,
                 victim.ToMrId,
-                victim.Kind is PlanEdgeKind.StackHard or PlanEdgeKind.RepoHard
+                victim.Kind is PlanEdgeKind.RepoHard
                     ? "Dependency cycle consists only of hard links and cannot be satisfied. "
                       + "This link was dropped to produce an ordered plan; fix the ordering configuration."
                     : $"Dropped to break a dependency cycle ({victim.Kind})."));

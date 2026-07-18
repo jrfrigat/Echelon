@@ -7,7 +7,6 @@ public class ArchiveDbContext(DbContextOptions<ArchiveDbContext> options) : DbCo
 {
     public DbSet<ArchivedTask> ArchivedTasks => Set<ArchivedTask>();
     public DbSet<ArchivedMergeRequest> ArchivedMergeRequests => Set<ArchivedMergeRequest>();
-    public DbSet<ArchivedReleasePlan> ArchivedReleasePlans => Set<ArchivedReleasePlan>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -33,14 +32,6 @@ public class ArchiveDbContext(DbContextOptions<ArchiveDbContext> options) : DbCo
             e.HasIndex(x => x.TaskExternalId);
             e.HasIndex(x => x.MergedAt);
             e.HasIndex(x => x.ClosedAt);
-        });
-
-        b.Entity<ArchivedReleasePlan>(e =>
-        {
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(300);
-            e.Property(x => x.Version).HasMaxLength(50);
-            e.HasIndex(x => x.CreatedAt);
         });
     }
 }

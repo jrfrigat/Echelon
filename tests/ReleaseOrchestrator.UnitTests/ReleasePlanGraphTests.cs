@@ -13,8 +13,9 @@ namespace ReleaseOrchestrator.UnitTests;
 /// These builders used to construct entity graphs and wire both ends of every navigation by hand,
 /// because the algorithm read <c>MergeRequest.Task.Dependencies</c> and the test had to imitate
 /// EF's fixup to reach it. The algorithm now takes what it needs and nothing else, so a test
-/// merge request is three fields — and no longer states, in its own setup, a claim about how EF
-/// behaves that it never actually verified.
+/// merge request is a few fields — and no longer states, in its own setup, a claim about how EF
+/// behaves that it never actually verified. Repository ordering is the mechanism that replaced
+/// stacks; the Hard/Soft cycle-breaking rules it inherits are what these exercise.
 /// </remarks>
 public class ReleasePlanGraphTests
 {
@@ -29,10 +30,11 @@ public class ReleasePlanGraphTests
         public List<Guid> DependsOn { get; } = [];
     }
 
-    private sealed class StackDef
+    /// <summary>A repository under construction, with the repositories it deploys after.</summary>
+    private sealed class RepoDef
     {
         public Guid Id { get; } = Guid.NewGuid();
-        public List<PlanStackLink> DependsOn { get; } = [];
+        public List<PlanRepositoryLink> DependsOn { get; } = [];
     }
 
     private static TaskDef Task() => new();
@@ -41,19 +43,18 @@ public class ReleasePlanGraphTests
     private static void DependsOn(TaskDef dependent, TaskDef dependsOn) =>
         dependent.DependsOn.Add(dependsOn.Id);
 
-    private static StackDef Stack() => new();
+    private static RepoDef Repo() => new();
 
     /// <summary>Records "from depends on to", i.e. every MR in <paramref name="to"/> deploys first.</summary>
-    private static void StackDependsOn(StackDef from, StackDef to, StackDependencyType type) =>
-        from.DependsOn.Add(new PlanStackLink(to.Id, type));
+    private static void RepoDependsOn(RepoDef from, RepoDef to, StackDependencyType type) =>
+        from.DependsOn.Add(new PlanRepositoryLink(to.Id, type));
 
-    private static PlanMergeRequest Mr(TaskDef? task = null, params StackDef[] stacks) =>
+    private static PlanMergeRequest Mr(TaskDef? task = null, RepoDef? repo = null) =>
         new(Guid.NewGuid(),
             task?.Id,
             task?.DependsOn ?? [],
-            [.. stacks.Select(s => new PlanRepositoryStack(s.Id, s.DependsOn))],
-            Guid.NewGuid(),   // a distinct repository per merge request unless a test says otherwise
-            []);
+            repo?.Id ?? Guid.NewGuid(),   // a distinct repository per merge request unless a test shares one
+            repo?.DependsOn ?? []);
 
     private static int StageOf(PlanGraphResult result, PlanMergeRequest mr) =>
         result.Stages.FindIndex(stage => stage.Contains(mr.Id));
@@ -117,17 +118,17 @@ public class ReleasePlanGraphTests
         Assert.Equal(3, result.Stages.Count);
     }
 
-    // ---- stack dependencies ---------------------------------------------------
+    // ---- repository dependencies ----------------------------------------------
 
     [Fact]
-    public void HardStackDependencyOrdersStages()
+    public void HardRepositoryDependencyOrdersStages()
     {
-        var db = Stack();
-        var api = Stack();
-        StackDependsOn(api, db, StackDependencyType.Hard);
+        var db = Repo();
+        var api = Repo();
+        RepoDependsOn(api, db, StackDependencyType.Hard);
 
-        var dbMr = Mr(null, db);
-        var apiMr = Mr(null, api);
+        var dbMr = Mr(repo: db);
+        var apiMr = Mr(repo: api);
 
         var result = ReleasePlanGraph.Build([apiMr, dbMr]);
 
@@ -135,15 +136,15 @@ public class ReleasePlanGraphTests
     }
 
     [Fact]
-    public void SoftStackDependencyAlsoOrdersWhenNoCycleForcesItOut()
+    public void SoftRepositoryDependencyAlsoOrdersWhenNoCycleForcesItOut()
     {
         // README §5.2: soft links are advisory, but honoured when they cost nothing.
-        var db = Stack();
-        var api = Stack();
-        StackDependsOn(api, db, StackDependencyType.Soft);
+        var db = Repo();
+        var api = Repo();
+        RepoDependsOn(api, db, StackDependencyType.Soft);
 
-        var dbMr = Mr(null, db);
-        var apiMr = Mr(null, api);
+        var dbMr = Mr(repo: db);
+        var apiMr = Mr(repo: api);
 
         var result = ReleasePlanGraph.Build([apiMr, dbMr]);
 
@@ -152,14 +153,14 @@ public class ReleasePlanGraphTests
     }
 
     [Fact]
-    public void RepositoryInTwoMutuallyDependentStacksDoesNotDeadlock()
+    public void RepositoryDependingOnItselfDoesNotDeadlock()
     {
-        // Both ends of the link resolve to the same MR; a self-edge would strand it.
-        var a = Stack();
-        var b = Stack();
-        StackDependsOn(a, b, StackDependencyType.Hard);
+        // A repository that (mis)declares a dependency on itself would put both ends of the link on
+        // the same MR; a self-edge would strand it. The guard drops it.
+        var a = Repo();
+        RepoDependsOn(a, a, StackDependencyType.Hard);
 
-        var mr = Mr(null, a, b);
+        var mr = Mr(repo: a);
 
         var result = ReleasePlanGraph.Build([mr]);
 
@@ -173,22 +174,22 @@ public class ReleasePlanGraphTests
     [Fact]
     public void SoftLinkIsSacrificedBeforeTaskLinkToBreakACycle()
     {
-        // TASK-2 depends on TASK-1, but B's stack softly depends on A's stack.
+        // TASK-2 depends on TASK-1, but A's repository softly depends on B's.
         var t1 = Task();
         var t2 = Task();
         DependsOn(t2, t1);
 
-        var sa = Stack();
-        var sb = Stack();
-        StackDependsOn(sa, sb, StackDependencyType.Soft);
+        var ra = Repo();
+        var rb = Repo();
+        RepoDependsOn(ra, rb, StackDependencyType.Soft);
 
-        var mrA = Mr(t1, sa);
-        var mrB = Mr(t2, sb);
+        var mrA = Mr(t1, ra);
+        var mrB = Mr(t2, rb);
 
         var result = ReleasePlanGraph.Build([mrA, mrB]);
 
         var conflict = Assert.Single(result.Conflicts);
-        Assert.Equal(PlanEdgeKind.StackSoft, conflict.DroppedEdgeKind);
+        Assert.Equal(PlanEdgeKind.RepoSoft, conflict.DroppedEdgeKind);
         // The task link survives, so the tracker's ordering still holds.
         Assert.True(StageOf(result, mrA) < StageOf(result, mrB));
     }
@@ -235,18 +236,18 @@ public class ReleasePlanGraphTests
     [Fact]
     public void AllHardCycleIsReportedAsUnresolvable()
     {
-        var a = Stack();
-        var b = Stack();
-        StackDependsOn(a, b, StackDependencyType.Hard);
-        StackDependsOn(b, a, StackDependencyType.Hard);
+        var a = Repo();
+        var b = Repo();
+        RepoDependsOn(a, b, StackDependencyType.Hard);
+        RepoDependsOn(b, a, StackDependencyType.Hard);
 
-        var mrA = Mr(null, a);
-        var mrB = Mr(null, b);
+        var mrA = Mr(repo: a);
+        var mrB = Mr(repo: b);
 
         var result = ReleasePlanGraph.Build([mrA, mrB]);
 
         var conflict = Assert.Single(result.Conflicts);
-        Assert.Equal(PlanEdgeKind.StackHard, conflict.DroppedEdgeKind);
+        Assert.Equal(PlanEdgeKind.RepoHard, conflict.DroppedEdgeKind);
         Assert.Contains("cannot be satisfied", conflict.Reason);
     }
 
@@ -303,17 +304,30 @@ public class ReleasePlanGraphTests
     [Fact]
     public void MandatoryEdgesExcludeSoftLinks()
     {
-        var db = Stack();
-        var api = Stack();
-        StackDependsOn(api, db, StackDependencyType.Soft);
+        var a = Repo();
+        var b = Repo();
+        RepoDependsOn(a, b, StackDependencyType.Soft);
 
-        var edges = ReleasePlanGraph.MandatoryEdges([Mr(null, api), Mr(null, db)]);
+        var edges = ReleasePlanGraph.MandatoryEdges([Mr(repo: a), Mr(repo: b)]);
 
         Assert.Empty(edges);
     }
 
     [Fact]
-    public void MandatoryEdgesIncludeHardAndTaskLinks()
+    public void MandatoryEdgesIncludeHardRepositoryLinks()
+    {
+        var a = Repo();
+        var b = Repo();
+        RepoDependsOn(a, b, StackDependencyType.Hard);
+
+        var edges = ReleasePlanGraph.MandatoryEdges([Mr(repo: a), Mr(repo: b)]);
+
+        var edge = Assert.Single(edges);
+        Assert.Equal(PlanEdgeKind.RepoHard, edge.Kind);
+    }
+
+    [Fact]
+    public void MandatoryEdgesIncludeTaskLinks()
     {
         var t1 = Task();
         var t2 = Task();

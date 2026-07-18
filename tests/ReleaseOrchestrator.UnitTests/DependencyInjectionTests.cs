@@ -94,7 +94,7 @@ public class DependencyInjectionTests
         using var provider = BuildProvider(Configuration());
         using var scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IReleasePlannerService>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IRolloutPlannerService>());
     }
 
     /// <summary>

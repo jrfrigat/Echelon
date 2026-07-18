@@ -27,16 +27,9 @@ internal static class PlanInput
             // Rows naming this merge request's task as the dependent — the tasks it waits on.
             // Null Task yields no rows, which is what an unlinked merge request should contribute.
             mr.Task!.Dependencies.Select(d => d.DependsOnTaskId).ToList(),
-            mr.Repository.RepositoryStacks
-                .Select(rs => new PlanRepositoryStack(
-                    rs.StackId,
-                    rs.Stack.DependentOn
-                        .Select(sd => new PlanStackLink(sd.ToStackId, sd.Type))
-                        .ToList()))
-                .ToList(),
             mr.RepositoryId,
-            // Repository-ordering links: the editable replacement for stacks. Same failure mode if a
-            // link is missing (an ordering built from half the constraints), so it is named here too.
+            // Repository-ordering links: the editable deploy-order policy. Same failure mode if a
+            // link is missing (an ordering built from half the constraints), so it is named here.
             mr.Repository.DependsOn
                 .Select(rd => new PlanRepositoryLink(rd.ToRepositoryId, rd.Type))
                 .ToList());

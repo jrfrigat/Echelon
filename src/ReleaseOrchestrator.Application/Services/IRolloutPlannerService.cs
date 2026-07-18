@@ -6,9 +6,8 @@ namespace ReleaseOrchestrator.Application.Services;
 /// Builds and reads per-task rollout plans: the projection of the atlas rooted at one target task.
 /// </summary>
 /// <remarks>
-/// The per-task counterpart to <see cref="IReleasePlannerService"/> (which owns the global plan the
-/// pivot demotes). Both exist during the transition; the global one is retired later
-/// (docs/issues/009-admin-and-migration.md).
+/// The sole planner since the pivot retired the global release plan: a plan is always rooted at one
+/// target task and covers its dependency closure (docs/issues/009-admin-and-migration.md).
 /// </remarks>
 public interface IRolloutPlannerService
 {

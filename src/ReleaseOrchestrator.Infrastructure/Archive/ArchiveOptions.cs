@@ -15,5 +15,4 @@ public class ArchiveOptions
     public int ArchiveAfterDays { get; set; } = 90;
     public int TaskBatchSize { get; set; } = 1000;
     public int MrBatchSize { get; set; } = 500;
-    public int PlanBatchSize { get; set; } = 100;
 }

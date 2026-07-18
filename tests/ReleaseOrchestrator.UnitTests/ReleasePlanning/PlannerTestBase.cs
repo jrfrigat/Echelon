@@ -66,9 +66,6 @@ public abstract class PlannerTestBase : IAsyncLifetime
         await _connection.DisposeAsync();
     }
 
-    protected ReleasePlanner Planner() =>
-        new(Db, new FakeTimeProvider(Now), NullLogger<ReleasePlanner>.Instance);
-
     protected Repository AddRepository(string name)
     {
         var repo = new Repository
@@ -105,22 +102,13 @@ public abstract class PlannerTestBase : IAsyncLifetime
             DependsOnTaskId = dependsOn.Id
         });
 
-    protected Stack AddStack(string name, params Repository[] repositories)
-    {
-        var stack = new Stack { Id = Guid.NewGuid(), Name = name };
-        Db.Stacks.Add(stack);
-        foreach (var repo in repositories)
-            Db.Set<RepositoryStack>().Add(new RepositoryStack { RepositoryId = repo.Id, StackId = stack.Id });
-        return stack;
-    }
-
-    /// <summary>Records that <paramref name="from"/> deploys after <paramref name="to"/>.</summary>
-    protected void AddStackDependency(Stack from, Stack to, StackDependencyType type) =>
-        Db.Set<StackDependency>().Add(new StackDependency
+    /// <summary>Records that <paramref name="from"/>'s repository deploys after <paramref name="to"/>'s.</summary>
+    protected void AddRepositoryDependency(Repository from, Repository to, StackDependencyType type) =>
+        Db.RepositoryDependencies.Add(new RepositoryDependency
         {
             Id = Guid.NewGuid(),
-            FromStackId = from.Id,
-            ToStackId = to.Id,
+            FromRepositoryId = from.Id,
+            ToRepositoryId = to.Id,
             Type = type
         });
 
@@ -145,7 +133,4 @@ public abstract class PlannerTestBase : IAsyncLifetime
         Db.MergeRequests.Add(mr);
         return mr;
     }
-
-    protected static List<Guid> StageItems(Application.DTOs.ReleasePlanDto plan, int sequence) =>
-        plan.Stages.Single(s => s.Sequence == sequence).Items.Select(i => i.MergeRequestId).ToList();
 }

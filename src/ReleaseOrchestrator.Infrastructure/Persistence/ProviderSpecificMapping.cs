@@ -92,15 +92,9 @@ public static class ProviderSpecificMapping
     /// </remarks>
     private static void ApplyPostgreSqlIndexFilters(ModelBuilder builder)
     {
-        builder.Entity<ReleasePlan>()
-            .HasIndex(e => e.IsActive)
-            .IsUnique()
-            .HasFilter("\"IsActive\"")
-            .HasDatabaseName("IX_ReleasePlan_IsActive");
-
         // One active rollout plan per target task -- the SQL Server filter "[IsActive] = 1" from
         // RolloutPlanConfiguration reaches PostgreSQL as-is otherwise, where the brackets are not
-        // quoting and a boolean does not equal 1. Same rewrite as ReleasePlan above.
+        // quoting and a boolean does not equal 1.
         builder.Entity<RolloutPlan>()
             .HasIndex(e => e.TargetTaskId)
             .IsUnique()

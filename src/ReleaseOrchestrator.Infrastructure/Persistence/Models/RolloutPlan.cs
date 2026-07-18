@@ -9,12 +9,10 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// A rollout plan for one target task: the projection of the atlas rooted at that task.
 /// </summary>
 /// <remarks>
-/// The per-task counterpart to the global <see cref="ReleasePlan"/>. Where <see cref="ReleasePlan"/>
-/// holds at most one ACTIVE plan for the whole system, this holds at most one active plan PER task,
-/// enforced by a filtered unique index scoped to <see cref="TargetTaskId"/> (declared in
-/// <c>RolloutPlanConfiguration</c>, because <c>[Index]</c> has no filter). Introduced alongside the
-/// global plan so no invariant flips while both live; the global plan is retired later
-/// (docs/issues/009-admin-and-migration.md).
+/// Holds at most one active plan PER task, enforced by a filtered unique index scoped to
+/// <see cref="TargetTaskId"/> (declared in <c>RolloutPlanConfiguration</c>, because <c>[Index]</c>
+/// has no filter). This is the only plan aggregate since the pivot retired the single global
+/// release plan (docs/issues/009-admin-and-migration.md).
 /// </remarks>
 [Index(nameof(CreatedAt), Name = "IX_RolloutPlan_CreatedAt")]
 public class RolloutPlan

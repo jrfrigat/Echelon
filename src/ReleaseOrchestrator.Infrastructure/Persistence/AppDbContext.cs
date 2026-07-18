@@ -15,16 +15,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<TrackerConnection> TrackerConnections => Set<TrackerConnection>();
     public DbSet<Repository> Repositories => Set<Repository>();
     public DbSet<DeploymentEnvironment> DeploymentEnvironments => Set<DeploymentEnvironment>();
-    public DbSet<Stack> Stacks => Set<Stack>();
-    public DbSet<RepositoryStack> RepositoryStacks => Set<RepositoryStack>();
-    public DbSet<StackDependency> StackDependencies => Set<StackDependency>();
     public DbSet<RepositoryDependency> RepositoryDependencies => Set<RepositoryDependency>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<TaskDependency> TaskDependencies => Set<TaskDependency>();
     public DbSet<MergeRequest> MergeRequests => Set<MergeRequest>();
-    public DbSet<ReleasePlan> ReleasePlans => Set<ReleasePlan>();
-    public DbSet<ReleaseStage> ReleaseStages => Set<ReleaseStage>();
-    public DbSet<StageItem> StageItems => Set<StageItem>();
     public DbSet<RolloutPlan> RolloutPlans => Set<RolloutPlan>();
     public DbSet<PlanTaskNode> PlanTaskNodes => Set<PlanTaskNode>();
     public DbSet<PlanItem> PlanItems => Set<PlanItem>();

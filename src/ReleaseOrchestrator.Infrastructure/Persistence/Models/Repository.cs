@@ -63,10 +63,6 @@ public class Repository
     /// <summary>Strategy-specific settings for this repository, as JSON (schema-declared by the strategy).</summary>
     public string? DeployStrategySettingsJson { get; set; }
 
-    /// <summary>The stacks this repository belongs to.</summary>
-    [InverseProperty(nameof(RepositoryStack.Repository))]
-    public ICollection<RepositoryStack> RepositoryStacks { get; set; } = [];
-
     /// <summary>Repository-ordering links where this repository waits (it deploys after their targets).</summary>
     [InverseProperty(nameof(RepositoryDependency.FromRepository))]
     public ICollection<RepositoryDependency> DependsOn { get; set; } = [];

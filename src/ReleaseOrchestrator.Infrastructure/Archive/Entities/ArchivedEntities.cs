@@ -32,20 +32,3 @@ public class ArchivedMergeRequest
 
     public DateTime ArchivedAt { get; set; }
 }
-
-public class ArchivedReleasePlan
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Version { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The plan with its stages and items, denormalised. The operational rows are deleted
-    /// immediately after this is written and the merge requests they referenced are archived
-    /// separately, so anything omitted here is unrecoverable.
-    /// </summary>
-    public string PlanJson { get; set; } = string.Empty;
-
-    public DateTime CreatedAt { get; set; }
-    public DateTime ArchivedAt { get; set; }
-}

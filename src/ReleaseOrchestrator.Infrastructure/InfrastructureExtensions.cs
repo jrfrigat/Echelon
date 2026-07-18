@@ -46,7 +46,6 @@ public static class InfrastructureExtensions
         services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<TokenProtector>();
-        services.AddScoped<IReleasePlannerService, ReleasePlanner>();
         services.AddScoped<IRolloutPlannerService, RolloutPlanner>();
         services.AddScoped<IRolloutService, RolloutService>();
         services.AddScoped<IVcsService, VcsService>();

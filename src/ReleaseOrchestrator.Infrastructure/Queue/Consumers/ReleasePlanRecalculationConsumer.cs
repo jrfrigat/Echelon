@@ -1,23 +1,37 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
+using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
 /// <summary>
-/// Rebuilds the release plan, coalescing bursts.
-///
-/// The work runs inside the consumer, so the broker only acknowledges the message once the
-/// plan exists. The previous design handed the request to an in-process debounce timer and
-/// acknowledged immediately: a restart inside the 15-second window lost the recalculation
-/// outright, and each replica ran its own timer over the same data.
-///
-/// Coalescing no longer needs a timer. A burst of N events becomes N messages: the first
-/// rebuilds, and the rest find a plan whose snapshot already covers them, costing one query.
+/// Rebuilds every active per-task rollout plan when an ingestion change may have altered a closure.
 /// </summary>
+/// <remarks>
+/// A merge request opening or changing status, or a task edit, can change the deploy order of any
+/// task whose plan is currently live. Which tasks are affected is not cheap to know precisely — a
+/// merge request reaches a task through its branch key, a task edit through the dependency graph —
+/// so every active plan is rebuilt. There are only as many active plans as there are tasks with a
+/// built rollout plan, and a rebuild that finds nothing changed is a couple of queries.
+///
+/// <para>
+/// The work runs inside the handler, so the broker acknowledges only once the plans are rebuilt: a
+/// failure faults the message and Rebus redelivers it, rather than dropping the recalculation. This
+/// is the point-to-point successor to the old global-plan recalculation the pivot retired — the
+/// ingestion consumers still publish one <see cref="ReleasePlanRecalculationRequested"/> per event.
+/// </para>
+/// <para>
+/// A burst of N events becomes N messages, each rebuilding the same small set. Coalescing per-task
+/// recalculation (the global planner had it) is a possible optimisation, not a correctness need:
+/// each rebuild is idempotent, replacing the active plan with an equal one when nothing changed.
+/// </para>
+/// </remarks>
 public class ReleasePlanRecalculationConsumer(
-    IReleasePlannerService planner,
+    AppDbContext db,
+    IRolloutPlannerService planner,
     ILogger<ReleasePlanRecalculationConsumer> logger) : IHandleMessages<ReleasePlanRecalculationRequested>
 {
     /// <inheritdoc/>
@@ -25,13 +39,16 @@ public class ReleasePlanRecalculationConsumer(
     {
         var ct = HandlerCancellation.Token;
 
-        if (await planner.IsPlanCurrentAsync(message.RequestedAt, ct))
-        {
-            logger.LogDebug("Skipping recalculation for {Reason}: the current plan already covers it.", message.Reason);
-            return;
-        }
+        var targetTaskIds = await db.RolloutPlans
+            .Where(p => p.IsActive)
+            .Select(p => p.TargetTaskId)
+            .ToListAsync(ct);
 
-        await planner.RecalculateAsync(ct);
-        logger.LogInformation("Release plan recalculated. Reason: {Reason}", message.Reason);
+        foreach (var taskId in targetTaskIds)
+            await planner.RecalculateAsync(taskId, ct);
+
+        if (targetTaskIds.Count > 0)
+            logger.LogInformation(
+                "Recalculated {Count} active plan(s). Reason: {Reason}", targetTaskIds.Count, message.Reason);
     }
 }

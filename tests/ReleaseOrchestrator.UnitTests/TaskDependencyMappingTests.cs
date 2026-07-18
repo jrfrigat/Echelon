@@ -50,19 +50,6 @@ public class TaskDependencyMappingTests
             Assert.Single(navigation.ForeignKey.Properties).Name);
     }
 
-    /// <summary>Stack navigations were already correct; this keeps them that way.</summary>
-    [Fact]
-    public void StackDependentOnNavigationIsKeyedByFromStackId()
-    {
-        var navigation = BuildModel()
-            .FindEntityType(typeof(Stack))!
-            .FindNavigation(nameof(Stack.DependentOn))!;
-
-        Assert.Equal(
-            nameof(StackDependency.FromStackId),
-            Assert.Single(navigation.ForeignKey.Properties).Name);
-    }
-
     [Fact]
     public void MergeRequestNaturalKeyIsUnique()
     {

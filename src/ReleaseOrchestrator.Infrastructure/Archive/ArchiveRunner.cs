@@ -23,50 +23,11 @@ internal sealed class ArchiveRunner(
     private static readonly TimeSpan BatchPause = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan RetryBackoff = TimeSpan.FromSeconds(2);
 
-    public Task ArchiveReleasePlansAsync(DateTime cutoff, CancellationToken ct) =>
-        RunBatchLoopAsync("release plans", c => LoadPlanBatchAsync(cutoff, c), ArchivePlanBatchAsync, ct);
-
     public Task ArchiveMergeRequestsAsync(DateTime cutoff, CancellationToken ct) =>
         RunBatchLoopAsync("merge requests", c => LoadMergeRequestBatchAsync(cutoff, c), ArchiveMergeRequestBatchAsync, ct);
 
     public Task ArchiveTasksAsync(DateTime cutoff, CancellationToken ct) =>
         RunBatchLoopAsync("tasks", c => LoadTaskBatchAsync(cutoff, c), ArchiveTaskBatchAsync, ct);
-
-    // ---- release plans -------------------------------------------------------------------
-
-    private Task<List<ReleasePlan>> LoadPlanBatchAsync(DateTime cutoff, CancellationToken ct) =>
-        db.ReleasePlans
-            .AsNoTracking()
-            .Where(p => !p.IsActive && p.CreatedAt < cutoff)
-            .OrderBy(p => p.CreatedAt)
-            .Take(options.PlanBatchSize)
-            .Include(p => p.Stages).ThenInclude(s => s.Items).ThenInclude(i => i.MergeRequest).ThenInclude(mr => mr.Repository)
-            .Include(p => p.Stages).ThenInclude(s => s.Items).ThenInclude(i => i.MergeRequest).ThenInclude(mr => mr.Task)
-            .AsSplitQuery()
-            .ToListAsync(ct);
-
-    private async Task ArchivePlanBatchAsync(List<ReleasePlan> plans, CancellationToken ct)
-    {
-        var archived = plans.Select(p => new ArchivedReleasePlan
-        {
-            Id = p.Id,
-            Name = p.Name,
-            Version = p.Version,
-            PlanJson = JsonSerializer.Serialize(PlanSnapshot.From(p)),
-            CreatedAt = p.CreatedAt,
-            ArchivedAt = clock.GetUtcNow().UtcDateTime
-        }).ToList();
-
-        var ids = plans.Select(p => p.Id).ToList();
-        var existing = await archiveDb.ArchivedReleasePlans.AsNoTracking()
-            .Where(a => ids.Contains(a.Id)).Select(a => a.Id).ToListAsync(ct);
-
-        await InsertMissingAsync(archiveDb.ArchivedReleasePlans, archived, a => a.Id, [.. existing], ct);
-
-        // ReleaseStage and StageItem cascade from the plan. Dropping the plan is the only way
-        // to release the StageItem -> MergeRequest references, which are Restrict.
-        await db.ReleasePlans.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync(ct);
-    }
 
     // ---- merge requests ------------------------------------------------------------------
 
@@ -75,9 +36,16 @@ internal sealed class ArchiveRunner(
             .AsNoTracking()
             .Where(mr => ((mr.Status == MergeRequestStatus.Merged && mr.MergedAt < cutoff)
                     || (mr.Status == MergeRequestStatus.Closed && mr.ClosedAt < cutoff))
-                // Every surviving StageItem blocks the delete, not just those of active plans:
-                // historical plans keep their items until the plan phase clears them.
-                && !db.StageItems.Any(si => si.MergeRequestId == mr.Id))
+                // The per-task plan, the rollout history and the deployment state each reference a
+                // merge request with Restrict, so it cannot be deleted while any of them survive. A
+                // merge request that never entered a rollout (closed without deploying) has none and
+                // is archived here; one that did stays until its rollout history is cleared -- a
+                // follow-up, as nothing prunes that yet. Without this gate the delete FK-violates and
+                // the batch wedges, exactly as the old StageItem gate prevented for the global plan.
+                && !db.PlanItems.Any(pi => pi.MergeRequestId == mr.Id)
+                && !db.RolloutSteps.Any(rs => rs.MergeRequestId == mr.Id)
+                && !db.MrDeploymentStates.Any(s => s.MergeRequestId == mr.Id)
+                && !db.MrDeployClaims.Any(c => c.MergeRequestId == mr.Id))
             .OrderBy(mr => mr.Id)
             .Take(options.MrBatchSize)
             .Include(mr => mr.Repository)

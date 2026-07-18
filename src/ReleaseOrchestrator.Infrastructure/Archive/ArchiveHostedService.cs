@@ -8,7 +8,7 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 namespace ReleaseOrchestrator.Infrastructure.Archive;
 
 /// <summary>
-/// Nightly archiving of superseded release plans, closed merge requests and closed tasks.
+/// Nightly archiving of closed merge requests and closed tasks.
 /// </summary>
 /// <remarks>
 /// Registered in every replica but gated on a lease, so one cycle runs per night across the
@@ -103,12 +103,10 @@ public class ArchiveHostedService(
 
         var cutoff = clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.ArchiveAfterDays);
 
-        // The order is load-bearing, in both directions of the foreign keys:
-        //  - plans first, because their StageItems reference merge requests with Restrict, so
-        //    an MR that ever entered any plan stays undeletable while that plan exists;
-        //  - merge requests before tasks, because MergeRequest.TaskId is SetNull, so deleting
-        //    a task first blanks the link and the archived MR loses its TaskExternalId.
-        await RunPhaseAsync("release plans", c => runner.ArchiveReleasePlansAsync(cutoff, c), ct);
+        // Merge requests before tasks: MergeRequest.TaskId is SetNull, so deleting a task first
+        // blanks the link and the archived merge request loses its TaskExternalId. (A merge request
+        // referenced by a live plan, rollout or deployment state is skipped by the merge-request
+        // phase itself -- those references are Restrict -- so no plan phase has to run first.)
         await RunPhaseAsync("merge requests", c => runner.ArchiveMergeRequestsAsync(cutoff, c), ct);
         await RunPhaseAsync("tasks", c => runner.ArchiveTasksAsync(cutoff, c), ct);
 
