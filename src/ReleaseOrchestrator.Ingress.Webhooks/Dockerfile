@@ -8,17 +8,16 @@ RUN apt-get update \
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src
-COPY ["ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj", "ReleaseOrchestrator.Ingress.Webhooks/"]
-COPY ["ReleaseOrchestrator.Application/ReleaseOrchestrator.Application.csproj", "ReleaseOrchestrator.Application/"]
-COPY ["ReleaseOrchestrator.Core/ReleaseOrchestrator.Core.csproj", "ReleaseOrchestrator.Core/"]
+# Central Package Management: the versions live in Directory.Packages.props at the repo root, so the
+# build context is the root (not src/), and these must be restored before any csproj — without them
+# every PackageReference is version-less and restore fails. global.json pins the SDK to match.
+COPY Directory.Build.props Directory.Packages.props global.json ./
+COPY src/ ./
 RUN dotnet restore "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj"
-# src/.dockerignore keeps host bin/obj out of this copy; without it the restore above is
-# overwritten by Windows-path artifacts and the build fails to resolve packages.
-COPY . .
-RUN dotnet build "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" -c Release -o /app/build
+RUN dotnet build "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" -c Release -o /app/build --no-restore
 
 FROM build AS publish
-RUN dotnet publish "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ReleaseOrchestrator.Ingress.Webhooks/ReleaseOrchestrator.Ingress.Webhooks.csproj" -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

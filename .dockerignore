@@ -1,0 +1,46 @@
+# Build context is the repository root (see docker-compose.yml): the image build needs
+# Directory.Packages.props / Directory.Build.props / global.json, which live here and are outside
+# src/. Everything below is kept out of the context — either it would clobber the in-container
+# restore (host bin/obj carry Windows NuGet paths) or it has no business in an image layer.
+
+# Host build artifacts — the important one: these overwrite the container's own restore.
+**/bin/
+**/obj/
+**/out/
+
+# Version control and IDE state
+.git/
+.gitignore
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+**/*.suo
+
+# Secrets — never into an image. docker-compose.override.yml carries a real SQL password.
+.env
+.env.*
+docker-compose.override.yml
+**/*.pfx
+**/*.p12
+**/appsettings.*.local.json
+appsettings.Development.json
+
+# Not needed to build the runtime image
+**/*Tests/
+docs/
+observability/
+scripts/
+**/*.md
+
+# Tooling artifacts
+ruvector.db
+**/*.db-shm
+**/*.db-wal
+.claude/
+.claude-flow/
+.swarm/
+
+# OS
+**/Thumbs.db
+**/.DS_Store
