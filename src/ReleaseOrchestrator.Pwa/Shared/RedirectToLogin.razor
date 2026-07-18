@@ -1,5 +1,13 @@
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
 @code {
-    protected override void OnInitialized() =>
-        Navigation.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+    // The Local provider has its own /login form; MSAL/OIDC use the RemoteAuthenticatorView route.
+    protected override void OnInitialized()
+    {
+        var isLocal = string.Equals(Configuration["Auth:Provider"], "Local", StringComparison.OrdinalIgnoreCase);
+        var returnUrl = Uri.EscapeDataString(Navigation.Uri);
+        Navigation.NavigateTo(isLocal
+            ? $"login?returnUrl={returnUrl}"
+            : $"authentication/login?returnUrl={returnUrl}");
+    }
 }
