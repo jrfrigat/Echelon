@@ -12,4 +12,8 @@ public record MrOpened(
     string SourceBranch,
     string TargetBranch,
     string? TaskExternalId,
-    IReadOnlyList<string> Labels) : IMessage;
+    IReadOnlyList<string> Labels,
+    // Event identity for dedup. Defaulted so non-ingestion construction (tests) stays terse; the
+    // webhook front door sets them, and an empty EventId means "not deduplicated".
+    string Source = "",
+    string EventId = "") : IMessage, IHasEventIdentity;

@@ -7,4 +7,6 @@ public record MrStatusChanged(
     string RepositoryExternalId,
     string ExternalMrId,
     MergeRequestStatus NewStatus,
-    DateTime ChangedAt) : IMessage;
+    DateTime ChangedAt,
+    string Source = "",
+    string EventId = "") : IMessage, IHasEventIdentity;

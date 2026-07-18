@@ -60,6 +60,12 @@ public static class GitLabWebhookEndpoints
 
         var externalMrId = iid.ToString();
 
+        // GitLab stamps every delivery with a unique id and re-uses it on a retry, so it is the
+        // dedup key: a retried delivery is dropped, a genuine re-send (a label change) is a new id
+        // and passes. Absent (older GitLab), an empty id means the event is simply not deduplicated.
+        var source = $"gitlab/{connectionName}";
+        var eventId = httpContext.Request.Headers["X-Gitlab-Event-UUID"].FirstOrDefault() ?? string.Empty;
+
         if (status == MergeRequestStatus.Opened)
         {
             // Published for every open-state event, not only the first. GitLab re-sends on
@@ -72,7 +78,9 @@ public static class GitLabWebhookEndpoints
                 SourceBranch: attributes.SourceBranch ?? string.Empty,
                 TargetBranch: attributes.TargetBranch ?? string.Empty,
                 TaskExternalId: GitLabBranchTaskParser.ParseTaskId(attributes.SourceBranch),
-                Labels: ExtractLabels(payload)));
+                Labels: ExtractLabels(payload),
+                Source: source,
+                EventId: eventId));
         }
         else
         {
@@ -81,7 +89,9 @@ public static class GitLabWebhookEndpoints
                 RepositoryExternalId: repositoryExternalId,
                 ExternalMrId: externalMrId,
                 NewStatus: status.Value,
-                ChangedAt: clock.GetUtcNow().UtcDateTime));
+                ChangedAt: clock.GetUtcNow().UtcDateTime,
+                Source: source,
+                EventId: eventId));
         }
 
         return Results.Ok();
