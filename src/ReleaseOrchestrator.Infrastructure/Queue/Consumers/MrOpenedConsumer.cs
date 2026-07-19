@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -49,7 +50,8 @@ public class MrOpenedConsumer(
 
         var now = clock.GetUtcNow().UtcDateTime;
 
-        if (mr is null)
+        var isNew = mr is null;
+        if (isNew)
         {
             mr = new MergeRequest
             {
@@ -61,18 +63,31 @@ public class MrOpenedConsumer(
             db.MergeRequests.Add(mr);
         }
 
-        mr.SourceBranch = msg.SourceBranch;
+        mr!.SourceBranch = msg.SourceBranch;
         mr.TargetBranch = msg.TargetBranch;
         // Recorded even when the task is unknown, so TaskSyncConsumer can attach this MR once
         // the task lands rather than leaving it unordered forever.
         mr.TaskExternalId = msg.TaskExternalId;
         if (taskId is not null) mr.TaskId = taskId;
 
-        // A reopened MR must shed its terminal timestamps, or archiving still claims it.
-        mr.MergedAt = null;
-        mr.ClosedAt = null;
-        mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
-            msg.Labels, repo.Connection.ReadyForDeployLabel, mr.IsStatusManual, mr.Status);
+        // A merge is final: GitLab cannot reopen a merged merge request, so an 'opened' delivery for
+        // one we already hold as Merged is a stale, out-of-order event from before the merge (deliveries
+        // are unordered across workers). Honouring it would resurrect a deployed MR back into the plan
+        // and back into archiving eligibility. A CLOSED MR, by contrast, can genuinely be reopened, so
+        // that still sheds its terminal timestamps and rejoins the plan; a brand-new MR always resolves.
+        if (isNew || mr.Status != MergeRequestStatus.Merged)
+        {
+            mr.MergedAt = null;
+            mr.ClosedAt = null;
+            mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
+                msg.Labels, repo.Connection.ReadyForDeployLabel, mr.IsStatusManual, mr.Status);
+        }
+        else
+        {
+            logger.LogInformation(
+                "Ignoring opened event for merged MR {Mr}: a merge is final, so this is a stale delivery.",
+                msg.ExternalMrId);
+        }
 
         await db.SaveChangesAsync(ct);
 

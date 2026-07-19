@@ -35,10 +35,12 @@ public class VcsPollingOptions
 /// drops an unchanged merge request and only a change (status, labels) is processed. Leased, so one
 /// replica polls at a time.
 ///
-/// NOT VERIFIED against a live GitLab. Limitations for this cut: it lists OPEN merge requests, so a
-/// transition to merged/closed (the merge request leaving the open list) is not emitted here -- that
-/// still comes via a webhook; and the per-connection <c>PollIntervalSeconds</c> is stored but not yet
-/// honoured (every poll-mode connection is swept each pass). Both are follow-ups.
+/// Each connection is swept on its own <c>PollIntervalSeconds</c>, with the global tick
+/// (<c>IntervalSeconds</c>) as the floor -- the poller cannot wake more often than it ticks.
+///
+/// NOT VERIFIED against a live GitLab. Remaining limitation for this cut: it lists OPEN merge
+/// requests, so a transition to merged/closed (the merge request leaving the open list) is not
+/// emitted here -- that still comes via a webhook. A follow-up.
 /// </remarks>
 public class VcsPollingCoordinator(
     IServiceScopeFactory scopeFactory,
@@ -48,6 +50,11 @@ public class VcsPollingCoordinator(
     ILogger<VcsPollingCoordinator> logger) : BackgroundService
 {
     private const string LeaseName = "vcs-polling";
+
+    // Per-connection last-sweep wall-clock, so PollIntervalSeconds is honoured. In-memory and per
+    // replica: on a lease hand-off the new holder starts fresh and sweeps each connection once
+    // immediately, which is harmless -- the deterministic event id dedups an unchanged merge request.
+    private readonly Dictionary<Guid, DateTime> _lastPolled = [];
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -96,8 +103,21 @@ public class VcsPollingCoordinator(
             .AsNoTracking()
             .ToListAsync(ct);
 
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        // Drop connections that left poll mode so the map does not grow unbounded.
+        var live = connections.Select(c => c.Id).ToHashSet();
+        foreach (var gone in _lastPolled.Keys.Where(k => !live.Contains(k)).ToList())
+            _lastPolled.Remove(gone);
+
         foreach (var connection in connections)
         {
+            // Honour the per-connection cadence, with the global interval as the floor.
+            var due = TimeSpan.FromSeconds(Math.Max(connection.PollIntervalSeconds, options.Value.IntervalSeconds));
+            if (_lastPolled.TryGetValue(connection.Id, out var last) && now - last < due)
+                continue;
+            _lastPolled[connection.Id] = now;
+
             try
             {
                 var provider = await factory.CreateAsync(connection.ToDescriptor(), ct);

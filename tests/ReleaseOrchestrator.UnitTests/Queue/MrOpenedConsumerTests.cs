@@ -219,6 +219,35 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// A merge is final in GitLab: it cannot be reopened. So an "opened" delivery for a merge request
+    /// we already hold as Merged is a stale, out-of-order event from before the merge, not a reopen —
+    /// honouring it would resurrect a deployed MR back into the plan. It must be ignored.
+    /// </summary>
+    [Fact]
+    public async Task AStaleOpenedForAMergedMergeRequestDoesNotResurrectIt()
+    {
+        var repo = AddRepository();
+        _db.MergeRequests.Add(new MergeRequest
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "1",
+            SourceBranch = "feature/x",
+            TargetBranch = "main",
+            RepositoryId = repo.Id,
+            Status = MergeRequestStatus.Merged,
+            MergedAt = Now.AddDays(-1),
+            CreatedAt = Now.AddDays(-10)
+        });
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync(labels: ReadyLabel);
+
+        var mr = (await FindMrAsync())!;
+        Assert.Equal(MergeRequestStatus.Merged, mr.Status);
+        Assert.NotNull(mr.MergedAt);
+    }
+
+    /// <summary>
     /// The key is recorded whether or not the task exists, because nothing revisits a merge request
     /// once its own event is handled. Without it the branch would have to be re-parsed across the
     /// whole table to find this MR again, so in practice it would stay unlinked for good.
