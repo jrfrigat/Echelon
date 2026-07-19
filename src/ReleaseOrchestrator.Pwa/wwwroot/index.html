@@ -18,6 +18,10 @@
          not flash the wrong colour scheme. An external file, not an inline block: script-src is
          'self' 'wasm-unsafe-eval', with no 'unsafe-inline'. -->
     <script src="_content/Flare.Components/js/flare-bootstrap.js"></script>
+    <!-- Flare's consolidated JS-interop bundle (FlareDataGrid infinite-scroll, clipboard, file
+         download, ...). Separate from bootstrap; without it interactive components fail at runtime
+         with "FlareDataGrid was undefined". Both Flare reference apps load it right after bootstrap. -->
+    <script src="_content/Flare.Components/js/flare-components.js"></script>
     <script src="js/icon-font-ready.js"></script>
 </head>
 <body>
