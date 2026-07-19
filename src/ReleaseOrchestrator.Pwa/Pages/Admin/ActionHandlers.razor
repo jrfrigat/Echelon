@@ -35,15 +35,25 @@
                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
                     @foreach (var setting in selected.Settings)
                     {
-                        <FlareTextField Label="@setting.Label"
-                                        Value="@_settings.GetValueOrDefault(setting.Key, "")"
-                                        ValueChanged="@(v => _settings[setting.Key] = v)" />
+                        @if (setting.Secret)
+                        {
+                            @* A secret (e.g. a Telegram bot token) is masked, not shown in cleartext. *@
+                            <FlarePasswordField Label="@setting.Label"
+                                                Value="@_settings.GetValueOrDefault(setting.Key, "")"
+                                                ValueChanged="@(v => _settings[setting.Key] = v)" />
+                        }
+                        else
+                        {
+                            <FlareTextField Label="@setting.Label"
+                                            Value="@_settings.GetValueOrDefault(setting.Key, "")"
+                                            ValueChanged="@(v => _settings[setting.Key] = v)" />
+                        }
                     }
                 </FlareStack>
             }
 
             <div>
-                <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType))">
+                <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
                     @UiStrings.Actions_Add
                 </FlareButton>
             </div>
@@ -101,6 +111,11 @@ else
     Dictionary<string, string> _settings = [];
 
     ActionTypeDto? SelectedType => _types?.FirstOrDefault(t => t.ActionType == _actionType);
+
+    // A setting the schema marks Required must be filled, or the binding would be enabled-but-broken
+    // (the server does not validate these). The Create button stays disabled until they are.
+    bool MissingRequired => SelectedType?.Settings
+        .Any(s => s.Required && string.IsNullOrWhiteSpace(_settings.GetValueOrDefault(s.Key, ""))) ?? false;
 
     protected override async Task OnInitializedAsync()
     {

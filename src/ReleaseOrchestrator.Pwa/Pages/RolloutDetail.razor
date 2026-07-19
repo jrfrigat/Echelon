@@ -77,7 +77,10 @@ else
     RolloutDto? _rollout;
     bool _loading = true;
     bool _busy;
-    CancellationTokenSource? _poll;
+    // Created eagerly, not inside PollAsync: if the user navigates away DURING the initial Load (before
+    // PollAsync runs), Dispose must still be able to cancel it -- otherwise the poll starts against a
+    // disposed component and loops forever, leaking an HTTP fetch every 4s.
+    readonly CancellationTokenSource _poll = new();
 
     bool IsTerminal => _rollout?.Status is "Succeeded" or "Failed" or "Cancelled";
 
@@ -93,7 +96,6 @@ else
     // A running rollout advances in the background; poll so the timeline stays live without a reload.
     async Task PollAsync()
     {
-        _poll = new CancellationTokenSource();
         try
         {
             while (!_poll.IsCancellationRequested && !IsTerminal)
@@ -134,7 +136,8 @@ else
 
     public override void Dispose()
     {
-        _poll?.Cancel();
+        _poll.Cancel();
+        _poll.Dispose();
         base.Dispose();
     }
 

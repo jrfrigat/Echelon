@@ -1,6 +1,11 @@
 @inherits LayoutComponentBase
 @implements IDisposable
+@using Microsoft.Extensions.DependencyInjection
+@using ReleaseOrchestrator.Pwa.Services.LocalAuth
 @inject LanguageService Lang
+@inject IConfiguration Config
+@inject NavigationManager Nav
+@inject IServiceProvider Services
 
 <FlareLayout>
     <FlareLayoutAppBar DrawerToggle="true">
@@ -13,10 +18,22 @@
             <LanguageSwitcher />
             <AuthorizeView>
                 <Authorized>
-                    <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" Href="authentication/logout">
-                        <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
-                        <ChildContent>@UiStrings.Shell_Logout</ChildContent>
-                    </FlareButton>
+                    @* The Local provider has no RemoteAuthenticatorView, so authentication/logout does
+                       nothing there and the token would never clear -- it needs its own handler. *@
+                    @if (_isLocal)
+                    {
+                        <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" OnClick="LogoutLocal">
+                            <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
+                            <ChildContent>@UiStrings.Shell_Logout</ChildContent>
+                        </FlareButton>
+                    }
+                    else
+                    {
+                        <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" Href="authentication/logout">
+                            <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
+                            <ChildContent>@UiStrings.Shell_Logout</ChildContent>
+                        </FlareButton>
+                    }
                 </Authorized>
             </AuthorizeView>
         </FlareStack>
@@ -39,9 +56,22 @@
 
 @code {
     bool _navOpen = true;
+    bool _isLocal;
 
     // LayoutComponentBase cannot inherit LocalizedComponent, so the subscription is by hand.
-    protected override void OnInitialized() => Lang.LanguageChanged += OnLanguageChanged;
+    protected override void OnInitialized()
+    {
+        _isLocal = string.Equals(Config["Auth:Provider"], "Local", StringComparison.OrdinalIgnoreCase);
+        Lang.LanguageChanged += OnLanguageChanged;
+    }
+
+    // Clear the stored token and reboot at the login form. LocalAuthService is resolved lazily because
+    // it is only registered under the Local provider; forceLoad restarts the app anonymous.
+    async Task LogoutLocal()
+    {
+        await Services.GetRequiredService<LocalAuthService>().LogoutAsync();
+        Nav.NavigateTo("login", forceLoad: true);
+    }
 
     void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
