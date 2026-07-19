@@ -6,13 +6,13 @@
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">
-        <LeadingIcon><FlareIconView Value="FlareIcons.ArrowBack" /></LeadingIcon>
+        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.ArrowBack" /></LeadingIcon>
         <ChildContent>@UiStrings.TaskDetail_Back</ChildContent>
     </FlareButton>
     <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@(_plan?.TargetTaskKey ?? "")</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="Recalculate" Disabled="_busy">
-        <LeadingIcon><FlareIconView Value="FlareIcons.Refresh" /></LeadingIcon>
+        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" /></LeadingIcon>
         <ChildContent>@UiStrings.TaskDetail_Recalculate</ChildContent>
     </FlareButton>
 </FlareStack>

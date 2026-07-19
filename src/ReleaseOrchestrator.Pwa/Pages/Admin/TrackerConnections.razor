@@ -8,7 +8,7 @@
     <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Tracker_Title</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
-        <LeadingIcon><FlareIconView Value="FlareIcons.Add" /></LeadingIcon>
+        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
         <ChildContent>@UiStrings.Tracker_New</ChildContent>
     </FlareButton>
 </FlareStack>
@@ -36,10 +36,10 @@ else if (Result is not null)
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
                         <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
-                            <FlareIconView Value="FlareIcons.Edit" />
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
                         </FlareIconButton>
                         <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
-                            <FlareIconView Value="FlareIcons.Delete" />
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
                         </FlareIconButton>
                     </FlareStack>
                 </Template>

@@ -42,7 +42,7 @@ else
                 <FlareCardHeader Title="@UiStrings.Perms_Mappings_Title">
                     <Action>
                         <FlareButton Size="ButtonSize.Sm" OnClick="@(() => _showAddMapping = !_showAddMapping)">
-                            <LeadingIcon><FlareIconView Value="FlareIcons.Add" /></LeadingIcon>
+                            <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
                             <ChildContent>@UiStrings.Perms_AddMapping</ChildContent>
                         </FlareButton>
                     </Action>
@@ -83,7 +83,7 @@ else
                                     <Template>
                                         <FlareIconButton AriaLabel="@string.Format(UiStrings.Perms_Remove_Aria, context.ClaimName)" Color="FlareColor.Error"
                                                          OnClick="@(() => RemoveMapping(context))">
-                                            <FlareIconView Value="FlareIcons.Close" />
+                                            <FlareIconView Value="MaterialDesign3Icons.Regular.Close" />
                                         </FlareIconButton>
                                     </Template>
                                 </FlareColumn>

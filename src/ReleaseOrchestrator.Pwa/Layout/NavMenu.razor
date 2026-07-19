@@ -5,37 +5,37 @@
     @* Tasks is the home page. Exact only for "/", which would otherwise prefix-match every route
        and always look active. *@
     <FlareNavLink Href="/" Match="NavMatchMode.Exact">
-        <Icon><FlareIconView Value="FlareIcons.Table" /></Icon>
+        <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Checklist" /></Icon>
         <ChildContent>@UiStrings.Nav_Tasks</ChildContent>
     </FlareNavLink>
     <FlareNavLink Href="/rollouts">
-        <Icon><FlareIconView Value="FlareIcons.RocketLaunch" /></Icon>
+        <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.RocketLaunch" /></Icon>
         <ChildContent>@UiStrings.Nav_Rollouts</ChildContent>
     </FlareNavLink>
 
     <FlareNavGroup Label="@UiStrings.Nav_Administration" Expanded="true">
         <FlareNavLink Href="/admin/vcs">
-            <Icon><FlareIconView Value="FlareIcons.Link" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Link" /></Icon>
             <ChildContent>@UiStrings.Nav_VcsConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/trackers">
-            <Icon><FlareIconView Value="FlareIcons.Description" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Assignment" /></Icon>
             <ChildContent>@UiStrings.Nav_TrackerConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/repos">
-            <Icon><FlareIconView Value="FlareIcons.Folder" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Folder" /></Icon>
             <ChildContent>@UiStrings.Nav_Repositories</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/environments">
-            <Icon><FlareIconView Value="FlareIcons.DataObject" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Dns" /></Icon>
             <ChildContent>@UiStrings.Nav_Environments</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/action-handlers">
-            <Icon><FlareIconView Value="FlareIcons.Notifications" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Notifications" /></Icon>
             <ChildContent>@UiStrings.Nav_ActionHandlers</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/permissions">
-            <Icon><FlareIconView Value="FlareIcons.Lock" /></Icon>
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Lock" /></Icon>
             <ChildContent>@UiStrings.Nav_Permissions</ChildContent>
         </FlareNavLink>
     </FlareNavGroup>

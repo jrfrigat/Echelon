@@ -20,10 +20,12 @@
     <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" />
     <!-- Supplies AddHttpClient, which is what attaches the MSAL access-token handler. -->
     <PackageReference Include="Microsoft.Extensions.Http" />
-    <!-- Flare.Blazor is the meta-package (Flare.Components + Flare.Infrastructure). Themes ship
-         separately and are referenced explicitly; VisualStudio is the only one this app registers. -->
+    <!-- Flare.Blazor is the meta-package (Flare.Components + Flare.Infrastructure). Themes and icon
+         packs ship separately and are referenced explicitly; VisualStudio is the only theme this app
+         registers, and MaterialDesign3 (SVG, self-contained) is its single icon pack. -->
     <PackageReference Include="Flare.Blazor" />
     <PackageReference Include="Flare.Theme.VisualStudio" />
+    <PackageReference Include="Flare.Icons.MaterialDesign3.Svg" />
   </ItemGroup>
 
   <ItemGroup>
