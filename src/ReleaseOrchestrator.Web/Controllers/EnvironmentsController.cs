@@ -83,6 +83,15 @@ public class EnvironmentsController(AppDbContext db) : ControllerBase
         var env = await db.DeploymentEnvironments.FirstOrDefaultAsync(e => e.Id == id, ct);
         if (env is null) return NotFound();
 
+        // Rollout, MrDeploymentState and MrDeployClaim reference the environment with Restrict, so a
+        // delete while any exist would FK-violate and surface as an opaque 500. Report it as a clean
+        // Conflict instead, as the sibling connection/repository controllers do -- disabling the
+        // environment (IsEnabled = false) is the way to retire it without losing its history.
+        if (await db.Rollouts.AnyAsync(r => r.EnvironmentId == id, ct)
+            || await db.MrDeploymentStates.AnyAsync(s => s.EnvironmentId == id, ct)
+            || await db.MrDeployClaims.AnyAsync(c => c.EnvironmentId == id, ct))
+            return Conflict(new { error = $"Environment '{env.Key}' has rollout or deployment history and cannot be deleted. Disable it instead." });
+
         db.DeploymentEnvironments.Remove(env);
         await db.SaveChangesAsync(ct);
         return NoContent();

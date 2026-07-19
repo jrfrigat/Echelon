@@ -1,9 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>A configured connection to an issue tracker.</summary>
+/// <remarks>
+/// Name is uniquely indexed, like <see cref="VcsConnection"/>: the controllers' check-then-insert is
+/// only advisory, and consumers resolve a connection by Name via FirstOrDefault, so two rows sharing
+/// a Name would let task sync, status updates and tracker actions run against the wrong connection.
+/// </remarks>
+[Index(nameof(Name), IsUnique = true, Name = "UQ_TrackerConnection_Name")]
 public class TrackerConnection
 {
     /// <summary>Primary key.</summary>

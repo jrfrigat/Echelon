@@ -16,6 +16,12 @@ public class RolloutExecutionOptions
     public int MaxAttempts { get; set; } = 3;
 
     /// <summary>
+    /// How long a single in-flight deploy (Awaiting/polling) may run before it is given up as failed.
+    /// Bounds a stuck pipeline and a persistent poll outage so a step cannot re-poll forever.
+    /// </summary>
+    public int MaxDeployMinutes { get; set; } = 120;
+
+    /// <summary>
     /// When true, a rollout to an environment requires the closure already deployed to every enabled
     /// environment ordered before it (prod requires staging). Editable, on by default.
     /// </summary>

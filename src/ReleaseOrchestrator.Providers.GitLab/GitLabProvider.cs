@@ -40,17 +40,31 @@ internal sealed class GitLabProvider(
     /// <inheritdoc/>
     public async Task<IReadOnlyList<VcsMergeRequest>> GetOpenMergeRequestsAsync(string projectPath, CancellationToken ct)
     {
-        using var request = Authorized(HttpMethod.Get, GitLabUrls.OpenMergeRequests(context.ApiUrl, projectPath));
+        // Page through all open merge requests: GitLab caps per_page at 100, so reading only the first
+        // page silently dropped every open MR beyond 100 from the poll-based ingestion backstop. The
+        // next page number comes back in X-Next-Page, empty on the last page.
+        var all = new List<VcsMergeRequest>();
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            using var request = Authorized(HttpMethod.Get, GitLabUrls.OpenMergeRequests(context.ApiUrl, projectPath, page));
+            var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
 
-        var response = await http.SendAsync(request, ct).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+            var dtos = await response.Content
+                .ReadFromJsonAsync<List<GitLabMrDto>>(cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (dtos is { Count: > 0 })
+                all.AddRange(dtos.Select(d => d.ToMergeRequest()));
 
-        var dtos = await response.Content
-            .ReadFromJsonAsync<List<GitLabMrDto>>(cancellationToken: ct)
-            .ConfigureAwait(false);
+            var next = response.Headers.TryGetValues("X-Next-Page", out var values) ? values.FirstOrDefault() : null;
+            if (string.IsNullOrEmpty(next)) break;
+        }
 
-        return dtos?.Select(d => d.ToMergeRequest()).ToList() ?? [];
+        return all;
     }
+
+    /// <summary>A safety bound so a misbehaving pagination header cannot loop forever (100 pages = 10k MRs).</summary>
+    private const int MaxPages = 100;
 
     private HttpRequestMessage Authorized(HttpMethod method, Uri url)
     {

@@ -16,8 +16,8 @@ internal static class GitLabUrls
     internal static Uri MergeRequest(Uri apiUrl, string projectPath, string iid) =>
         new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests/{Uri.EscapeDataString(iid)}");
 
-    internal static Uri OpenMergeRequests(Uri apiUrl, string projectPath) =>
-        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests?state=opened&per_page=100");
+    internal static Uri OpenMergeRequests(Uri apiUrl, string projectPath, int page = 1) =>
+        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests?state=opened&per_page=100&page={page}");
 
     internal static Uri MergeMergeRequest(Uri apiUrl, string projectPath, string iid) =>
         new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests/{Uri.EscapeDataString(iid)}/merge");

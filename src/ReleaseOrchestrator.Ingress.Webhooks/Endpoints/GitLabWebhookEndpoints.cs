@@ -100,7 +100,9 @@ public static class GitLabWebhookEndpoints
     /// <summary>GitLab populates labels at the top level, and for some events only under object_attributes.</summary>
     private static IReadOnlyList<string> ExtractLabels(GitLabMrPayload payload) =>
         (payload.Labels ?? payload.ObjectAttributes?.Labels ?? [])
-            .Select(l => l.Title)
+            // l?.Title, not l.Title: a JSON null element in the labels array binds to a null label,
+            // which would NullReference and 500 the handler on an otherwise valid authenticated payload.
+            .Select(l => l?.Title)
             .Where(title => !string.IsNullOrWhiteSpace(title))
             .Select(title => title!.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)

@@ -239,6 +239,16 @@ public class RolloutCoordinator(
     {
         if (string.IsNullOrEmpty(step.ExternalRef)) return;
 
+        // An in-flight deploy that has not settled within the deadline is given up, whether it kept
+        // reporting Awaiting (a stuck pipeline) or its polls kept throwing (a persistent outage) -- so
+        // an in-flight step can never re-poll forever and hang the rollout past fail-stop.
+        if (IsPastDeadline(step))
+        {
+            await FailInFlightAsync(db, rollout, step,
+                $"Deploy did not settle within {options.Value.MaxDeployMinutes} min; giving up.", ct);
+            return;
+        }
+
         DeployResult result;
         try
         {
@@ -247,7 +257,14 @@ public class RolloutCoordinator(
         }
         catch (Exception ex)
         {
-            await FailStepAsync(db, rollout, step, $"Deploy poll threw: {ex.Message}", ct);
+            // The POLL itself threw (a transient outage): the deploy's outcome is unknown and it may
+            // still be running, so it must NOT be restarted -- that would deploy the same MR twice.
+            // Re-poll next tick, keeping the claim and external ref; the deadline above bounds it. This
+            // is distinct from ApplyResultAsync's default branch, where the poll SUCCEEDED and reported
+            // a genuine failure -- that goes to FailStepAsync and fail-stops.
+            logger.LogWarning(ex, "Rollout {Rollout} step {Step} poll failed transiently; will re-poll.", rollout.Id, step.Id);
+            step.LastError = ex.Message;
+            step.State = RolloutStepState.Awaiting;
             return;
         }
 
@@ -281,31 +298,22 @@ public class RolloutCoordinator(
         }
     }
 
+    /// <summary>
+    /// Handles a KNOWN deploy failure: the deploy reported failure, or its start threw before it
+    /// began. Reached only when the deploy is not running -- so re-triggering it is a retry, never a
+    /// double-deploy. A transient POLL failure of an in-flight deploy does NOT come here; it re-polls.
+    /// </summary>
     private async Task FailStepAsync(AppDbContext db, Rollout rollout, RolloutStep step, string message, CancellationToken ct)
     {
         var now = clock.GetUtcNow().UtcDateTime;
+        await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
         RecordAttempt(db, step, "Failed", message, now);
         step.LastError = message;
 
-        // A deploy that has already started (its external ref is recorded) whose POLL failed is not
-        // restarted: calling StartAsync again would trigger a SECOND deploy of the same MR into the
-        // same environment. It re-polls on the next tick instead, keeping its claim and external ref
-        // -- a poll that failed on a transient outage resumes once the dependency returns.
-        var inFlight = !string.IsNullOrEmpty(step.ExternalRef);
-        if (inFlight && step.AttemptCount < options.Value.MaxAttempts)
-        {
-            step.State = RolloutStepState.Awaiting;
-            return;
-        }
-
-        // The deploy never started (StartAsync threw before returning a ref) or attempts are
-        // exhausted: release the claim so the (MR, environment) is not blocked forever.
-        await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
-
         if (step.AttemptCount < options.Value.MaxAttempts)
         {
-            // Retry the start on the next tick. No backoff timer in this cut; a persistent failure
-            // still stops at MaxAttempts.
+            // Retry the deploy from the start on the next tick. No backoff timer in this cut; a
+            // persistent failure still stops at MaxAttempts and pauses the run (fail-stop).
             step.State = RolloutStepState.Pending;
         }
         else
@@ -315,6 +323,26 @@ public class RolloutCoordinator(
             await UpsertDeploymentStateAsync(db, step.MergeRequestId, rollout.EnvironmentId, DeploymentState.Failed, now, ct);
         }
     }
+
+    /// <summary>
+    /// Gives up an in-flight deploy that never settled (deadline reached): fails the step and releases
+    /// the claim WITHOUT retrying -- the deploy may still be running, so it is not restarted.
+    /// </summary>
+    private async Task FailInFlightAsync(AppDbContext db, Rollout rollout, RolloutStep step, string message, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
+        step.State = RolloutStepState.Failed;
+        step.FinishedAt = now;
+        step.LastError = message;
+        await UpsertDeploymentStateAsync(db, step.MergeRequestId, rollout.EnvironmentId, DeploymentState.Failed, now, ct);
+        RecordAttempt(db, step, "Failed", message, now);
+    }
+
+    /// <summary>True when an in-flight step has run past <see cref="RolloutExecutionOptions.MaxDeployMinutes"/>.</summary>
+    private bool IsPastDeadline(RolloutStep step) =>
+        step.StartedAt is { } startedAt
+        && clock.GetUtcNow().UtcDateTime - startedAt > TimeSpan.FromMinutes(options.Value.MaxDeployMinutes);
 
     /// <summary>
     /// Fails any step left in <see cref="RolloutStepState.Deploying"/> by a crash or lease hand-off.

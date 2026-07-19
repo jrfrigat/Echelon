@@ -959,6 +959,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex(new[] { "Name" }, "UQ_TrackerConnection_Name")
+                        .IsUnique();
+
                     b.ToTable("TrackerConnections");
                 });
 

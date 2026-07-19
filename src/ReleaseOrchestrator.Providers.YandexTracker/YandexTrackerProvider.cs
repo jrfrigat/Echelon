@@ -50,7 +50,12 @@ internal sealed class YandexTrackerProvider(
         using var request = Authorized(HttpMethod.Get, Url($"v2/issues/{Uri.EscapeDataString(issueKey)}/links"));
 
         var response = await http.SendAsync(request, ct).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return [];
+        // Throw on a non-success status rather than returning an empty list. An empty list is
+        // indistinguishable from "this issue has no dependencies", which the sync layer
+        // (TrackerService.ReplaceDependenciesAsync) reads as an instruction to DELETE every existing
+        // edge. A transient tracker error (500/502/429) or a 403 must instead propagate, so the sync
+        // is redelivered and retried, never silently wiping a task's ordering constraints.
+        response.EnsureSuccessStatusCode();
 
         var dtos = await response.Content
             .ReadFromJsonAsync<List<YtIssueLinkDto>>(cancellationToken: ct)
@@ -59,15 +64,17 @@ internal sealed class YandexTrackerProvider(
         // Only "depends": it is the one relation that carries ordering. "relates" exists too and
         // means nothing — feeding it to a topological sort invents constraints nobody stated.
         //
-        // UNVERIFIED — direction. Atlassian is explicit that a link's direction is interpretable
-        // only at the UI level, and Yandex.Tracker follows Jira's model, so "depends on" and "is
-        // dependent by" are plausibly the same link seen from two ends. This carries forward the
-        // existing behaviour (the linked issue is the prerequisite) rather than changing it
-        // blind: no live tracker was reachable to confirm, and inverting an edge on a guess would
-        // reverse the deploy order in exactly the case this product exists for. Check the
-        // "direction" field against a live API before trusting this with more than one link type.
+        // Only the OUTWARD end. Yandex.Tracker (Jira's model) returns the same relationship from both
+        // issues: issue A's links carry {depends, direction: outward, object: B} and issue B's carry
+        // {depends, direction: inward, object: A}. Emitting both — as this once did — produces A->B AND
+        // B->A, a cycle that breaks the topological sort the moment both issues are synced. The outward
+        // end is the dependent's own edge (A depends on B), so filtering to it records each dependency
+        // exactly once, oriented as TrackerIssueDependency(dependent, prerequisite). The direction
+        // semantics were not confirmable against a live tracker; if "outward" turns out to mean the
+        // reverse, flip this single predicate — but one acyclic edge is correct where a cycle never was.
         return dtos?
             .Where(d => string.Equals(d.Type?.Id, "depends", StringComparison.Ordinal))
+            .Where(d => string.Equals(d.Direction, "outward", StringComparison.OrdinalIgnoreCase))
             .Where(d => d.Object?.Key is { Length: > 0 })
             .Select(d => new TrackerIssueDependency(issueKey, d.Object!.Key))
             .ToList() ?? [];
@@ -133,6 +140,7 @@ internal sealed class YandexTrackerProvider(
 
     private sealed record YtIssueLinkDto(
         [property: JsonPropertyName("type")] YtLinkType? Type,
+        [property: JsonPropertyName("direction")] string? Direction,
         [property: JsonPropertyName("object")] YtLinkObject? Object);
 
     private sealed record YtLinkType([property: JsonPropertyName("id")] string Id);
