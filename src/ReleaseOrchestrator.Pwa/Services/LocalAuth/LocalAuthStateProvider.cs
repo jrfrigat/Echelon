@@ -28,6 +28,16 @@ public sealed class LocalAuthStateProvider(IJSRuntime js) : AuthenticationStateP
         if (string.IsNullOrWhiteSpace(token) || !TryReadClaims(token, out var claims))
             return Anonymous;
 
+        // A token whose exp has passed is not a session. Treat it as anonymous so the router sends the
+        // user to the login form, rather than showing the authenticated shell and letting every API
+        // call fail with a 401 "session expired" the user cannot act on. The server is still the
+        // authority on validity; this only stops a stale token from masquerading as a live session.
+        if (IsExpired(claims))
+        {
+            await js.InvokeVoidAsync("localStorage.removeItem", TokenStorageKey);
+            return Anonymous;
+        }
+
         var identity = new ClaimsIdentity(claims, authenticationType: "Local", nameType: "name", roleType: "role");
         return new AuthenticationState(new ClaimsPrincipal(identity));
     }
@@ -63,6 +73,14 @@ public sealed class LocalAuthStateProvider(IJSRuntime js) : AuthenticationStateP
         {
             return false;
         }
+    }
+
+    /// <summary>True when the token's <c>exp</c> claim (Unix seconds) is in the past.</summary>
+    private static bool IsExpired(IEnumerable<Claim> claims)
+    {
+        var exp = claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+        return long.TryParse(exp, out var seconds)
+               && DateTimeOffset.FromUnixTimeSeconds(seconds) <= DateTimeOffset.UtcNow;
     }
 
     private static byte[] Base64UrlDecode(string value)
