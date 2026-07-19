@@ -150,12 +150,6 @@
   <data name="Nav_Aria" xml:space="preserve">
     <value>Основная навигация</value>
   </data>
-  <data name="Nav_ReleasePlan" xml:space="preserve">
-    <value>План релиза</value>
-  </data>
-  <data name="Nav_YamlEditor" xml:space="preserve">
-    <value>Редактор YAML</value>
-  </data>
   <data name="Nav_Administration" xml:space="preserve">
     <value>Администрирование</value>
   </data>
@@ -168,9 +162,6 @@
   <data name="Nav_Repositories" xml:space="preserve">
     <value>Репозитории</value>
   </data>
-  <data name="Nav_Stacks" xml:space="preserve">
-    <value>Стеки</value>
-  </data>
   <data name="Nav_Permissions" xml:space="preserve">
     <value>Права доступа</value>
   </data>
@@ -182,9 +173,6 @@
   </data>
   <data name="Common_Add" xml:space="preserve">
     <value>Добавить</value>
-  </data>
-  <data name="Common_Create" xml:space="preserve">
-    <value>Создать</value>
   </data>
   <data name="Common_Delete" xml:space="preserve">
     <value>Удалить</value>
@@ -225,122 +213,11 @@
   <data name="Error_Unreachable" xml:space="preserve">
     <value>Не удалось связаться с сервером: {0}</value>
   </data>
-  <data name="Plan_Title" xml:space="preserve">
-    <value>План релиза</value>
-  </data>
-  <data name="Plan_Heading" xml:space="preserve">
-    <value>Активный план релиза</value>
-  </data>
-  <data name="Plan_Recalculate" xml:space="preserve">
-    <value>Пересчитать</value>
-  </data>
-  <data name="Plan_ExportYaml" xml:space="preserve">
-    <value>Выгрузить YAML</value>
-  </data>
-  <data name="Plan_Empty_Title" xml:space="preserve">
-    <value>Активного плана релиза нет</value>
-  </data>
-  <data name="Plan_Empty_Description" xml:space="preserve">
-    <value>Нажмите «Пересчитать», чтобы собрать план из merge-запросов, готовых к развёртыванию.</value>
-  </data>
-  <data name="Plan_Meta" xml:space="preserve">
-    <value>{0} v{1} — {2} — обновлён {3}</value>
-  </data>
-  <data name="Plan_Meta_Auto" xml:space="preserve">
-    <value>собран автоматически</value>
-  </data>
-  <data name="Plan_Meta_Manual" xml:space="preserve">
-    <value>изменён вручную</value>
-  </data>
   <data name="Plan_Conflicts_Title" xml:space="preserve">
     <value>Нарушенные зависимости: {0}</value>
   </data>
   <data name="Plan_Conflicts_Body" xml:space="preserve">
     <value>План учитывает не все ограничения — либо планировщик не смог, либо их переопределили при правке. Развёртывание в этом порядке нарушит правила ниже — проверьте план перед релизом.</value>
-  </data>
-  <data name="Plan_Stage" xml:space="preserve">
-    <value>Этап {0}</value>
-  </data>
-  <data name="Plan_Stage_Manual" xml:space="preserve">
-    <value>Вручную</value>
-  </data>
-  <data name="Plan_Stage_DragHint" xml:space="preserve">
-    <value>перетащите, чтобы изменить порядок</value>
-  </data>
-  <data name="Plan_Stage_DropHint" xml:space="preserve">
-    <value>Перетащите сюда merge-запрос</value>
-  </data>
-  <data name="Plan_AddMr" xml:space="preserve">
-    <value>Добавить merge-запрос</value>
-  </data>
-  <data name="Plan_Item_ManualTooltip" xml:space="preserve">
-    <value>Добавлен вручную</value>
-  </data>
-  <data name="Plan_Item_Remove_Aria" xml:space="preserve">
-    <value>Убрать из плана</value>
-  </data>
-  <data name="Plan_Item_Remove_Title" xml:space="preserve">
-    <value>Удаление из плана</value>
-  </data>
-  <data name="Plan_Item_Remove_Message" xml:space="preserve">
-    <value>Убрать {0} !{1} из плана релиза?</value>
-  </data>
-  <data name="Plan_AddMr_Dialog_Title" xml:space="preserve">
-    <value>Добавить merge-запрос на этап</value>
-  </data>
-  <data name="Plan_Filter_Placeholder" xml:space="preserve">
-    <value>Фильтр по ветке или репозиторию...</value>
-  </data>
-  <data name="Plan_Col_Repository" xml:space="preserve">
-    <value>Репозиторий</value>
-  </data>
-  <data name="Plan_Col_Branch" xml:space="preserve">
-    <value>Ветка</value>
-  </data>
-  <data name="Plan_Col_Task" xml:space="preserve">
-    <value>Задача</value>
-  </data>
-  <data name="Plan_Recalculated" xml:space="preserve">
-    <value>План пересчитан.</value>
-  </data>
-  <data name="Plan_ItemMoved" xml:space="preserve">
-    <value>Элемент перемещён.</value>
-  </data>
-  <data name="Plan_StagesReordered" xml:space="preserve">
-    <value>Порядок этапов изменён.</value>
-  </data>
-  <data name="Plan_ItemRemoved" xml:space="preserve">
-    <value>Элемент убран из плана.</value>
-  </data>
-  <data name="Plan_MrAdded" xml:space="preserve">
-    <value>Merge-запрос добавлен на этап.</value>
-  </data>
-  <data name="Yaml_Title" xml:space="preserve">
-    <value>Редактор YAML</value>
-  </data>
-  <data name="Yaml_Heading" xml:space="preserve">
-    <value>План релиза в YAML</value>
-  </data>
-  <data name="Yaml_ForceImport" xml:space="preserve">
-    <value>Импорт без проверок</value>
-  </data>
-  <data name="Yaml_ExportActive" xml:space="preserve">
-    <value>Выгрузить активный</value>
-  </data>
-  <data name="Yaml_Import" xml:space="preserve">
-    <value>Импортировать</value>
-  </data>
-  <data name="Yaml_ForceWarning" xml:space="preserve">
-    <value>Импорт без проверок пропускает контроль жёстких зависимостей. Загруженный порядок может их нарушить.</value>
-  </data>
-  <data name="Yaml_Placeholder" xml:space="preserve">
-    <value>Вставьте YAML сюда или нажмите «Выгрузить активный», чтобы загрузить текущий план...</value>
-  </data>
-  <data name="Yaml_NoActivePlan" xml:space="preserve">
-    <value>Активный план не найден.</value>
-  </data>
-  <data name="Yaml_Imported" xml:space="preserve">
-    <value>План «{0}» импортирован.</value>
   </data>
   <data name="Vcs_Title" xml:space="preserve">
     <value>Подключения к VCS</value>
@@ -410,48 +287,6 @@
   </data>
   <data name="Repos_Delete_What" xml:space="preserve">
     <value>репозиторий «{0}»</value>
-  </data>
-  <data name="Stacks_Title" xml:space="preserve">
-    <value>Стеки</value>
-  </data>
-  <data name="Stacks_New" xml:space="preserve">
-    <value>Новый стек</value>
-  </data>
-  <data name="Stacks_Dependencies" xml:space="preserve">
-    <value>Зависимости</value>
-  </data>
-  <data name="Stacks_Repositories" xml:space="preserve">
-    <value>Репозитории</value>
-  </data>
-  <data name="Stacks_AddDependency" xml:space="preserve">
-    <value>Добавить зависимость</value>
-  </data>
-  <data name="Stacks_TargetStack" xml:space="preserve">
-    <value>Стек, от которого зависим</value>
-  </data>
-  <data name="Stacks_AssignRepository" xml:space="preserve">
-    <value>Привязать репозиторий</value>
-  </data>
-  <data name="Stacks_Repository" xml:space="preserve">
-    <value>Репозиторий</value>
-  </data>
-  <data name="Stacks_Assign" xml:space="preserve">
-    <value>Привязать</value>
-  </data>
-  <data name="Stacks_Dialog_New" xml:space="preserve">
-    <value>Новый стек</value>
-  </data>
-  <data name="Stacks_Name" xml:space="preserve">
-    <value>Название стека</value>
-  </data>
-  <data name="Stacks_Created" xml:space="preserve">
-    <value>Стек создан.</value>
-  </data>
-  <data name="Stacks_DependencyAdded" xml:space="preserve">
-    <value>Зависимость добавлена.</value>
-  </data>
-  <data name="Stacks_RepositoryAssigned" xml:space="preserve">
-    <value>Репозиторий привязан.</value>
   </data>
   <data name="Perms_Title" xml:space="preserve">
     <value>Права доступа</value>
@@ -557,9 +392,6 @@
   </data>
   <data name="TaskDetail_Tree_Title" xml:space="preserve">
     <value>Дерево зависимостей</value>
-  </data>
-  <data name="TaskDetail_Waves_Title" xml:space="preserve">
-    <value>Волны выполнения</value>
   </data>
   <data name="TaskDetail_Target" xml:space="preserve">
     <value>цель</value>

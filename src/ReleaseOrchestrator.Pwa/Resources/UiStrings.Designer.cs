@@ -186,23 +186,7 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Release Plan.
-        /// </summary>
-        public static string Nav_ReleasePlan {
-            get {
-                return ResourceManager.GetString("Nav_ReleasePlan", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to YAML Editor.
-        /// </summary>
-        public static string Nav_YamlEditor {
-            get {
-                return ResourceManager.GetString("Nav_YamlEditor", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to Administration.
@@ -240,14 +224,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stacks.
-        /// </summary>
-        public static string Nav_Stacks {
-            get {
-                return ResourceManager.GetString("Nav_Stacks", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to Permissions.
@@ -285,14 +261,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Create.
-        /// </summary>
-        public static string Common_Create {
-            get {
-                return ResourceManager.GetString("Common_Create", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to Delete.
@@ -411,86 +379,14 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Release Plan.
-        /// </summary>
-        public static string Plan_Title {
-            get {
-                return ResourceManager.GetString("Plan_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Active Release Plan.
-        /// </summary>
-        public static string Plan_Heading {
-            get {
-                return ResourceManager.GetString("Plan_Heading", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Recalculate.
-        /// </summary>
-        public static string Plan_Recalculate {
-            get {
-                return ResourceManager.GetString("Plan_Recalculate", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Export YAML.
-        /// </summary>
-        public static string Plan_ExportYaml {
-            get {
-                return ResourceManager.GetString("Plan_ExportYaml", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to No active release plan.
-        /// </summary>
-        public static string Plan_Empty_Title {
-            get {
-                return ResourceManager.GetString("Plan_Empty_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Recalculate to build one from the merge requests that are ready to deploy..
-        /// </summary>
-        public static string Plan_Empty_Description {
-            get {
-                return ResourceManager.GetString("Plan_Empty_Description", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to {0} v{1} — {2} — updated {3}.
-        /// </summary>
-        public static string Plan_Meta {
-            get {
-                return ResourceManager.GetString("Plan_Meta", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to auto-generated.
-        /// </summary>
-        public static string Plan_Meta_Auto {
-            get {
-                return ResourceManager.GetString("Plan_Meta_Auto", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to manual.
-        /// </summary>
-        public static string Plan_Meta_Manual {
-            get {
-                return ResourceManager.GetString("Plan_Meta_Manual", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to Broken dependencies: {0}.
@@ -510,257 +406,33 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stage {0}.
-        /// </summary>
-        public static string Plan_Stage {
-            get {
-                return ResourceManager.GetString("Plan_Stage", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Manual.
-        /// </summary>
-        public static string Plan_Stage_Manual {
-            get {
-                return ResourceManager.GetString("Plan_Stage_Manual", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to drag to reorder.
-        /// </summary>
-        public static string Plan_Stage_DragHint {
-            get {
-                return ResourceManager.GetString("Plan_Stage_DragHint", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Drop a merge request here.
-        /// </summary>
-        public static string Plan_Stage_DropHint {
-            get {
-                return ResourceManager.GetString("Plan_Stage_DropHint", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Add merge request.
-        /// </summary>
-        public static string Plan_AddMr {
-            get {
-                return ResourceManager.GetString("Plan_AddMr", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Added manually.
-        /// </summary>
-        public static string Plan_Item_ManualTooltip {
-            get {
-                return ResourceManager.GetString("Plan_Item_ManualTooltip", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Remove from plan.
-        /// </summary>
-        public static string Plan_Item_Remove_Aria {
-            get {
-                return ResourceManager.GetString("Plan_Item_Remove_Aria", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Remove from plan.
-        /// </summary>
-        public static string Plan_Item_Remove_Title {
-            get {
-                return ResourceManager.GetString("Plan_Item_Remove_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Remove {0} !{1} from the release plan?.
-        /// </summary>
-        public static string Plan_Item_Remove_Message {
-            get {
-                return ResourceManager.GetString("Plan_Item_Remove_Message", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Add merge request to stage.
-        /// </summary>
-        public static string Plan_AddMr_Dialog_Title {
-            get {
-                return ResourceManager.GetString("Plan_AddMr_Dialog_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Filter by branch or repository....
-        /// </summary>
-        public static string Plan_Filter_Placeholder {
-            get {
-                return ResourceManager.GetString("Plan_Filter_Placeholder", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Repository.
-        /// </summary>
-        public static string Plan_Col_Repository {
-            get {
-                return ResourceManager.GetString("Plan_Col_Repository", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Branch.
-        /// </summary>
-        public static string Plan_Col_Branch {
-            get {
-                return ResourceManager.GetString("Plan_Col_Branch", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Task.
-        /// </summary>
-        public static string Plan_Col_Task {
-            get {
-                return ResourceManager.GetString("Plan_Col_Task", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Plan recalculated successfully..
-        /// </summary>
-        public static string Plan_Recalculated {
-            get {
-                return ResourceManager.GetString("Plan_Recalculated", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Item moved..
-        /// </summary>
-        public static string Plan_ItemMoved {
-            get {
-                return ResourceManager.GetString("Plan_ItemMoved", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stages reordered..
-        /// </summary>
-        public static string Plan_StagesReordered {
-            get {
-                return ResourceManager.GetString("Plan_StagesReordered", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Item removed..
-        /// </summary>
-        public static string Plan_ItemRemoved {
-            get {
-                return ResourceManager.GetString("Plan_ItemRemoved", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to MR added to stage..
-        /// </summary>
-        public static string Plan_MrAdded {
-            get {
-                return ResourceManager.GetString("Plan_MrAdded", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to YAML Editor.
-        /// </summary>
-        public static string Yaml_Title {
-            get {
-                return ResourceManager.GetString("Yaml_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to YAML Release Plan.
-        /// </summary>
-        public static string Yaml_Heading {
-            get {
-                return ResourceManager.GetString("Yaml_Heading", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Force import.
-        /// </summary>
-        public static string Yaml_ForceImport {
-            get {
-                return ResourceManager.GetString("Yaml_ForceImport", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Export Active.
-        /// </summary>
-        public static string Yaml_ExportActive {
-            get {
-                return ResourceManager.GetString("Yaml_ExportActive", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Import.
-        /// </summary>
-        public static string Yaml_Import {
-            get {
-                return ResourceManager.GetString("Yaml_Import", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Force skips validation against hard dependencies. The imported order may break them..
-        /// </summary>
-        public static string Yaml_ForceWarning {
-            get {
-                return ResourceManager.GetString("Yaml_ForceWarning", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Paste YAML here, or use 'Export Active' to load the current plan....
-        /// </summary>
-        public static string Yaml_Placeholder {
-            get {
-                return ResourceManager.GetString("Yaml_Placeholder", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to No active plan found..
-        /// </summary>
-        public static string Yaml_NoActivePlan {
-            get {
-                return ResourceManager.GetString("Yaml_NoActivePlan", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Plan '{0}' imported successfully..
-        /// </summary>
-        public static string Yaml_Imported {
-            get {
-                return ResourceManager.GetString("Yaml_Imported", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to VCS Connections.
@@ -969,131 +641,19 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stacks.
-        /// </summary>
-        public static string Stacks_Title {
-            get {
-                return ResourceManager.GetString("Stacks_Title", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to New Stack.
-        /// </summary>
-        public static string Stacks_New {
-            get {
-                return ResourceManager.GetString("Stacks_New", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Dependencies.
-        /// </summary>
-        public static string Stacks_Dependencies {
-            get {
-                return ResourceManager.GetString("Stacks_Dependencies", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Repositories.
-        /// </summary>
-        public static string Stacks_Repositories {
-            get {
-                return ResourceManager.GetString("Stacks_Repositories", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Add Dependency.
-        /// </summary>
-        public static string Stacks_AddDependency {
-            get {
-                return ResourceManager.GetString("Stacks_AddDependency", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Target Stack.
-        /// </summary>
-        public static string Stacks_TargetStack {
-            get {
-                return ResourceManager.GetString("Stacks_TargetStack", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Assign Repository.
-        /// </summary>
-        public static string Stacks_AssignRepository {
-            get {
-                return ResourceManager.GetString("Stacks_AssignRepository", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Repository.
-        /// </summary>
-        public static string Stacks_Repository {
-            get {
-                return ResourceManager.GetString("Stacks_Repository", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Assign.
-        /// </summary>
-        public static string Stacks_Assign {
-            get {
-                return ResourceManager.GetString("Stacks_Assign", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to New Stack.
-        /// </summary>
-        public static string Stacks_Dialog_New {
-            get {
-                return ResourceManager.GetString("Stacks_Dialog_New", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stack Name.
-        /// </summary>
-        public static string Stacks_Name {
-            get {
-                return ResourceManager.GetString("Stacks_Name", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Stack created..
-        /// </summary>
-        public static string Stacks_Created {
-            get {
-                return ResourceManager.GetString("Stacks_Created", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Dependency added..
-        /// </summary>
-        public static string Stacks_DependencyAdded {
-            get {
-                return ResourceManager.GetString("Stacks_DependencyAdded", resourceCulture);
-            }
-        }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Repository assigned..
-        /// </summary>
-        public static string Stacks_RepositoryAssigned {
-            get {
-                return ResourceManager.GetString("Stacks_RepositoryAssigned", resourceCulture);
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized string similar to Permissions.
@@ -1410,14 +970,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
-        /// <summary>
-        ///   Looks up a localized string similar to Execution waves.
-        /// </summary>
-        public static string TaskDetail_Waves_Title {
-            get {
-                return ResourceManager.GetString("TaskDetail_Waves_Title", resourceCulture);
-            }
-        }
 
         /// <summary>
         ///   Looks up a localized string similar to target.

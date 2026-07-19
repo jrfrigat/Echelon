@@ -150,12 +150,6 @@
   <data name="Nav_Aria" xml:space="preserve">
     <value>Main navigation</value>
   </data>
-  <data name="Nav_ReleasePlan" xml:space="preserve">
-    <value>Release Plan</value>
-  </data>
-  <data name="Nav_YamlEditor" xml:space="preserve">
-    <value>YAML Editor</value>
-  </data>
   <data name="Nav_Administration" xml:space="preserve">
     <value>Administration</value>
   </data>
@@ -168,9 +162,6 @@
   <data name="Nav_Repositories" xml:space="preserve">
     <value>Repositories</value>
   </data>
-  <data name="Nav_Stacks" xml:space="preserve">
-    <value>Stacks</value>
-  </data>
   <data name="Nav_Permissions" xml:space="preserve">
     <value>Permissions</value>
   </data>
@@ -182,9 +173,6 @@
   </data>
   <data name="Common_Add" xml:space="preserve">
     <value>Add</value>
-  </data>
-  <data name="Common_Create" xml:space="preserve">
-    <value>Create</value>
   </data>
   <data name="Common_Delete" xml:space="preserve">
     <value>Delete</value>
@@ -225,122 +213,11 @@
   <data name="Error_Unreachable" xml:space="preserve">
     <value>Could not reach the server: {0}</value>
   </data>
-  <data name="Plan_Title" xml:space="preserve">
-    <value>Release Plan</value>
-  </data>
-  <data name="Plan_Heading" xml:space="preserve">
-    <value>Active Release Plan</value>
-  </data>
-  <data name="Plan_Recalculate" xml:space="preserve">
-    <value>Recalculate</value>
-  </data>
-  <data name="Plan_ExportYaml" xml:space="preserve">
-    <value>Export YAML</value>
-  </data>
-  <data name="Plan_Empty_Title" xml:space="preserve">
-    <value>No active release plan</value>
-  </data>
-  <data name="Plan_Empty_Description" xml:space="preserve">
-    <value>Recalculate to build one from the merge requests that are ready to deploy.</value>
-  </data>
-  <data name="Plan_Meta" xml:space="preserve">
-    <value>{0} v{1} — {2} — updated {3}</value>
-  </data>
-  <data name="Plan_Meta_Auto" xml:space="preserve">
-    <value>auto-generated</value>
-  </data>
-  <data name="Plan_Meta_Manual" xml:space="preserve">
-    <value>manual</value>
-  </data>
   <data name="Plan_Conflicts_Title" xml:space="preserve">
     <value>Broken dependencies: {0}</value>
   </data>
   <data name="Plan_Conflicts_Body" xml:space="preserve">
     <value>This plan does not satisfy every constraint — either the planner could not, or an edit overrode one. Deploying in this order will violate the rules below; review before releasing.</value>
-  </data>
-  <data name="Plan_Stage" xml:space="preserve">
-    <value>Stage {0}</value>
-  </data>
-  <data name="Plan_Stage_Manual" xml:space="preserve">
-    <value>Manual</value>
-  </data>
-  <data name="Plan_Stage_DragHint" xml:space="preserve">
-    <value>drag to reorder</value>
-  </data>
-  <data name="Plan_Stage_DropHint" xml:space="preserve">
-    <value>Drop a merge request here</value>
-  </data>
-  <data name="Plan_AddMr" xml:space="preserve">
-    <value>Add merge request</value>
-  </data>
-  <data name="Plan_Item_ManualTooltip" xml:space="preserve">
-    <value>Added manually</value>
-  </data>
-  <data name="Plan_Item_Remove_Aria" xml:space="preserve">
-    <value>Remove from plan</value>
-  </data>
-  <data name="Plan_Item_Remove_Title" xml:space="preserve">
-    <value>Remove from plan</value>
-  </data>
-  <data name="Plan_Item_Remove_Message" xml:space="preserve">
-    <value>Remove {0} !{1} from the release plan?</value>
-  </data>
-  <data name="Plan_AddMr_Dialog_Title" xml:space="preserve">
-    <value>Add merge request to stage</value>
-  </data>
-  <data name="Plan_Filter_Placeholder" xml:space="preserve">
-    <value>Filter by branch or repository...</value>
-  </data>
-  <data name="Plan_Col_Repository" xml:space="preserve">
-    <value>Repository</value>
-  </data>
-  <data name="Plan_Col_Branch" xml:space="preserve">
-    <value>Branch</value>
-  </data>
-  <data name="Plan_Col_Task" xml:space="preserve">
-    <value>Task</value>
-  </data>
-  <data name="Plan_Recalculated" xml:space="preserve">
-    <value>Plan recalculated successfully.</value>
-  </data>
-  <data name="Plan_ItemMoved" xml:space="preserve">
-    <value>Item moved.</value>
-  </data>
-  <data name="Plan_StagesReordered" xml:space="preserve">
-    <value>Stages reordered.</value>
-  </data>
-  <data name="Plan_ItemRemoved" xml:space="preserve">
-    <value>Item removed.</value>
-  </data>
-  <data name="Plan_MrAdded" xml:space="preserve">
-    <value>MR added to stage.</value>
-  </data>
-  <data name="Yaml_Title" xml:space="preserve">
-    <value>YAML Editor</value>
-  </data>
-  <data name="Yaml_Heading" xml:space="preserve">
-    <value>YAML Release Plan</value>
-  </data>
-  <data name="Yaml_ForceImport" xml:space="preserve">
-    <value>Force import</value>
-  </data>
-  <data name="Yaml_ExportActive" xml:space="preserve">
-    <value>Export Active</value>
-  </data>
-  <data name="Yaml_Import" xml:space="preserve">
-    <value>Import</value>
-  </data>
-  <data name="Yaml_ForceWarning" xml:space="preserve">
-    <value>Force skips validation against hard dependencies. The imported order may break them.</value>
-  </data>
-  <data name="Yaml_Placeholder" xml:space="preserve">
-    <value>Paste YAML here, or use 'Export Active' to load the current plan...</value>
-  </data>
-  <data name="Yaml_NoActivePlan" xml:space="preserve">
-    <value>No active plan found.</value>
-  </data>
-  <data name="Yaml_Imported" xml:space="preserve">
-    <value>Plan '{0}' imported successfully.</value>
   </data>
   <data name="Vcs_Title" xml:space="preserve">
     <value>VCS Connections</value>
@@ -410,48 +287,6 @@
   </data>
   <data name="Repos_Delete_What" xml:space="preserve">
     <value>repository '{0}'</value>
-  </data>
-  <data name="Stacks_Title" xml:space="preserve">
-    <value>Stacks</value>
-  </data>
-  <data name="Stacks_New" xml:space="preserve">
-    <value>New Stack</value>
-  </data>
-  <data name="Stacks_Dependencies" xml:space="preserve">
-    <value>Dependencies</value>
-  </data>
-  <data name="Stacks_Repositories" xml:space="preserve">
-    <value>Repositories</value>
-  </data>
-  <data name="Stacks_AddDependency" xml:space="preserve">
-    <value>Add Dependency</value>
-  </data>
-  <data name="Stacks_TargetStack" xml:space="preserve">
-    <value>Target Stack</value>
-  </data>
-  <data name="Stacks_AssignRepository" xml:space="preserve">
-    <value>Assign Repository</value>
-  </data>
-  <data name="Stacks_Repository" xml:space="preserve">
-    <value>Repository</value>
-  </data>
-  <data name="Stacks_Assign" xml:space="preserve">
-    <value>Assign</value>
-  </data>
-  <data name="Stacks_Dialog_New" xml:space="preserve">
-    <value>New Stack</value>
-  </data>
-  <data name="Stacks_Name" xml:space="preserve">
-    <value>Stack Name</value>
-  </data>
-  <data name="Stacks_Created" xml:space="preserve">
-    <value>Stack created.</value>
-  </data>
-  <data name="Stacks_DependencyAdded" xml:space="preserve">
-    <value>Dependency added.</value>
-  </data>
-  <data name="Stacks_RepositoryAssigned" xml:space="preserve">
-    <value>Repository assigned.</value>
   </data>
   <data name="Perms_Title" xml:space="preserve">
     <value>Permissions</value>
@@ -557,9 +392,6 @@
   </data>
   <data name="TaskDetail_Tree_Title" xml:space="preserve">
     <value>Dependency tree</value>
-  </data>
-  <data name="TaskDetail_Waves_Title" xml:space="preserve">
-    <value>Execution waves</value>
   </data>
   <data name="TaskDetail_Target" xml:space="preserve">
     <value>target</value>
