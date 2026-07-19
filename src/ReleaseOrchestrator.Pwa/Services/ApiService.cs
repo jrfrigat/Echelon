@@ -85,10 +85,34 @@ public class ApiService(HttpClient http)
     public Task DeleteRepositoryAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/repositories/{id}", ct), ct);
 
+    // ---- default rollout plan (repository ordering) ----------------------------
+
+    public Task<PagedResult<RepositoryOrderingDto>> GetRepositoryOrderingAsync(int page = 1, CancellationToken ct = default) =>
+        GetAsync<PagedResult<RepositoryOrderingDto>>($"api/repository-ordering?page={page}&pageSize=50", ct);
+
+    /// <summary>The order those rules add up to, derived server-side by the real ordering engine.</summary>
+    public Task<DefaultPlanDto> GetDefaultPlanAsync(CancellationToken ct = default) =>
+        GetAsync<DefaultPlanDto>("api/repository-ordering/plan", ct);
+
+    /// <param name="fromRepositoryId">The repository that deploys later.</param>
+    /// <param name="toRepositoryId">The repository that deploys first.</param>
+    /// <param name="type">"Hard" (never dropped) or "Soft" (dropped first to break a cycle).</param>
+    public Task CreateRepositoryOrderingAsync(
+        Guid fromRepositoryId, Guid toRepositoryId, string type, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsJsonAsync("api/repository-ordering",
+            new { FromRepositoryId = fromRepositoryId, ToRepositoryId = toRepositoryId, Type = type }, ct), ct);
+
+    public Task DeleteRepositoryOrderingAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.DeleteAsync($"api/repository-ordering/{id}", ct), ct);
+
     // ---- tasks (per-task rollout plans) ---------------------------------------
 
     public Task<PagedResult<TaskListItemDto>> GetTasksAsync(int page = 1, CancellationToken ct = default) =>
         GetAsync<PagedResult<TaskListItemDto>>($"api/tasks?page={page}&pageSize=50", ct);
+
+    /// <summary>The task itself — its parent and subtasks — which exists whether or not a plan does.</summary>
+    public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
+        GetOrNullAsync<TaskDetailDto>($"api/tasks/{taskId}", ct);
 
     public Task<RolloutPlanDto?> GetTaskPlanAsync(Guid taskId, CancellationToken ct = default) =>
         GetOrNullAsync<RolloutPlanDto>($"api/tasks/{taskId}/plan", ct);

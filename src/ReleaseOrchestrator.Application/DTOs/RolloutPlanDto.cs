@@ -9,6 +9,48 @@ public record TaskListItemDto(
     int MergeRequestCount,
     bool HasActivePlan);
 
+/// <summary>Another task named from this one — its parent, or one of its children.</summary>
+public record TaskRefDto(Guid Id, string ExternalId, string Title);
+
+/// <summary>A repository in the default plan, in the wave it deploys in.</summary>
+public record DefaultPlanRepositoryDto(Guid Id, string Name);
+
+/// <summary>One wave of the default plan: repositories that deploy in parallel.</summary>
+public record DefaultPlanWaveDto(int Sequence, IReadOnlyList<DefaultPlanRepositoryDto> Repositories);
+
+/// <summary>An ordering rule the default plan could not honour — in practice, a cycle in the rules.</summary>
+public record DefaultPlanConflictDto(string FromRepositoryName, string ToRepositoryName, string Kind, string Reason);
+
+/// <summary>
+/// The default rollout plan: the order repositories deploy in before any task's own dependencies
+/// or hierarchy are taken into account.
+/// </summary>
+/// <remarks>
+/// Derived from the repository-ordering rules, not stored. It is shown to operators as the answer to
+/// "what do these rules actually mean", which a list of pairs does not answer on its own.
+/// </remarks>
+public record DefaultPlanDto(
+    IReadOnlyList<DefaultPlanWaveDto> Waves,
+    IReadOnlyList<DefaultPlanConflictDto> Conflicts);
+
+/// <summary>
+/// A task's own facts, independent of any plan: what it is and where it sits in the tracker's
+/// hierarchy.
+/// </summary>
+/// <remarks>
+/// Separate from <see cref="RolloutPlanDto"/> because it has to be readable when there is no plan —
+/// a task shows its parentage before anyone builds anything — and because the plan cannot carry all
+/// of it: a plan is the closure of what the target waits on, and a task does not wait on its parent.
+/// Opening a subtask would therefore show a tree its parent never appears in.
+/// </remarks>
+public record TaskDetailDto(
+    Guid Id,
+    string ExternalId,
+    string Title,
+    string Status,
+    TaskRefDto? Parent,
+    IReadOnlyList<TaskRefDto> Children);
+
 /// <summary>
 /// A per-task rollout plan: the tree of the target's dependency closure plus the merge-request-level
 /// execution waves.

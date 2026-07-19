@@ -41,12 +41,54 @@ public class TrackerService(
         }
 
         var task = await UpsertTaskAsync(conn.Id, provider, info, ct);
+        var parentChanged = await ApplyParentAsync(conn, provider, task, info.ParentKey, ct);
         var links = await ReadDependenciesAsync(provider, conn, externalTaskId, ct);
 
         var changed = await ReplaceDependenciesAsync(conn, provider, task, links, ct);
 
         await db.SaveChangesAsync(ct);
-        return changed;
+        return changed || parentChanged;
+    }
+
+    /// <summary>
+    /// Points the task at its parent, or clears the link when the tracker no longer reports one.
+    /// </summary>
+    /// <returns>True when the parent actually changed — the caller only replans then.</returns>
+    /// <remarks>
+    /// Deliberately here and not in <see cref="UpsertTaskAsync"/>. Resolving a parent may fetch it,
+    /// and fetching goes through the same upsert: setting the parent there would make every fetch
+    /// resolve its own parent in turn, walking the hierarchy to its root on every sync and never
+    /// terminating at all if a tracker reports a cycle. The fetch stays shallow, exactly as it does
+    /// for prerequisites — a fetched parent gets its own parent when it is itself synced.
+    ///
+    /// A hierarchy cycle a tracker does report is not fatal downstream: the closure builder expands
+    /// each task once and the planner breaks cycles and records the conflict, so it degrades to a
+    /// reported conflict rather than a hang.
+    /// </remarks>
+    private async Task<bool> ApplyParentAsync(
+        TrackerConnection conn,
+        ITrackerProvider provider,
+        TaskItem task,
+        string? parentKey,
+        CancellationToken ct)
+    {
+        Guid? parentId = null;
+
+        if (!string.IsNullOrWhiteSpace(parentKey))
+        {
+            parentId = await ResolveOrFetchTaskAsync(conn, provider, parentKey, ct);
+
+            // A task that is its own parent carries no ordering and would be a self-edge in the plan.
+            if (parentId == task.Id) parentId = null;
+        }
+
+        if (task.ParentTaskId == parentId) return false;
+
+        logger.LogInformation(
+            "Task {Task}: parent {Parent}", task.ExternalId, parentKey is { Length: > 0 } ? parentKey : "cleared");
+
+        task.ParentTaskId = parentId;
+        return true;
     }
 
     private async Task<IReadOnlyList<TrackerIssueDependency>> ReadDependenciesAsync(
@@ -148,15 +190,16 @@ public class TrackerService(
     }
 
     /// <summary>
-    /// Finds the prerequisite task, fetching it from the tracker if it is not stored yet.
+    /// Finds a referenced task — a prerequisite or a parent — fetching it from the tracker if it is
+    /// not stored yet.
     ///
-    /// Skipping an unknown prerequisite — as this used to — loses the edge permanently: nothing
-    /// revisits the dependent task once the prerequisite appears, so the plan silently omits a
+    /// Skipping an unknown reference — as this used to — loses the edge permanently: nothing
+    /// revisits the referring task once the other appears, so the plan silently omits a
     /// constraint that the tracker states. Sync order is not something we control, so a task
     /// referencing one we have not imported yet is ordinary, not exceptional.
     ///
-    /// The fetch is deliberately shallow — the prerequisite's own links are left to its own sync,
-    /// which bounds this at one extra call per edge instead of walking the graph.
+    /// The fetch is deliberately shallow — the fetched task's own links and parent are left to its
+    /// own sync, which bounds this at one extra call per edge instead of walking the graph.
     /// </summary>
     private async Task<Guid?> ResolveOrFetchTaskAsync(TrackerConnection conn, ITrackerProvider provider, string key, CancellationToken ct)
     {
@@ -170,9 +213,12 @@ public class TrackerService(
         var info = await provider.GetIssueAsync(key, ct);
         if (info is null)
         {
+            // Said of the referenced key alone: this resolves both prerequisites and parents, and the
+            // message used to name the same key as both ends ("X depends on X"), which read as a
+            // self-dependency that was never there.
             logger.LogWarning(
-                "Task {Task} depends on {Missing}, which the tracker does not return; the link is skipped.",
-                key, key);
+                "Task {Missing} is referenced but tracker {Tracker} does not return it; the link is skipped.",
+                key, conn.Name);
             return null;
         }
 

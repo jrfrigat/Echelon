@@ -219,6 +219,112 @@ public sealed class TrackerServiceTests : IAsyncLifetime
         Assert.Empty(await _db.Tasks.ToListAsync(Ct));
     }
 
+    // ---- hierarchy ------------------------------------------------------------
+
+    [Fact]
+    public async Task ImportsTheParentLink()
+    {
+        var provider = new FakeTrackerProvider()
+            .WithIssue("EPIC-1")
+            .WithIssue("TASK-2", parentKey: "EPIC-1");
+
+        var changed = await Service(provider).SyncTaskAsync(_tracker.Id, "TASK-2", Ct);
+
+        Assert.True(changed);
+
+        var child = await FindTaskAsync("TASK-2");
+        var parent = await FindTaskAsync("EPIC-1");
+        Assert.NotNull(parent);
+        Assert.Equal(parent!.Id, child!.ParentTaskId);
+    }
+
+    /// <summary>
+    /// Same reasoning as a prerequisite: sync order is not ours to control, and dropping the link
+    /// because the parent has not been imported yet loses it for good.
+    /// </summary>
+    [Fact]
+    public async Task FetchesAParentThatIsNotStoredYet()
+    {
+        var provider = new FakeTrackerProvider()
+            .WithIssue("EPIC-1")
+            .WithIssue("TASK-2", parentKey: "EPIC-1");
+
+        await Service(provider).SyncTaskAsync(_tracker.Id, "TASK-2", Ct);
+
+        Assert.NotNull(await FindTaskAsync("EPIC-1"));
+    }
+
+    /// <summary>
+    /// The parent is fetched shallowly. Resolving its parent too would walk the hierarchy to its root
+    /// on every sync — and never terminate at all if a tracker reported a cycle.
+    /// </summary>
+    [Fact]
+    public async Task DoesNotWalkTheParentsOwnParent()
+    {
+        var provider = new FakeTrackerProvider()
+            .WithIssue("EPIC-1")
+            .WithIssue("EPIC-2", parentKey: "EPIC-1")
+            .WithIssue("TASK-3", parentKey: "EPIC-2");
+
+        await Service(provider).SyncTaskAsync(_tracker.Id, "TASK-3", Ct);
+
+        // EPIC-1 is two hops up; TASK-3's sync must not import it.
+        Assert.Null(await FindTaskAsync("EPIC-1"));
+        Assert.Null((await FindTaskAsync("EPIC-2"))!.ParentTaskId);
+    }
+
+    [Fact]
+    public async Task AParentTheTrackerDoesNotHaveIsSkipped()
+    {
+        var provider = new FakeTrackerProvider().WithIssue("TASK-2", parentKey: "GHOST-9");
+
+        await Service(provider).SyncTaskAsync(_tracker.Id, "TASK-2", Ct);
+
+        Assert.Null((await FindTaskAsync("TASK-2"))!.ParentTaskId);
+    }
+
+    /// <summary>A task moved out from under its epic loses the link, or it deploys against an order nobody states.</summary>
+    [Fact]
+    public async Task ClearingTheParentInTheTrackerClearsItHere()
+    {
+        var provider = new FakeTrackerProvider()
+            .WithIssue("EPIC-1")
+            .WithIssue("TASK-2", parentKey: "EPIC-1");
+
+        var service = Service(provider);
+        await service.SyncTaskAsync(_tracker.Id, "TASK-2", Ct);
+        Assert.NotNull((await FindTaskAsync("TASK-2"))!.ParentTaskId);
+
+        provider.WithIssue("TASK-2", parentKey: null);
+        var changed = await service.SyncTaskAsync(_tracker.Id, "TASK-2", Ct);
+
+        Assert.True(changed);
+        Assert.Null((await FindTaskAsync("TASK-2"))!.ParentTaskId);
+    }
+
+    [Fact]
+    public async Task ResyncingWithTheSameParentReportsNoChange()
+    {
+        var provider = new FakeTrackerProvider()
+            .WithIssue("EPIC-1")
+            .WithIssue("TASK-2", parentKey: "EPIC-1");
+
+        var service = Service(provider);
+        Assert.True(await service.SyncTaskAsync(_tracker.Id, "TASK-2", Ct));
+        Assert.False(await service.SyncTaskAsync(_tracker.Id, "TASK-2", Ct));
+    }
+
+    /// <summary>A task that is its own parent would be a self-edge in the plan, exactly as a self-dependency is.</summary>
+    [Fact]
+    public async Task SelfParentIsIgnored()
+    {
+        var provider = new FakeTrackerProvider().WithIssue("TASK-1", parentKey: "TASK-1");
+
+        await Service(provider).SyncTaskAsync(_tracker.Id, "TASK-1", Ct);
+
+        Assert.Null((await FindTaskAsync("TASK-1"))!.ParentTaskId);
+    }
+
     [Fact]
     public async Task SelfDependencyIsIgnored()
     {

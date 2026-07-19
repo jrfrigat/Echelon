@@ -10,6 +10,7 @@ Release Orchestrator помогает автоматически выстраи�
 
 **👉 Start here:** [Comprehensive Documentation](docs/README.md)
 
+- **[User Guide](docs/en/user-guide.md)** — Why each part exists and how to use it (start here if you use the product)
 - **[Getting Started](docs/en/getting-started.md)** — Local setup with Docker Compose
 - **[Architecture](docs/en/architecture.md)** — System design and data flow
 - **[Configuration](docs/en/configuration.md)** — All environment variables
@@ -18,6 +19,7 @@ Release Orchestrator помогает автоматически выстраи�
 - **[Localization](docs/en/localization.md)** — How i18n works
 
 **Русский:**
+- **[Руководство пользователя](docs/ru/user-guide.md)** — зачем нужна каждая часть и как ей пользоваться
 - **[Начало работы](docs/ru/getting-started.md)**
 - **[Архитектура](docs/ru/architecture.md)**
 - **[Конфигурация](docs/ru/configuration.md)**

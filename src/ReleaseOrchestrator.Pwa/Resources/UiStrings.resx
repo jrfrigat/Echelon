@@ -402,14 +402,95 @@
   <data name="TaskDetail_DependsOn" xml:space="preserve">
     <value>depends on</value>
   </data>
+  <data name="TaskDetail_Parent" xml:space="preserve">
+    <value>Parent task</value>
+  </data>
+  <data name="TaskDetail_Children" xml:space="preserve">
+    <value>Subtasks</value>
+  </data>
+  <data name="TaskDetail_Children_Hint" xml:space="preserve">
+    <value>Subtasks deploy before this task: rolling it out rolls them out first.</value>
+  </data>
   <data name="Plan_Wave" xml:space="preserve">
     <value>Wave {0}</value>
   </data>
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Rollouts</value>
   </data>
+  <data name="Nav_DefaultPlan" xml:space="preserve">
+    <value>Default plan</value>
+  </data>
   <data name="Nav_Environments" xml:space="preserve">
     <value>Environments</value>
+  </data>
+  <data name="DefaultPlan_Title" xml:space="preserve">
+    <value>Default rollout plan</value>
+  </data>
+  <data name="DefaultPlan_Description" xml:space="preserve">
+    <value>The order repositories deploy in. It applies to every task's rollout, unless that task's own dependencies or subtasks change it.</value>
+  </data>
+  <data name="DefaultPlan_Order_Title" xml:space="preserve">
+    <value>Deploy order</value>
+  </data>
+  <data name="DefaultPlan_Order_Hint" xml:space="preserve">
+    <value>Repositories in the same wave deploy in parallel; each wave waits for the one before it.</value>
+  </data>
+  <data name="DefaultPlan_NoRepos_Title" xml:space="preserve">
+    <value>No repositories yet</value>
+  </data>
+  <data name="DefaultPlan_NoRepos_Description" xml:space="preserve">
+    <value>Add repositories first: the default plan is the order they deploy in.</value>
+  </data>
+  <data name="DefaultPlan_Conflicts_Title" xml:space="preserve">
+    <value>{0} rule(s) could not be honoured</value>
+  </data>
+  <data name="DefaultPlan_Conflicts_Body" xml:space="preserve">
+    <value>These rules contradict each other, so some were dropped to produce an order at all. This is normally a cycle: fix the rules below.</value>
+  </data>
+  <data name="DefaultPlan_Rules_Title" xml:space="preserve">
+    <value>Ordering rules</value>
+  </data>
+  <data name="DefaultPlan_NeedTwoRepos" xml:space="preserve">
+    <value>At least two repositories are needed before one can deploy after another.</value>
+  </data>
+  <data name="DefaultPlan_Col_From" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="DefaultPlan_Col_After" xml:space="preserve">
+    <value>Deploys after</value>
+  </data>
+  <data name="DefaultPlan_Col_Type" xml:space="preserve">
+    <value>Strictness</value>
+  </data>
+  <data name="DefaultPlan_Type_Hard" xml:space="preserve">
+    <value>Hard</value>
+  </data>
+  <data name="DefaultPlan_Type_Soft" xml:space="preserve">
+    <value>Soft</value>
+  </data>
+  <data name="DefaultPlan_Type_Hint" xml:space="preserve">
+    <value>A hard rule is never dropped; a soft rule yields first when rules contradict each other.</value>
+  </data>
+  <data name="DefaultPlan_Add" xml:space="preserve">
+    <value>Add rule</value>
+  </data>
+  <data name="DefaultPlan_Created" xml:space="preserve">
+    <value>Ordering rule added</value>
+  </data>
+  <data name="DefaultPlan_Deleted" xml:space="preserve">
+    <value>Ordering rule removed</value>
+  </data>
+  <data name="DefaultPlan_Delete_Title" xml:space="preserve">
+    <value>Remove ordering rule</value>
+  </data>
+  <data name="DefaultPlan_Delete_Message" xml:space="preserve">
+    <value>Remove the rule {0}? Rollout plans will be rebuilt without it.</value>
+  </data>
+  <data name="DefaultPlan_NoRules_Title" xml:space="preserve">
+    <value>No ordering rules</value>
+  </data>
+  <data name="DefaultPlan_NoRules_Description" xml:space="preserve">
+    <value>Without rules every repository deploys in the first wave, all in parallel.</value>
   </data>
   <data name="TaskDetail_Environment" xml:space="preserve">
     <value>Environment</value>

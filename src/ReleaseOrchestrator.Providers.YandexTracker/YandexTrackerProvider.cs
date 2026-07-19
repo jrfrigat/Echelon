@@ -41,7 +41,11 @@ internal sealed class YandexTrackerProvider(
                 dto.Key,
                 dto.Summary ?? string.Empty,
                 dto.Status?.Key ?? string.Empty,
-                dto.ResolvedAt?.UtcDateTime);
+                dto.ResolvedAt?.UtcDateTime,
+                // The hierarchy comes back on the issue itself, not through /links: Yandex.Tracker
+                // models "parent" as a field holding the parent issue, the way Jira does. A blank key
+                // is treated as absent so a malformed object cannot resolve to a task named "".
+                dto.Parent?.Key is { Length: > 0 } parentKey ? parentKey : null);
     }
 
     /// <inheritdoc/>
@@ -134,7 +138,9 @@ internal sealed class YandexTrackerProvider(
         // refuses outright, since it maps DateTime to timestamptz and Npgsql writes only Kind=Utc.
         // The ambiguity is removed here rather than compensated for later: an offset is exactly what
         // DateTimeOffset is for, and the adapter is where the tracker's format is known.
-        [property: JsonPropertyName("resolvedAt")] DateTimeOffset? ResolvedAt);
+        [property: JsonPropertyName("resolvedAt")] DateTimeOffset? ResolvedAt,
+        // Same shape as a link target -- an object carrying the issue key -- so it reuses YtLinkObject.
+        [property: JsonPropertyName("parent")] YtLinkObject? Parent);
 
     private sealed record YtStatus([property: JsonPropertyName("key")] string Key);
 

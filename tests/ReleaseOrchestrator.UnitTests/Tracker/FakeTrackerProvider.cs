@@ -26,9 +26,10 @@ internal sealed class FakeTrackerProvider : ITrackerProvider, ITrackerDependency
     /// <summary>Issue keys requested, in order. Duplicates are the point.</summary>
     public List<string> IssueReads { get; } = [];
 
-    public FakeTrackerProvider WithIssue(string key, string status = "open", DateTime? resolvedAt = null)
+    public FakeTrackerProvider WithIssue(
+        string key, string status = "open", DateTime? resolvedAt = null, string? parentKey = null)
     {
-        _issues[key] = new TrackerIssue(key, $"Summary of {key}", status, resolvedAt);
+        _issues[key] = new TrackerIssue(key, $"Summary of {key}", status, resolvedAt, parentKey);
         return this;
     }
 

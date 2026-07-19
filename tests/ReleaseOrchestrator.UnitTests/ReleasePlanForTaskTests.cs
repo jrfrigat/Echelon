@@ -29,6 +29,7 @@ public class ReleasePlanForTaskTests
         new(Guid.NewGuid(),
             taskId,
             dependsOn.TryGetValue(taskId, out var deps) ? deps : [],
+            [],   // hierarchy children: exercised in ReleasePlanGraphTests, not needed for the closure cases
             repositoryId ?? Guid.NewGuid(),
             repoDependsOn ?? []);
 

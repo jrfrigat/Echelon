@@ -2,14 +2,14 @@
 @attribute [Authorize]
 @inherits PageBase
 
-<PageTitle>@(_plan?.TargetTaskKey ?? UiStrings.Tasks_Title)</PageTitle>
+<PageTitle>@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? UiStrings.Tasks_Title)</PageTitle>
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">
         <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.ArrowBack" /></LeadingIcon>
         <ChildContent>@UiStrings.TaskDetail_Back</ChildContent>
     </FlareButton>
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@(_plan?.TargetTaskKey ?? "")</FlareText>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? "")</FlareText>
     <FlareSpacer />
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="Recalculate" Disabled="_busy">
         <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" /></LeadingIcon>
@@ -19,6 +19,41 @@
 
 <PageAlerts Error="@Error" Success="@Success"
             OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@* The hierarchy is a fact about the task, not about a plan, so it renders whether or not one was
+   ever built -- and a subtask's parent never appears in its own plan tree (a task does not wait on
+   its parent), which makes this the only place it is visible at all. *@
+@if (!_loading && _task is not null && (_task.Parent is not null || _task.Children.Count > 0))
+{
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Gap="FlareSpacing.XSmall">
+                @if (_task.Parent is not null)
+                {
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                        <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_Parent</FlareText>
+                        <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(_task.Parent.Id))">@_task.Parent.ExternalId</FlareChip>
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@_task.Parent.Title</FlareText>
+                    </FlareStack>
+                }
+                @if (_task.Children.Count > 0)
+                {
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                        <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_Children</FlareText>
+                        @foreach (var child in _task.Children)
+                        {
+                            var childId = child.Id;
+                            <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(childId))">@child.ExternalId</FlareChip>
+                        }
+                    </FlareStack>
+                    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                        @UiStrings.TaskDetail_Children_Hint
+                    </FlareText>
+                }
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
+}
 
 @if (_loading)
 {
@@ -135,14 +170,26 @@ else
     [Parameter] public Guid Id { get; set; }
     [Inject] NavigationManager Nav { get; set; } = default!;
 
+    TaskDetailDto? _task;
     RolloutPlanDto? _plan;
     List<EnvironmentDto>? _environments;
     Guid _selectedEnvironmentId;
     bool _loading = true;
     bool _busy;
     Dictionary<Guid, string> _keyById = [];
+    Guid _loadedId;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    /// <summary>
+    /// Keyed on the route parameter rather than on first render: the parent and subtask chips
+    /// navigate to another task, and Blazor reuses this component for that — OnInitializedAsync
+    /// would not run again, leaving the previous task's plan on screen under the new URL.
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == Id) return;
+        _loadedId = Id;
+        await Load();
+    }
 
     async Task Load()
     {
@@ -150,6 +197,7 @@ else
         // A null plan is a legitimate answer (nothing built yet), not a failure.
         await RunAsync(async () =>
         {
+            _task = await Api.GetTaskAsync(Id);
             _plan = await Api.GetTaskPlanAsync(Id);
             _environments = await Api.GetEnvironmentsAsync();
         });
@@ -182,6 +230,9 @@ else
     string KeyOf(Guid taskId) => _keyById.TryGetValue(taskId, out var k) ? k : taskId.ToString()[..8];
 
     void Back() => Nav.NavigateTo("/");
+
+    /// <summary>Opens another task — the parent, or one of the subtasks.</summary>
+    void Open(Guid taskId) => Nav.NavigateTo($"/tasks/{taskId}");
 
     // Mirrors the server-side MergeRequestStatus enum, which the PWA does not reference.
     static FlareColor StatusColor(string status) => status switch

@@ -28,6 +28,9 @@ public class ReleasePlanGraphTests
 
         /// <summary>Live, so a test may declare dependencies before or after building the MR.</summary>
         public List<Guid> DependsOn { get; } = [];
+
+        /// <summary>Its subtasks, which deploy before it. Live for the same reason.</summary>
+        public List<Guid> Children { get; } = [];
     }
 
     /// <summary>A repository under construction, with the repositories it deploys after.</summary>
@@ -43,6 +46,10 @@ public class ReleasePlanGraphTests
     private static void DependsOn(TaskDef dependent, TaskDef dependsOn) =>
         dependent.DependsOn.Add(dependsOn.Id);
 
+    /// <summary>Records "child is a subtask of parent", so the child deploys first and the parent last.</summary>
+    private static void ChildOf(TaskDef child, TaskDef parent) =>
+        parent.Children.Add(child.Id);
+
     private static RepoDef Repo() => new();
 
     /// <summary>Records "from depends on to", i.e. every MR in <paramref name="to"/> deploys first.</summary>
@@ -53,6 +60,7 @@ public class ReleasePlanGraphTests
         new(Guid.NewGuid(),
             task?.Id,
             task?.DependsOn ?? [],
+            task?.Children ?? [],
             repo?.Id ?? Guid.NewGuid(),   // a distinct repository per merge request unless a test shares one
             repo?.DependsOn ?? []);
 
@@ -93,6 +101,76 @@ public class ReleasePlanGraphTests
 
         Assert.True(StageOf(result, mrA1) < StageOf(result, mrB));
         Assert.True(StageOf(result, mrA2) < StageOf(result, mrB));
+    }
+
+    // ---- task hierarchy -------------------------------------------------------
+
+    /// <summary>
+    /// A subtask deploys before the parent it hangs under: the parent is the umbrella, the children
+    /// are the concrete work.
+    /// </summary>
+    /// <remarks>
+    /// The parent is listed first in the input on purpose. Input order is what breaks ties inside a
+    /// stage, so a hierarchy edge that went missing — or pointed the other way — would leave the
+    /// parent in the earlier stage and fail here. Given the child first, the assertion would pass on
+    /// tie-break luck whether the edge existed or not.
+    /// </remarks>
+    [Fact]
+    public void SubtaskDeploysBeforeItsParentTask()
+    {
+        var parent = Task();
+        var child = Task();
+        ChildOf(child, parent);
+
+        var parentMr = Mr(parent);
+        var childMr = Mr(child);
+
+        var result = ReleasePlanGraph.Build([parentMr, childMr]);
+
+        Assert.True(StageOf(result, childMr) < StageOf(result, parentMr));
+        Assert.Empty(result.Conflicts);
+    }
+
+    /// <summary>A parent spanning several children waits for all of them, not just the first.</summary>
+    [Fact]
+    public void ParentTaskWaitsForEveryChild()
+    {
+        var parent = Task();
+        var firstChild = Task();
+        var secondChild = Task();
+        ChildOf(firstChild, parent);
+        ChildOf(secondChild, parent);
+
+        var parentMr = Mr(parent);
+        var firstMr = Mr(firstChild);
+        var secondMr = Mr(secondChild);
+
+        var result = ReleasePlanGraph.Build([parentMr, firstMr, secondMr]);
+
+        Assert.True(StageOf(result, firstMr) < StageOf(result, parentMr));
+        Assert.True(StageOf(result, secondMr) < StageOf(result, parentMr));
+    }
+
+    /// <summary>
+    /// The hierarchy is a mandatory constraint, like a declared dependency: an operator may deploy
+    /// against it, but the plan has to say so rather than reorder in silence.
+    /// </summary>
+    [Fact]
+    public void TheParentChildOrderingIsAMandatoryConstraint()
+    {
+        var parent = Task();
+        var child = Task();
+        ChildOf(child, parent);
+
+        var parentMr = Mr(parent);
+        var childMr = Mr(child);
+
+        var mandatory = ReleasePlanGraph.MandatoryEdges([parentMr, childMr]);
+
+        var edge = Assert.Single(mandatory);
+        Assert.Equal(childMr.Id, edge.FromMrId);
+        Assert.Equal(parentMr.Id, edge.ToMrId);
+        Assert.Equal(PlanEdgeKind.TaskDependency, edge.Kind);
     }
 
     [Fact]

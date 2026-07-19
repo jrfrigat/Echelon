@@ -1,0 +1,197 @@
+@page "/admin/default-plan"
+@attribute [Authorize]
+@inherits PageBase
+
+@* The rules are the input, the order is what they mean. Both are on one page on purpose: an
+   operator adds "api after db" and needs to see immediately what the whole sequence became --
+   a list of pairs does not read as a plan, and a contradictory pair does not announce itself. *@
+
+<PageTitle>@UiStrings.DefaultPlan_Title</PageTitle>
+
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.DefaultPlan_Title</FlareText>
+<FlareText Typo="TypographyScale.BodyMedium" Color="FlareColor.OnSurfaceVariant">
+    @UiStrings.DefaultPlan_Description
+</FlareText>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else
+{
+    @* ---- the plan itself ---- *@
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.DefaultPlan_Order_Title</FlareText>
+
+    @if (_plan is null || _plan.Waves.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.DefaultPlan_NoRepos_Title"
+                         Description="@UiStrings.DefaultPlan_NoRepos_Description" />
+    }
+    else
+    {
+        @if (_plan.Conflicts.Count > 0)
+        {
+            <FlareAlert Severity="AlertSeverity.Warning"
+                        Title="@string.Format(UiStrings.DefaultPlan_Conflicts_Title, _plan.Conflicts.Count)">
+                <FlareStack Gap="FlareSpacing.XSmall">
+                    <FlareText Typo="TypographyScale.BodySmall">@UiStrings.DefaultPlan_Conflicts_Body</FlareText>
+                    @foreach (var c in _plan.Conflicts)
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall">
+                            @c.FromRepositoryName -> @c.ToRepositoryName: @c.Reason
+                        </FlareText>
+                    }
+                </FlareStack>
+            </FlareAlert>
+        }
+
+        <FlareStack Gap="FlareSpacing.Small">
+            @foreach (var wave in _plan.Waves)
+            {
+                <FlareCard Variant="CardVariant.Outlined">
+                    <FlareCardContent>
+                        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">
+                                @string.Format(UiStrings.Plan_Wave, wave.Sequence)
+                            </FlareChip>
+                            @foreach (var repo in wave.Repositories)
+                            {
+                                <FlareChip Size="ChipSize.Sm">@repo.Name</FlareChip>
+                            }
+                        </FlareStack>
+                    </FlareCardContent>
+                </FlareCard>
+            }
+        </FlareStack>
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @UiStrings.DefaultPlan_Order_Hint
+        </FlareText>
+    }
+
+    @* ---- the rules that produced it ---- *@
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.DefaultPlan_Rules_Title</FlareText>
+
+    <FlareCard>
+        <FlareCardContent>
+            @if (_repositories is null || _repositories.Count < 2)
+            {
+                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                    @UiStrings.DefaultPlan_NeedTwoRepos
+                </FlareText>
+            }
+            else
+            {
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+                    <FlareSelect TValue="Guid" Label="@UiStrings.DefaultPlan_Col_From" @bind-Value="_fFrom"
+                                 Items="@_repositories.Select(r => r.Id)"
+                                 ItemLabel="@(id => RepositoryName(id))" />
+                    <FlareSelect TValue="Guid" Label="@UiStrings.DefaultPlan_Col_After" @bind-Value="_fTo"
+                                 Items="@_repositories.Select(r => r.Id)"
+                                 ItemLabel="@(id => RepositoryName(id))" />
+                    <FlareSelect TValue="string" Label="@UiStrings.DefaultPlan_Col_Type" @bind-Value="_fType"
+                                 Items="@(new[] { "Hard", "Soft" })"
+                                 ItemLabel="@(t => t == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)" />
+                    <FlareButton OnClick="Create" Loading="_busy" Disabled="IsFormIncomplete">
+                        @UiStrings.DefaultPlan_Add
+                    </FlareButton>
+                </FlareStack>
+                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                    @UiStrings.DefaultPlan_Type_Hint
+                </FlareText>
+            }
+        </FlareCardContent>
+    </FlareCard>
+
+    @if (_rules is null || _rules.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.DefaultPlan_NoRules_Title"
+                         Description="@UiStrings.DefaultPlan_NoRules_Description" />
+    }
+    else
+    {
+        <FlareTable TItem="RepositoryOrderingDto" Items="_rules">
+            <HeaderContent>
+                <tr>
+                    <th>@UiStrings.DefaultPlan_Col_From</th>
+                    <th>@UiStrings.DefaultPlan_Col_After</th>
+                    <th>@UiStrings.DefaultPlan_Col_Type</th>
+                    <th></th>
+                </tr>
+            </HeaderContent>
+            <RowTemplate Context="rule">
+                <td>@rule.FromRepositoryName</td>
+                <td>@rule.ToRepositoryName</td>
+                <td>
+                    <FlareChip Size="ChipSize.Sm" Color="@(rule.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)">
+                        @(rule.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)
+                    </FlareChip>
+                </td>
+                <td>
+                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, $"{rule.FromRepositoryName} / {rule.ToRepositoryName}")"
+                                     OnClick="@(() => Delete(rule))">
+                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                    </FlareIconButton>
+                </td>
+            </RowTemplate>
+        </FlareTable>
+    }
+}
+
+@code {
+    List<RepositoryOrderingDto>? _rules;
+    List<RepositoryDto>? _repositories;
+    DefaultPlanDto? _plan;
+    bool _loading = true;
+    bool _busy;
+
+    Guid _fFrom;
+    Guid _fTo;
+    string _fType = "Hard";
+
+    bool IsFormIncomplete => _fFrom == Guid.Empty || _fTo == Guid.Empty || _fFrom == _fTo;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    async Task Load()
+    {
+        await RunAsync(async () =>
+        {
+            _rules = (await Api.GetRepositoryOrderingAsync()).Items;
+            _repositories = (await Api.GetRepositoriesAsync()).Items;
+            // Read after the rules, so it reflects whatever was just added or removed.
+            _plan = await Api.GetDefaultPlanAsync();
+        });
+        _loading = false;
+    }
+
+    string RepositoryName(Guid id) =>
+        _repositories?.FirstOrDefault(r => r.Id == id)?.Name ?? id.ToString();
+
+    async Task Create()
+    {
+        _busy = true;
+        if (await RunAsync(
+                () => Api.CreateRepositoryOrderingAsync(_fFrom, _fTo, _fType),
+                UiStrings.DefaultPlan_Created))
+        {
+            _fFrom = Guid.Empty;
+            _fTo = Guid.Empty;
+            await Load();
+        }
+        _busy = false;
+    }
+
+    async Task Delete(RepositoryOrderingDto rule)
+    {
+        var what = $"{rule.FromRepositoryName} -> {rule.ToRepositoryName}";
+        if (!await ConfirmAsync(UiStrings.DefaultPlan_Delete_Title, string.Format(UiStrings.DefaultPlan_Delete_Message, what)))
+            return;
+
+        if (await RunAsync(() => Api.DeleteRepositoryOrderingAsync(rule.Id), UiStrings.DefaultPlan_Deleted))
+            await Load();
+    }
+}

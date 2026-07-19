@@ -11,11 +11,27 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 /// Ask <see cref="ITrackerProvider.IsClosedStatus"/> rather than comparing this to a literal.
 /// </param>
 /// <param name="ResolvedAt">When the tracker says it was resolved, when it says so.</param>
+/// <param name="ParentKey">
+/// The key of this issue's parent in the tracker's hierarchy — an epic over its subtasks — or null
+/// when the issue is top-level or the tracker has no hierarchy.
+/// <para>
+/// Carries ordering, which is why it is here rather than left as display metadata: a parent is the
+/// umbrella over concrete work, so its children deploy first and it deploys last. The orchestrator
+/// turns this into the same kind of edge a declared dependency produces.
+/// </para>
+/// <para>
+/// Positional and without a default on purpose. An adapter that forgets it does not produce a task
+/// with no parent — it produces a plan missing an ordering constraint, which looks exactly like a
+/// correct plan. The compiler naming every construction site is the cheapest way to keep that from
+/// happening quietly.
+/// </para>
+/// </param>
 public sealed record TrackerIssue(
     string Key,
     string Summary,
     string StatusKey,
-    DateTime? ResolvedAt);
+    DateTime? ResolvedAt,
+    string? ParentKey);
 
 /// <summary>
 /// A "depends on" edge between two issues.

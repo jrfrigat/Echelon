@@ -21,6 +21,14 @@ public interface IRolloutPlannerService
     /// <param name="ct">Cancellation token.</param>
     Task<int> CountTasksAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// One task's own facts and its place in the hierarchy, or <c>null</c> when there is no such task.
+    /// Answerable before any plan exists.
+    /// </summary>
+    /// <param name="taskId">The task.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default);
+
     /// <summary>The active plan for a task, or <c>null</c> when none has been built yet.</summary>
     /// <param name="taskId">The target task.</param>
     /// <param name="ct">Cancellation token.</param>

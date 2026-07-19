@@ -20,6 +20,19 @@ public class TaskItem
     [Required, MaxLength(200)]
     public string ExternalId { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The parent task in the tracker's hierarchy (an epic over its subtasks), if one is set. Null
+    /// for a top-level task.
+    /// </summary>
+    /// <remarks>
+    /// A subtask deploys before its parent — the parent is the umbrella, its children the concrete
+    /// work — so a parent task waits on every child exactly as a dependent waits on its
+    /// prerequisites, and the planner treats it as one more task-dependency edge (parent depends on
+    /// child). Stored as a scalar because that is how the tracker reports it: an issue names its one
+    /// parent, not the parent its children. The inverse is <see cref="Children"/>.
+    /// </remarks>
+    public Guid? ParentTaskId { get; set; }
+
     /// <summary>Issue summary, for operators reading the plan.</summary>
     [Required, MaxLength(500)]
     public string Title { get; set; } = string.Empty;
@@ -43,6 +56,20 @@ public class TaskItem
     [InverseProperty(nameof(Models.TrackerConnection.Tasks))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
     public TrackerConnection TrackerConnection { get; set; } = null!;
+
+    /// <summary>
+    /// Its parent task, if any. Restrict, and self-referencing: SQL Server rejects a cascade or
+    /// set-null action that targets the same table, so a parent with children cannot be deleted
+    /// out from under them — the archive drains children first (see <c>ArchiveRunner</c>).
+    /// </summary>
+    [ForeignKey(nameof(ParentTaskId))]
+    [InverseProperty(nameof(Children))]
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public TaskItem? ParentTask { get; set; }
+
+    /// <summary>Its child tasks — the subtasks that deploy before it. Inverse of <see cref="ParentTask"/>.</summary>
+    [InverseProperty(nameof(ParentTask))]
+    public ICollection<TaskItem> Children { get; set; } = [];
 
     /// <summary>Tasks this one waits on — deploy those first.</summary>
     [InverseProperty(nameof(TaskDependency.DependentTask))]

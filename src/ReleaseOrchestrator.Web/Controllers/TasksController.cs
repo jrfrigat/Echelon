@@ -29,6 +29,16 @@ public class TasksController(IRolloutPlannerService planner, IRolloutService rol
         return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
     }
 
+    /// <summary>One task's own facts and its place in the tracker hierarchy (parent and subtasks).</summary>
+    /// <param name="id">The task id.</param>
+    /// <param name="ct">Cancellation token.</param>
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, CancellationToken ct)
+    {
+        var task = await planner.GetTaskAsync(id, ct);
+        return task is null ? NotFound() : Ok(task);
+    }
+
     /// <summary>The active rollout plan for a task (its dependency tree and execution waves).</summary>
     /// <param name="id">The target task id.</param>
     /// <param name="ct">Cancellation token.</param>

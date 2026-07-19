@@ -71,6 +71,10 @@ public class ModelMappingTests
     [Theory]
     [InlineData(DatabaseProviders.SqlServer, "TaskDependency", "DependentTask")]
     [InlineData(DatabaseProviders.SqlServer, "TaskDependency", "DependsOnTask")]
+    // Self-referencing, and not merely a preference: SQL Server rejects a cascade or set-null action
+    // that targets the same table, so Restrict is the only behaviour the hierarchy can have.
+    [InlineData(DatabaseProviders.SqlServer, "TaskItem", "ParentTask")]
+    [InlineData(DatabaseProviders.PostgreSql, "TaskItem", "ParentTask")]
     [InlineData(DatabaseProviders.SqlServer, "MergeRequest", "Repository")]
     [InlineData(DatabaseProviders.SqlServer, "PlanItem", "MergeRequest")]
     [InlineData(DatabaseProviders.SqlServer, "RolloutStep", "MergeRequest")]

@@ -15,6 +15,20 @@ public record TrackerConnectionDto(Guid Id, string Name, string TrackerType, str
 
 public record RepositoryDto(Guid Id, string Name, string ExternalId, Guid ConnectionId, string ConnectionName);
 
+// ---- default rollout plan (repository ordering; mirrors RepositoryOrderingController) ----
+
+/// <summary>One ordering rule: <see cref="FromRepositoryName"/> deploys after <see cref="ToRepositoryName"/>.</summary>
+public record RepositoryOrderingDto(
+    Guid Id, Guid FromRepositoryId, string FromRepositoryName,
+    Guid ToRepositoryId, string ToRepositoryName, string Type);
+
+public record DefaultPlanRepositoryDto(Guid Id, string Name);
+public record DefaultPlanWaveDto(int Sequence, List<DefaultPlanRepositoryDto> Repositories);
+public record DefaultPlanConflictDto(string FromRepositoryName, string ToRepositoryName, string Kind, string Reason);
+
+/// <summary>The order the ordering rules add up to, plus any rule that could not be honoured.</summary>
+public record DefaultPlanDto(List<DefaultPlanWaveDto> Waves, List<DefaultPlanConflictDto> Conflicts);
+
 public record MrDto(
     Guid Id, string ExternalId, string SourceBranch, string TargetBranch,
     string Status, DateTime CreatedAt, Guid RepositoryId,
@@ -31,6 +45,13 @@ public record GroupMappingDto(Guid Id, string AdGroupSid, string ClaimName);
 public record TaskListItemDto(
     Guid Id, string ExternalId, string Title, string Status,
     int MergeRequestCount, bool HasActivePlan);
+
+public record TaskRefDto(Guid Id, string ExternalId, string Title);
+
+/// <summary>A task's own facts and its place in the hierarchy — readable before any plan exists.</summary>
+public record TaskDetailDto(
+    Guid Id, string ExternalId, string Title, string Status,
+    TaskRefDto? Parent, List<TaskRefDto> Children);
 
 public record RolloutPlanDto(
     Guid Id, Guid TargetTaskId, string TargetTaskKey, string Version,

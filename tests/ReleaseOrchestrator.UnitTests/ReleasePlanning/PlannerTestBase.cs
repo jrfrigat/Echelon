@@ -102,6 +102,13 @@ public abstract class PlannerTestBase : IAsyncLifetime
             DependsOnTaskId = dependsOn.Id
         });
 
+    /// <summary>
+    /// Makes <paramref name="child"/> a subtask of <paramref name="parent"/>, so the child deploys
+    /// first and the parent last.
+    /// </summary>
+    protected static void AddChild(TaskItem parent, TaskItem child) =>
+        child.ParentTaskId = parent.Id;
+
     /// <summary>Records that <paramref name="from"/>'s repository deploys after <paramref name="to"/>'s.</summary>
     protected void AddRepositoryDependency(Repository from, Repository to, StackDependencyType type) =>
         Db.RepositoryDependencies.Add(new RepositoryDependency

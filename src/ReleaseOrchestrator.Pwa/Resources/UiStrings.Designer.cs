@@ -999,6 +999,33 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Parent task.
+        /// </summary>
+        public static string TaskDetail_Parent {
+            get {
+                return ResourceManager.GetString("TaskDetail_Parent", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Subtasks.
+        /// </summary>
+        public static string TaskDetail_Children {
+            get {
+                return ResourceManager.GetString("TaskDetail_Children", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Subtasks deploy before this task: rolling it out rolls them out first.
+        /// </summary>
+        public static string TaskDetail_Children_Hint {
+            get {
+                return ResourceManager.GetString("TaskDetail_Children_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Wave {0}.
         /// </summary>
         public static string Plan_Wave {
@@ -1014,6 +1041,222 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         public static string Nav_Rollouts {
             get {
                 return ResourceManager.GetString("Nav_Rollouts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Default plan.
+        /// </summary>
+        public static string Nav_DefaultPlan {
+            get {
+                return ResourceManager.GetString("Nav_DefaultPlan", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Default rollout plan.
+        /// </summary>
+        public static string DefaultPlan_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The order repositories deploy in.
+        /// </summary>
+        public static string DefaultPlan_Description {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Deploy order.
+        /// </summary>
+        public static string DefaultPlan_Order_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Order_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Repositories in the same wave deploy in parallel.
+        /// </summary>
+        public static string DefaultPlan_Order_Hint {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Order_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No repositories yet.
+        /// </summary>
+        public static string DefaultPlan_NoRepos_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_NoRepos_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add repositories first.
+        /// </summary>
+        public static string DefaultPlan_NoRepos_Description {
+            get {
+                return ResourceManager.GetString("DefaultPlan_NoRepos_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} rule(s) could not be honoured.
+        /// </summary>
+        public static string DefaultPlan_Conflicts_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Conflicts_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to These rules contradict each other.
+        /// </summary>
+        public static string DefaultPlan_Conflicts_Body {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Conflicts_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ordering rules.
+        /// </summary>
+        public static string DefaultPlan_Rules_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Rules_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to At least two repositories are needed.
+        /// </summary>
+        public static string DefaultPlan_NeedTwoRepos {
+            get {
+                return ResourceManager.GetString("DefaultPlan_NeedTwoRepos", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Repository.
+        /// </summary>
+        public static string DefaultPlan_Col_From {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Col_From", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Deploys after.
+        /// </summary>
+        public static string DefaultPlan_Col_After {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Col_After", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Strictness.
+        /// </summary>
+        public static string DefaultPlan_Col_Type {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Col_Type", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Hard.
+        /// </summary>
+        public static string DefaultPlan_Type_Hard {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Type_Hard", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Soft.
+        /// </summary>
+        public static string DefaultPlan_Type_Soft {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Type_Soft", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to A hard rule is never dropped.
+        /// </summary>
+        public static string DefaultPlan_Type_Hint {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Type_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Add rule.
+        /// </summary>
+        public static string DefaultPlan_Add {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Add", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ordering rule added.
+        /// </summary>
+        public static string DefaultPlan_Created {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ordering rule removed.
+        /// </summary>
+        public static string DefaultPlan_Deleted {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Deleted", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Remove ordering rule.
+        /// </summary>
+        public static string DefaultPlan_Delete_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Delete_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Remove the rule {0}?.
+        /// </summary>
+        public static string DefaultPlan_Delete_Message {
+            get {
+                return ResourceManager.GetString("DefaultPlan_Delete_Message", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No ordering rules.
+        /// </summary>
+        public static string DefaultPlan_NoRules_Title {
+            get {
+                return ResourceManager.GetString("DefaultPlan_NoRules_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Without rules every repository deploys in the first wave.
+        /// </summary>
+        public static string DefaultPlan_NoRules_Description {
+            get {
+                return ResourceManager.GetString("DefaultPlan_NoRules_Description", resourceCulture);
             }
         }
 

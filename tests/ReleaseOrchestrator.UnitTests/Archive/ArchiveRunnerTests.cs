@@ -264,4 +264,63 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
         Assert.Single(await _db.Tasks.ToListAsync(Ct));
         Assert.Empty(await _archiveDb.ArchivedTasks.ToListAsync(Ct));
     }
+
+    /// <summary>
+    /// A parent whose subtask is still here stays, and goes once the subtask does.
+    /// </summary>
+    /// <remarks>
+    /// ParentTaskId is Restrict and self-referencing — SQL Server allows nothing else on a
+    /// self-reference — so deleting a parent a child still points at FK-violates and wedges the whole
+    /// task batch. It is also the same ordering constraint a dependency is: archiving the parent
+    /// early would drop the edge out of a task still being planned. The child drains first, and the
+    /// parent follows on a later pass, exactly as dependents drain before their prerequisites.
+    /// </remarks>
+    [Fact]
+    public async Task ParentTaskIsNotArchivedWhileASubtaskStillPointsAtIt()
+    {
+        var tracker = new TrackerConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = "tracker",
+            ProviderType = "fake",
+            ApiUrl = "https://tracker.example.com"
+        };
+        var parent = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "EPIC-1",
+            Title = "epic",
+            Status = "closed",
+            ClosedAt = Cutoff.AddDays(-1),
+            TrackerConnectionId = tracker.Id
+        };
+        var child = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "PROJ-2",
+            Title = "child",
+            Status = "open",
+            // Not closed, so nothing archives it: the parent has to wait regardless of its own age.
+            ClosedAt = null,
+            TrackerConnectionId = tracker.Id,
+            ParentTaskId = parent.Id
+        };
+        _db.TrackerConnections.Add(tracker);
+        _db.Tasks.AddRange(parent, child);
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().ArchiveTasksAsync(Cutoff, Ct);
+
+        Assert.Equal(2, await _db.Tasks.CountAsync(Ct));
+        Assert.Empty(await _archiveDb.ArchivedTasks.ToListAsync(Ct));
+
+        // Once the subtask is gone, the parent is archivable on the next pass.
+        _db.Tasks.Remove(child);
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().ArchiveTasksAsync(Cutoff, Ct);
+
+        Assert.Empty(await _db.Tasks.ToListAsync(Ct));
+        Assert.Single(await _archiveDb.ArchivedTasks.ToListAsync(Ct));
+    }
 }

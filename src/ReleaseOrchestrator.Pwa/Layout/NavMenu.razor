@@ -26,6 +26,11 @@
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Folder" /></Icon>
             <ChildContent>@UiStrings.Nav_Repositories</ChildContent>
         </FlareNavLink>
+        @* Directly after Repositories: it configures how they order each other. *@
+        <FlareNavLink Href="/admin/default-plan">
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Checklist" /></Icon>
+            <ChildContent>@UiStrings.Nav_DefaultPlan</ChildContent>
+        </FlareNavLink>
         <FlareNavLink Href="/admin/environments">
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Dns" /></Icon>
             <ChildContent>@UiStrings.Nav_Environments</ChildContent>

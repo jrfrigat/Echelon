@@ -898,6 +898,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid?>("ParentTaskId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -917,6 +920,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentTaskId");
 
                     b.HasIndex(new[] { "ClosedAt" }, "IX_TaskItem_ClosedAt");
 
@@ -1344,11 +1349,18 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", b =>
                 {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "ParentTask")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentTaskId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", "TrackerConnection")
                         .WithMany("Tasks")
                         .HasForeignKey("TrackerConnectionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ParentTask");
 
                     b.Navigation("TrackerConnection");
                 });
@@ -1404,6 +1416,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", b =>
                 {
+                    b.Navigation("Children");
+
                     b.Navigation("Dependencies");
 
                     b.Navigation("Dependents");

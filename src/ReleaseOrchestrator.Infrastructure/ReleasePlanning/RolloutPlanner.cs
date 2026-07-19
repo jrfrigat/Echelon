@@ -46,6 +46,27 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     }
 
     /// <inheritdoc/>
+    public async Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
+        await db.Tasks
+            .Where(t => t.Id == taskId)
+            .Select(t => new TaskDetailDto(
+                t.Id,
+                t.ExternalId,
+                t.Title,
+                t.Status,
+                t.ParentTask == null
+                    ? null
+                    : new TaskRefDto(t.ParentTask.Id, t.ParentTask.ExternalId, t.ParentTask.Title),
+                // Ordered by key so the list is stable between reads; a task's subtasks have no
+                // inherent order of their own, and they all deploy before it regardless.
+                t.Children
+                    .OrderBy(c => c.ExternalId)
+                    .Select(c => new TaskRefDto(c.Id, c.ExternalId, c.Title))
+                    .ToList()))
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ct);
+
+    /// <inheritdoc/>
     public async Task<RolloutPlanDto?> GetActivePlanAsync(Guid taskId, CancellationToken ct = default)
     {
         var plan = await db.RolloutPlans
@@ -141,6 +162,14 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     }
 
     /// <summary>Loads the whole task-dependency graph as adjacency. A recursive walk is a later optimization.</summary>
+    /// <remarks>
+    /// Two sources, one relation. Declared dependencies name who waits directly; the hierarchy says a
+    /// parent waits on its children, because a parent is the umbrella over the concrete work its
+    /// subtasks carry. Both end up as "tasks this one deploys after", and both have to be here: this
+    /// adjacency decides the closure — which tasks a rollout even includes — so a parent missing its
+    /// children here would produce a plan that silently leaves them out, no matter what
+    /// <see cref="PlanInput"/> says about the edges between their merge requests.
+    /// </remarks>
     private async Task<Dictionary<Guid, IReadOnlyList<Guid>>> LoadAdjacencyAsync(CancellationToken ct)
     {
         var edges = await db.TaskDependencies
@@ -148,9 +177,19 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
 
-        return edges
+        var hierarchy = await db.Tasks
+            .Where(t => t.ParentTaskId != null)
+            .Select(t => new { DependentTaskId = t.ParentTaskId!.Value, DependsOnTaskId = t.Id })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return edges.Concat(hierarchy)
             .GroupBy(e => e.DependentTaskId)
-            .ToDictionary(g => g.Key, g => (IReadOnlyList<Guid>)g.Select(e => e.DependsOnTaskId).ToList());
+            .ToDictionary(
+                g => g.Key,
+                // Distinct: a tracker may state a dependency that the hierarchy already implies, and
+                // the same prerequisite twice would be the same edge twice in the graph.
+                g => (IReadOnlyList<Guid>)g.Select(e => e.DependsOnTaskId).Distinct().ToList());
     }
 
     private async Task<RolloutPlanDto> BuildDtoAsync(RolloutPlan plan, Computed c, CancellationToken ct)

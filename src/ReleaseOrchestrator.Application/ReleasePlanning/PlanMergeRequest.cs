@@ -11,6 +11,17 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// dependency (they share a task); they order each other only via the repository-ordering policy.
 /// </param>
 /// <param name="DependsOnTaskIds">Tasks this one waits on. Every merge request of those deploys first.</param>
+/// <param name="ChildTaskIds">
+/// The subtasks of this merge request's task, which it also waits on: a parent is the umbrella over
+/// the concrete work its children carry, so the children deploy first and the parent last.
+/// <para>
+/// Carried separately from <see cref="DependsOnTaskIds"/> rather than merged into it, for one
+/// unglamorous reason: the two come from different navigations, and EF cannot translate a projection
+/// that concatenates two collection subqueries — it throws at query time, which is how this arrived
+/// here. Separate is also what makes the hierarchy's direction assertable without a database, and
+/// the direction is the part that silently inverts.
+/// </para>
+/// </param>
 /// <param name="RepositoryId">Its repository, used to derive repository-ordering edges.</param>
 /// <param name="RepositoryDependsOn">Repositories this one's repository deploys after, and how firmly.</param>
 /// <remarks>
@@ -27,8 +38,22 @@ public record PlanMergeRequest(
     Guid Id,
     Guid? TaskId,
     IReadOnlyList<Guid> DependsOnTaskIds,
+    IReadOnlyList<Guid> ChildTaskIds,
     Guid RepositoryId,
-    IReadOnlyList<PlanRepositoryLink> RepositoryDependsOn);
+    IReadOnlyList<PlanRepositoryLink> RepositoryDependsOn)
+{
+    /// <summary>
+    /// Every task this one deploys after, whatever the reason — declared dependencies and the
+    /// hierarchy's children alike.
+    /// </summary>
+    /// <remarks>
+    /// The two are kept apart in storage and in the projection because they arrive by different
+    /// routes, but the planner has exactly one notion of "goes first", and it reads it here. Ordering
+    /// code that reached for <see cref="DependsOnTaskIds"/> alone would honour declared dependencies
+    /// and quietly ignore the hierarchy.
+    /// </remarks>
+    public IEnumerable<Guid> PrerequisiteTaskIds => DependsOnTaskIds.Concat(ChildTaskIds);
+}
 
 /// <summary>"Deploy after every merge request in <paramref name="ToRepositoryId"/>", and how firmly.</summary>
 /// <param name="ToRepositoryId">The repository that must go first.</param>

@@ -402,14 +402,95 @@
   <data name="TaskDetail_DependsOn" xml:space="preserve">
     <value>зависит от</value>
   </data>
+  <data name="TaskDetail_Parent" xml:space="preserve">
+    <value>Родительская задача</value>
+  </data>
+  <data name="TaskDetail_Children" xml:space="preserve">
+    <value>Подзадачи</value>
+  </data>
+  <data name="TaskDetail_Children_Hint" xml:space="preserve">
+    <value>Подзадачи катятся раньше этой задачи: её выкатка сначала выкатит их.</value>
+  </data>
   <data name="Plan_Wave" xml:space="preserve">
     <value>Волна {0}</value>
   </data>
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Выкатки</value>
   </data>
+  <data name="Nav_DefaultPlan" xml:space="preserve">
+    <value>План по умолчанию</value>
+  </data>
   <data name="Nav_Environments" xml:space="preserve">
     <value>Окружения</value>
+  </data>
+  <data name="DefaultPlan_Title" xml:space="preserve">
+    <value>План выкатки по умолчанию</value>
+  </data>
+  <data name="DefaultPlan_Description" xml:space="preserve">
+    <value>Порядок выкатки репозиториев. Применяется к выкатке каждой задачи, если её собственные зависимости или подзадачи не меняют его.</value>
+  </data>
+  <data name="DefaultPlan_Order_Title" xml:space="preserve">
+    <value>Порядок выкатки</value>
+  </data>
+  <data name="DefaultPlan_Order_Hint" xml:space="preserve">
+    <value>Репозитории одной волны катятся параллельно; каждая волна ждёт предыдущую.</value>
+  </data>
+  <data name="DefaultPlan_NoRepos_Title" xml:space="preserve">
+    <value>Репозиториев пока нет</value>
+  </data>
+  <data name="DefaultPlan_NoRepos_Description" xml:space="preserve">
+    <value>Сначала добавьте репозитории: план по умолчанию задаёт порядок их выкатки.</value>
+  </data>
+  <data name="DefaultPlan_Conflicts_Title" xml:space="preserve">
+    <value>Не удалось соблюсти правил: {0}</value>
+  </data>
+  <data name="DefaultPlan_Conflicts_Body" xml:space="preserve">
+    <value>Правила противоречат друг другу, поэтому часть отброшена, чтобы получить хоть какой-то порядок. Обычно это цикл: исправьте правила ниже.</value>
+  </data>
+  <data name="DefaultPlan_Rules_Title" xml:space="preserve">
+    <value>Правила порядка</value>
+  </data>
+  <data name="DefaultPlan_NeedTwoRepos" xml:space="preserve">
+    <value>Нужно хотя бы два репозитория, чтобы один катился после другого.</value>
+  </data>
+  <data name="DefaultPlan_Col_From" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="DefaultPlan_Col_After" xml:space="preserve">
+    <value>Катится после</value>
+  </data>
+  <data name="DefaultPlan_Col_Type" xml:space="preserve">
+    <value>Строгость</value>
+  </data>
+  <data name="DefaultPlan_Type_Hard" xml:space="preserve">
+    <value>Жёсткое</value>
+  </data>
+  <data name="DefaultPlan_Type_Soft" xml:space="preserve">
+    <value>Мягкое</value>
+  </data>
+  <data name="DefaultPlan_Type_Hint" xml:space="preserve">
+    <value>Жёсткое правило не отбрасывается никогда; мягкое уступает первым, когда правила противоречат друг другу.</value>
+  </data>
+  <data name="DefaultPlan_Add" xml:space="preserve">
+    <value>Добавить правило</value>
+  </data>
+  <data name="DefaultPlan_Created" xml:space="preserve">
+    <value>Правило порядка добавлено</value>
+  </data>
+  <data name="DefaultPlan_Deleted" xml:space="preserve">
+    <value>Правило порядка удалено</value>
+  </data>
+  <data name="DefaultPlan_Delete_Title" xml:space="preserve">
+    <value>Удалить правило порядка</value>
+  </data>
+  <data name="DefaultPlan_Delete_Message" xml:space="preserve">
+    <value>Удалить правило {0}? Планы выкатки будут перестроены без него.</value>
+  </data>
+  <data name="DefaultPlan_NoRules_Title" xml:space="preserve">
+    <value>Правил порядка нет</value>
+  </data>
+  <data name="DefaultPlan_NoRules_Description" xml:space="preserve">
+    <value>Без правил все репозитории катятся в первой волне, параллельно.</value>
   </data>
   <data name="TaskDetail_Environment" xml:space="preserve">
     <value>Окружение</value>

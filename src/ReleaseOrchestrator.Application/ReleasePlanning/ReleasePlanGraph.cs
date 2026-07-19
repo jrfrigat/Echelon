@@ -194,8 +194,11 @@ public static class ReleasePlanGraph
         {
             // Every merge request of a task this one waits on deploys first — a task may span
             // several repositories, so all of its merge requests are predecessors, not just one.
-            foreach (var dependsOnTaskId in mr.DependsOnTaskIds)
-                foreach (var predecessor in byTask[dependsOnTaskId])
+            //
+            // PrerequisiteTaskIds, not DependsOnTaskIds: a declared dependency and a subtask are the
+            // same constraint arriving by different routes, and both mean "that task goes first".
+            foreach (var prerequisiteTaskId in mr.PrerequisiteTaskIds)
+                foreach (var predecessor in byTask[prerequisiteTaskId])
                     AddEdge(predecessor.Id, mr.Id, PlanEdgeKind.TaskDependency);
 
             // Repository-ordering edges: every merge request in a repository this one's repository

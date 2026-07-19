@@ -79,6 +79,8 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         public Task<int> CountTasksAsync(CancellationToken ct = default) => throw new NotSupportedException();
         public Task<RolloutPlanDto?> GetActivePlanAsync(Guid taskId, CancellationToken ct = default) =>
             throw new NotSupportedException();
+        public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     private async Task<Guid> AddTaskWithPlanAsync(bool active)

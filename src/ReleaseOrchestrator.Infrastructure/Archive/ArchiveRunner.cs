@@ -94,6 +94,11 @@ internal sealed class ArchiveRunner(
                 // incomplete when its own turn came. Batches re-query, so the graph drains
                 // from its dependents downwards within the same cycle.
                 && !db.TaskDependencies.Any(d => d.DependsOnTaskId == t.Id)
+                // Same reasoning for the hierarchy: a parent waits on its children, so archiving a
+                // task while a child still points at it (ParentTaskId, Restrict and self-referencing)
+                // would both FK-violate the delete and drop the parent's ordering edge. Children
+                // archive first; the parent drains once none reference it.
+                && !db.Tasks.Any(c => c.ParentTaskId == t.Id)
                 // The per-task plan and the rollout history reference the task with Restrict
                 // (PlanTaskNode.TaskId, RolloutPlan/Rollout.TargetTaskId, RolloutStep.TaskId), and a
                 // prerequisite task can hold a PlanTaskNode with no merge requests of its own -- so

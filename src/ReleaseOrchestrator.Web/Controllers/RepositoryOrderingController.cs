@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Application.DTOs;
+using ReleaseOrchestrator.Application.ReleasePlanning;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
@@ -51,6 +53,53 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
             .ToListAsync(ct);
 
         return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
+    }
+
+    /// <summary>
+    /// The default rollout plan: what the ordering rules add up to, as an order rather than a list of
+    /// pairs.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Derived on read rather than stored, and derived by the same engine that orders a real rollout
+    /// — so it cannot drift from what the planner will actually do. Repositories with no rules at all
+    /// still appear: they deploy in the first wave, which is the honest answer, and leaving them out
+    /// would make an unconfigured repository look excluded rather than unconstrained.
+    /// </remarks>
+    [HttpGet("plan")]
+    public async Task<IActionResult> Plan(CancellationToken ct)
+    {
+        var repositories = await db.Repositories
+            .OrderBy(r => r.Name).ThenBy(r => r.Id)
+            .Select(r => new
+            {
+                r.Id,
+                r.Name,
+                DependsOn = r.DependsOn.Select(d => new PlanRepositoryLink(d.ToRepositoryId, d.Type)).ToList()
+            })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var nameById = repositories.ToDictionary(r => r.Id, r => r.Name);
+
+        var plan = DefaultRolloutPlan.Build(
+            [.. repositories.Select(r => new DefaultPlanRepository(r.Id, r.DependsOn))]);
+
+        var waves = plan.Waves
+            .Select((wave, index) => new DefaultPlanWaveDto(
+                index + 1,
+                [.. wave.Select(id => new DefaultPlanRepositoryDto(id, nameById.GetValueOrDefault(id, string.Empty)))]))
+            .ToList();
+
+        var conflicts = plan.Conflicts
+            .Select(c => new DefaultPlanConflictDto(
+                nameById.GetValueOrDefault(c.FromMrId, string.Empty),
+                nameById.GetValueOrDefault(c.ToMrId, string.Empty),
+                c.DroppedEdgeKind.ToString(),
+                c.Reason))
+            .ToList();
+
+        return Ok(new DefaultPlanDto(waves, conflicts));
     }
 
     /// <summary>Adds a rule "<paramref name="req"/>.From deploys after <paramref name="req"/>.To".</summary>

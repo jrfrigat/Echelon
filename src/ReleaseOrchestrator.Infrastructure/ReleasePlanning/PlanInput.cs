@@ -27,6 +27,11 @@ internal static class PlanInput
             // Rows naming this merge request's task as the dependent — the tasks it waits on.
             // Null Task yields no rows, which is what an unlinked merge request should contribute.
             mr.Task!.Dependencies.Select(d => d.DependsOnTaskId).ToList(),
+            // The task's subtasks, which it also waits on: a parent deploys after the children it
+            // covers. A second field rather than a concatenation of the two — EF cannot translate a
+            // projection that concatenates two collection subqueries, and says so at query time
+            // rather than at compile time. PlanMergeRequest.PrerequisiteTaskIds rejoins them.
+            mr.Task.Children.Select(c => c.Id).ToList(),
             mr.RepositoryId,
             // Repository-ordering links: the editable deploy-order policy. Same failure mode if a
             // link is missing (an ordering built from half the constraints), so it is named here.
