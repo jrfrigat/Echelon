@@ -16,7 +16,12 @@ const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // .woff2 is listed explicitly: the icon font is self-hosted (see app.css) and /\.woff$/ does not
 // match it, so without this the icons would be the one thing that breaks offline.
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.woff2$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
-const offlineAssetsExclude = [/^service-worker\.js$/];
+// appsettings.json is deploy-overridable -- the compose override mounts a Local-provider copy over the
+// baked (AzureAd) one -- so what is served no longer matches the integrity hash the build recorded.
+// Precaching it would fail the SRI check and abort the whole service-worker install. Exclude it (and
+// any environment variant); Blazor fetches it fresh from the network at startup, which is what
+// environment config should do anyway.
+const offlineAssetsExclude = [/^service-worker\.js$/, /(^|\/)appsettings(\.[^/]+)?\.json$/];
 
 async function onInstall() {
     // Everything is precached here from the manifest, with each entry pinned to the integrity
