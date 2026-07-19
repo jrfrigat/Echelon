@@ -71,8 +71,8 @@
   </ItemGroup>
 
   <ItemGroup Label="UI">
-    <PackageVersion Include="Flare.Blazor" Version="0.7.0" />
-    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.7.0" />
+    <PackageVersion Include="Flare.Blazor" Version="0.10.0" />
+    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.10.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">

@@ -4,7 +4,7 @@
 <FlareMenu Anchor="MenuAnchor.BottomRight" AriaLabel="@UiStrings.Language_Label">
     <Activator>
         <FlareIconButton Size="ButtonSize.Sm" AriaLabel="@UiStrings.Language_Label">
-            <FlareIcon Name="language" />
+            <FlareIconView Value="FlareIcons.Tune" />
         </FlareIconButton>
     </Activator>
     <ChildContent>
@@ -12,7 +12,7 @@
         {
             @* Captured per iteration: the lambda would otherwise close over the loop variable. *@
             var culture = code;
-            <FlareMenuItem Icon="@(Lang.CurrentCulture == culture ? "check" : "language")"
+            <FlareMenuItem Icon="@(Lang.CurrentCulture == culture ? FlareIcons.Check : FlareIcons.Tune)"
                            OnClick="@(() => Lang.SetCultureAsync(culture))">
                 @displayName
             </FlareMenuItem>

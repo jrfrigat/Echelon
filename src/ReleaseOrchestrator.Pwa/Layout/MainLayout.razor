@@ -23,14 +23,14 @@
                     @if (_isLocal)
                     {
                         <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" OnClick="LogoutLocal">
-                            <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
+                            <LeadingIcon><FlareIconView Value="FlareIcons.Cancel" /></LeadingIcon>
                             <ChildContent>@UiStrings.Shell_Logout</ChildContent>
                         </FlareButton>
                     }
                     else
                     {
                         <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" Href="authentication/logout">
-                            <LeadingIcon><FlareIcon Name="logout" /></LeadingIcon>
+                            <LeadingIcon><FlareIconView Value="FlareIcons.Cancel" /></LeadingIcon>
                             <ChildContent>@UiStrings.Shell_Logout</ChildContent>
                         </FlareButton>
                     }

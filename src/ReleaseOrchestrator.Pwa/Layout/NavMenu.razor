@@ -1,42 +1,41 @@
 @inherits LocalizedComponent
 
-@* Auth gating and the logout action live in MainLayout, which owns the drawer this sits in.
-   Icon names with no FlareIcons constant are passed as literals, which FlareIcon also accepts. *@
+@* Auth gating and the logout action live in MainLayout, which owns the drawer this sits in. *@
 <FlareNavMenu AriaLabel="@UiStrings.Nav_Aria">
     @* Tasks is the home page. Exact only for "/", which would otherwise prefix-match every route
        and always look active. *@
     <FlareNavLink Href="/" Match="NavMatchMode.Exact">
-        <Icon><FlareIcon Name="checklist" /></Icon>
+        <Icon><FlareIconView Value="FlareIcons.Table" /></Icon>
         <ChildContent>@UiStrings.Nav_Tasks</ChildContent>
     </FlareNavLink>
     <FlareNavLink Href="/rollouts">
-        <Icon><FlareIcon Name="rocket_launch" /></Icon>
+        <Icon><FlareIconView Value="FlareIcons.RocketLaunch" /></Icon>
         <ChildContent>@UiStrings.Nav_Rollouts</ChildContent>
     </FlareNavLink>
 
     <FlareNavGroup Label="@UiStrings.Nav_Administration" Expanded="true">
         <FlareNavLink Href="/admin/vcs">
-            <Icon><FlareIcon Name="@FlareIcons.Link" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.Link" /></Icon>
             <ChildContent>@UiStrings.Nav_VcsConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/trackers">
-            <Icon><FlareIcon Name="assignment" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.Description" /></Icon>
             <ChildContent>@UiStrings.Nav_TrackerConnections</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/repos">
-            <Icon><FlareIcon Name="@FlareIcons.Folder" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.Folder" /></Icon>
             <ChildContent>@UiStrings.Nav_Repositories</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/environments">
-            <Icon><FlareIcon Name="dns" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.DataObject" /></Icon>
             <ChildContent>@UiStrings.Nav_Environments</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/action-handlers">
-            <Icon><FlareIcon Name="notifications" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.Notifications" /></Icon>
             <ChildContent>@UiStrings.Nav_ActionHandlers</ChildContent>
         </FlareNavLink>
         <FlareNavLink Href="/admin/permissions">
-            <Icon><FlareIcon Name="@FlareIcons.Lock" /></Icon>
+            <Icon><FlareIconView Value="FlareIcons.Lock" /></Icon>
             <ChildContent>@UiStrings.Nav_Permissions</ChildContent>
         </FlareNavLink>
     </FlareNavGroup>
