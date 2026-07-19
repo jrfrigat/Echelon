@@ -58,32 +58,53 @@ public class TaskReconciliationService(
         // to run, and racing it just doubles the calls.
         using var timer = new PeriodicTimer(interval, clock);
 
-        while (!stoppingToken.IsCancellationRequested)
+        // The lease is held for the WHOLE interval, not just the fast pass. A pass only enqueues sync
+        // requests and returns in milliseconds; releasing it then (the earlier design) let each
+        // replica's own unsynchronized timer acquire the freed lease and run again -- N passes per
+        // interval, the exact redundant tracker load the lease exists to prevent. Instead the winner
+        // keeps the lease until just before it re-contends, so a staggered replica finds it held and
+        // skips. Its interval-length TTL frees it for another replica within one cycle if the winner dies.
+        IAsyncDisposable? held = null;
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
-
-                // Held for the interval, not for the expected duration of the pass: a replica that
-                // dies mid-pass then blocks the job for at most one cycle, and a slow pass renews.
-                await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
-                if (held is null)
+                try
                 {
-                    logger.LogDebug("Another replica is reconciling; skipping this pass");
-                    continue;
-                }
+                    if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
 
-                await ReconcileAsync(stoppingToken);
+                    // Release last cycle's lease only now, immediately before re-contending, so it
+                    // stayed held across the interval rather than being freed after the fast pass.
+                    if (held is not null)
+                    {
+                        await held.DisposeAsync();
+                        held = null;
+                    }
+
+                    held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
+                    if (held is null)
+                    {
+                        logger.LogDebug("Another replica is reconciling; skipping this pass");
+                        continue;
+                    }
+
+                    await ReconcileAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // One failed pass must not kill the service: the next tick retries. The lease is
+                    // kept (released before the next contention) so the interval invariant still holds.
+                    logger.LogError(ex, "Task reconciliation pass failed");
+                }
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                // One failed pass must not kill the service: the next tick retries.
-                logger.LogError(ex, "Task reconciliation pass failed");
-            }
+        }
+        finally
+        {
+            if (held is not null) await held.DisposeAsync();
         }
     }
 
