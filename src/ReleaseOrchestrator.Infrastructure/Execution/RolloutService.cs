@@ -46,15 +46,23 @@ public class RolloutService(
         if (!string.IsNullOrEmpty(plan.ConflictsJson))
             throw new DomainValidationException("The plan violates a mandatory dependency and cannot be launched. Fix the plan first.");
 
-        // Idempotent: the same (task, environment, plan) never launches twice while a run is live.
+        // Idempotent: the (task, environment, plan-version) launches at most once. A live run is
+        // returned unchanged, so a double-submit is a no-op. A terminal run means this plan version
+        // already ran here and the key (a unique index) is taken -- recalculating the plan mints a new
+        // version and a new key, which is how a re-deploy is requested. Reported as a clean domain
+        // error rather than surfacing the raw unique-constraint violation as a 500.
         var idempotencyKey = $"{taskId:N}:{environmentId:N}:{plan.Id:N}";
-        var live = await db.Rollouts.FirstOrDefaultAsync(
-            r => r.IdempotencyKey == idempotencyKey
-                 && r.Status != RolloutStatus.Succeeded
-                 && r.Status != RolloutStatus.Failed
-                 && r.Status != RolloutStatus.Cancelled, ct);
+        var existing = await db.Rollouts.AsNoTracking()
+            .Where(r => r.IdempotencyKey == idempotencyKey)
+            .Select(r => new { r.Id, r.Status })
+            .ToListAsync(ct);
+        var live = existing.FirstOrDefault(r =>
+            r.Status is not (RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled));
         if (live is not null)
             return (await GetAsync(live.Id, ct))!;
+        if (existing.Count > 0)
+            throw new DomainValidationException(
+                $"This plan version has already been rolled out to '{env.Key}'. Recalculate the plan to roll out again.");
 
         var closure = plan.Nodes.Select(n => n.TaskId).ToHashSet();
         var mrIds = plan.Nodes.SelectMany(n => n.Items.Select(i => i.MergeRequestId)).Distinct().ToList();
@@ -162,7 +170,20 @@ public class RolloutService(
             Id = Guid.NewGuid(), RolloutId = rollout.Id, Kind = "Launched",
             PayloadJson = JsonSerializer.Serialize(new { environment = env.Key, steps = steps.Count }), At = now
         });
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent launch inserted the same (task, environment, plan) between the check above
+            // and here -- the unique index on IdempotencyKey caught it. Report it cleanly rather than
+            // as a 500; rethrow anything that is not that conflict.
+            if (await db.Rollouts.AsNoTracking().AnyAsync(r => r.IdempotencyKey == idempotencyKey && r.Id != rollout.Id, ct))
+                throw new DomainValidationException($"This plan version is already being rolled out to '{env.Key}'.");
+            throw;
+        }
 
         logger.LogInformation(
             "Rollout {Rollout} launched for task {Task} into {Env}: {Steps} step(s).",

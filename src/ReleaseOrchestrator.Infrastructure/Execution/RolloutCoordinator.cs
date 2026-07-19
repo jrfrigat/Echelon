@@ -106,6 +106,10 @@ public class RolloutCoordinator(
 
         var statusBefore = rollout.Status;
 
+        // Recover any step stranded mid-deploy by a prior crashed pass or lease hand-off, before
+        // anything else looks at the frontier.
+        await RecoverStrandedStepsAsync(db, rollout, ct);
+
         // Poll in-flight async deploys first, so a wave can advance in the same tick it settles.
         foreach (var step in rollout.Steps.Where(s => s.State == RolloutStepState.Awaiting).ToList())
             await PollAsync(sp, db, rollout, step, ct);
@@ -280,22 +284,68 @@ public class RolloutCoordinator(
     private async Task FailStepAsync(AppDbContext db, Rollout rollout, RolloutStep step, string message, CancellationToken ct)
     {
         var now = clock.GetUtcNow().UtcDateTime;
-        await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
         RecordAttempt(db, step, "Failed", message, now);
+        step.LastError = message;
+
+        // A deploy that has already started (its external ref is recorded) whose POLL failed is not
+        // restarted: calling StartAsync again would trigger a SECOND deploy of the same MR into the
+        // same environment. It re-polls on the next tick instead, keeping its claim and external ref
+        // -- a poll that failed on a transient outage resumes once the dependency returns.
+        var inFlight = !string.IsNullOrEmpty(step.ExternalRef);
+        if (inFlight && step.AttemptCount < options.Value.MaxAttempts)
+        {
+            step.State = RolloutStepState.Awaiting;
+            return;
+        }
+
+        // The deploy never started (StartAsync threw before returning a ref) or attempts are
+        // exhausted: release the claim so the (MR, environment) is not blocked forever.
+        await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
 
         if (step.AttemptCount < options.Value.MaxAttempts)
         {
-            // Retry on the next tick. No backoff timer in this cut; a persistent failure still stops
-            // at MaxAttempts.
+            // Retry the start on the next tick. No backoff timer in this cut; a persistent failure
+            // still stops at MaxAttempts.
             step.State = RolloutStepState.Pending;
-            step.LastError = message;
         }
         else
         {
             step.State = RolloutStepState.Failed;
             step.FinishedAt = now;
+            await UpsertDeploymentStateAsync(db, step.MergeRequestId, rollout.EnvironmentId, DeploymentState.Failed, now, ct);
+        }
+    }
+
+    /// <summary>
+    /// Fails any step left in <see cref="RolloutStepState.Deploying"/> by a crash or lease hand-off.
+    /// </summary>
+    /// <remarks>
+    /// A Deploying step committed its intent to deploy (line before the external call) but recorded
+    /// no outcome, and neither the poll frontier (Awaiting) nor the dispatch frontier (Pending)
+    /// advances it -- so it would hang the rollout forever and leak its claim. Whether the external
+    /// call actually fired is unknown, so it is not silently re-deployed (that risks a double-deploy
+    /// of a non-idempotent strategy): the step is failed and its claim released, and the rollout
+    /// pauses for an operator to verify the target and retry the step.
+    /// </remarks>
+    private async Task RecoverStrandedStepsAsync(AppDbContext db, Rollout rollout, CancellationToken ct)
+    {
+        var stranded = rollout.Steps.Where(s => s.State == RolloutStepState.Deploying).ToList();
+        if (stranded.Count == 0) return;
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        const string message = "Interrupted mid-deploy by a restart; the outcome is unknown. Verify the target and retry this step.";
+
+        foreach (var step in stranded)
+        {
+            await ReleaseClaimAsync(db, step.MergeRequestId, rollout.EnvironmentId, ct);
+            step.State = RolloutStepState.Failed;
+            step.FinishedAt = now;
             step.LastError = message;
             await UpsertDeploymentStateAsync(db, step.MergeRequestId, rollout.EnvironmentId, DeploymentState.Failed, now, ct);
+            RecordAttempt(db, step, "Failed", message, now);
+            logger.LogWarning(
+                "Rollout {Rollout} step {Step} was stranded in Deploying (crash mid-deploy); marked Failed for operator retry.",
+                rollout.Id, step.Id);
         }
     }
 

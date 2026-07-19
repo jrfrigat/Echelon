@@ -133,4 +133,34 @@ public class RolloutServiceTests : PlannerTestBase
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
     }
+
+    /// <summary>
+    /// The idempotency key is unique across all statuses, so once a run for a plan version has
+    /// reached a terminal state that version cannot launch to the same environment again. It must be
+    /// a clean domain error pointing the operator at recalculation, not the raw unique-constraint
+    /// violation surfacing as a 500.
+    /// </summary>
+    [Fact]
+    public async Task Launch_AfterATerminalRun_ReportsACleanConflict()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment();
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, Ct);
+
+        var first = await Service().LaunchAsync(task.Id, env.Id, null, Ct);
+
+        // Drive the run to a terminal state, as the coordinator would on success or failure.
+        var rollout = await Db.Rollouts.FirstAsync(r => r.Id == first.Id, Ct);
+        rollout.Status = RolloutStatus.Failed;
+        await Db.SaveChangesAsync(Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, null, Ct));
+        Assert.Contains("already been rolled out", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
+    }
 }
