@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReleaseOrchestrator.Infrastructure.Actions;
+using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Actions;
@@ -36,8 +39,12 @@ public class ActionDispatcherTests : PlannerTestBase
         public IActionHandler Resolve(string actionType) => handler;
     }
 
+    internal static TokenProtector Protector() =>
+        new(new ServiceCollection().AddDataProtection().Services.BuildServiceProvider()
+            .GetRequiredService<IDataProtectionProvider>());
+
     private ActionDispatcher Dispatcher(IActionHandler handler) =>
-        new(Db, new FakeFactory(handler), NullLogger<ActionDispatcher>.Instance);
+        new(Db, new FakeFactory(handler), Protector(), NullLogger<ActionDispatcher>.Instance);
 
     private void AddBinding(string eventType, string? scope = null, bool enabled = true) =>
         Db.ActionBindings.Add(new ActionBinding

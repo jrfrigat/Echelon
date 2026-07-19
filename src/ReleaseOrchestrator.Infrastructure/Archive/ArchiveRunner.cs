@@ -93,7 +93,17 @@ internal sealed class ArchiveRunner(
                 // an ordering constraint, and would leave the dependent's DependenciesJson
                 // incomplete when its own turn came. Batches re-query, so the graph drains
                 // from its dependents downwards within the same cycle.
-                && !db.TaskDependencies.Any(d => d.DependsOnTaskId == t.Id))
+                && !db.TaskDependencies.Any(d => d.DependsOnTaskId == t.Id)
+                // The per-task plan and the rollout history reference the task with Restrict
+                // (PlanTaskNode.TaskId, RolloutPlan/Rollout.TargetTaskId, RolloutStep.TaskId), and a
+                // prerequisite task can hold a PlanTaskNode with no merge requests of its own -- so
+                // the two gates above do not cover it. Without these the ExecuteDeleteAsync below
+                // FK-violates and wedges the whole task batch. Nothing prunes rollout history yet, so
+                // such a task simply waits (a follow-up), rather than failing every nightly cycle.
+                && !db.PlanTaskNodes.Any(n => n.TaskId == t.Id)
+                && !db.RolloutPlans.Any(p => p.TargetTaskId == t.Id)
+                && !db.Rollouts.Any(r => r.TargetTaskId == t.Id)
+                && !db.RolloutSteps.Any(s => s.TaskId == t.Id))
             .OrderBy(t => t.Id)
             .Take(options.TaskBatchSize)
             .Include(t => t.Dependencies)

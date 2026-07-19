@@ -218,4 +218,50 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
         Assert.Single(await _db.MergeRequests.ToListAsync(Ct));
     }
+
+    /// <summary>
+    /// A closed task still referenced by the per-task plan or rollout history must stay: those point
+    /// at TaskItem with Restrict (PlanTaskNode / RolloutPlan / Rollout / RolloutStep), and a
+    /// prerequisite task can hold a plan node with no merge requests of its own -- so the merge-request
+    /// and dependency gates do not cover it. Archiving it would FK-violate on delete and wedge the
+    /// whole task batch, while leaving an orphan archive row.
+    /// </summary>
+    [Fact]
+    public async Task TaskStillReferencedByARolloutPlanIsNotArchived()
+    {
+        var tracker = new TrackerConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = "tracker",
+            ProviderType = "fake",
+            ApiUrl = "https://tracker.example.com"
+        };
+        var task = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "PROJ-1",
+            Title = "t",
+            Status = "closed",
+            ClosedAt = Cutoff.AddDays(-1),
+            TrackerConnectionId = tracker.Id
+        };
+        _db.TrackerConnections.Add(tracker);
+        _db.Tasks.Add(task);
+        _db.RolloutPlans.Add(new RolloutPlan
+        {
+            Id = Guid.NewGuid(),
+            TargetTaskId = task.Id,
+            Version = "1",
+            IsActive = true,
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            SnapshotStartedAt = Now
+        });
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().ArchiveTasksAsync(Cutoff, Ct);
+
+        Assert.Single(await _db.Tasks.ToListAsync(Ct));
+        Assert.Empty(await _archiveDb.ArchivedTasks.ToListAsync(Ct));
+    }
 }

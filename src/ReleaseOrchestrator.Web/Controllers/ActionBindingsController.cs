@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -19,7 +19,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 [ApiController]
 [Route("api/action-bindings")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class ActionBindingsController(AppDbContext db, IActionHandlerFactory factory) : ControllerBase
+public class ActionBindingsController(AppDbContext db, IActionHandlerFactory factory, TokenProtector protector) : ControllerBase
 {
     /// <summary>Lists the action bindings.</summary>
     /// <param name="ct">Cancellation token.</param>
@@ -59,7 +59,10 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
             EventType = req.EventType.Trim(),
             ActionType = req.ActionType.Trim(),
             Scope = string.IsNullOrWhiteSpace(req.Scope) ? null : req.Scope.Trim(),
-            SettingsJson = req.Settings is null ? null : JsonSerializer.Serialize(req.Settings),
+            // Secret settings (e.g. a Telegram bot token) are encrypted before storage, so they are
+            // never at rest in plaintext in SettingsJson -- the same treatment connection tokens get.
+            SettingsJson = ActionSecretProtection.ProtectForStorage(
+                req.Settings, factory.GetSettingsSchema(req.ActionType), protector),
             Order = req.Order,
             Enabled = req.Enabled
         };

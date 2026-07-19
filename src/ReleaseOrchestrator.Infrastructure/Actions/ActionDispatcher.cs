@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Actions;
 
@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Infrastructure.Actions;
 /// next binding still runs, and nothing here propagates to the caller -- an action must never fail a
 /// rollout step (docs/issues/007-execution-engine.md).
 /// </summary>
-public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, ILogger<ActionDispatcher> logger)
+public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, TokenProtector protector, ILogger<ActionDispatcher> logger)
 {
     /// <summary>Runs every enabled binding for <paramref name="eventType"/> whose scope matches the payload.</summary>
     /// <param name="eventType">The event that fired, e.g. <c>RolloutSucceeded</c>.</param>
@@ -33,7 +33,7 @@ public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, IL
             try
             {
                 var handler = factory.Resolve(binding.ActionType);
-                var settings = ParseSettings(binding.SettingsJson);
+                var settings = ActionSecretProtection.UnprotectForUse(binding.SettingsJson, handler.SettingsSchema, protector);
                 var result = await handler.ExecuteAsync(new ActionContext(eventType, settings, payload), ct).ConfigureAwait(false);
 
                 if (!result.Success)
@@ -66,9 +66,4 @@ public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, IL
         return payload.TryGetValue(payloadKey, out var actual)
                && string.Equals(actual, value, StringComparison.OrdinalIgnoreCase);
     }
-
-    private static IReadOnlyDictionary<string, string> ParseSettings(string? json) =>
-        string.IsNullOrWhiteSpace(json)
-            ? new Dictionary<string, string>()
-            : JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
 }
