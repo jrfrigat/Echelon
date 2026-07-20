@@ -187,7 +187,7 @@ public class RequestAuditMiddlewareTests
     [Fact]
     public async Task IgnoresStaticAssetsAndInfrastructurePaths()
     {
-        // No endpoint at all: a static file. A cold page load fetches hundreds of these.
+        // No endpoint and not API-shaped: a static file. A cold page load fetches hundreds of these.
         var asset = await RunAsync(ctx => ctx.Request.Path = "/_framework/blazor.boot.json");
         Assert.Empty(asset);
 
@@ -236,6 +236,41 @@ public class RequestAuditMiddlewareTests
         });
 
         Assert.Empty(records);
+    }
+
+    /// <summary>
+    /// The same treatment when NO endpoint is exposed at all, which is what actually happens in the
+    /// running app: an unmatched API path is served the app shell with a 200, and end-to-end testing
+    /// showed the fallback endpoint is not visible here. Keying the rule off the outcome rather than
+    /// off which shape the framework produced is what stopped this recording nothing.
+    /// </summary>
+    [Fact]
+    public async Task AnApiPathThatReachedNoEndpointIsStillRecordedAsAMiss()
+    {
+        var records = await RunAsync(ctx => ctx.Request.Path = "/api/does-not-exist-abcdef");
+
+        var record = Assert.Single(records);
+        Assert.Equal(RequestAuditKinds.RoutingMiss, record.Kind);
+        Assert.Equal("(routing miss)", record.Path);
+        Assert.Equal("(no route)", record.RoutePattern);
+        Assert.DoesNotContain("does-not-exist", record.Path);
+    }
+
+    /// <summary>
+    /// Cardinality is the point: a thousand distinct probed URLs must collapse to one route pattern
+    /// and one path, or the table and its indexes grow at a rate an anonymous caller chooses.
+    /// </summary>
+    [Fact]
+    public async Task AFloodOfDistinctProbedPathsCollapsesToOneKey()
+    {
+        var sink = new CapturingSink();
+
+        for (var i = 0; i < 50; i++)
+            await RunAsync(ctx => ctx.Request.Path = $"/api/probe-{Guid.NewGuid():N}", sink: sink);
+
+        Assert.Equal(50, sink.Records.Count);
+        Assert.Single(sink.Records.Select(r => r.Path).Distinct());
+        Assert.Single(sink.Records.Select(r => r.RoutePattern).Distinct());
     }
 
     // ---- it must never harm the request ---------------------------------------

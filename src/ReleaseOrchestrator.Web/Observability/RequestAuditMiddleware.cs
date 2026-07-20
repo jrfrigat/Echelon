@@ -46,8 +46,11 @@ namespace ReleaseOrchestrator.Observability;
 /// </remarks>
 public static class RequestAuditMiddleware
 {
-    /// <summary>Stored in place of the real path when a request matched the SPA fallback.</summary>
+    /// <summary>Stored in place of the real path when a request reached no endpoint. Cardinality: one.</summary>
     private const string RoutingMissPath = "(routing miss)";
+
+    /// <summary>Stored in place of the route pattern for the same requests, for the same reason.</summary>
+    private const string RoutingMissPattern = "(no route)";
 
     /// <summary>
     /// Adds request auditing. Register before every other middleware.
@@ -104,32 +107,50 @@ public static class RequestAuditMiddleware
         DateTime startedAt,
         long startTimestamp)
     {
-        var endpoint = context.GetEndpoint();
-
-        // No endpoint means a static asset or a file that is simply not there. Recording those buries
-        // real traffic under a cold page load's hundreds of framework files.
-        if (endpoint is null) return;
         if (TelemetryExtensions.IsInfrastructureRequest(context.Request.Path)) return;
 
+        var endpoint = context.GetEndpoint();
         var path = context.Request.Path.Value ?? "/";
-        var routePattern = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint.DisplayName ?? "unknown";
+        var routePattern = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint?.DisplayName;
 
-        string kind;
-        if (IsSpaFallback(routePattern))
+        // "Reached no real endpoint" covers two shapes that look different and mean the same thing:
+        // no endpoint was matched at all, or the SPA catch-all matched and served the app shell. Both
+        // answer 200 for anything, so both are treated identically -- keyed off the outcome rather
+        // than off which of the two the framework happened to produce, because that turned out to
+        // vary and a rule that depends on it silently records nothing.
+        if (routePattern is null || IsSpaFallback(routePattern))
         {
-            // The fallback answers 200 for any extension-less path, so an unauthenticated stranger
-            // could otherwise mint an unlimited number of distinct Path values -- unbounded rows and
-            // unbounded index cardinality, chosen entirely by them. Only API-shaped misses are worth
-            // recording at all, and even those store a fixed literal rather than what was typed.
+            // An API-shaped path that reached no endpoint is a real signal: a probe, a typo, or a
+            // client calling a route that no longer exists. Anything else is somebody deep-linking
+            // into the app, which is not worth a row.
             if (!IsApiShaped(path)) return;
 
-            kind = RequestAuditKinds.RoutingMiss;
-            path = RoutingMissPath;
+            // The path is replaced by a fixed literal and the pattern by a constant. This is the
+            // whole anonymous-write-amplification fix: the fallback answers 200 for any
+            // extension-less path, so without it an unauthenticated stranger could mint unlimited
+            // distinct Path values -- unbounded rows and unbounded index cardinality, chosen
+            // entirely by them. Collapsed this way, a flood of junk URLs is one row per minute.
+            Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp,
+                RoutingMissPattern, RoutingMissPath, RequestAuditKinds.RoutingMiss, endpoint);
+            return;
         }
-        else
-        {
-            kind = ClassifyPath(context.Request.Path);
-        }
+
+        var kind = ClassifyPath(context.Request.Path);
+        Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp, routePattern, path, kind, endpoint);
+    }
+
+    private static void Enqueue(
+        HttpContext context,
+        IRequestAuditSink sink,
+        string hostName,
+        string? peerIp,
+        DateTime startedAt,
+        long startTimestamp,
+        string routePattern,
+        string path,
+        string kind,
+        Endpoint? endpoint)
+    {
 
         var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
 
@@ -151,7 +172,7 @@ public static class RequestAuditMiddleware
             // Read now, after the pipeline: this is the forwarded-header value, which is
             // caller-supplied and labelled as such wherever it is shown.
             ForwardedIp: Truncate(context.Connection.RemoteIpAddress?.ToString(), 64),
-            Permission: Truncate(endpoint.Metadata.GetMetadata<IAuthorizeData>()?.Policy, 200),
+            Permission: Truncate(endpoint?.Metadata.GetMetadata<IAuthorizeData>()?.Policy, 200),
             CorrelationId: Truncate(context.TraceIdentifier, 64) ?? string.Empty,
             // The TYPE only. A database driver's exception message can carry a connection string; the
             // full text stays in the log, reachable by the correlation id.
