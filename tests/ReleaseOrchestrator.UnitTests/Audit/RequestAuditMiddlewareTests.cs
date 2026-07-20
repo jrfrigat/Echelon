@@ -257,6 +257,32 @@ public class RequestAuditMiddlewareTests
     }
 
     /// <summary>
+    /// The path must be judged on what was requested, not on what the pipeline rewrote it to.
+    /// </summary>
+    /// <remarks>
+    /// MapFallbackToFile rewrites Request.Path to "/index.html" before serving the app shell. Reading
+    /// the path on the way out therefore sees "/index.html" for every unmatched route, which is not
+    /// API-shaped and gets dropped — so every probe was invisible until this was caught end to end.
+    /// The middleware captures the path on the way in; this pins that it still does.
+    /// </remarks>
+    [Fact]
+    public async Task JudgesTheRequestedPath_NotOneRewrittenDuringTheRequest()
+    {
+        var records = await RunAsync(
+            ctx => ctx.Request.Path = "/api/probe-that-matches-nothing",
+            terminal: ctx =>
+            {
+                // Stand-in for MapFallbackToFile serving the shell.
+                ctx.Request.Path = "/index.html";
+                ctx.Response.StatusCode = 200;
+                return Task.CompletedTask;
+            });
+
+        var record = Assert.Single(records);
+        Assert.Equal(RequestAuditKinds.RoutingMiss, record.Kind);
+    }
+
+    /// <summary>
     /// Cardinality is the point: a thousand distinct probed URLs must collapse to one route pattern
     /// and one path, or the table and its indexes grow at a rate an anonymous caller chooses.
     /// </summary>

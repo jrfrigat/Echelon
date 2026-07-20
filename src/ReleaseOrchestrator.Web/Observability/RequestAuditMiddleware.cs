@@ -74,6 +74,14 @@ public static class RequestAuditMiddleware
 
             // Before UseForwardedHeaders rewrites it. This is who actually connected.
             var peerIp = context.Connection.RemoteIpAddress?.ToString();
+
+            // Captured on the way in for the same reason, and it is not optional: MapFallbackToFile
+            // REWRITES Request.Path to "/index.html" before serving the app shell. Read on the way
+            // out, every unmatched path -- every probe, every stale client route -- reads as
+            // "/index.html" and is dropped as a static asset. That is what made API probes invisible
+            // until end-to-end testing caught it.
+            var originalPath = context.Request.Path;
+
             var startedAt = DateTime.UtcNow;
             var startTimestamp = Stopwatch.GetTimestamp();
 
@@ -88,7 +96,7 @@ public static class RequestAuditMiddleware
                 // a truncated response. The audit must never be able to damage the request it audits.
                 try
                 {
-                    Record(context, sink, hostName, peerIp, startedAt, startTimestamp);
+                    Record(context, sink, hostName, peerIp, originalPath, startedAt, startTimestamp);
                 }
                 catch
                 {
@@ -104,13 +112,14 @@ public static class RequestAuditMiddleware
         IRequestAuditSink sink,
         string hostName,
         string? peerIp,
+        PathString originalPath,
         DateTime startedAt,
         long startTimestamp)
     {
-        if (TelemetryExtensions.IsInfrastructureRequest(context.Request.Path)) return;
+        if (TelemetryExtensions.IsInfrastructureRequest(originalPath)) return;
 
         var endpoint = context.GetEndpoint();
-        var path = context.Request.Path.Value ?? "/";
+        var path = originalPath.Value ?? "/";
         var routePattern = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint?.DisplayName;
 
         // "Reached no real endpoint" covers two shapes that look different and mean the same thing:
@@ -135,7 +144,7 @@ public static class RequestAuditMiddleware
             return;
         }
 
-        var kind = ClassifyPath(context.Request.Path);
+        var kind = ClassifyPath(originalPath);
         Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp, routePattern, path, kind, endpoint);
     }
 
