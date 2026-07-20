@@ -7,9 +7,11 @@ namespace ReleaseOrchestrator.Pwa.Models;
 public record PlanConflictDto(
     string Kind, Guid FromMergeRequestId, Guid ToMergeRequestId, string Reason);
 
+/// <param name="IngestionMode">"Push" (webhooks, the default) or "Poll" for a VCS that cannot reach us.</param>
 public record VcsConnectionDto(
     Guid Id, string Name, string VcsType, string ApiUrl,
-    string? ReadyForDeployLabel = null, string? ConnectionName = null);
+    string? ReadyForDeployLabel = null, string? ConnectionName = null,
+    string? IngestionMode = null);
 
 public record TrackerConnectionDto(Guid Id, string Name, string TrackerType, string ApiUrl, string? OrgId);
 

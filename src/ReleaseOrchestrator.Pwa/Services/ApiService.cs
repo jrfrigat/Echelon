@@ -38,16 +38,25 @@ public class ApiService(HttpClient http)
 
     public Task CreateVcsConnectionAsync(
         string name, string vcsType, string apiUrl, string accessToken, string? readyForDeployLabel,
-        CancellationToken ct = default) =>
+        string? ingestionMode = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/vcs-connections",
-            new { Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken, ReadyForDeployLabel = readyForDeployLabel }, ct), ct);
+            new
+            {
+                Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken,
+                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode
+            }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
+    /// <param name="ingestionMode">Blank keeps the stored mode, for the same reason.</param>
     public Task UpdateVcsConnectionAsync(
         Guid id, string name, string apiUrl, string? accessToken, string? readyForDeployLabel,
-        CancellationToken ct = default) =>
+        string? ingestionMode = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/vcs-connections/{id}",
-            new { Name = name, ApiUrl = apiUrl, AccessToken = accessToken, ReadyForDeployLabel = readyForDeployLabel }, ct), ct);
+            new
+            {
+                Name = name, ApiUrl = apiUrl, AccessToken = accessToken,
+                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode
+            }, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/vcs-connections/{id}", ct), ct);

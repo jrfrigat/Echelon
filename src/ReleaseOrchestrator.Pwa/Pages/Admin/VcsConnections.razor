@@ -43,6 +43,16 @@ else if (Result is not null)
                     }
                 </Template>
             </FlareColumn>
+            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Vcs_IngestionMode">
+                <Template>
+                    @* Push is the default and unremarkable; polling is the one worth spotting in a
+                       list, because it is the connection that costs requests on a timer. *@
+                    <FlareChip Size="ChipSize.Sm"
+                               Color="@(context.IngestionMode == "Poll" ? FlareColor.Warning : FlareColor.Default)">
+                        @IngestionModeLabel(context.IngestionMode ?? "Push")
+                    </FlareChip>
+                </Template>
+            </FlareColumn>
             <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
@@ -79,6 +89,9 @@ else if (Result is not null)
             <FlareTextField Label="@UiStrings.Vcs_Col_ReadyLabel" @bind-Value="_fLabel"
                             Placeholder="@DefaultReadyForDeployLabel"
                             HelperText="@string.Format(UiStrings.Vcs_ReadyLabel_Helper, _fType)" />
+            <FlareSelect TValue="string" Label="@UiStrings.Vcs_IngestionMode" @bind-Value="_fIngestionMode"
+                         Items="IngestionModes" ItemLabel="@(m => IngestionModeLabel(m))"
+                         HelperText="@UiStrings.Vcs_IngestionMode_Helper" />
             <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
@@ -95,8 +108,12 @@ else if (Result is not null)
 
     static readonly string[] VcsTypes = ["GitLab"];
 
+    /// <summary>Mirrors Core.Enums.IngestionMode; the PWA does not reference Core.</summary>
+    static readonly string[] IngestionModes = ["Push", "Poll"];
+
     Guid? _editId;
     string _fName = "", _fType = "GitLab", _fUrl = "", _fToken = "", _fLabel = "";
+    string _fIngestionMode = "Push";
 
     // The type is fixed at creation: an existing connection's stored repositories and token are
     // meaningless against a different provider, so Update takes no vcsType.
@@ -111,6 +128,7 @@ else if (Result is not null)
     {
         _editId = null;
         _fName = ""; _fType = "GitLab"; _fUrl = ""; _fToken = "";
+        _fIngestionMode = "Push";
         _fLabel = DefaultReadyForDeployLabel;
         ShowModal = true;
     }
@@ -120,6 +138,9 @@ else if (Result is not null)
         _editId = c.Id;
         _fName = c.Name; _fType = c.VcsType; _fUrl = c.ApiUrl;
         _fLabel = c.ReadyForDeployLabel ?? "";
+        // Pre-filled from the row so saving an unrelated edit re-sends the mode it already had,
+        // rather than leaving it blank and relying on the server to keep it.
+        _fIngestionMode = c.IngestionMode ?? "Push";
         _fToken = "";
         ShowModal = true;
     }
@@ -130,10 +151,13 @@ else if (Result is not null)
         var label = string.IsNullOrWhiteSpace(_fLabel) ? null : _fLabel.Trim();
 
         if (_editId.HasValue)
-            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, label);
+            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, label, _fIngestionMode);
         else
-            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, label);
+            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, label, _fIngestionMode);
     });
+
+    static string IngestionModeLabel(string mode) =>
+        mode == "Poll" ? UiStrings.Vcs_IngestionMode_Poll : UiStrings.Vcs_IngestionMode_Push;
 
     Task Delete(VcsConnectionDto c) =>
         DeleteAsync(string.Format(UiStrings.Vcs_Delete_What, c.Name), () => Api.DeleteVcsConnectionAsync(c.Id));

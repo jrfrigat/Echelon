@@ -198,6 +198,9 @@
   <data name="Vcs_UnknownType" xml:space="preserve">
     <value>Неизвестный vcsType «{0}». Допустимые: {1}</value>
   </data>
+  <data name="Vcs_UnknownIngestionMode" xml:space="preserve">
+    <value>Неизвестный режим приёма «{0}». Допустимые: {1}</value>
+  </data>
   <data name="Vcs_NameTaken" xml:space="preserve">
     <value>Подключение к VCS с названием «{0}» уже существует.</value>
   </data>

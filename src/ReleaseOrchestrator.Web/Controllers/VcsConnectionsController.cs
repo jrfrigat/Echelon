@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
+using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
@@ -41,7 +42,11 @@ public class VcsConnectionsController(
         // every client for no gain.
         var items = await db.VcsConnections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
-            .Select(c => new { c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel })
+            .Select(c => new
+            {
+                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel,
+                IngestionMode = c.IngestionMode.ToString()
+            })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
 
@@ -53,7 +58,7 @@ public class VcsConnectionsController(
     {
         var c = await db.VcsConnections
             .Where(x => x.Id == id)
-            .Select(x => new { x.Id, x.Name, VcsType = x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel })
+            .Select(x => new { x.Id, x.Name, VcsType = x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel, IngestionMode = x.IngestionMode.ToString() })
             .FirstOrDefaultAsync(ct);
 
         return c is null ? NotFound() : Ok(c);
@@ -80,6 +85,9 @@ public class VcsConnectionsController(
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name, ct))
             return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
 
+        if (!TryParseIngestionMode(req.IngestionMode, out var ingestionMode))
+            return BadRequest(new { error = localizer["Vcs_UnknownIngestionMode", req.IngestionMode ?? "", string.Join(", ", Enum.GetNames<IngestionMode>())].Value });
+
         var entity = new VcsConnection
         {
             Id = Guid.NewGuid(),
@@ -87,6 +95,7 @@ public class VcsConnectionsController(
             ProviderType = providerType,
             ApiUrl = req.ApiUrl,
             ReadyForDeployLabel = req.ReadyForDeployLabel,
+            IngestionMode = ingestionMode,
             EncryptedAccessToken = protector.Protect(req.AccessToken)
         };
 
@@ -107,6 +116,18 @@ public class VcsConnectionsController(
 
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
             return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
+
+        // Blank keeps the stored mode, exactly as it keeps the stored token below. Resolving an
+        // absent value to the Push default here would silently switch a polling connection back to
+        // webhooks the first time somebody renamed it -- and nothing polls it afterwards, which
+        // presents as "the VCS stopped syncing" with no edit that mentions polling.
+        if (!string.IsNullOrWhiteSpace(req.IngestionMode))
+        {
+            if (!TryParseIngestionMode(req.IngestionMode, out var ingestionMode))
+                return BadRequest(new { error = localizer["Vcs_UnknownIngestionMode", req.IngestionMode, string.Join(", ", Enum.GetNames<IngestionMode>())].Value });
+
+            entity.IngestionMode = ingestionMode;
+        }
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
@@ -136,19 +157,46 @@ public class VcsConnectionsController(
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Reads the requested ingestion mode, defaulting to push when the caller says nothing.
+    /// </summary>
+    /// <remarks>
+    /// Absent means Push, not invalid: a client that predates this field must keep creating working
+    /// connections rather than start failing. But a value that is present and unrecognised IS
+    /// rejected — quietly falling back to Push on a typo would leave an operator convinced they had
+    /// switched a connection to polling while nothing polled it.
+    /// </remarks>
+    private static bool TryParseIngestionMode(string? value, out IngestionMode mode)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            mode = IngestionMode.Push;
+            return true;
+        }
+
+        return Enum.TryParse(value, ignoreCase: true, out mode) && Enum.IsDefined(mode);
+    }
 }
 
+/// <param name="IngestionMode">"Push" (default) or "Poll" for a VCS that cannot deliver webhooks.</param>
 public record CreateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required] string VcsType,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: Required, MaxLength(500)] string AccessToken,
-    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel);
+    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
+    [property: MaxLength(20)] string? IngestionMode = null);
 
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 /// <param name="ReadyForDeployLabel">Blank disables label-driven promotion for this connection.</param>
+/// <param name="IngestionMode">
+/// Blank keeps the stored mode; "Push" or "Poll" changes it. Blank means keep, not Push — resolving
+/// it to the default here would switch a polling connection back to webhooks on any unrelated edit.
+/// </param>
 public record UpdateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: MaxLength(500)] string? AccessToken = null,
-    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel);
+    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
+    [property: MaxLength(20)] string? IngestionMode = null);

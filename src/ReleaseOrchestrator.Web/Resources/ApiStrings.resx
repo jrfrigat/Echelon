@@ -198,6 +198,9 @@
   <data name="Vcs_UnknownType" xml:space="preserve">
     <value>Unknown vcsType '{0}'. Valid: {1}</value>
   </data>
+  <data name="Vcs_UnknownIngestionMode" xml:space="preserve">
+    <value>Unknown ingestion mode '{0}'. Valid: {1}</value>
+  </data>
   <data name="Vcs_NameTaken" xml:space="preserve">
     <value>A VCS connection named '{0}' already exists.</value>
   </data>
