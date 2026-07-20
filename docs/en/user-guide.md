@@ -164,7 +164,24 @@ call a webhook - without that being hard-coded.
 **How:** bind an action to an event ("rollout finished", "step failed"). Each action type declares
 its own settings; secret fields are stored encrypted.
 
-### 4.7 Permissions
+### 4.7 Request log
+
+**Why:** to answer "is anything failing, and what is slow" without leaving the product.
+
+**How:** it records itself — there is nothing to configure. The page summarises the window by
+endpoint (calls, 4xx, 5xx, p50/p95) and then lists individual requests, filterable to errors only.
+
+Two things it deliberately tells you about itself. It shows a **warning banner** when the picture is
+incomplete — records dropped, the anonymous cap reached, percentiles from a sample, or the webhook
+host not covered — because an unexplained gap in a log reads as quiet traffic, which is the opposite
+of what it means. And the **caller address is shown twice**: the connection's real peer, and the
+`X-Forwarded-For` value, which is whatever the client claimed and is labelled as unverified.
+
+It never records headers, bodies, query strings or cookies — those are not filtered out, they are
+never read, so no future endpoint can leak by being forgotten. When something failed, the entry
+carries the request id: search your log aggregator by it for the full error text.
+
+### 4.8 Permissions
 
 **Why:** viewing a plan, approving it and executing it are different levels of trust.
 
@@ -223,6 +240,22 @@ A plan with conflicts cannot be launched. Fix the configuration, recalculate, an
 6. **Pick an environment and launch.**
 7. **Watch the rollout.** Steps run wave by wave. Everything in a wave runs in parallel; the next
    wave starts only when the current one has fully succeeded.
+
+### The task's history
+
+Every task screen has a **History** button. It shows, newest first, everything that happened to that
+task: when it arrived and through which channel, when its merge requests opened, changed status,
+merged or closed, every time its plan was rebuilt and by whom, and every rollout with who launched it
+and into which environment. Filter to **people only** to answer "who did what" in one click.
+
+Two honest limits it states on the page rather than hiding:
+
+- **Entries that predate this feature cannot be recovered.** Rollouts, plan versions and merge-request
+  timestamps were always stored and appear for old tasks. Arrival time, plan authorship and status
+  transitions were not recorded before, and read as "not recorded" rather than as "nothing happened".
+- **Under Local authentication every operator shares one identity**, so every "who" is the same
+  account whoever acted. The page says so when it detects it. Per-person attribution needs Entra or
+  OIDC.
 
 ### If a step fails
 
