@@ -1,0 +1,239 @@
+@page "/admin/request-audit"
+@attribute [Authorize]
+@inherits PageBase
+
+@* Two views of one window: which endpoints are misbehaving, then the individual requests. The
+   summary is first because the first question is always "what is broken", not "what happened". *@
+
+<PageTitle>@UiStrings.Audit_Title</PageTitle>
+
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Audit_Title</FlareText>
+<FlareText Typo="TypographyScale.BodyMedium" Color="FlareColor.OnSurfaceVariant">@UiStrings.Audit_Description</FlareText>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@* Everything this page cannot vouch for, said before the numbers rather than after. *@
+@if (_summary is not null && (_summary.DroppedRecords > 0 || _summary.AnonymousCapBound
+                              || _summary.PercentilesApproximate || !_summary.IngressCovered))
+{
+    <FlareAlert Severity="AlertSeverity.Warning" Title="@UiStrings.Audit_Health_Title">
+        <FlareStack Gap="FlareSpacing.None">
+            @if (_summary.DroppedRecords > 0)
+            {
+                <FlareText Typo="TypographyScale.BodySmall">
+                    @string.Format(UiStrings.Audit_Health_Dropped, _summary.DroppedRecords)
+                </FlareText>
+            }
+            @if (_summary.AnonymousCapBound)
+            {
+                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_AnonCap</FlareText>
+            }
+            @if (_summary.PercentilesApproximate)
+            {
+                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_Approx</FlareText>
+            }
+            @if (!_summary.IngressCovered)
+            {
+                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_NoIngress</FlareText>
+            }
+        </FlareStack>
+    </FlareAlert>
+}
+
+<FlareCard>
+    <FlareCardContent>
+        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+            <FlareSelect TValue="int" Label="@UiStrings.Audit_Window" @bind-Value="_minutes"
+                         Items="@(new[] { 15, 60, 360, 1440, 10080 })"
+                         ItemLabel="@(m => WindowLabel(m))" />
+            <FlareSelect TValue="string" Label="@UiStrings.Audit_Status" @bind-Value="_status"
+                         Items="@(new[] { "", "error", "client", "server" })"
+                         ItemLabel="@(s => StatusLabel(s))" />
+            <FlareTextField Label="@UiStrings.Audit_Search" @bind-Value="_search" />
+            <FlareButton OnClick="Reload" Loading="_busy">@UiStrings.Audit_Apply</FlareButton>
+        </FlareStack>
+        <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
+            <FlareSwitch @bind-Value="_notableOnly" Label="@UiStrings.Audit_NotableOnly" />
+            <FlareSwitch @bind-Value="_includeAuditTraffic" Label="@UiStrings.Audit_IncludeOwn" />
+        </FlareStack>
+    </FlareCardContent>
+</FlareCard>
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else
+{
+    @if (_summary is not null)
+    {
+        <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
+            <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Audit_Total, _summary.Total)</FlareChip>
+            <FlareChip Size="ChipSize.Sm" Color="@(_summary.Errors > 0 ? FlareColor.Error : FlareColor.Success)">
+                @string.Format(UiStrings.Audit_Errors, _summary.Errors)
+            </FlareChip>
+        </FlareStack>
+
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_ByEndpoint</FlareText>
+        @if (_summary.Routes.Count == 0)
+        {
+            <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
+        }
+        else
+        {
+            <FlareTable TItem="RequestAuditRouteStatDto" Items="_summary.Routes">
+                <HeaderContent>
+                    <tr>
+                        <th>@UiStrings.Audit_Col_Method</th>
+                        <th>@UiStrings.Audit_Col_Endpoint</th>
+                        <th>@UiStrings.Audit_Col_Count</th>
+                        <th>4xx</th>
+                        <th>5xx</th>
+                        <th>p50</th>
+                        <th>p95</th>
+                        <th>max</th>
+                    </tr>
+                </HeaderContent>
+                <RowTemplate Context="r">
+                    <td>@r.Method</td>
+                    <td>@r.RoutePattern</td>
+                    <td>@r.Count</td>
+                    <td>@(r.ClientErrors > 0 ? r.ClientErrors.ToString() : "")</td>
+                    <td>
+                        @if (r.ServerErrors > 0)
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error">@r.ServerErrors</FlareChip>
+                        }
+                    </td>
+                    <td>@r.P50Ms</td>
+                    <td>@r.P95Ms</td>
+                    <td>@r.MaxMs</td>
+                </RowTemplate>
+            </FlareTable>
+        }
+    }
+
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_Requests</FlareText>
+    @if (_result is null || _result.Items.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
+    }
+    else
+    {
+        <FlareTable TItem="RequestAuditEntryDto" Items="_result.Items">
+            <HeaderContent>
+                <tr>
+                    <th>@UiStrings.Audit_Col_Time</th>
+                    <th>@UiStrings.Audit_Col_Method</th>
+                    <th>@UiStrings.Audit_Col_Path</th>
+                    <th>@UiStrings.Audit_Col_Status</th>
+                    <th>@UiStrings.Audit_Col_Duration</th>
+                    <th>@UiStrings.Audit_Col_User</th>
+                </tr>
+            </HeaderContent>
+            <RowTemplate Context="e">
+                <td>@e.StartedAt.ToString("g")</td>
+                <td>@e.Method</td>
+                <td>
+                    @e.Path
+                    @if (e.Kind == "RoutingMiss")
+                    {
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
+                                   Title="@UiStrings.Audit_RoutingMiss_Tooltip">@UiStrings.Audit_RoutingMiss</FlareChip>
+                    }
+                    @if (e.ExceptionType is { Length: > 0 })
+                    {
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
+                                   Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, e.CorrelationId)">
+                            @e.ExceptionType
+                        </FlareChip>
+                    }
+                </td>
+                <td><FlareChip Size="ChipSize.Sm" Color="@StatusColor(e.StatusCode)">@e.StatusCode</FlareChip></td>
+                <td>@e.DurationMs ms</td>
+                <td>
+                    @(e.UserName ?? (e.UserId is { Length: > 8 } u ? u[..8] : e.UserId) ?? UiStrings.Audit_Anonymous)
+                </td>
+            </RowTemplate>
+        </FlareTable>
+
+        @if (_result.Total > _result.PageSize)
+        {
+            <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
+                             TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
+        }
+    }
+}
+
+@code {
+    PagedResult<RequestAuditEntryDto>? _result;
+    RequestAuditSummaryDto? _summary;
+    bool _loading = true;
+    bool _busy;
+    int _page = 1;
+
+    int _minutes = 60;
+    string _status = "";
+    string _search = "";
+    bool _notableOnly = true;
+    bool _includeAuditTraffic;
+
+    int TotalPages => _result is null || _result.PageSize == 0
+        ? 1
+        : (int)Math.Ceiling(_result.Total / (double)_result.PageSize);
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    async Task Load()
+    {
+        await RunAsync(async () =>
+        {
+            _summary = await Api.GetRequestAuditSummaryAsync(_minutes);
+            _result = await Api.GetRequestAuditAsync(
+                _minutes, string.IsNullOrEmpty(_status) ? null : _status,
+                _notableOnly, _includeAuditTraffic,
+                string.IsNullOrWhiteSpace(_search) ? null : _search.Trim(), _page);
+        });
+        _loading = false;
+    }
+
+    async Task Reload()
+    {
+        _busy = true;
+        _page = 1;
+        await Load();
+        _busy = false;
+    }
+
+    async Task OnPageChanged(int page)
+    {
+        _page = page;
+        await Load();
+    }
+
+    string WindowLabel(int minutes) => minutes switch
+    {
+        15 => UiStrings.Audit_Window_15m,
+        60 => UiStrings.Audit_Window_1h,
+        360 => UiStrings.Audit_Window_6h,
+        1440 => UiStrings.Audit_Window_24h,
+        _ => UiStrings.Audit_Window_7d
+    };
+
+    string StatusLabel(string status) => status switch
+    {
+        "error" => UiStrings.Audit_Status_AnyError,
+        "client" => UiStrings.Audit_Status_Client,
+        "server" => UiStrings.Audit_Status_Server,
+        _ => UiStrings.Audit_Status_Any
+    };
+
+    static FlareColor StatusColor(int status) => status switch
+    {
+        >= 500 => FlareColor.Error,
+        >= 400 => FlareColor.Warning,
+        >= 300 => FlareColor.Default,
+        _ => FlareColor.Success
+    };
+}

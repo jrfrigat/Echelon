@@ -174,6 +174,19 @@ public class ApiService(HttpClient http)
     public Task DeleteActionBindingAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/action-bindings/{id}", ct), ct);
 
+    // ---- request audit --------------------------------------------------------
+
+    public Task<PagedResult<RequestAuditEntryDto>> GetRequestAuditAsync(
+        int minutes, string? status, bool notableOnly, bool includeAuditTraffic, string? search,
+        int page = 1, CancellationToken ct = default) =>
+        GetAsync<PagedResult<RequestAuditEntryDto>>(
+            $"api/request-audit?minutes={minutes}&status={Uri.EscapeDataString(status ?? "")}"
+            + $"&notableOnly={notableOnly}&includeAuditTraffic={includeAuditTraffic}"
+            + $"&search={Uri.EscapeDataString(search ?? "")}&page={page}&pageSize=50", ct);
+
+    public Task<RequestAuditSummaryDto> GetRequestAuditSummaryAsync(int minutes, CancellationToken ct = default) =>
+        GetAsync<RequestAuditSummaryDto>($"api/request-audit/summary?minutes={minutes}", ct);
+
     // ---- permissions ----------------------------------------------------------
 
     public Task<List<PermissionClaimDto>> GetPermissionClaimsAsync(CancellationToken ct = default) =>

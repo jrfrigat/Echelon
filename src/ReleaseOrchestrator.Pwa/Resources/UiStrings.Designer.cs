@@ -2180,5 +2180,374 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Timeline_Kind_TrackerStatusPushed", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Request log.
+        /// </summary>
+        public static string Nav_RequestAudit {
+            get {
+                return ResourceManager.GetString("Nav_RequestAudit", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Request log.
+        /// </summary>
+        public static string Audit_Title {
+            get {
+                return ResourceManager.GetString("Audit_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Requests served by the API and the admin panel: what was called, what failed, and how long it took..
+        /// </summary>
+        public static string Audit_Description {
+            get {
+                return ResourceManager.GetString("Audit_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This view is incomplete.
+        /// </summary>
+        public static string Audit_Health_Title {
+            get {
+                return ResourceManager.GetString("Audit_Health_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} request(s) happened but were not recorded, because the buffer filled. Raise RequestAudit:BufferCapacity if this persists..
+        /// </summary>
+        public static string Audit_Health_Dropped {
+            get {
+                return ResourceManager.GetString("Audit_Health_Dropped", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The limit on recording unauthenticated requests was reached, so some are missing..
+        /// </summary>
+        public static string Audit_Health_AnonCap {
+            get {
+                return ResourceManager.GetString("Audit_Health_AnonCap", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Percentiles come from a sample, not from every request in the window..
+        /// </summary>
+        public static string Audit_Health_Approx {
+            get {
+                return ResourceManager.GetString("Audit_Health_Approx", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to The webhook host is a separate process and is not recorded here. Look for its traffic in the log aggregator..
+        /// </summary>
+        public static string Audit_Health_NoIngress {
+            get {
+                return ResourceManager.GetString("Audit_Health_NoIngress", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Window.
+        /// </summary>
+        public static string Audit_Window {
+            get {
+                return ResourceManager.GetString("Audit_Window", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Last 15 minutes.
+        /// </summary>
+        public static string Audit_Window_15m {
+            get {
+                return ResourceManager.GetString("Audit_Window_15m", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Last hour.
+        /// </summary>
+        public static string Audit_Window_1h {
+            get {
+                return ResourceManager.GetString("Audit_Window_1h", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Last 6 hours.
+        /// </summary>
+        public static string Audit_Window_6h {
+            get {
+                return ResourceManager.GetString("Audit_Window_6h", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Last 24 hours.
+        /// </summary>
+        public static string Audit_Window_24h {
+            get {
+                return ResourceManager.GetString("Audit_Window_24h", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Last 7 days.
+        /// </summary>
+        public static string Audit_Window_7d {
+            get {
+                return ResourceManager.GetString("Audit_Window_7d", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string Audit_Status {
+            get {
+                return ResourceManager.GetString("Audit_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Any.
+        /// </summary>
+        public static string Audit_Status_Any {
+            get {
+                return ResourceManager.GetString("Audit_Status_Any", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Errors only.
+        /// </summary>
+        public static string Audit_Status_AnyError {
+            get {
+                return ResourceManager.GetString("Audit_Status_AnyError", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Client errors (4xx).
+        /// </summary>
+        public static string Audit_Status_Client {
+            get {
+                return ResourceManager.GetString("Audit_Status_Client", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Server errors (5xx).
+        /// </summary>
+        public static string Audit_Status_Server {
+            get {
+                return ResourceManager.GetString("Audit_Status_Server", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path contains.
+        /// </summary>
+        public static string Audit_Search {
+            get {
+                return ResourceManager.GetString("Audit_Search", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Apply.
+        /// </summary>
+        public static string Audit_Apply {
+            get {
+                return ResourceManager.GetString("Audit_Apply", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Failures and changes only.
+        /// </summary>
+        public static string Audit_NotableOnly {
+            get {
+                return ResourceManager.GetString("Audit_NotableOnly", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Include this page's own requests.
+        /// </summary>
+        public static string Audit_IncludeOwn {
+            get {
+                return ResourceManager.GetString("Audit_IncludeOwn", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} request(s).
+        /// </summary>
+        public static string Audit_Total {
+            get {
+                return ResourceManager.GetString("Audit_Total", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0} error(s).
+        /// </summary>
+        public static string Audit_Errors {
+            get {
+                return ResourceManager.GetString("Audit_Errors", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to By endpoint.
+        /// </summary>
+        public static string Audit_ByEndpoint {
+            get {
+                return ResourceManager.GetString("Audit_ByEndpoint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Requests.
+        /// </summary>
+        public static string Audit_Requests {
+            get {
+                return ResourceManager.GetString("Audit_Requests", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing recorded.
+        /// </summary>
+        public static string Audit_Empty_Title {
+            get {
+                return ResourceManager.GetString("Audit_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No requests match this window and filter..
+        /// </summary>
+        public static string Audit_Empty_Description {
+            get {
+                return ResourceManager.GetString("Audit_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Time.
+        /// </summary>
+        public static string Audit_Col_Time {
+            get {
+                return ResourceManager.GetString("Audit_Col_Time", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Method.
+        /// </summary>
+        public static string Audit_Col_Method {
+            get {
+                return ResourceManager.GetString("Audit_Col_Method", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Endpoint.
+        /// </summary>
+        public static string Audit_Col_Endpoint {
+            get {
+                return ResourceManager.GetString("Audit_Col_Endpoint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path.
+        /// </summary>
+        public static string Audit_Col_Path {
+            get {
+                return ResourceManager.GetString("Audit_Col_Path", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Status.
+        /// </summary>
+        public static string Audit_Col_Status {
+            get {
+                return ResourceManager.GetString("Audit_Col_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Duration.
+        /// </summary>
+        public static string Audit_Col_Duration {
+            get {
+                return ResourceManager.GetString("Audit_Col_Duration", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Count.
+        /// </summary>
+        public static string Audit_Col_Count {
+            get {
+                return ResourceManager.GetString("Audit_Col_Count", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to User.
+        /// </summary>
+        public static string Audit_Col_User {
+            get {
+                return ResourceManager.GetString("Audit_Col_User", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to anonymous.
+        /// </summary>
+        public static string Audit_Anonymous {
+            get {
+                return ResourceManager.GetString("Audit_Anonymous", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to no route.
+        /// </summary>
+        public static string Audit_RoutingMiss {
+            get {
+                return ResourceManager.GetString("Audit_RoutingMiss", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This path matched no endpoint and fell through to the app shell, which answers 200. The path itself is not stored..
+        /// </summary>
+        public static string Audit_RoutingMiss_Tooltip {
+            get {
+                return ResourceManager.GetString("Audit_RoutingMiss_Tooltip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Request id {0} - search the log aggregator by it for the full error..
+        /// </summary>
+        public static string Audit_Correlation_Tooltip {
+            get {
+                return ResourceManager.GetString("Audit_Correlation_Tooltip", resourceCulture);
+            }
+        }
     }
 }

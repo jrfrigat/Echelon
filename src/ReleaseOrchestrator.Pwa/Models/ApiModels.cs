@@ -29,6 +29,24 @@ public record DefaultPlanConflictDto(string FromRepositoryName, string ToReposit
 /// <summary>The order the ordering rules add up to, plus any rule that could not be honoured.</summary>
 public record DefaultPlanDto(List<DefaultPlanWaveDto> Waves, List<DefaultPlanConflictDto> Conflicts);
 
+// ---- request audit (mirrors RequestAuditController) ----
+
+public record RequestAuditEntryDto(
+    Guid Id, string Method, string RoutePattern, string Path, string Kind,
+    int StatusCode, int DurationMs, DateTime StartedAt,
+    string? UserId, string? UserName, string? PeerIp, string? ForwardedIp,
+    string? Permission, string CorrelationId, string? ExceptionType, string Instance);
+
+public record RequestAuditRouteStatDto(
+    string Method, string RoutePattern, long Count,
+    long ClientErrors, long ServerErrors, int P50Ms, int P95Ms, int MaxMs);
+
+/// <summary>The window at a glance. The four trailing flags are what the page cannot vouch for.</summary>
+public record RequestAuditSummaryDto(
+    DateTime FromUtc, DateTime ToUtc, long Total, long Errors,
+    List<RequestAuditRouteStatDto> Routes,
+    bool PercentilesApproximate, long DroppedRecords, bool AnonymousCapBound, bool IngressCovered);
+
 public record MrDto(
     Guid Id, string ExternalId, string SourceBranch, string TargetBranch,
     string Status, DateTime CreatedAt, Guid RepositoryId,

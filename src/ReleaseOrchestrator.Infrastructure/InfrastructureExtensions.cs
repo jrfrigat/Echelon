@@ -82,6 +82,14 @@ public static class InfrastructureExtensions
         services.Configure<ArchiveOptions>(config.GetSection("Archiving"));
         services.AddHostedService<ArchiveHostedService>();
 
+        // The buffer is a singleton shared by every request; the sink is the same object seen through
+        // the port, so the hot path depends on an interface that cannot be awaited.
+        services.Configure<RequestAuditOptions>(config.GetSection("RequestAudit"));
+        services.AddSingleton<RequestAuditBuffer>();
+        services.AddSingleton<IRequestAuditSink>(sp => sp.GetRequiredService<RequestAuditBuffer>());
+        services.AddHostedService<RequestAuditWriter>();
+        services.AddHostedService<RequestAuditPruner>();
+
         services.Configure<TaskReconciliationOptions>(config.GetSection("TaskReconciliation"));
         services.AddHostedService<TaskReconciliationService>();
 

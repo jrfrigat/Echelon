@@ -27,6 +27,11 @@
          in-memory and never open a connection. -->
     <ProjectReference Include="..\..\src\ReleaseOrchestrator.Infrastructure\ReleaseOrchestrator.Infrastructure.csproj" />
 
+    <!-- The request-audit middleware lives in the web host (it is compiled into the ingress host by
+         a source glob, so it cannot move to Infrastructure without giving that host a database
+         reference). Testing what it stores — and what it refuses to — needs the host referenced. -->
+    <ProjectReference Include="..\..\src\ReleaseOrchestrator.Web\ReleaseOrchestrator.Web.csproj" />
+
     <!-- The provider dialects moved out of Core into these; their tests followed them. -->
     <ProjectReference Include="..\..\src\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />

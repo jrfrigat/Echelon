@@ -112,6 +112,14 @@ try
         Log.Information("Applied EF Core migrations on startup.");
     }
 
+    // FIRST, and above UseForwardedHeaders specifically. It captures the transport peer on the way
+    // in -- before X-Forwarded-For rewrites it, and that header is accepted from anyone here -- and
+    // reads the final status and the authenticated principal on the way out, because it sits
+    // upstream of both the exception handler and authentication. Move it below either and it starts
+    // recording confident nonsense: every handled failure as a 200 or 500, every caller as anonymous.
+    // Nothing in the test suite would notice; this repo has no integration host.
+    app.UseRequestAudit("core");
+
     app.UseForwardedHeaders();
 
     // Ahead of UseExceptionHandler so DomainExceptionHandler, which runs upstream of the

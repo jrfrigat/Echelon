@@ -795,4 +795,127 @@
   <data name="Timeline_Kind_TrackerStatusPushed" xml:space="preserve">
     <value>Status written back to the tracker</value>
   </data>
+  <data name="Nav_RequestAudit" xml:space="preserve">
+    <value>Request log</value>
+  </data>
+  <data name="Audit_Title" xml:space="preserve">
+    <value>Request log</value>
+  </data>
+  <data name="Audit_Description" xml:space="preserve">
+    <value>Requests served by the API and the admin panel: what was called, what failed, and how long it took.</value>
+  </data>
+  <data name="Audit_Health_Title" xml:space="preserve">
+    <value>This view is incomplete</value>
+  </data>
+  <data name="Audit_Health_Dropped" xml:space="preserve">
+    <value>{0} request(s) happened but were not recorded, because the buffer filled. Raise RequestAudit:BufferCapacity if this persists.</value>
+  </data>
+  <data name="Audit_Health_AnonCap" xml:space="preserve">
+    <value>The limit on recording unauthenticated requests was reached, so some are missing.</value>
+  </data>
+  <data name="Audit_Health_Approx" xml:space="preserve">
+    <value>Percentiles come from a sample, not from every request in the window.</value>
+  </data>
+  <data name="Audit_Health_NoIngress" xml:space="preserve">
+    <value>The webhook host is a separate process and is not recorded here. Look for its traffic in the log aggregator.</value>
+  </data>
+  <data name="Audit_Window" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="Audit_Window_15m" xml:space="preserve">
+    <value>Last 15 minutes</value>
+  </data>
+  <data name="Audit_Window_1h" xml:space="preserve">
+    <value>Last hour</value>
+  </data>
+  <data name="Audit_Window_6h" xml:space="preserve">
+    <value>Last 6 hours</value>
+  </data>
+  <data name="Audit_Window_24h" xml:space="preserve">
+    <value>Last 24 hours</value>
+  </data>
+  <data name="Audit_Window_7d" xml:space="preserve">
+    <value>Last 7 days</value>
+  </data>
+  <data name="Audit_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Audit_Status_Any" xml:space="preserve">
+    <value>Any</value>
+  </data>
+  <data name="Audit_Status_AnyError" xml:space="preserve">
+    <value>Errors only</value>
+  </data>
+  <data name="Audit_Status_Client" xml:space="preserve">
+    <value>Client errors (4xx)</value>
+  </data>
+  <data name="Audit_Status_Server" xml:space="preserve">
+    <value>Server errors (5xx)</value>
+  </data>
+  <data name="Audit_Search" xml:space="preserve">
+    <value>Path contains</value>
+  </data>
+  <data name="Audit_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Audit_NotableOnly" xml:space="preserve">
+    <value>Failures and changes only</value>
+  </data>
+  <data name="Audit_IncludeOwn" xml:space="preserve">
+    <value>Include this page's own requests</value>
+  </data>
+  <data name="Audit_Total" xml:space="preserve">
+    <value>{0} request(s)</value>
+  </data>
+  <data name="Audit_Errors" xml:space="preserve">
+    <value>{0} error(s)</value>
+  </data>
+  <data name="Audit_ByEndpoint" xml:space="preserve">
+    <value>By endpoint</value>
+  </data>
+  <data name="Audit_Requests" xml:space="preserve">
+    <value>Requests</value>
+  </data>
+  <data name="Audit_Empty_Title" xml:space="preserve">
+    <value>Nothing recorded</value>
+  </data>
+  <data name="Audit_Empty_Description" xml:space="preserve">
+    <value>No requests match this window and filter.</value>
+  </data>
+  <data name="Audit_Col_Time" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="Audit_Col_Method" xml:space="preserve">
+    <value>Method</value>
+  </data>
+  <data name="Audit_Col_Endpoint" xml:space="preserve">
+    <value>Endpoint</value>
+  </data>
+  <data name="Audit_Col_Path" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Audit_Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Audit_Col_Duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="Audit_Col_Count" xml:space="preserve">
+    <value>Count</value>
+  </data>
+  <data name="Audit_Col_User" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="Audit_Anonymous" xml:space="preserve">
+    <value>anonymous</value>
+  </data>
+  <data name="Audit_RoutingMiss" xml:space="preserve">
+    <value>no route</value>
+  </data>
+  <data name="Audit_RoutingMiss_Tooltip" xml:space="preserve">
+    <value>This path matched no endpoint and fell through to the app shell, which answers 200. The path itself is not stored.</value>
+  </data>
+  <data name="Audit_Correlation_Tooltip" xml:space="preserve">
+    <value>Request id {0} - search the log aggregator by it for the full error.</value>
+  </data>
 </root>

@@ -795,4 +795,127 @@
   <data name="Timeline_Kind_TrackerStatusPushed" xml:space="preserve">
     <value>Статус записан обратно в трекер</value>
   </data>
+  <data name="Nav_RequestAudit" xml:space="preserve">
+    <value>Журнал запросов</value>
+  </data>
+  <data name="Audit_Title" xml:space="preserve">
+    <value>Журнал запросов</value>
+  </data>
+  <data name="Audit_Description" xml:space="preserve">
+    <value>Запросы, обслуженные API и админкой: что вызывали, что упало и сколько это заняло.</value>
+  </data>
+  <data name="Audit_Health_Title" xml:space="preserve">
+    <value>Эта картина неполная</value>
+  </data>
+  <data name="Audit_Health_Dropped" xml:space="preserve">
+    <value>{0} запрос(ов) были обслужены, но не записаны: буфер переполнился. Увеличьте RequestAudit:BufferCapacity, если это повторяется.</value>
+  </data>
+  <data name="Audit_Health_AnonCap" xml:space="preserve">
+    <value>Достигнут предел записи неаутентифицированных запросов, часть из них отсутствует.</value>
+  </data>
+  <data name="Audit_Health_Approx" xml:space="preserve">
+    <value>Перцентили посчитаны по выборке, а не по всем запросам окна.</value>
+  </data>
+  <data name="Audit_Health_NoIngress" xml:space="preserve">
+    <value>Хост вебхуков - отдельный процесс, здесь он не записывается. Его трафик ищите в агрегаторе логов.</value>
+  </data>
+  <data name="Audit_Window" xml:space="preserve">
+    <value>Окно</value>
+  </data>
+  <data name="Audit_Window_15m" xml:space="preserve">
+    <value>Последние 15 минут</value>
+  </data>
+  <data name="Audit_Window_1h" xml:space="preserve">
+    <value>Последний час</value>
+  </data>
+  <data name="Audit_Window_6h" xml:space="preserve">
+    <value>Последние 6 часов</value>
+  </data>
+  <data name="Audit_Window_24h" xml:space="preserve">
+    <value>Последние 24 часа</value>
+  </data>
+  <data name="Audit_Window_7d" xml:space="preserve">
+    <value>Последние 7 дней</value>
+  </data>
+  <data name="Audit_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Audit_Status_Any" xml:space="preserve">
+    <value>Любой</value>
+  </data>
+  <data name="Audit_Status_AnyError" xml:space="preserve">
+    <value>Только ошибки</value>
+  </data>
+  <data name="Audit_Status_Client" xml:space="preserve">
+    <value>Ошибки клиента (4xx)</value>
+  </data>
+  <data name="Audit_Status_Server" xml:space="preserve">
+    <value>Ошибки сервера (5xx)</value>
+  </data>
+  <data name="Audit_Search" xml:space="preserve">
+    <value>Путь содержит</value>
+  </data>
+  <data name="Audit_Apply" xml:space="preserve">
+    <value>Применить</value>
+  </data>
+  <data name="Audit_NotableOnly" xml:space="preserve">
+    <value>Только ошибки и изменения</value>
+  </data>
+  <data name="Audit_IncludeOwn" xml:space="preserve">
+    <value>Включая запросы этой страницы</value>
+  </data>
+  <data name="Audit_Total" xml:space="preserve">
+    <value>Запросов: {0}</value>
+  </data>
+  <data name="Audit_Errors" xml:space="preserve">
+    <value>Ошибок: {0}</value>
+  </data>
+  <data name="Audit_ByEndpoint" xml:space="preserve">
+    <value>По эндпоинтам</value>
+  </data>
+  <data name="Audit_Requests" xml:space="preserve">
+    <value>Запросы</value>
+  </data>
+  <data name="Audit_Empty_Title" xml:space="preserve">
+    <value>Ничего не записано</value>
+  </data>
+  <data name="Audit_Empty_Description" xml:space="preserve">
+    <value>Под это окно и фильтр не попал ни один запрос.</value>
+  </data>
+  <data name="Audit_Col_Time" xml:space="preserve">
+    <value>Время</value>
+  </data>
+  <data name="Audit_Col_Method" xml:space="preserve">
+    <value>Метод</value>
+  </data>
+  <data name="Audit_Col_Endpoint" xml:space="preserve">
+    <value>Эндпоинт</value>
+  </data>
+  <data name="Audit_Col_Path" xml:space="preserve">
+    <value>Путь</value>
+  </data>
+  <data name="Audit_Col_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Audit_Col_Duration" xml:space="preserve">
+    <value>Длительность</value>
+  </data>
+  <data name="Audit_Col_Count" xml:space="preserve">
+    <value>Количество</value>
+  </data>
+  <data name="Audit_Col_User" xml:space="preserve">
+    <value>Пользователь</value>
+  </data>
+  <data name="Audit_Anonymous" xml:space="preserve">
+    <value>аноним</value>
+  </data>
+  <data name="Audit_RoutingMiss" xml:space="preserve">
+    <value>нет маршрута</value>
+  </data>
+  <data name="Audit_RoutingMiss_Tooltip" xml:space="preserve">
+    <value>Этот путь не совпал ни с одним эндпоинтом и ушёл в оболочку приложения, которая отвечает 200. Сам путь не сохраняется.</value>
+  </data>
+  <data name="Audit_Correlation_Tooltip" xml:space="preserve">
+    <value>Идентификатор запроса {0} - ищите по нему полную ошибку в агрегаторе логов.</value>
+  </data>
 </root>

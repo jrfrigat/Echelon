@@ -1,0 +1,201 @@
+using System.Diagnostics;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using ReleaseOrchestrator.Application.DTOs;
+using ReleaseOrchestrator.Application.Services;
+
+namespace ReleaseOrchestrator.Observability;
+
+// WHAT THIS DELIBERATELY NEVER READS: request or response headers, request or response bodies, query
+// strings, cookies. Not filtered -- never read. The sign-in endpoint receives a cleartext username
+// and password, every call from the app carries an Authorization bearer token, and the webhook host
+// carries provider signing tokens. Because none of it is read, there is no allowlist to
+// misconfigure and no endpoint added later that leaks by being forgotten. Anyone adding "just the
+// headers, for debugging" is removing that guarantee and should have to argue for it here.
+
+/// <summary>
+/// Records one row per meaningful request: what was called, by whom, what came back, how long.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Must be registered FIRST, above forwarded-header handling. Three things depend on that position,
+/// and all three break quietly if it moves:
+/// </para>
+/// <list type="number">
+///   <item>
+///     The transport peer is captured on the way in, before <c>X-Forwarded-For</c> has rewritten the
+///     connection's address. That header is accepted from any caller in this deployment, so the
+///     rewritten value is whatever the client claimed — the peer address is the only one that is not.
+///   </item>
+///   <item>
+///     Being upstream of the exception handler means the status read on the way out is the one the
+///     handler wrote, not the exception that briefly passed through. Register this below it and
+///     every domain failure records 200 or 500.
+///   </item>
+///   <item>
+///     Authentication runs downstream and mutates the same context, so the principal is populated by
+///     the time this reads it on the way out — which is why the user is read AFTER the pipeline
+///     returns and not before. A reviewer tidying that up would silently blank every user id.
+///   </item>
+/// </list>
+/// </remarks>
+public static class RequestAuditMiddleware
+{
+    /// <summary>Stored in place of the real path when a request matched the SPA fallback.</summary>
+    private const string RoutingMissPath = "(routing miss)";
+
+    /// <summary>
+    /// Adds request auditing. Register before every other middleware.
+    /// </summary>
+    /// <param name="app">The application builder.</param>
+    /// <param name="hostName">Which host this is, recorded on every row.</param>
+    /// <returns>The same builder, for chaining.</returns>
+    public static IApplicationBuilder UseRequestAudit(this IApplicationBuilder app, string hostName)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.Use(async (context, next) =>
+        {
+            var sink = context.RequestServices.GetService<IRequestAuditSink>();
+            if (sink is null)
+            {
+                // Not configured in this host. Nothing to do, and nothing to fail.
+                await next();
+                return;
+            }
+
+            // Before UseForwardedHeaders rewrites it. This is who actually connected.
+            var peerIp = context.Connection.RemoteIpAddress?.ToString();
+            var startedAt = DateTime.UtcNow;
+            var startTimestamp = Stopwatch.GetTimestamp();
+
+            try
+            {
+                await next();
+            }
+            finally
+            {
+                // Everything about recording is inside a catch-all. A throw here happens after the
+                // response has begun, so it cannot become a clean 500 -- it presents to the caller as
+                // a truncated response. The audit must never be able to damage the request it audits.
+                try
+                {
+                    Record(context, sink, hostName, peerIp, startedAt, startTimestamp);
+                }
+                catch
+                {
+                    // Intentionally swallowed. There is nowhere safe to report from here, and a
+                    // failure to observe must not become a failure to serve.
+                }
+            }
+        });
+    }
+
+    private static void Record(
+        HttpContext context,
+        IRequestAuditSink sink,
+        string hostName,
+        string? peerIp,
+        DateTime startedAt,
+        long startTimestamp)
+    {
+        var endpoint = context.GetEndpoint();
+
+        // No endpoint means a static asset or a file that is simply not there. Recording those buries
+        // real traffic under a cold page load's hundreds of framework files.
+        if (endpoint is null) return;
+        if (TelemetryExtensions.IsInfrastructureRequest(context.Request.Path)) return;
+
+        var path = context.Request.Path.Value ?? "/";
+        var routePattern = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? endpoint.DisplayName ?? "unknown";
+
+        string kind;
+        if (IsSpaFallback(routePattern))
+        {
+            // The fallback answers 200 for any extension-less path, so an unauthenticated stranger
+            // could otherwise mint an unlimited number of distinct Path values -- unbounded rows and
+            // unbounded index cardinality, chosen entirely by them. Only API-shaped misses are worth
+            // recording at all, and even those store a fixed literal rather than what was typed.
+            if (!IsApiShaped(path)) return;
+
+            kind = RequestAuditKinds.RoutingMiss;
+            path = RoutingMissPath;
+        }
+        else
+        {
+            kind = ClassifyPath(context.Request.Path);
+        }
+
+        var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+
+        sink.Enqueue(new RequestAuditRecord(
+            Host: hostName,
+            Instance: Environment.MachineName,
+            Method: context.Request.Method,
+            RoutePattern: Truncate(routePattern, 200) ?? "unknown",
+            Path: Truncate(path, 300) ?? "/",
+            Kind: kind,
+            StatusCode: context.Response.StatusCode,
+            DurationMs: (int)Math.Min(int.MaxValue, elapsed.TotalMilliseconds),
+            StartedAt: startedAt,
+            UserId: ResolveUserId(context.User),
+            UserName: context.User.Identity?.IsAuthenticated == true
+                ? Truncate(context.User.FindFirstValue("preferred_username") ?? context.User.Identity.Name, 256)
+                : null,
+            PeerIp: Truncate(peerIp, 64),
+            // Read now, after the pipeline: this is the forwarded-header value, which is
+            // caller-supplied and labelled as such wherever it is shown.
+            ForwardedIp: Truncate(context.Connection.RemoteIpAddress?.ToString(), 64),
+            Permission: Truncate(endpoint.Metadata.GetMetadata<IAuthorizeData>()?.Policy, 200),
+            CorrelationId: Truncate(context.TraceIdentifier, 64) ?? string.Empty,
+            // The TYPE only. A database driver's exception message can carry a connection string; the
+            // full text stays in the log, reachable by the correlation id.
+            ExceptionType: context.Features.Get<IExceptionHandlerFeature>()?.Error.GetType().Name));
+    }
+
+    /// <summary>True for the catch-all route that serves the app shell for client-side routes.</summary>
+    private static bool IsSpaFallback(string routePattern) =>
+        routePattern.Contains("{*path", StringComparison.OrdinalIgnoreCase)
+        || routePattern.Contains("{**", StringComparison.Ordinal);
+
+    /// <summary>
+    /// True for a path that was clearly meant to reach the API, so a miss on it is a real signal
+    /// rather than someone deep-linking into the app.
+    /// </summary>
+    private static bool IsApiShaped(string path) =>
+        path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWith("/auth/", StringComparison.OrdinalIgnoreCase);
+
+    private static string ClassifyPath(PathString path)
+    {
+        if (path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)) return RequestAuditKinds.Api;
+        if (path.StartsWithSegments("/auth", StringComparison.OrdinalIgnoreCase)) return RequestAuditKinds.Auth;
+        return RequestAuditKinds.Other;
+    }
+
+    /// <summary>
+    /// The caller's object id, normalized the same way permissions are keyed.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately duplicated rather than calling Infrastructure's resolver: this file is compiled
+    /// into the webhook host too, which must not gain a dependency on Infrastructure. The claim names
+    /// are a stable part of the token format, not this codebase's invention.
+    /// </remarks>
+    private static string? ResolveUserId(ClaimsPrincipal user)
+    {
+        if (user.Identity?.IsAuthenticated != true) return null;
+
+        var raw = user.FindFirstValue("oid")
+                  ?? user.FindFirstValue("http://schemas.microsoft.com/identity/claims/objectidentifier");
+
+        return Guid.TryParse(raw, out var oid) && oid != Guid.Empty ? oid.ToString("D") : null;
+    }
+
+    private static string? Truncate(string? value, int max) =>
+        value is null ? null : value.Length <= max ? value : value[..max];
+}
