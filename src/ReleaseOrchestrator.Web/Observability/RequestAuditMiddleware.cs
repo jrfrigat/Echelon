@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Services;
 
@@ -72,6 +73,13 @@ public static class RequestAuditMiddleware
                 return;
             }
 
+            // The privacy switches are read here, where the values are collected. They were
+            // documented and shipped in appsettings.json while nothing consulted them -- a setting
+            // that reads as honoured and is not is worse than no setting, because an operator who
+            // turns off IP recording believes they have.
+            var privacy = context.RequestServices.GetService<IOptions<RequestAuditPrivacy>>()?.Value
+                          ?? RequestAuditPrivacy.RecordEverything;
+
             // Before UseForwardedHeaders rewrites it. This is who actually connected.
             var peerIp = context.Connection.RemoteIpAddress?.ToString();
 
@@ -96,7 +104,7 @@ public static class RequestAuditMiddleware
                 // a truncated response. The audit must never be able to damage the request it audits.
                 try
                 {
-                    Record(context, sink, hostName, peerIp, originalPath, startedAt, startTimestamp);
+                    Record(context, sink, hostName, peerIp, originalPath, startedAt, startTimestamp, privacy);
                 }
                 catch
                 {
@@ -114,7 +122,8 @@ public static class RequestAuditMiddleware
         string? peerIp,
         PathString originalPath,
         DateTime startedAt,
-        long startTimestamp)
+        long startTimestamp,
+        RequestAuditPrivacy privacy)
     {
         if (TelemetryExtensions.IsInfrastructureRequest(originalPath)) return;
 
@@ -140,12 +149,12 @@ public static class RequestAuditMiddleware
             // distinct Path values -- unbounded rows and unbounded index cardinality, chosen
             // entirely by them. Collapsed this way, a flood of junk URLs is one row per minute.
             Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp,
-                RoutingMissPattern, RoutingMissPath, RequestAuditKinds.RoutingMiss, endpoint);
+                RoutingMissPattern, RoutingMissPath, RequestAuditKinds.RoutingMiss, endpoint, privacy);
             return;
         }
 
         var kind = ClassifyPath(originalPath);
-        Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp, routePattern, path, kind, endpoint);
+        Enqueue(context, sink, hostName, peerIp, startedAt, startTimestamp, routePattern, path, kind, endpoint, privacy);
     }
 
     private static void Enqueue(
@@ -158,7 +167,8 @@ public static class RequestAuditMiddleware
         string routePattern,
         string path,
         string kind,
-        Endpoint? endpoint)
+        Endpoint? endpoint,
+        RequestAuditPrivacy privacy)
     {
 
         var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
@@ -166,7 +176,14 @@ public static class RequestAuditMiddleware
         sink.Enqueue(new RequestAuditRecord(
             Host: hostName,
             Instance: Environment.MachineName,
-            Method: context.Request.Method,
+            // Clamped like every other caller-controlled string, and this one is not cosmetic: the
+            // column is 10 characters and HTTP methods are an open token set -- WebDAV alone has
+            // VERSION-CONTROL (15) and BASELINE-CONTROL (16), and a scanner can send anything. An
+            // over-long value makes SaveChanges throw, and the writer's catch discards the WHOLE
+            // batch of up to 200 mostly-unrelated records while the summary still reports zero
+            // dropped. An unauthenticated caller could hold the audit dark indefinitely. SQLite does
+            // not enforce length, so no test here could have seen it.
+            Method: Truncate(context.Request.Method, 10) ?? "?",
             RoutePattern: Truncate(routePattern, 200) ?? "unknown",
             Path: Truncate(path, 300) ?? "/",
             Kind: kind,
@@ -174,18 +191,18 @@ public static class RequestAuditMiddleware
             DurationMs: (int)Math.Min(int.MaxValue, elapsed.TotalMilliseconds),
             StartedAt: startedAt,
             UserId: ResolveUserId(context.User),
-            UserName: context.User.Identity?.IsAuthenticated == true
+            UserName: privacy.RecordUserName && context.User.Identity?.IsAuthenticated == true
                 ? Truncate(context.User.FindFirstValue("preferred_username") ?? context.User.Identity.Name, 256)
                 : null,
-            PeerIp: Truncate(peerIp, 64),
+            PeerIp: privacy.RecordClientIp ? Truncate(peerIp, 64) : null,
             // Read now, after the pipeline: this is the forwarded-header value, which is
             // caller-supplied and labelled as such wherever it is shown.
-            ForwardedIp: Truncate(context.Connection.RemoteIpAddress?.ToString(), 64),
+            ForwardedIp: privacy.RecordClientIp ? Truncate(context.Connection.RemoteIpAddress?.ToString(), 64) : null,
             Permission: Truncate(endpoint?.Metadata.GetMetadata<IAuthorizeData>()?.Policy, 200),
             CorrelationId: Truncate(context.TraceIdentifier, 64) ?? string.Empty,
             // The TYPE only. A database driver's exception message can carry a connection string; the
             // full text stays in the log, reachable by the correlation id.
-            ExceptionType: context.Features.Get<IExceptionHandlerFeature>()?.Error.GetType().Name));
+            ExceptionType: Truncate(context.Features.Get<IExceptionHandlerFeature>()?.Error.GetType().Name, 200)));
     }
 
     /// <summary>True for the catch-all route that serves the app shell for client-side routes.</summary>

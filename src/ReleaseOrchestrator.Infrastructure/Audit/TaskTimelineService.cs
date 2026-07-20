@@ -122,9 +122,15 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
             .ToListAsync(ct);
         truncated |= transitions.Count == limit;
 
+        // Qualified with the repository, like every other merge-request entry. A bare "118" is
+        // ambiguous the moment two repositories both have one, and it also made two such entries
+        // compare equal in the ordering's tie-break, which is what the total order exists to avoid.
+        // The denormalised id remains the fallback: it is all that survives a hard-deleted MR.
+        var subjectByMr = mergeRequests.ToDictionary(m => m.Id, m => $"{m.RepoName} !{m.ExternalId}");
+
         foreach (var change in transitions)
             entries.Add(Entry(change.At, TimelineCategories.MergeRequest, TimelineKinds.MrStatusChanged,
-                subject: change.MergeRequestExternalId,
+                subject: subjectByMr.GetValueOrDefault(change.MergeRequestId) ?? change.MergeRequestExternalId,
                 detail: $"{change.FromStatus ?? "-"} -> {change.ToStatus} ({change.Cause})",
                 actorOid: change.ActorOid, actorKind: change.ActorKind, actorName: change.ActorName,
                 mergeRequestId: change.MergeRequestId,
@@ -226,11 +232,21 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
 
         // ---- merge ----------------------------------------------------------
 
+        // Truncation is decided HERE, on the merged list, not only by the per-source caps above.
+        // Two sources are uncapped by design -- merge requests emit up to three entries each and
+        // rollouts one or two -- so the total can exceed the limit while every individual source
+        // count is comfortably under it. Reporting only the per-source caps meant the final cut
+        // discarded the oldest entries and still claimed complete coverage, which is precisely the
+        // failure TimelineCoverageDto exists to prevent: the reader concludes nothing happened
+        // before the point where the history simply stops.
+        var ordered = Order(entries).ToList();
+        truncated |= ordered.Count > limit;
+
         return new TaskTimelineDto(
             task.Id, task.ExternalId, IsArchived: false,
             task.FirstSeenAt, task.FirstSeenSource,
             new TimelineCoverageDto(await RecordingBeganAtAsync(ct), truncated, await AttributionIsSharedAsync(ct)),
-            Order(entries).Take(limit).ToList());
+            ordered.Take(limit).ToList());
     }
 
     /// <summary>
@@ -333,15 +349,22 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
     /// </remarks>
     private async Task<bool> AttributionIsSharedAsync(CancellationToken ct)
     {
-        var distinct = await db.Rollouts
-            .Where(r => r.LaunchedByOid != null)
-            .Select(r => r.LaunchedByOid)
+        // Every actor column the page renders, not launches alone: a deployment where one person
+        // launches but several pin statuses or recalculate plans has real attribution, and warning
+        // that it does not would teach an operator to distrust names that are accurate.
+        var oids = await db.Rollouts.Where(r => r.LaunchedByOid != null).Select(r => r.LaunchedByOid)
+            .Union(db.RolloutPlans.Where(p => p.CreatedByOid != null).Select(p => p.CreatedByOid))
+            .Union(db.MergeRequestStatusChanges.Where(c => c.ActorOid != null).Select(c => c.ActorOid))
             .Distinct()
             .Take(2)
             .CountAsync(ct);
 
-        var total = await db.Rollouts.CountAsync(r => r.LaunchedByOid != null, ct);
-        return distinct == 1 && total > 1;
+        // Still a heuristic, and deliberately a conservative one: a genuine one-person team looks
+        // identical to a shared identity from the data alone. Erring towards silence is right --
+        // a false warning that attribution is meaningless is worse than no warning, because it
+        // discredits names that are in fact correct. The definitive signal is the auth provider,
+        // which the page reads separately.
+        return oids == 1 && await db.Rollouts.CountAsync(r => r.LaunchedByOid != null, ct) > 1;
     }
 
     /// <summary>What survives for a task that has been archived: its own two moments, and nothing else.</summary>

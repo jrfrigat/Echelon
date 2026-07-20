@@ -95,11 +95,35 @@ public class RolloutCoordinator(
                 // shared lease, and the next tick re-reads: logged at Warning so it is visible, but
                 // not as an error, which would train an operator to ignore the error log.
                 logger.LogWarning(ex, "Rollout {Rollout} was updated concurrently; retrying on the next pass", id);
+                ResetContext(scope, id);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Driving rollout {Rollout} failed", id);
+                ResetContext(scope, id);
             }
+        }
+    }
+
+    /// <summary>
+    /// Discards the failed unit of work so the next rollout in the pass starts clean.
+    /// </summary>
+    /// <remarks>
+    /// The scope — and therefore the <c>AppDbContext</c> — is shared by every rollout in one pass.
+    /// A failed <c>SaveChanges</c> leaves its entities tracked as Modified, so the very next
+    /// rollout's save re-submits them and fails the same way: one concurrency loss silently
+    /// cascaded into every remaining rollout in the pass, each logged as its own unrelated error.
+    /// </remarks>
+    private static void ResetContext(IServiceScope scope, Guid rolloutId)
+    {
+        try
+        {
+            scope.ServiceProvider.GetRequiredService<AppDbContext>().ChangeTracker.Clear();
+        }
+        catch
+        {
+            // Nothing useful to do: the next pass builds a fresh scope regardless, and throwing from
+            // a cleanup path would abort the remaining rollouts this call was trying to protect.
         }
     }
 

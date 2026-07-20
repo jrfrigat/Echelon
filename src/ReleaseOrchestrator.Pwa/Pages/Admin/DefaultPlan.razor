@@ -112,7 +112,7 @@ else
     }
     else
     {
-        <FlareDataGrid TItem="RepositoryOrderingDto" Items="_rules" Dense="true" Striped="true" Hoverable="true">
+        <FlareDataGrid TItem="RepositoryOrderingDto" Items="_rules" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
             <Columns>
                 <FlareColumn TItem="RepositoryOrderingDto" Id="from" Title="@UiStrings.DefaultPlan_Col_From"
                              Field="@(r => (object?)r.FromRepositoryName)" Sortable="true" Filterable="true" />

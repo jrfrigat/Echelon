@@ -936,4 +936,7 @@
   <data name="Vcs_IngestionMode_Helper" xml:space="preserve">
     <value>Push is the default: the VCS calls us when something changes. Poll asks the VCS on a timer instead - slower and costs requests, for a VCS that cannot reach this service.</value>
   </data>
+  <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
+    <value>Cancellation requested</value>
+  </data>
 </root>

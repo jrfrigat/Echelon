@@ -73,6 +73,19 @@ public sealed class RequestAuditBuffer : IRequestAuditSink
     public ChannelReader<RequestAuditRecord> Reader => _channel.Reader;
 
     /// <summary>
+    /// Records that <paramref name="count"/> already-dequeued records were lost.
+    /// </summary>
+    /// <remarks>
+    /// A batch whose write fails is just as absent from the audit as one the buffer refused, and the
+    /// operator has the same right to know. Without this the summary reported zero dropped over a
+    /// real gap, which reads as "no traffic" — the one interpretation that is never true.
+    /// </remarks>
+    public void RecordLoss(int count)
+    {
+        if (count > 0) Interlocked.Add(ref _dropped, count);
+    }
+
+    /// <summary>
     /// Records that could not be stored since the process started.
     /// </summary>
     /// <remarks>

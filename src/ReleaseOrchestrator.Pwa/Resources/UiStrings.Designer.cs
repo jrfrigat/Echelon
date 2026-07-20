@@ -2603,5 +2603,14 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Vcs_IngestionMode_Helper", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancellation requested.
+        /// </summary>
+        public static string Timeline_Kind_CancelRequested {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_CancelRequested", resourceCulture);
+            }
+        }
     }
 }

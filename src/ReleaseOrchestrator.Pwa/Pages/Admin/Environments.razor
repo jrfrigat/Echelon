@@ -33,7 +33,7 @@ else if (_envs is null || _envs.Count == 0)
 }
 else
 {
-    <FlareDataGrid TItem="EnvironmentDto" Items="_envs" Dense="true" Striped="true" Hoverable="true">
+    <FlareDataGrid TItem="EnvironmentDto" Items="_envs" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
         <Columns>
             <FlareColumn TItem="EnvironmentDto" Id="key" Title="@UiStrings.Env_Col_Key"
                          Field="@(e => (object?)e.Key)" Sortable="true" Filterable="true" />

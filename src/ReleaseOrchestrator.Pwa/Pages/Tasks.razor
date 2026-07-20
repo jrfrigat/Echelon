@@ -21,16 +21,19 @@ else if (_tasks is null || _tasks.Items.Count == 0)
 }
 else
 {
-    <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true">
+    @* Server-paged: the grid holds one page, so its own pager is off and the columns are not
+       sortable. Sorting 50 of N rows client-side reorders the slice while looking like it ordered
+       the whole list -- the wrong answer wearing the right one's clothes. *@
+    <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
         <Columns>
             <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
-                         Field="@(t => (object?)t.ExternalId)" Sortable="true" Filterable="true" />
+                         Field="@(t => (object?)t.ExternalId)" />
             <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
-                         Field="@(t => (object?)t.Title)" Sortable="true" Filterable="true" />
+                         Field="@(t => (object?)t.Title)" />
             <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
-                         Field="@(t => (object?)t.Status)" Sortable="true" Filterable="true" />
+                         Field="@(t => (object?)t.Status)" />
             <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
-                         Field="@(t => (object?)t.MergeRequestCount)" Sortable="true" Align="ColumnAlign.End" />
+                         Field="@(t => (object?)t.MergeRequestCount)" Align="ColumnAlign.End" />
             <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
                 <Template>
                     @if (context.HasActivePlan)

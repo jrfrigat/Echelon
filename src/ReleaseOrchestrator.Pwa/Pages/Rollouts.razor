@@ -19,7 +19,7 @@ else if (_rollouts is null || _rollouts.Count == 0)
 }
 else
 {
-    <FlareDataGrid TItem="RolloutSummaryDto" Items="_rollouts" Dense="true" Striped="true" Hoverable="true">
+    <FlareDataGrid TItem="RolloutSummaryDto" Items="_rollouts" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
         <Columns>
             <FlareColumn TItem="RolloutSummaryDto" Id="task" Title="@UiStrings.Rollouts_Col_Task"
                          Field="@(r => (object?)r.TargetTaskKey)" Sortable="true" Filterable="true" />
@@ -33,8 +33,11 @@ else
             </FlareColumn>
             <FlareColumn TItem="RolloutSummaryDto" Id="progress" Title="@UiStrings.Rollouts_Col_Progress"
                          Field="@(r => (object?)$"{r.SucceededCount} / {r.StepCount}")" Align="ColumnAlign.End" />
+            @* The raw DateTime, not a formatted string: the grid renders it identically but sorts on
+               the value. Sorting the formatted text ordered "01.03" before "02.01" and called it
+               ascending -- a wrong answer that looks like a right one. *@
             <FlareColumn TItem="RolloutSummaryDto" Id="started" Title="@UiStrings.Rollouts_Col_Started"
-                         Field="@(r => (object?)r.StartedAt.ToString("g"))" Sortable="true" />
+                         Field="@(r => (object?)r.StartedAt)" Sortable="true" />
             <FlareColumn TItem="RolloutSummaryDto" Id="actions" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Rollouts_Open</FlareButton>

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Coordination;
@@ -87,6 +89,13 @@ public static class InfrastructureExtensions
         services.Configure<RequestAuditOptions>(config.GetSection("RequestAudit"));
         services.AddSingleton<RequestAuditBuffer>();
         services.AddSingleton<IRequestAuditSink>(sp => sp.GetRequiredService<RequestAuditBuffer>());
+        // Projected out of the options so the recorder -- which lives in the web host and must not
+        // reference this assembly -- can honour the privacy switches.
+        services.AddSingleton<IOptions<RequestAuditPrivacy>>(sp =>
+        {
+            var audit = sp.GetRequiredService<IOptions<RequestAuditOptions>>().Value;
+            return Options.Create(new RequestAuditPrivacy(audit.RecordClientIp, audit.RecordUserName));
+        });
         services.AddHostedService<RequestAuditWriter>();
         services.AddHostedService<RequestAuditPruner>();
 

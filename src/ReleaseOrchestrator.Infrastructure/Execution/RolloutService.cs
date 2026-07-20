@@ -264,7 +264,14 @@ public class RolloutService(
         r.Status = inFlight ? RolloutStatus.Cancelling : RolloutStatus.Cancelled;
         if (!inFlight) r.FinishedAt = now;
 
-        db.RolloutEvents.Add(NewEvent(r.Id, RolloutEventKinds.Cancelled, actor, now,
+        // Two facts, two kinds. When steps are still in flight this only REQUESTS cancellation and
+        // the coordinator writes Cancelled later when the run actually settles; emitting Cancelled
+        // here as well put two identical entries on the timeline for one operator action, the second
+        // of them attributed to the coordinator.
+        db.RolloutEvents.Add(NewEvent(
+            r.Id,
+            inFlight ? RolloutEventKinds.CancelRequested : RolloutEventKinds.Cancelled,
+            actor, now,
             new { settling = inFlight }));
         await db.SaveChangesAsync(ct);
     }

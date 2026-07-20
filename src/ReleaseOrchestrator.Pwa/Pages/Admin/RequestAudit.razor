@@ -82,7 +82,7 @@ else
         }
         else
         {
-            <FlareDataGrid TItem="RequestAuditRouteStatDto" Items="_summary.Routes" Dense="true" Striped="true" Hoverable="true">
+            <FlareDataGrid TItem="RequestAuditRouteStatDto" Items="_summary.Routes" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
                 <Columns>
                     <FlareColumn TItem="RequestAuditRouteStatDto" Id="method" Title="@UiStrings.Audit_Col_Method"
                                  Field="@(r => (object?)r.Method)" Sortable="true" Filterable="true" />
@@ -126,14 +126,18 @@ else
     }
     else
     {
-        <FlareDataGrid TItem="RequestAuditEntryDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true">
+        @* Server-paged, with its own FlarePagination below: the grid must not page as well, and its
+           columns are not sortable because a client sort would reorder only the current page while
+           appearing to order the whole window. *@
+        <FlareDataGrid TItem="RequestAuditEntryDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
             <Columns>
+                @* Raw DateTime so the sort is chronological rather than lexicographic on the rendered text. *@
                 <FlareColumn TItem="RequestAuditEntryDto" Id="time" Title="@UiStrings.Audit_Col_Time"
-                             Field="@(e => (object?)e.StartedAt.ToString("g"))" Sortable="true" />
+                             Field="@(e => (object?)e.StartedAt)" />
                 <FlareColumn TItem="RequestAuditEntryDto" Id="method" Title="@UiStrings.Audit_Col_Method"
-                             Field="@(e => (object?)e.Method)" Sortable="true" Filterable="true" />
+                             Field="@(e => (object?)e.Method)" />
                 <FlareColumn TItem="RequestAuditEntryDto" Id="path" Title="@UiStrings.Audit_Col_Path"
-                             Field="@(e => (object?)e.Path)" Sortable="true" Filterable="true">
+                             Field="@(e => (object?)e.Path)">
                     <Template>
                         <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
                             <FlareText Element="span">@context.Path</FlareText>
@@ -153,17 +157,17 @@ else
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
-                             Field="@(e => (object?)e.StatusCode)" Sortable="true" Align="ColumnAlign.End">
+                             Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
                     <Template>
                         <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)">@context.StatusCode</FlareChip>
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"
-                             Field="@(e => (object?)e.DurationMs)" Sortable="true" Align="ColumnAlign.End">
+                             Field="@(e => (object?)e.DurationMs)" Align="ColumnAlign.End">
                     <Template>@context.DurationMs ms</Template>
                 </FlareColumn>
                 <FlareColumn TItem="RequestAuditEntryDto" Id="user" Title="@UiStrings.Audit_Col_User"
-                             Field="@(e => (object?)UserLabel(e))" Sortable="true" Filterable="true" />
+                             Field="@(e => (object?)UserLabel(e))" />
             </Columns>
         </FlareDataGrid>
 

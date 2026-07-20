@@ -333,6 +333,37 @@ public class RequestAuditMiddlewareTests
         Assert.Equal("boom", exception!.Message);
     }
 
+    /// <summary>
+    /// Every caller-controlled string must fit its column, and the method is the one that nearly did
+    /// not.
+    /// </summary>
+    /// <remarks>
+    /// HTTP methods are an open token set — WebDAV alone has VERSION-CONTROL (15) and
+    /// BASELINE-CONTROL (16) — while the column is 10 characters. An over-long value made
+    /// SaveChanges throw, and the writer's catch discarded the whole batch of up to 200 mostly
+    /// unrelated records while the summary still reported zero dropped: an anonymous caller could
+    /// hold the audit dark indefinitely. SQLite does not enforce length, so only an assertion here
+    /// can catch it.
+    /// </remarks>
+    [Fact]
+    public async Task ClampsEveryCallerControlledFieldToItsColumnWidth()
+    {
+        var records = await RunAsync(ctx =>
+        {
+            ctx.SetEndpoint(RouteEndpointFor("api/tasks"));
+            ctx.Request.Path = "/api/tasks";
+            ctx.Request.Method = "VERSION-CONTROL";   // 15 chars against a 10-char column
+        });
+
+        var record = Assert.Single(records);
+        Assert.True(record.Method.Length <= 10, $"Method '{record.Method}' exceeds its column width");
+        Assert.True(record.RoutePattern.Length <= 200);
+        Assert.True(record.Path.Length <= 300);
+        Assert.True((record.UserName?.Length ?? 0) <= 256);
+        Assert.True((record.PeerIp?.Length ?? 0) <= 64);
+        Assert.True((record.ExceptionType?.Length ?? 0) <= 200);
+    }
+
     [Fact]
     public async Task RecordsTheAuthenticatedCaller()
     {

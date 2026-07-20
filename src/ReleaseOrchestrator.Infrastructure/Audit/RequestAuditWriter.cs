@@ -77,13 +77,47 @@ public class RequestAuditWriter(
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                // Shutdown. Write what is in hand rather than discarding it silently -- the host
+                // allows a stop timeout for exactly this, and the alternative is losing up to a
+                // full batch plus the channel's contents on every ordinary restart, invisibly.
+                await FlushOnShutdownAsync(pending);
                 return;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Request audit flush failed; {Count} record(s) lost", pending.Count);
+                // Counted, not just logged: a failed write leaves the same hole as a refused one, and
+                // the summary must not keep reporting zero dropped across it.
+                buffer.RecordLoss(pending.Count);
                 pending.Clear();
             }
+        }
+    }
+
+    /// <summary>
+    /// Last-chance flush of the in-hand batch and whatever is still queued.
+    /// </summary>
+    /// <remarks>
+    /// Uses its own short timeout rather than the (already cancelled) stopping token, which would
+    /// abort the write immediately. Anything still unwritten after this is counted as lost, so a
+    /// restart that did drop records says so instead of quietly shortening the history.
+    /// </remarks>
+    private async Task FlushOnShutdownAsync(List<RequestAuditRecord> pending)
+    {
+        try
+        {
+            while (pending.Count < Math.Max(1, options.Value.BatchSize) * 4 && buffer.Reader.TryRead(out var record))
+                pending.Add(record);
+
+            if (pending.Count == 0) return;
+
+            using var grace = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await FlushAsync(pending, grace.Token);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Request audit could not flush {Count} record(s) during shutdown", pending.Count);
+            buffer.RecordLoss(pending.Count);
         }
     }
 

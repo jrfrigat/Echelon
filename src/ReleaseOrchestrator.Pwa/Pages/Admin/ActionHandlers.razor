@@ -62,7 +62,7 @@ else if (_bindings is null || _bindings.Count == 0)
 }
 else
 {
-    <FlareDataGrid TItem="ActionBindingDto" Items="_bindings" Dense="true" Striped="true" Hoverable="true">
+    <FlareDataGrid TItem="ActionBindingDto" Items="_bindings" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
         <Columns>
             <FlareColumn TItem="ActionBindingDto" Id="event" Title="@UiStrings.Actions_Col_Event"
                          Field="@(b => (object?)b.EventType)" Sortable="true" Filterable="true" />

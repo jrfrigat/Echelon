@@ -936,4 +936,7 @@
   <data name="Vcs_IngestionMode_Helper" xml:space="preserve">
     <value>Push - по умолчанию: VCS сама вызывает нас при изменениях. Poll вместо этого опрашивает VCS по таймеру - медленнее и тратит запросы, для VCS, которая не может достучаться до сервиса.</value>
   </data>
+  <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
+    <value>Запрошена отмена</value>
+  </data>
 </root>

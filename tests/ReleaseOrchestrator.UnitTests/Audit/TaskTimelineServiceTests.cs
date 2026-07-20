@@ -401,6 +401,30 @@ public sealed class TaskTimelineServiceTests : IAsyncLifetime
     public async Task IsNullOnlyForATaskThatExistsNowhere() =>
         Assert.Null(await Service().GetAsync(Guid.NewGuid(), ct: Ct));
 
+    /// <summary>
+    /// Truncation must be reported even when no single source hit its cap.
+    /// </summary>
+    /// <remarks>
+    /// The flag used to come only from the four capped queries, while merge requests and rollouts
+    /// are uncapped by design. A task could therefore produce more entries than the limit with every
+    /// individual source well under it, and the final cut discarded the oldest silently — leaving a
+    /// history that begins mid-story next to a page that swears it is complete.
+    /// </remarks>
+    [Fact]
+    public async Task ReportsTruncation_EvenWhenNoSingleSourceHitItsCap()
+    {
+        var task = AddTask("PROJ-1");
+        // Four MrOpened entries from an uncapped source; nothing else contributes.
+        for (var i = 0; i < 4; i++)
+            AddMr(task, $"{100 + i}", Now.AddHours(-i));
+        await _db.SaveChangesAsync(Ct);
+
+        var timeline = await Service().GetAsync(task.Id, limit: 3, ct: Ct);
+
+        Assert.Equal(3, timeline!.Entries.Count);
+        Assert.True(timeline.Coverage.Truncated, "entries were dropped by the final cut and must be reported");
+    }
+
     [Fact]
     public async Task ReportsTruncationRatherThanSilentlyDroppingEntries()
     {

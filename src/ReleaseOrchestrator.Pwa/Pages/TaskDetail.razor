@@ -74,15 +74,21 @@ else
         @string.Format(UiStrings.TaskDetail_Meta, _plan.Version, _plan.Source, _plan.UpdatedAt.ToString("g"))
     </FlareText>
 
+    @* Gated on the ENABLED set, not the raw list. Environments that all happen to be disabled left
+       the picker with no options and a default Guid.Empty selection, rendering an all-zeros id and
+       offering a Launch button that could only fail. *@
     <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-        @if (_environments is { Count: > 0 })
+        @if (EnabledEnvironments is { Count: > 0 } enabled)
         {
             <FlareSelect TValue="Guid" Label="@UiStrings.TaskDetail_Environment"
                          @bind-Value="_selectedEnvironmentId"
-                         Items="@_environments.Where(e => e.IsEnabled).Select(e => e.Id)"
+                         Items="@enabled.Select(e => e.Id)"
                          ItemLabel="@(id => EnvironmentLabel(id))"
                          Style="min-width:14rem;" />
-            <FlareButton OnClick="Launch" Loading="_busy" Disabled="@(_plan.Conflicts.Count > 0)">@UiStrings.TaskDetail_Launch</FlareButton>
+            <FlareButton OnClick="Launch" Loading="_busy"
+                         Disabled="@(_plan.Conflicts.Count > 0 || _selectedEnvironmentId == Guid.Empty)">
+                @UiStrings.TaskDetail_Launch
+            </FlareButton>
         }
         else
         {
@@ -228,6 +234,9 @@ else
     void RebuildKeyMap() => _keyById = _plan?.Nodes.ToDictionary(n => n.TaskId, n => n.TaskKey) ?? [];
 
     string KeyOf(Guid taskId) => _keyById.TryGetValue(taskId, out var k) ? k : taskId.ToString()[..8];
+
+    /// <summary>Only enabled environments can be launched into, so only they are offered.</summary>
+    List<EnvironmentDto>? EnabledEnvironments => _environments?.Where(e => e.IsEnabled).ToList();
 
     string EnvironmentLabel(Guid id)
     {

@@ -38,7 +38,19 @@ public static class RolloutEventKinds
     /// </summary>
     public const string Paused = "Paused";
 
-    /// <summary>The run was cancelled, either outright or after in-flight steps settled.</summary>
+    /// <summary>
+    /// An operator asked for cancellation while steps were still in flight, so the run entered
+    /// Cancelling and waits for them to settle.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Cancelled"/> because they are two different facts about two moments,
+    /// with two different actors: a person asked, and later the coordinator finished. Writing
+    /// <c>Cancelled</c> for both put two identical-looking entries on one timeline for what the
+    /// operator experienced as a single action.
+    /// </remarks>
+    public const string CancelRequested = "CancelRequested";
+
+    /// <summary>The run reached its cancelled end state.</summary>
     public const string Cancelled = "Cancelled";
 
     /// <summary>
