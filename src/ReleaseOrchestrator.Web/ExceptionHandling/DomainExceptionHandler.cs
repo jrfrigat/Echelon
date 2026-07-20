@@ -30,7 +30,8 @@ public class DomainExceptionHandler(
 
         // The log keeps the invariant key, not the localized title: logs are read by operators and
         // must stay greppable regardless of who happened to make the request.
-        logger.LogInformation("{Title}: {Message}", titleKey, exception.Message);
+        logger.LogInformation(
+            "{Title}: {Message} [{RequestId}]", titleKey, exception.Message, httpContext.TraceIdentifier);
 
         var title = localizer[titleKey];
 
@@ -41,6 +42,11 @@ public class DomainExceptionHandler(
             Detail = exception.Message,
             Instance = httpContext.Request.Path
         };
+
+        // The one identifier that ties what the user saw to what the log recorded. Without it an
+        // operator holding a screenshot of a 404 has nothing to search Seq by -- a repo-wide grep
+        // for a correlation id previously returned nothing at all.
+        problem.Extensions["traceId"] = httpContext.TraceIdentifier;
 
         httpContext.Response.StatusCode = status;
         await httpContext.Response.WriteAsJsonAsync(problem, ct);

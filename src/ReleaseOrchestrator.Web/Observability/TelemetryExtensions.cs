@@ -154,7 +154,17 @@ public static class TelemetryExtensions
         ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
         ?? "unknown";
 
-    private static bool IsInfrastructureRequest(PathString path) =>
+    /// <summary>
+    /// True for traffic that exists to observe the service rather than to use it: health probes and
+    /// metric scrapes.
+    /// </summary>
+    /// <param name="path">The request path.</param>
+    /// <remarks>
+    /// Public so request logging and the request audit share this one definition. Each of them wants
+    /// to exclude the same paths, and a second copy would drift — this file's own summary records
+    /// that the audit already paid for duplicated rules drifting apart once.
+    /// </remarks>
+    public static bool IsInfrastructureRequest(PathString path) =>
         path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/metrics", StringComparison.OrdinalIgnoreCase);
 }

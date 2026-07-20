@@ -75,8 +75,11 @@ try
     var app = builder.Build();
 
     app.UseForwardedHeaders();
+
+    // Above the exception handler, for the reason spelled out in the core host: below it, a handled
+    // failure is logged as the 500 it briefly was rather than the status the caller was sent.
+    app.UseReleaseOrchestratorRequestLogging();
     app.UseExceptionHandler();
-    app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())
         app.MapOpenApi();

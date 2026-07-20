@@ -125,8 +125,11 @@ try
         .AddSupportedCultures(supportedCultures)
         .AddSupportedUICultures(supportedCultures));
 
+    // Request logging ABOVE the exception handler, not below it. Below, the logging middleware sees
+    // the exception on its way up and records a 500 -- while the handler downstream converts it into
+    // the 404 or 400 the caller actually received. Every domain failure was logged as a server fault.
+    app.UseReleaseOrchestratorRequestLogging();
     app.UseExceptionHandler();
-    app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())
         app.MapOpenApi();
