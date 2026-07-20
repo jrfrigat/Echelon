@@ -39,7 +39,7 @@ public class RolloutsController(IRolloutService rollouts) : ControllerBase
     [Authorize(Policy = Permissions.ReleaseExecute)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
-        await rollouts.CancelAsync(id, ct);
+        await rollouts.CancelAsync(id, this.ResolveActor(), ct);
         return NoContent();
     }
 
@@ -51,7 +51,7 @@ public class RolloutsController(IRolloutService rollouts) : ControllerBase
     [Authorize(Policy = Permissions.ReleaseExecute)]
     public async Task<IActionResult> Retry(Guid id, Guid stepId, CancellationToken ct)
     {
-        await rollouts.RetryStepAsync(id, stepId, ct);
+        await rollouts.RetryStepAsync(id, stepId, this.ResolveActor(), ct);
         return NoContent();
     }
 
@@ -63,7 +63,7 @@ public class RolloutsController(IRolloutService rollouts) : ControllerBase
     [Authorize(Policy = Permissions.ReleaseExecute)]
     public async Task<IActionResult> Skip(Guid id, Guid stepId, CancellationToken ct)
     {
-        await rollouts.SkipStepAsync(id, stepId, ct);
+        await rollouts.SkipStepAsync(id, stepId, this.ResolveActor(), ct);
         return NoContent();
     }
 }

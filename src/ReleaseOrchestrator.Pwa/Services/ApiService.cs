@@ -114,6 +114,10 @@ public class ApiService(HttpClient http)
     public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
         GetOrNullAsync<TaskDetailDto>($"api/tasks/{taskId}", ct);
 
+    /// <summary>Everything that has happened to the task, newest first.</summary>
+    public Task<TaskTimelineDto?> GetTaskTimelineAsync(Guid taskId, int limit = 200, CancellationToken ct = default) =>
+        GetOrNullAsync<TaskTimelineDto>($"api/tasks/{taskId}/timeline?limit={limit}", ct);
+
     public Task<RolloutPlanDto?> GetTaskPlanAsync(Guid taskId, CancellationToken ct = default) =>
         GetOrNullAsync<RolloutPlanDto>($"api/tasks/{taskId}/plan", ct);
 

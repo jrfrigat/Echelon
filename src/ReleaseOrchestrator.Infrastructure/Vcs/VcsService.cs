@@ -4,6 +4,7 @@ using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Core.Parsing;
+using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
@@ -49,6 +50,10 @@ public class VcsService(
         var mr = await db.MergeRequests
             .FirstOrDefaultAsync(m => m.RepositoryId == repositoryId && m.ExternalId == externalMrId, ct);
 
+        // Whether this poll is the first time we have seen the merge request decides whether its
+        // status journal entry has a "from" or opens the history.
+        var isNew = mr is null;
+
         if (mr is null)
         {
             mr = new MergeRequest
@@ -68,7 +73,17 @@ public class VcsService(
         mr.TaskExternalId = provider.ParseTaskKeyFromBranch(info.SourceBranch);
         mr.TaskId = await ResolveTaskIdAsync(repo, mr.TaskExternalId, ct) ?? mr.TaskId;
 
+        // Captured around the call rather than inside it: ApplyStatus assigns the status in three
+        // branches and returns early from two more, so recording at each site would be five calls
+        // that have to stay in step. Comparing before and after is one, and a new branch added later
+        // is covered without anyone remembering to instrument it.
+        var previousStatus = isNew ? (Core.Enums.MergeRequestStatus?)null : mr.Status;
+
         ApplyStatus(mr, info, provider.Capabilities, repo.Connection.ReadyForDeployLabel);
+
+        MergeRequestStatusJournal.Record(
+            db, mr, previousStatus, mr.Status,
+            MergeRequestStatusJournal.CausePoll, ActorRef.System, clock.GetUtcNow().UtcDateTime);
 
         await db.SaveChangesAsync(ct);
     }

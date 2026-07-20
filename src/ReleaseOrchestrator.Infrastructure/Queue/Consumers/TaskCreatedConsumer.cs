@@ -11,6 +11,7 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 public class TaskCreatedConsumer(
     AppDbContext db,
     IBus bus,
+    TimeProvider clock,
     ILogger<TaskCreatedConsumer> logger) : IHandleMessages<TaskCreated>
 {
     /// <inheritdoc/>
@@ -43,7 +44,11 @@ public class TaskCreatedConsumer(
                 ExternalId = msg.ExternalId,
                 Title = msg.Title,
                 Status = "open",
-                TrackerConnectionId = conn.Id
+                TrackerConnectionId = conn.Id,
+                // Stamped only on the insert branch. A redelivery lands on the update branch below
+                // and leaves it alone, so at-least-once delivery cannot move a task's arrival time.
+                FirstSeenAt = clock.GetUtcNow().UtcDateTime,
+                FirstSeenSource = string.IsNullOrWhiteSpace(msg.Source) ? null : msg.Source
             });
         }
         else

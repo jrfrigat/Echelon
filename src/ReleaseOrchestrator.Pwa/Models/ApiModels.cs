@@ -48,6 +48,23 @@ public record TaskListItemDto(
 
 public record TaskRefDto(Guid Id, string ExternalId, string Title);
 
+// ---- task timeline (mirrors Application.DTOs.TaskTimelineDto) ----
+
+public record TaskTimelineDto(
+    Guid TaskId, string TaskExternalId, bool IsArchived,
+    DateTime? FirstSeenAt, string? FirstSeenSource,
+    TimelineCoverageDto Coverage, List<TimelineEntryDto> Entries);
+
+/// <summary>What the timeline cannot say. Rendered, never swallowed: an unexplained gap reads as "nothing happened".</summary>
+public record TimelineCoverageDto(DateTime? RecordingBeganAt, bool Truncated, bool AttributionIsShared);
+
+public record TimelineEntryDto(
+    DateTime At, string Category, string Kind,
+    string? ActorOid, string? ActorKind, string? ActorName,
+    string? SubjectKey, string? Detail, string ClockSource,
+    int Repetitions, DateTime? RepeatedUntil,
+    Guid? RolloutId, Guid? MergeRequestId, bool IsReassigned);
+
 /// <summary>A task's own facts and its place in the hierarchy — readable before any plan exists.</summary>
 public record TaskDetailDto(
     Guid Id, string ExternalId, string Title, string Status,

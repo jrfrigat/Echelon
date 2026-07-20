@@ -41,6 +41,30 @@ public class Rollout
     [MaxLength(64)]
     public string? LaunchedByOid { get; set; }
 
+    /// <summary>
+    /// The kind of actor that launched it (see <c>ActorKinds</c>): a person, a service principal, or
+    /// a machine path.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the oid because a null oid alone is ambiguous — it is equally true of a
+    /// background trigger and of a signed-in operator whose token carried no usable object id. A CI
+    /// pipeline's client-credential token in particular resolves an object id like anyone else, and
+    /// nothing here validates scopes, so without this a pipeline deploy reads as a person.
+    /// </remarks>
+    [MaxLength(32)]
+    public string? LaunchedByKind { get; set; }
+
+    /// <summary>
+    /// The launcher's display name as their token spelled it.
+    /// </summary>
+    /// <remarks>
+    /// Captured at launch because it cannot be looked up afterwards: this context derives from
+    /// <c>IdentityDbContext</c> but nothing ever creates a user, so <c>AspNetUsers</c> is empty and
+    /// an oid recorded without a name stays a raw GUID forever.
+    /// </remarks>
+    [MaxLength(200)]
+    public string? LaunchedByName { get; set; }
+
     /// <summary>Deterministic key that makes launching idempotent; unique.</summary>
     [Required, MaxLength(200)]
     public string IdempotencyKey { get; set; } = string.Empty;

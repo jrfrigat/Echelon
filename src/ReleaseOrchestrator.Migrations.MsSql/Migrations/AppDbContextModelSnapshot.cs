@@ -402,6 +402,60 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("MergeRequests");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestStatusChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ActorOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Cause")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("MergeRequestExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "MergeRequestId", "At" }, "IX_MergeRequestStatusChange_MergeRequestId_At");
+
+                    b.HasIndex(new[] { "TaskId", "At" }, "IX_MergeRequestStatusChange_TaskId_At");
+
+                    b.ToTable("MergeRequestStatusChanges");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeployClaim", b =>
                 {
                     b.Property<Guid>("MergeRequestId")
@@ -647,6 +701,14 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("LaunchedByKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("LaunchedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("LaunchedByOid")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -692,6 +754,18 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ActorKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ActorOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("At")
                         .HasColumnType("datetime2");
 
@@ -722,8 +796,24 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<string>("ConflictsJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("CreatedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CreatedByOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -765,6 +855,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .HasFilter("[IsActive] = 1");
 
                     b.HasIndex(new[] { "CreatedAt" }, "IX_RolloutPlan_CreatedAt");
+
+                    b.HasIndex(new[] { "TargetTaskId", "CreatedAt" }, "IX_RolloutPlan_TargetTaskId_CreatedAt");
 
                     b.ToTable("RolloutPlans");
                 });
@@ -895,6 +987,13 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("FirstSeenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FirstSeenSource")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 

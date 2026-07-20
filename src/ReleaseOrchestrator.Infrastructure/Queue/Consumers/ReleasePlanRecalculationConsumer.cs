@@ -44,8 +44,12 @@ public class ReleasePlanRecalculationConsumer(
             .Select(p => p.TargetTaskId)
             .ToListAsync(ct);
 
+        // Null actor: this is the planner running itself in response to an ingestion event, not
+        // anyone asking. Passing the operator whose action fanned out to here would be worse than
+        // passing nothing -- causality is not authorship, and one MR label can rebuild every plan
+        // in the system.
         foreach (var taskId in targetTaskIds)
-            await planner.RecalculateAsync(taskId, ct);
+            await planner.RecalculateAsync(taskId, actor: null, ct);
 
         if (targetTaskIds.Count > 0)
             logger.LogInformation(

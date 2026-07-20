@@ -15,6 +15,12 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// release plan (docs/issues/009-admin-and-migration.md).
 /// </remarks>
 [Index(nameof(CreatedAt), Name = "IX_RolloutPlan_CreatedAt")]
+// Plan history per task. The other TargetTaskId index is filtered to the active row, so it excludes
+// every superseded version -- exactly the rows a history read wants, on what is structurally the
+// largest table here (every ingestion event rebuilds every active plan). Attribute only: declaring
+// it fluently as well yields two indexes in the model and one in the database, which
+// has-pending-model-changes cannot see and only ModelMappingTests catches.
+[Index(nameof(TargetTaskId), nameof(CreatedAt), Name = "IX_RolloutPlan_TargetTaskId_CreatedAt")]
 public class RolloutPlan
 {
     /// <summary>Primary key.</summary>
@@ -40,6 +46,50 @@ public class RolloutPlan
     /// <summary>SHA-256 of the imported document, so an operator can tell whether this is still what they wrote.</summary>
     [MaxLength(64)]
     public string? YamlHash { get; set; }
+
+    /// <summary>
+    /// Fingerprint of what this plan actually says: the ordered deploy stages, the closure it covers,
+    /// and the constraints it could not honour.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Exists so a reader can tell a plan that changed from one that was merely rebuilt. Every
+    /// ingestion event rebuilds every active plan, so the overwhelming majority of versions are
+    /// byte-identical restatements; a history that lists them all is unreadable, and one that hides
+    /// them loses the real changes too. Equal consecutive hashes are collapsed at read time.
+    /// </para>
+    /// <para>
+    /// Deliberately covers the ORDER, not just membership. An operator adding a repository-ordering
+    /// rule reorders the deploy stages while the set of tasks and merge requests stays identical — a
+    /// membership fingerprint would call that "unchanged" at precisely the moment it changed most.
+    /// </para>
+    /// <para>
+    /// Null on versions built before this column existed, which is why collapsing requires equality
+    /// rather than treating null as a value: those never collapse, which is noisy but true.
+    /// </para>
+    /// </remarks>
+    [MaxLength(64)]
+    public string? ContentHash { get; set; }
+
+    /// <summary>The object id of the operator who asked for this rebuild, or null when the planner ran itself.</summary>
+    [MaxLength(64)]
+    public string? CreatedByOid { get; set; }
+
+    /// <summary>
+    /// The kind of actor that caused this version (see <c>ActorKinds</c>).
+    /// </summary>
+    /// <remarks>
+    /// The recalculation consumer rebuilds every active plan on every ingestion event, so most
+    /// versions are machine churn with no author. This is what separates that churn from a version
+    /// an operator deliberately asked for — and a deliberate rebuild is worth showing even when it
+    /// changed nothing, because "I pressed it and nothing happened" answers a real question.
+    /// </remarks>
+    [MaxLength(32)]
+    public string? CreatedByKind { get; set; }
+
+    /// <summary>The requesting operator's display name, captured because it cannot be resolved later.</summary>
+    [MaxLength(200)]
+    public string? CreatedByName { get; set; }
 
     /// <summary>
     /// Ordering constraints this plan does not honour, as JSON. Null means it honours every one.

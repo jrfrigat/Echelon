@@ -15,9 +15,9 @@ public interface IRolloutService
     /// </summary>
     /// <param name="taskId">The task to roll out.</param>
     /// <param name="environmentId">The target environment.</param>
-    /// <param name="launchedByOid">The launching operator's object id, for the audit trail.</param>
+    /// <param name="actor">Who launched it, for the audit trail.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, string? launchedByOid, CancellationToken ct = default);
+    Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, CancellationToken ct = default);
 
     /// <summary>The run and its steps, or <c>null</c> when it does not exist.</summary>
     /// <param name="rolloutId">The run id.</param>
@@ -31,18 +31,24 @@ public interface IRolloutService
 
     /// <summary>Requests cancellation: stops dispatching new steps and lets in-flight ones settle.</summary>
     /// <param name="rolloutId">The run id.</param>
+    /// <param name="actor">Who cancelled it, for the audit trail.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task CancelAsync(Guid rolloutId, CancellationToken ct = default);
+    Task CancelAsync(Guid rolloutId, ActorRef actor, CancellationToken ct = default);
 
     /// <summary>Resets a failed step to pending so the coordinator retries it, and resumes a paused run.</summary>
     /// <param name="rolloutId">The run id.</param>
     /// <param name="stepId">The step id.</param>
+    /// <param name="actor">Who retried it, for the audit trail. A retry changes no column a reader could attribute afterwards.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task RetryStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default);
+    Task RetryStepAsync(Guid rolloutId, Guid stepId, ActorRef actor, CancellationToken ct = default);
 
     /// <summary>Marks a step skipped (and its merge request skipped in the environment), and resumes a paused run.</summary>
     /// <param name="rolloutId">The run id.</param>
     /// <param name="stepId">The step id.</param>
+    /// <param name="actor">
+    /// Who skipped it. Declaring a merge request deployed without deploying it is the most
+    /// consequential thing an operator can do here, and it is unattributed today.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
-    Task SkipStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default);
+    Task SkipStepAsync(Guid rolloutId, Guid stepId, ActorRef actor, CancellationToken ct = default);
 }

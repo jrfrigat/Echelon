@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ReleaseOrchestrator.Application.Auditing;
+using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Actions;
@@ -87,6 +89,13 @@ public class RolloutCoordinator(
             {
                 await DriveOneAsync(scope.ServiceProvider, id, ct);
             }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // Another replica drove this rollout in the same tick and won. Ordinary under a
+                // shared lease, and the next tick re-reads: logged at Warning so it is visible, but
+                // not as an error, which would train an operator to ignore the error log.
+                logger.LogWarning(ex, "Rollout {Rollout} was updated concurrently; retrying on the next pass", id);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Driving rollout {Rollout} failed", id);
@@ -118,6 +127,31 @@ public class RolloutCoordinator(
             await DispatchWaveAsync(sp, db, rollout, ct);
 
         await SettleRolloutAsync(db, rollout, ct);
+
+        // One place records a status transition, and it is here rather than at each site that
+        // assigns one. The dominant pause is written by DispatchWaveAsync, which stops the run while
+        // later waves are still Pending -- SettleRolloutAsync's pause branch requires nothing
+        // Pending, so an event emitted there would miss the ordinary fail-stop entirely. Comparing
+        // against the status captured on entry catches every transition regardless of which branch
+        // produced it, including a future one nobody remembers to instrument.
+        //
+        // Succeeded is excluded: SettleRolloutAsync already writes it, and duplicating it here would
+        // put two events on one transition.
+        if (rollout.Status != statusBefore && rollout.Status is RolloutStatus.Paused or RolloutStatus.Cancelled)
+            db.RolloutEvents.Add(new RolloutEvent
+            {
+                Id = Guid.NewGuid(),
+                RolloutId = rollout.Id,
+                Kind = rollout.Status == RolloutStatus.Paused ? RolloutEventKinds.Paused : RolloutEventKinds.Cancelled,
+                ActorKind = ActorKinds.Coordinator,
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    failed = rollout.Steps.Count(s => s.State == RolloutStepState.Failed),
+                    total = rollout.Steps.Count
+                }),
+                At = clock.GetUtcNow().UtcDateTime
+            });
+
         await db.SaveChangesAsync(ct);
 
         // On a terminal transition, run the matching action bindings -- off the deploy path, so a
@@ -392,7 +426,11 @@ public class RolloutCoordinator(
         {
             rollout.Status = RolloutStatus.Succeeded;
             rollout.FinishedAt = now;
-            db.RolloutEvents.Add(new RolloutEvent { Id = Guid.NewGuid(), RolloutId = rollout.Id, Kind = "Succeeded", At = now });
+            db.RolloutEvents.Add(new RolloutEvent
+            {
+                Id = Guid.NewGuid(), RolloutId = rollout.Id, Kind = RolloutEventKinds.Succeeded,
+                ActorKind = ActorKinds.Coordinator, At = now
+            });
         }
         else if (!inFlight && rollout.Steps.Any(s => s.State == RolloutStepState.Failed)
                  && !rollout.Steps.Any(s => s.State == RolloutStepState.Pending))

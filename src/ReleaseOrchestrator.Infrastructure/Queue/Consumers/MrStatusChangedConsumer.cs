@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 
@@ -55,7 +57,17 @@ public class MrStatusChangedConsumer(
             return;
         }
 
+        // Captured before the assignment: after it there is nothing left that says what it was.
+        var previousStatus = mr.Status;
         mr.Status = msg.NewStatus;
+
+        // ChangedAt, not the local clock: this is the VCS's own account of when it happened, and it
+        // is what the merged/closed timestamps below are already stamped with. Using two different
+        // clocks for one event would put the journal entry and the timestamp it describes minutes
+        // apart on the same timeline.
+        MergeRequestStatusJournal.Record(
+            db, mr, previousStatus, msg.NewStatus,
+            MergeRequestStatusJournal.CauseWebhook, ActorRef.System, msg.ChangedAt);
 
         // A terminal state is reported by the VCS and overrides any manual pin.
         if (MergeRequestStatusResolver.IsTerminal(msg.NewStatus))

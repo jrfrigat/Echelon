@@ -42,7 +42,7 @@ public sealed class TaskConsumerTests : IAsyncLifetime
         await _db.Database.EnsureCreatedAsync(Ct);
 
         _bus = new RecordingBus();
-        _created = new TaskCreatedConsumer(_db, _bus, NullLogger<TaskCreatedConsumer>.Instance);
+        _created = new TaskCreatedConsumer(_db, _bus, new FakeTimeProvider(Now), NullLogger<TaskCreatedConsumer>.Instance);
         _statusChanged = new TaskStatusChangedConsumer(
             _db,
             new FakeTrackerProviderFactory(new FakeTrackerProvider()),

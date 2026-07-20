@@ -1,0 +1,251 @@
+@page "/tasks/{Id:guid}/timeline"
+@attribute [Authorize]
+@inherits PageBase
+
+@* History, not live state: no polling loop here on purpose. What is on screen cannot go stale in a
+   way that matters, and a poll would only add a CancellationTokenSource to leak. *@
+
+<PageTitle>@(_timeline?.TaskExternalId ?? UiStrings.Timeline_Title)</PageTitle>
+
+<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
+    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">
+        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.ArrowBack" /></LeadingIcon>
+        <ChildContent>@UiStrings.TaskDetail_Back</ChildContent>
+    </FlareButton>
+    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">
+        @string.Format(UiStrings.Timeline_Heading, _timeline?.TaskExternalId ?? "")
+    </FlareText>
+</FlareStack>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_timeline is null)
+{
+    <FlareEmptyState Title="@UiStrings.Timeline_NotFound_Title" Description="@UiStrings.Timeline_NotFound_Description" />
+}
+else
+{
+    @* ---- what this page cannot tell you, said up front ---- *@
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Gap="FlareSpacing.XSmall">
+                <FlareText Typo="TypographyScale.BodyMedium">
+                    @if (_timeline.FirstSeenAt is { } arrived)
+                    {
+                        @string.Format(UiStrings.Timeline_Arrived, arrived.ToString("g"),
+                            _timeline.FirstSeenSource ?? UiStrings.Timeline_Source_Unknown)
+                    }
+                    else
+                    {
+                        @UiStrings.Timeline_Arrival_NotRecorded
+                    }
+                </FlareText>
+
+                @if (_timeline.IsArchived)
+                {
+                    <FlareAlert Severity="AlertSeverity.Info" Title="@UiStrings.Timeline_Archived_Title">
+                        @UiStrings.Timeline_Archived_Body
+                    </FlareAlert>
+                }
+                @if (_timeline.Coverage.AttributionIsShared)
+                {
+                    <FlareAlert Severity="AlertSeverity.Warning" Title="@UiStrings.Timeline_SharedIdentity_Title">
+                        @UiStrings.Timeline_SharedIdentity_Body
+                    </FlareAlert>
+                }
+                @if (_timeline.Coverage.Truncated)
+                {
+                    <FlareAlert Severity="AlertSeverity.Warning" Title="@UiStrings.Timeline_Truncated_Title">
+                        @UiStrings.Timeline_Truncated_Body
+                    </FlareAlert>
+                }
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
+
+    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+        <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Timeline_Filter</FlareText>
+        <FlareChip Size="ChipSize.Sm" Color="@(_filter is null ? FlareColor.Primary : FlareColor.Default)"
+                   OnClick="@(() => _filter = null)">@UiStrings.Timeline_Filter_All</FlareChip>
+        <FlareChip Size="ChipSize.Sm" Color="@(_filter == "people" ? FlareColor.Primary : FlareColor.Default)"
+                   OnClick="@(() => _filter = "people")">@UiStrings.Timeline_Filter_People</FlareChip>
+        <FlareChip Size="ChipSize.Sm" Color="@(_filter == "rollout" ? FlareColor.Primary : FlareColor.Default)"
+                   OnClick="@(() => _filter = "rollout")">@UiStrings.Timeline_Filter_Deploys</FlareChip>
+    </FlareStack>
+
+    @if (Visible.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Timeline_Empty_Title" Description="@UiStrings.Timeline_Empty_Description" />
+    }
+    else
+    {
+        <FlareStack Gap="FlareSpacing.XSmall">
+            @foreach (var entry in Visible)
+            {
+                <FlareCard Variant="CardVariant.Outlined">
+                    <FlareCardContent>
+                        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                            <FlareIconView Value="@CategoryIcon(entry.Category)" />
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                @entry.At.ToString("g")
+                            </FlareText>
+
+                            @if (entry.ClockSource == "external")
+                            {
+                                @* The timestamp came from the VCS or tracker, so it is not strictly
+                                   comparable with ours. Marked rather than smoothed over. *@
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant"
+                                           Title="@UiStrings.Timeline_ExternalClock_Tooltip">~</FlareChip>
+                            }
+
+                            <FlareText Typo="TypographyScale.BodyMedium">@Describe(entry)</FlareText>
+
+                            @if (entry.SubjectKey is { Length: > 0 })
+                            {
+                                <FlareChip Size="ChipSize.Sm">@entry.SubjectKey</FlareChip>
+                            }
+                            @if (entry.Repetitions > 1)
+                            {
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant"
+                                           Title="@string.Format(UiStrings.Timeline_Collapsed_Tooltip, entry.RepeatedUntil?.ToString("g"))">
+                                    @($"x{entry.Repetitions}")
+                                </FlareChip>
+                            }
+                            @if (entry.IsReassigned)
+                            {
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
+                                           Title="@UiStrings.Timeline_Reassigned_Tooltip">@UiStrings.Timeline_Reassigned</FlareChip>
+                            }
+
+                            <FlareSpacer />
+
+                            <FlareChip Size="ChipSize.Sm" Color="@ActorColor(entry.ActorKind)"
+                                       Title="@(entry.ActorOid ?? "")">@ActorLabel(entry)</FlareChip>
+
+                            @if (entry.RolloutId is { } rolloutId)
+                            {
+                                <FlareIconButton Size="ButtonSize.Sm" AriaLabel="@UiStrings.Timeline_OpenRollout"
+                                                 OnClick="@(() => Nav.NavigateTo($"/rollouts/{rolloutId}"))">
+                                    <FlareIconView Value="MaterialDesign3Icons.Regular.RocketLaunch" />
+                                </FlareIconButton>
+                            }
+                        </FlareStack>
+
+                        @if (entry.Detail is { Length: > 0 })
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                @entry.Detail
+                            </FlareText>
+                        }
+                    </FlareCardContent>
+                </FlareCard>
+            }
+        </FlareStack>
+    }
+
+    @* The line before which silence means "not recorded", not "nothing happened". *@
+    @if (_timeline.Coverage.RecordingBeganAt is { } began)
+    {
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @string.Format(UiStrings.Timeline_RecordingBegan, began.ToString("g"))
+        </FlareText>
+    }
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    TaskTimelineDto? _timeline;
+    bool _loading = true;
+    string? _filter;
+    Guid _loadedId;
+
+    List<TimelineEntryDto> Visible => (_timeline?.Entries ?? [])
+        .Where(e => _filter switch
+        {
+            // "People only" is the filter that answers "who did what", and it is one click.
+            "people" => e.ActorKind is "user" or "service" or "unidentified",
+            "rollout" => e.Category == "rollout",
+            _ => true
+        })
+        .ToList();
+
+    /// <summary>Keyed on the route parameter: Blazor reuses this component when navigating between tasks.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == Id) return;
+        _loadedId = Id;
+        await Load();
+    }
+
+    async Task Load()
+    {
+        _loading = true;
+        await RunAsync(async () => _timeline = await Api.GetTaskTimelineAsync(Id));
+        _loading = false;
+    }
+
+    void Back() => Nav.NavigateTo($"/tasks/{Id}");
+
+    /// <summary>
+    /// Maps the server's stable Kind token to a localized sentence. The API never sends prose, so the
+    /// page stays translatable and a caller that is not this page gets something it can switch on.
+    /// </summary>
+    string Describe(TimelineEntryDto e) => e.Kind switch
+    {
+        "TaskFirstSeen" => UiStrings.Timeline_Kind_TaskFirstSeen,
+        "TaskClosed" => UiStrings.Timeline_Kind_TaskClosed,
+        "MrOpened" => UiStrings.Timeline_Kind_MrOpened,
+        "MrStatusChanged" => UiStrings.Timeline_Kind_MrStatusChanged,
+        "MrMerged" => UiStrings.Timeline_Kind_MrMerged,
+        "MrClosed" => UiStrings.Timeline_Kind_MrClosed,
+        "PlanRecalculated" => UiStrings.Timeline_Kind_PlanRecalculated,
+        "DeployAttempt" => UiStrings.Timeline_Kind_DeployAttempt,
+        "Launched" => UiStrings.Timeline_Kind_Launched,
+        "LaunchCoalesced" => UiStrings.Timeline_Kind_LaunchCoalesced,
+        "Succeeded" => UiStrings.Timeline_Kind_Succeeded,
+        "Paused" => UiStrings.Timeline_Kind_Paused,
+        "Cancelled" => UiStrings.Timeline_Kind_Cancelled,
+        "StepRetried" => UiStrings.Timeline_Kind_StepRetried,
+        "StepSkipped" => UiStrings.Timeline_Kind_StepSkipped,
+        "TrackerStatusPushed" => UiStrings.Timeline_Kind_TrackerStatusPushed,
+        // An unknown kind is shown raw rather than hidden: a new server-side event must be visible
+        // even before this page learns its wording.
+        _ => e.Kind
+    };
+
+    /// <summary>
+    /// The actor as a short label. An unresolvable person reads as such, never as a machine — that
+    /// distinction is the whole reason the server sends a kind alongside the id.
+    /// </summary>
+    string ActorLabel(TimelineEntryDto e) => e.ActorKind switch
+    {
+        null => UiStrings.Timeline_Actor_System,
+        "user" or "service" => e.ActorName
+            ?? (e.ActorOid is { Length: > 8 } oid ? oid[..8] : e.ActorOid ?? UiStrings.Timeline_Actor_System),
+        "unidentified" => e.ActorName ?? UiStrings.Timeline_Actor_Unidentified,
+        _ => UiStrings.Timeline_Actor_System
+    };
+
+    static FlareColor ActorColor(string? actorKind) => actorKind switch
+    {
+        "user" => FlareColor.Primary,
+        "service" => FlareColor.Secondary,
+        "unidentified" => FlareColor.Warning,
+        _ => FlareColor.Default
+    };
+
+    static FlareIcon CategoryIcon(string category) => category switch
+    {
+        "task" => MaterialDesign3Icons.Regular.Assignment,
+        "mergeRequest" => MaterialDesign3Icons.Regular.Link,
+        "plan" => MaterialDesign3Icons.Regular.Checklist,
+        _ => MaterialDesign3Icons.Regular.RocketLaunch
+    };
+}

@@ -44,6 +44,28 @@ public class TaskItem
     /// <summary>When the task reached a closed status. Archiving keys off this.</summary>
     public DateTime? ClosedAt { get; set; }
 
+    /// <summary>
+    /// When this service first stored the task. Null for tasks that predate the column.
+    /// </summary>
+    /// <remarks>
+    /// Written on insert only, and deliberately not backfilled: "we do not know when this arrived"
+    /// has to stay distinguishable from a real timestamp, or the history quietly claims every
+    /// pre-existing task arrived on the day this shipped.
+    /// </remarks>
+    public DateTime? FirstSeenAt { get; set; }
+
+    /// <summary>
+    /// How it arrived: the ingestion source, or a marker for the paths that are not arrivals.
+    /// </summary>
+    /// <remarks>
+    /// Null where the creating path knows of no source — rendered as "arrival channel not recorded".
+    /// It is never filled in from the tracker connection instead, tempting as that is: a task
+    /// created because a merge-request branch mentioned its key would then read as having been
+    /// announced by the tracker, which is a webhook that never happened.
+    /// </remarks>
+    [MaxLength(200)]
+    public string? FirstSeenSource { get; set; }
+
     /// <summary>The tracker it came from.</summary>
     public Guid TrackerConnectionId { get; set; }
 

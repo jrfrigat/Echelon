@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 using ReleaseOrchestrator.Application.Contracts.Messages;
+using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -79,8 +81,17 @@ public class MrOpenedConsumer(
         {
             mr.MergedAt = null;
             mr.ClosedAt = null;
+
+            var previousStatus = isNew ? (MergeRequestStatus?)null : mr.Status;
             mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
                 msg.Labels, repo.Connection.ReadyForDeployLabel, mr.IsStatusManual, mr.Status);
+
+            // The label-driven promotion to ReadyForDeploy happens here and nowhere else. It decides
+            // whether this merge request is in the plan at all, and it overwrites the column in
+            // place, so without this row nothing afterwards can say when it became deployable.
+            MergeRequestStatusJournal.Record(
+                db, mr, previousStatus, mr.Status,
+                MergeRequestStatusJournal.CauseLabel, ActorRef.System, clock.GetUtcNow().UtcDateTime);
         }
         else
         {

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ReleaseOrchestrator.Application.Auditing;
 using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Application.ReleasePlanning;
@@ -25,7 +26,7 @@ public class RolloutService(
     ILogger<RolloutService> logger) : IRolloutService
 {
     /// <inheritdoc/>
-    public async Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, string? launchedByOid, CancellationToken ct = default)
+    public async Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow().UtcDateTime;
 
@@ -59,7 +60,17 @@ public class RolloutService(
         var live = existing.FirstOrDefault(r =>
             r.Status is not (RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled));
         if (live is not null)
+        {
+            // Record who asked before handing back somebody else's run. This path answers 200 and
+            // changes nothing, so without an event the second operator to press Launch leaves no
+            // trace at all and the audit credits the run entirely to the first -- on a production
+            // deploy, quite possibly the wrong person.
+            db.RolloutEvents.Add(NewEvent(live.Id, RolloutEventKinds.LaunchCoalesced, actor, now,
+                new { environment = env.Key, existingStatus = live.Status.ToString() }));
+            await db.SaveChangesAsync(ct);
+
             return (await GetAsync(live.Id, ct))!;
+        }
         if (existing.Count > 0)
             throw new DomainValidationException(
                 $"This plan version has already been rolled out to '{env.Key}'. Recalculate the plan to roll out again.");
@@ -158,18 +169,19 @@ public class RolloutService(
             EnvironmentId = environmentId,
             PlanSnapshotJson = JsonSerializer.Serialize(snapshot),
             Status = RolloutStatus.Running,
-            LaunchedByOid = launchedByOid,
+            LaunchedByOid = actor.Oid,
+            LaunchedByKind = actor.Kind,
+            LaunchedByName = actor.DisplayName,
             IdempotencyKey = idempotencyKey,
             StartedAt = now,
             Steps = steps
         };
 
         db.Rollouts.Add(rollout);
-        db.RolloutEvents.Add(new RolloutEvent
-        {
-            Id = Guid.NewGuid(), RolloutId = rollout.Id, Kind = "Launched",
-            PayloadJson = JsonSerializer.Serialize(new { environment = env.Key, steps = steps.Count }), At = now
-        });
+        // Same actor on both rows, written in one unit of work, so the run and its opening event
+        // cannot disagree about who launched it.
+        db.RolloutEvents.Add(NewEvent(rollout.Id, RolloutEventKinds.Launched, actor, now,
+            new { environment = env.Key, steps = steps.Count }));
 
         try
         {
@@ -234,27 +246,42 @@ public class RolloutService(
     }
 
     /// <inheritdoc/>
-    public async Task CancelAsync(Guid rolloutId, CancellationToken ct = default)
+    public async Task CancelAsync(Guid rolloutId, ActorRef actor, CancellationToken ct = default)
     {
         var r = await db.Rollouts.Include(x => x.Steps).FirstOrDefaultAsync(x => x.Id == rolloutId, ct)
             ?? throw new NotFoundException($"Rollout {rolloutId} not found");
 
-        if (r.Status is RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled)
+        // Cancelling belongs in this guard: a second cancel of an already-cancelling run assigns the
+        // status it already has, EF emits no UPDATE, and the call answers 204 having done nothing.
+        // Without it the audit would gain an event for a change that never happened.
+        if (r.Status is RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled or RolloutStatus.Cancelling)
             throw new DomainValidationException($"Rollout is already {r.Status} and cannot be cancelled.");
+
+        var now = clock.GetUtcNow().UtcDateTime;
 
         // If nothing is in flight, cancel outright; otherwise let in-flight steps settle.
         var inFlight = r.Steps.Any(s => s.State is RolloutStepState.Deploying or RolloutStepState.Awaiting or RolloutStepState.Claimed);
         r.Status = inFlight ? RolloutStatus.Cancelling : RolloutStatus.Cancelled;
-        if (!inFlight) r.FinishedAt = clock.GetUtcNow().UtcDateTime;
+        if (!inFlight) r.FinishedAt = now;
+
+        db.RolloutEvents.Add(NewEvent(r.Id, RolloutEventKinds.Cancelled, actor, now,
+            new { settling = inFlight }));
         await db.SaveChangesAsync(ct);
     }
 
     /// <inheritdoc/>
-    public async Task RetryStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default)
+    public async Task RetryStepAsync(Guid rolloutId, Guid stepId, ActorRef actor, CancellationToken ct = default)
     {
         var (r, step) = await LoadStepAsync(rolloutId, stepId, ct);
         if (step.State != RolloutStepState.Failed)
             throw new DomainValidationException("Only a failed step can be retried.");
+
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        // The error text is captured into the event before it is cleared: after this method the step
+        // reads Pending with no error, so nothing downstream could reconstruct what was retried or why.
+        db.RolloutEvents.Add(NewEvent(r.Id, RolloutEventKinds.StepRetried, actor, now,
+            new { stepId = step.Id, mergeRequestId = step.MergeRequestId, previousError = step.LastError }));
 
         step.State = RolloutStepState.Pending;
         step.LastError = null;
@@ -263,19 +290,44 @@ public class RolloutService(
     }
 
     /// <inheritdoc/>
-    public async Task SkipStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct = default)
+    public async Task SkipStepAsync(Guid rolloutId, Guid stepId, ActorRef actor, CancellationToken ct = default)
     {
         var (r, step) = await LoadStepAsync(rolloutId, stepId, ct);
         if (step.State is RolloutStepState.Succeeded or RolloutStepState.Skipped)
             throw new DomainValidationException($"Step is already {step.State}.");
 
         var now = clock.GetUtcNow().UtcDateTime;
+
+        // Skipping declares the merge request deployed in this environment without deploying it, and
+        // the readiness gate trusts that for every later rollout. Of everything an operator can do
+        // here it is the action most worth being able to attribute afterwards.
+        db.RolloutEvents.Add(NewEvent(r.Id, RolloutEventKinds.StepSkipped, actor, now,
+            new { stepId = step.Id, mergeRequestId = step.MergeRequestId, previousState = step.State.ToString() }));
+
         step.State = RolloutStepState.Skipped;
         step.FinishedAt = now;
         await UpsertDeploymentStateAsync(step.MergeRequestId, r.EnvironmentId, DeploymentState.Skipped, now, ct);
         if (r.Status == RolloutStatus.Paused) r.Status = RolloutStatus.Running;
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>
+    /// Builds an event row. Added to the context by the caller so it lands in the caller's unit of
+    /// work — an audit row that could commit while the change it describes rolled back would be
+    /// worse than no audit row.
+    /// </summary>
+    private static RolloutEvent NewEvent(Guid rolloutId, string kind, ActorRef actor, DateTime at, object? payload) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            RolloutId = rolloutId,
+            Kind = kind,
+            ActorOid = actor.Oid,
+            ActorKind = actor.Kind,
+            ActorName = actor.DisplayName,
+            PayloadJson = payload is null ? null : JsonSerializer.Serialize(payload),
+            At = at
+        };
 
     private async Task<(Rollout, RolloutStep)> LoadStepAsync(Guid rolloutId, Guid stepId, CancellationToken ct)
     {

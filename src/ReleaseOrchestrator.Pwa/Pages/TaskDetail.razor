@@ -11,6 +11,10 @@
     </FlareButton>
     <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? "")</FlareText>
     <FlareSpacer />
+    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="@(() => Nav.NavigateTo($"/tasks/{Id}/timeline"))">
+        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Schedule" /></LeadingIcon>
+        <ChildContent>@UiStrings.Timeline_Title</ChildContent>
+    </FlareButton>
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="Recalculate" Disabled="_busy">
         <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" /></LeadingIcon>
         <ChildContent>@UiStrings.TaskDetail_Recalculate</ChildContent>

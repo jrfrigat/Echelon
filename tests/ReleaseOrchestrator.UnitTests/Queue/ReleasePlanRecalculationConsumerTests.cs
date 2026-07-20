@@ -66,9 +66,13 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         public List<Guid> Recalculated { get; } = [];
         public Exception? Throws { get; set; }
 
-        public Task<RolloutPlanDto> RecalculateAsync(Guid taskId, CancellationToken ct = default)
+        /// <summary>Records the actor too: the consumer must pass none, and a regression there would be silent.</summary>
+        public List<ActorRef?> Actors { get; } = [];
+
+        public Task<RolloutPlanDto> RecalculateAsync(Guid taskId, ActorRef? actor, CancellationToken ct = default)
         {
             Recalculated.Add(taskId);
+            Actors.Add(actor);
             return Throws is not null
                 ? Task.FromException<RolloutPlanDto>(Throws)
                 : Task.FromResult<RolloutPlanDto>(null!);

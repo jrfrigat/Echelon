@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -79,7 +81,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     }
 
     /// <inheritdoc/>
-    public async Task<RolloutPlanDto> RecalculateAsync(Guid taskId, CancellationToken ct = default)
+    public async Task<RolloutPlanDto> RecalculateAsync(Guid taskId, ActorRef? actor, CancellationToken ct = default)
     {
         // Stamped before the read: anything committed before this instant is in the plan.
         var snapshotStartedAt = clock.GetUtcNow().UtcDateTime;
@@ -102,6 +104,13 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             UpdatedAt = now,
             SnapshotStartedAt = snapshotStartedAt,
             ConflictsJson = computed.Graph.Conflicts.Count == 0 ? null : JsonSerializer.Serialize(computed.Graph.Conflicts),
+            ContentHash = ComputeContentHash(computed),
+            // Null for the recalculation consumer, which rebuilds every active plan on every
+            // ingestion event. Stamped inside the same transaction as the plan below, so authorship
+            // cannot commit without the version it describes.
+            CreatedByOid = actor?.Oid,
+            CreatedByKind = actor?.Kind,
+            CreatedByName = actor?.DisplayName,
             Nodes = []
         };
 
@@ -132,6 +141,52 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 target.ExternalId, computed.Graph.Conflicts.Count);
 
         return await BuildDtoAsync(plan, computed, ct);
+    }
+
+    /// <summary>
+    /// Fingerprints what the plan says, so a rebuild that changed nothing can be told from one that did.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Hashes the ORDERED STAGES — the actual deploy order — plus the closure and the dropped
+    /// constraints. Hashing which merge requests are in the plan would be cheaper and wrong: adding
+    /// a repository-ordering rule reorders the stages while membership is untouched, so a
+    /// membership fingerprint would report "plan unchanged" about the one edit whose entire purpose
+    /// was to change the order.
+    /// </para>
+    /// <para>
+    /// The closure is included because a prerequisite task joining or leaving changes what the
+    /// rollout covers even when no merge request moves; the conflicts because a plan that started
+    /// violating a constraint is a different plan, whatever its order.
+    /// </para>
+    /// </remarks>
+    private static string ComputeContentHash(Computed computed)
+    {
+        var builder = new StringBuilder();
+
+        // Stage index included explicitly: without it, moving a merge request between two adjacent
+        // stages would produce the same flattened sequence of ids.
+        for (int stage = 0; stage < computed.Graph.Stages.Count; stage++)
+        {
+            builder.Append(stage).Append(':');
+            foreach (var mrId in computed.Graph.Stages[stage])
+                builder.Append(mrId.ToString("N")).Append(',');
+            builder.Append(';');
+        }
+
+        builder.Append('|');
+        // Sorted: the closure is a set, and its enumeration order must not make an unchanged plan
+        // look changed.
+        foreach (var closureTaskId in computed.Closure.OrderBy(id => id))
+            builder.Append(closureTaskId.ToString("N")).Append(',');
+
+        builder.Append('|');
+        foreach (var conflict in computed.Graph.Conflicts.OrderBy(c => c.FromMrId).ThenBy(c => c.ToMrId))
+            builder.Append(conflict.DroppedEdgeKind).Append(':')
+                   .Append(conflict.FromMrId.ToString("N")).Append("->")
+                   .Append(conflict.ToMrId.ToString("N")).Append(',');
+
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
     private sealed record Computed(

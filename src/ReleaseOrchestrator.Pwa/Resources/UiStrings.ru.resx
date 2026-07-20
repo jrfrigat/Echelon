@@ -666,4 +666,133 @@
   <data name="Login_Failed" xml:space="preserve">
     <value>Неверное имя пользователя или пароль.</value>
   </data>
+  <data name="Timeline_Title" xml:space="preserve">
+    <value>История</value>
+  </data>
+  <data name="Timeline_Heading" xml:space="preserve">
+    <value>История {0}</value>
+  </data>
+  <data name="Timeline_NotFound_Title" xml:space="preserve">
+    <value>Задача не найдена</value>
+  </data>
+  <data name="Timeline_NotFound_Description" xml:space="preserve">
+    <value>Такой задачи нет ни в рабочей базе, ни в архиве.</value>
+  </data>
+  <data name="Timeline_Arrived" xml:space="preserve">
+    <value>Пришла {0} через {1}</value>
+  </data>
+  <data name="Timeline_Source_Unknown" xml:space="preserve">
+    <value>неизвестный канал</value>
+  </data>
+  <data name="Timeline_Arrival_NotRecorded" xml:space="preserve">
+    <value>Момент появления не записан - задача старше, чем сама история.</value>
+  </data>
+  <data name="Timeline_Archived_Title" xml:space="preserve">
+    <value>Задача в архиве</value>
+  </data>
+  <data name="Timeline_Archived_Body" xml:space="preserve">
+    <value>Задача заархивирована. Показано то, что сохранил архив; оперативных подробностей уже нет.</value>
+  </data>
+  <data name="Timeline_SharedIdentity_Title" xml:space="preserve">
+    <value>Авторство здесь не персональное</value>
+  </data>
+  <data name="Timeline_SharedIdentity_Body" xml:space="preserve">
+    <value>В этой установке всем операторам выдаётся одна учётная запись, поэтому любое "кто" ниже - один и тот же аккаунт, кто бы ни действовал. Персональное авторство требует Entra или OIDC.</value>
+  </data>
+  <data name="Timeline_Truncated_Title" xml:space="preserve">
+    <value>История усечена</value>
+  </data>
+  <data name="Timeline_Truncated_Body" xml:space="preserve">
+    <value>Событий больше, чем помещается на страницу. Показаны самые свежие, более старые отсутствуют.</value>
+  </data>
+  <data name="Timeline_Filter" xml:space="preserve">
+    <value>Показать</value>
+  </data>
+  <data name="Timeline_Filter_All" xml:space="preserve">
+    <value>Всё</value>
+  </data>
+  <data name="Timeline_Filter_People" xml:space="preserve">
+    <value>Только люди</value>
+  </data>
+  <data name="Timeline_Filter_Deploys" xml:space="preserve">
+    <value>Выкатки</value>
+  </data>
+  <data name="Timeline_Empty_Title" xml:space="preserve">
+    <value>Ничего не записано</value>
+  </data>
+  <data name="Timeline_Empty_Description" xml:space="preserve">
+    <value>Под этот фильтр не попало ни одного события.</value>
+  </data>
+  <data name="Timeline_RecordingBegan" xml:space="preserve">
+    <value>Запись истории началась {0}. Тишина до этого момента означает "не записано", а не "ничего не было".</value>
+  </data>
+  <data name="Timeline_ExternalClock_Tooltip" xml:space="preserve">
+    <value>Это время пришло из VCS или трекера, а не от этого сервиса, поэтому оно может не совпадать с остальными.</value>
+  </data>
+  <data name="Timeline_Collapsed_Tooltip" xml:space="preserve">
+    <value>Повторялось без изменений до {0}.</value>
+  </data>
+  <data name="Timeline_Reassigned" xml:space="preserve">
+    <value>перенесён</value>
+  </data>
+  <data name="Timeline_Reassigned_Tooltip" xml:space="preserve">
+    <value>Этот merge request теперь относится к другой задаче. Запись сохранена, потому что событие произошло, пока он был здесь.</value>
+  </data>
+  <data name="Timeline_OpenRollout" xml:space="preserve">
+    <value>Открыть выкатку</value>
+  </data>
+  <data name="Timeline_Actor_System" xml:space="preserve">
+    <value>система</value>
+  </data>
+  <data name="Timeline_Actor_Unidentified" xml:space="preserve">
+    <value>вошёл, не опознан</value>
+  </data>
+  <data name="Timeline_Kind_TaskFirstSeen" xml:space="preserve">
+    <value>Задача появилась</value>
+  </data>
+  <data name="Timeline_Kind_TaskClosed" xml:space="preserve">
+    <value>Задача закрыта</value>
+  </data>
+  <data name="Timeline_Kind_MrOpened" xml:space="preserve">
+    <value>Merge request открыт</value>
+  </data>
+  <data name="Timeline_Kind_MrStatusChanged" xml:space="preserve">
+    <value>Статус merge request изменился</value>
+  </data>
+  <data name="Timeline_Kind_MrMerged" xml:space="preserve">
+    <value>Merge request влит</value>
+  </data>
+  <data name="Timeline_Kind_MrClosed" xml:space="preserve">
+    <value>Merge request закрыт</value>
+  </data>
+  <data name="Timeline_Kind_PlanRecalculated" xml:space="preserve">
+    <value>План пересчитан</value>
+  </data>
+  <data name="Timeline_Kind_DeployAttempt" xml:space="preserve">
+    <value>Попытка выкатки</value>
+  </data>
+  <data name="Timeline_Kind_Launched" xml:space="preserve">
+    <value>Выкатка запущена</value>
+  </data>
+  <data name="Timeline_Kind_LaunchCoalesced" xml:space="preserve">
+    <value>Запуск запрошен для уже идущей выкатки</value>
+  </data>
+  <data name="Timeline_Kind_Succeeded" xml:space="preserve">
+    <value>Выкатка успешна</value>
+  </data>
+  <data name="Timeline_Kind_Paused" xml:space="preserve">
+    <value>Выкатка приостановлена</value>
+  </data>
+  <data name="Timeline_Kind_Cancelled" xml:space="preserve">
+    <value>Выкатка отменена</value>
+  </data>
+  <data name="Timeline_Kind_StepRetried" xml:space="preserve">
+    <value>Шаг перезапущен</value>
+  </data>
+  <data name="Timeline_Kind_StepSkipped" xml:space="preserve">
+    <value>Шаг пропущен</value>
+  </data>
+  <data name="Timeline_Kind_TrackerStatusPushed" xml:space="preserve">
+    <value>Статус записан обратно в трекер</value>
+  </data>
 </root>

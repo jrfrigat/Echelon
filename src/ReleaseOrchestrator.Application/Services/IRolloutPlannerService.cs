@@ -38,6 +38,15 @@ public interface IRolloutPlannerService
     /// Rebuilds the target task's plan from the atlas and makes it the active plan for that task.
     /// </summary>
     /// <param name="taskId">The target task.</param>
+    /// <param name="actor">
+    /// Who asked for the rebuild, or <c>null</c> when the planner ran itself — the recalculation
+    /// consumer rebuilds every active plan on every ingestion event, and that churn has no author.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
-    Task<RolloutPlanDto> RecalculateAsync(Guid taskId, CancellationToken ct = default);
+    /// <remarks>
+    /// One method with a nullable actor rather than a second user-aware overload: two entry points
+    /// into the same rebuild would eventually differ in what they record, and the one that differed
+    /// would be the machine path nobody watches.
+    /// </remarks>
+    Task<RolloutPlanDto> RecalculateAsync(Guid taskId, ActorRef? actor, CancellationToken ct = default);
 }

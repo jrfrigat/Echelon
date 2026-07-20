@@ -666,4 +666,133 @@
   <data name="Login_Failed" xml:space="preserve">
     <value>Wrong username or password.</value>
   </data>
+  <data name="Timeline_Title" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="Timeline_Heading" xml:space="preserve">
+    <value>History of {0}</value>
+  </data>
+  <data name="Timeline_NotFound_Title" xml:space="preserve">
+    <value>Task not found</value>
+  </data>
+  <data name="Timeline_NotFound_Description" xml:space="preserve">
+    <value>No such task exists, in the live database or in the archive.</value>
+  </data>
+  <data name="Timeline_Arrived" xml:space="preserve">
+    <value>Arrived {0} via {1}</value>
+  </data>
+  <data name="Timeline_Source_Unknown" xml:space="preserve">
+    <value>an unrecorded channel</value>
+  </data>
+  <data name="Timeline_Arrival_NotRecorded" xml:space="preserve">
+    <value>Arrival not recorded - this task predates history recording.</value>
+  </data>
+  <data name="Timeline_Archived_Title" xml:space="preserve">
+    <value>Archived task</value>
+  </data>
+  <data name="Timeline_Archived_Body" xml:space="preserve">
+    <value>This task has been archived. What is shown is what the archive preserved; live detail is gone.</value>
+  </data>
+  <data name="Timeline_SharedIdentity_Title" xml:space="preserve">
+    <value>Attribution is not per-person here</value>
+  </data>
+  <data name="Timeline_SharedIdentity_Body" xml:space="preserve">
+    <value>This deployment issues one identity to every operator, so every "who" below is the same account regardless of who acted. Per-person attribution needs Entra or OIDC.</value>
+  </data>
+  <data name="Timeline_Truncated_Title" xml:space="preserve">
+    <value>History truncated</value>
+  </data>
+  <data name="Timeline_Truncated_Body" xml:space="preserve">
+    <value>There are more events than fit in one page. The most recent are shown; older ones are missing.</value>
+  </data>
+  <data name="Timeline_Filter" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Timeline_Filter_All" xml:space="preserve">
+    <value>Everything</value>
+  </data>
+  <data name="Timeline_Filter_People" xml:space="preserve">
+    <value>People only</value>
+  </data>
+  <data name="Timeline_Filter_Deploys" xml:space="preserve">
+    <value>Deployments</value>
+  </data>
+  <data name="Timeline_Empty_Title" xml:space="preserve">
+    <value>Nothing recorded</value>
+  </data>
+  <data name="Timeline_Empty_Description" xml:space="preserve">
+    <value>No events match this filter.</value>
+  </data>
+  <data name="Timeline_RecordingBegan" xml:space="preserve">
+    <value>History recording began {0}. Silence before that means "not recorded", not "nothing happened".</value>
+  </data>
+  <data name="Timeline_ExternalClock_Tooltip" xml:space="preserve">
+    <value>This time came from the VCS or tracker, not from this service, so it may not line up exactly with the rest.</value>
+  </data>
+  <data name="Timeline_Collapsed_Tooltip" xml:space="preserve">
+    <value>Repeated identically until {0}.</value>
+  </data>
+  <data name="Timeline_Reassigned" xml:space="preserve">
+    <value>moved</value>
+  </data>
+  <data name="Timeline_Reassigned_Tooltip" xml:space="preserve">
+    <value>This merge request now belongs to another task. The entry is kept because it happened while it belonged here.</value>
+  </data>
+  <data name="Timeline_OpenRollout" xml:space="preserve">
+    <value>Open rollout</value>
+  </data>
+  <data name="Timeline_Actor_System" xml:space="preserve">
+    <value>system</value>
+  </data>
+  <data name="Timeline_Actor_Unidentified" xml:space="preserve">
+    <value>signed in, unidentified</value>
+  </data>
+  <data name="Timeline_Kind_TaskFirstSeen" xml:space="preserve">
+    <value>Task arrived</value>
+  </data>
+  <data name="Timeline_Kind_TaskClosed" xml:space="preserve">
+    <value>Task closed</value>
+  </data>
+  <data name="Timeline_Kind_MrOpened" xml:space="preserve">
+    <value>Merge request opened</value>
+  </data>
+  <data name="Timeline_Kind_MrStatusChanged" xml:space="preserve">
+    <value>Merge request status changed</value>
+  </data>
+  <data name="Timeline_Kind_MrMerged" xml:space="preserve">
+    <value>Merge request merged</value>
+  </data>
+  <data name="Timeline_Kind_MrClosed" xml:space="preserve">
+    <value>Merge request closed</value>
+  </data>
+  <data name="Timeline_Kind_PlanRecalculated" xml:space="preserve">
+    <value>Plan recalculated</value>
+  </data>
+  <data name="Timeline_Kind_DeployAttempt" xml:space="preserve">
+    <value>Deploy attempt</value>
+  </data>
+  <data name="Timeline_Kind_Launched" xml:space="preserve">
+    <value>Rollout launched</value>
+  </data>
+  <data name="Timeline_Kind_LaunchCoalesced" xml:space="preserve">
+    <value>Launch requested for a run already in progress</value>
+  </data>
+  <data name="Timeline_Kind_Succeeded" xml:space="preserve">
+    <value>Rollout succeeded</value>
+  </data>
+  <data name="Timeline_Kind_Paused" xml:space="preserve">
+    <value>Rollout paused</value>
+  </data>
+  <data name="Timeline_Kind_Cancelled" xml:space="preserve">
+    <value>Rollout cancelled</value>
+  </data>
+  <data name="Timeline_Kind_StepRetried" xml:space="preserve">
+    <value>Step retried</value>
+  </data>
+  <data name="Timeline_Kind_StepSkipped" xml:space="preserve">
+    <value>Step skipped</value>
+  </data>
+  <data name="Timeline_Kind_TrackerStatusPushed" xml:space="preserve">
+    <value>Status written back to the tracker</value>
+  </data>
 </root>

@@ -26,12 +26,15 @@ public class PermissionsController(
     ILogger<PermissionsController> logger,
     IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
-    private string ActorId => UserIdentifier.TryResolve(User, out var objectId)
-        ? objectId
-        : User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
+    // Delegates to the one resolution path rather than keeping a second: this controller's own
+    // version predates the audit trail, and two answers to "who is calling" eventually disagree.
+    // The NameIdentifier fallback is preserved -- for an unresolvable principal it is still the
+    // most identifying thing in the token, and these are permission-grant log lines.
+    private string ActorId => this.ResolveActor().Oid
+        ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? "unknown";
 
-    private string ActorName =>
-        User.FindFirstValue("preferred_username") ?? User.Identity?.Name ?? "unknown";
+    private string ActorName => this.ResolveActor().DisplayName ?? "unknown";
 
     [HttpGet("claims")]
     public async Task<IActionResult> ListClaims(CancellationToken ct)

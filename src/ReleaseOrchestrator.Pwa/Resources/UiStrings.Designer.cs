@@ -1793,5 +1793,392 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+
+        /// <summary>
+        ///   Looks up a localized string similar to History.
+        /// </summary>
+        public static string Timeline_Title {
+            get {
+                return ResourceManager.GetString("Timeline_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to History of {0}.
+        /// </summary>
+        public static string Timeline_Heading {
+            get {
+                return ResourceManager.GetString("Timeline_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Task not found.
+        /// </summary>
+        public static string Timeline_NotFound_Title {
+            get {
+                return ResourceManager.GetString("Timeline_NotFound_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No such task exists, in the live database or in the archive..
+        /// </summary>
+        public static string Timeline_NotFound_Description {
+            get {
+                return ResourceManager.GetString("Timeline_NotFound_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrived {0} via {1}.
+        /// </summary>
+        public static string Timeline_Arrived {
+            get {
+                return ResourceManager.GetString("Timeline_Arrived", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to an unrecorded channel.
+        /// </summary>
+        public static string Timeline_Source_Unknown {
+            get {
+                return ResourceManager.GetString("Timeline_Source_Unknown", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrival not recorded - this task predates history recording..
+        /// </summary>
+        public static string Timeline_Arrival_NotRecorded {
+            get {
+                return ResourceManager.GetString("Timeline_Arrival_NotRecorded", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Archived task.
+        /// </summary>
+        public static string Timeline_Archived_Title {
+            get {
+                return ResourceManager.GetString("Timeline_Archived_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This task has been archived. What is shown is what the archive preserved; live detail is gone..
+        /// </summary>
+        public static string Timeline_Archived_Body {
+            get {
+                return ResourceManager.GetString("Timeline_Archived_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Attribution is not per-person here.
+        /// </summary>
+        public static string Timeline_SharedIdentity_Title {
+            get {
+                return ResourceManager.GetString("Timeline_SharedIdentity_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This deployment issues one identity to every operator, so every "who" below is the same account regardless of who acted. Per-person attribution needs Entra or OIDC..
+        /// </summary>
+        public static string Timeline_SharedIdentity_Body {
+            get {
+                return ResourceManager.GetString("Timeline_SharedIdentity_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to History truncated.
+        /// </summary>
+        public static string Timeline_Truncated_Title {
+            get {
+                return ResourceManager.GetString("Timeline_Truncated_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to There are more events than fit in one page. The most recent are shown; older ones are missing..
+        /// </summary>
+        public static string Timeline_Truncated_Body {
+            get {
+                return ResourceManager.GetString("Timeline_Truncated_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Show.
+        /// </summary>
+        public static string Timeline_Filter {
+            get {
+                return ResourceManager.GetString("Timeline_Filter", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Everything.
+        /// </summary>
+        public static string Timeline_Filter_All {
+            get {
+                return ResourceManager.GetString("Timeline_Filter_All", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to People only.
+        /// </summary>
+        public static string Timeline_Filter_People {
+            get {
+                return ResourceManager.GetString("Timeline_Filter_People", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Deployments.
+        /// </summary>
+        public static string Timeline_Filter_Deploys {
+            get {
+                return ResourceManager.GetString("Timeline_Filter_Deploys", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Nothing recorded.
+        /// </summary>
+        public static string Timeline_Empty_Title {
+            get {
+                return ResourceManager.GetString("Timeline_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No events match this filter..
+        /// </summary>
+        public static string Timeline_Empty_Description {
+            get {
+                return ResourceManager.GetString("Timeline_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to History recording began {0}. Silence before that means "not recorded", not "nothing happened"..
+        /// </summary>
+        public static string Timeline_RecordingBegan {
+            get {
+                return ResourceManager.GetString("Timeline_RecordingBegan", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This time came from the VCS or tracker, not from this service, so it may not line up exactly with the rest..
+        /// </summary>
+        public static string Timeline_ExternalClock_Tooltip {
+            get {
+                return ResourceManager.GetString("Timeline_ExternalClock_Tooltip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Repeated identically until {0}..
+        /// </summary>
+        public static string Timeline_Collapsed_Tooltip {
+            get {
+                return ResourceManager.GetString("Timeline_Collapsed_Tooltip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to moved.
+        /// </summary>
+        public static string Timeline_Reassigned {
+            get {
+                return ResourceManager.GetString("Timeline_Reassigned", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This merge request now belongs to another task. The entry is kept because it happened while it belonged here..
+        /// </summary>
+        public static string Timeline_Reassigned_Tooltip {
+            get {
+                return ResourceManager.GetString("Timeline_Reassigned_Tooltip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Open rollout.
+        /// </summary>
+        public static string Timeline_OpenRollout {
+            get {
+                return ResourceManager.GetString("Timeline_OpenRollout", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to system.
+        /// </summary>
+        public static string Timeline_Actor_System {
+            get {
+                return ResourceManager.GetString("Timeline_Actor_System", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to signed in, unidentified.
+        /// </summary>
+        public static string Timeline_Actor_Unidentified {
+            get {
+                return ResourceManager.GetString("Timeline_Actor_Unidentified", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Task arrived.
+        /// </summary>
+        public static string Timeline_Kind_TaskFirstSeen {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_TaskFirstSeen", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Task closed.
+        /// </summary>
+        public static string Timeline_Kind_TaskClosed {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_TaskClosed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Merge request opened.
+        /// </summary>
+        public static string Timeline_Kind_MrOpened {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_MrOpened", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Merge request status changed.
+        /// </summary>
+        public static string Timeline_Kind_MrStatusChanged {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_MrStatusChanged", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Merge request merged.
+        /// </summary>
+        public static string Timeline_Kind_MrMerged {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_MrMerged", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Merge request closed.
+        /// </summary>
+        public static string Timeline_Kind_MrClosed {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_MrClosed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Plan recalculated.
+        /// </summary>
+        public static string Timeline_Kind_PlanRecalculated {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_PlanRecalculated", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Deploy attempt.
+        /// </summary>
+        public static string Timeline_Kind_DeployAttempt {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_DeployAttempt", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollout launched.
+        /// </summary>
+        public static string Timeline_Kind_Launched {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_Launched", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Launch requested for a run already in progress.
+        /// </summary>
+        public static string Timeline_Kind_LaunchCoalesced {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_LaunchCoalesced", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollout succeeded.
+        /// </summary>
+        public static string Timeline_Kind_Succeeded {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_Succeeded", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollout paused.
+        /// </summary>
+        public static string Timeline_Kind_Paused {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_Paused", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rollout cancelled.
+        /// </summary>
+        public static string Timeline_Kind_Cancelled {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_Cancelled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Step retried.
+        /// </summary>
+        public static string Timeline_Kind_StepRetried {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_StepRetried", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Step skipped.
+        /// </summary>
+        public static string Timeline_Kind_StepSkipped {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_StepSkipped", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Status written back to the tracker.
+        /// </summary>
+        public static string Timeline_Kind_TrackerStatusPushed {
+            get {
+                return ResourceManager.GetString("Timeline_Kind_TrackerStatusPushed", resourceCulture);
+            }
+        }
     }
 }

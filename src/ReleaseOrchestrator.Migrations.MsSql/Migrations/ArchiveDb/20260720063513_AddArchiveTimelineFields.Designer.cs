@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ReleaseOrchestrator.Infrastructure.Archive;
 
@@ -11,9 +12,11 @@ using ReleaseOrchestrator.Infrastructure.Archive;
 namespace ReleaseOrchestrator.Migrations.MsSql.Migrations.ArchiveDb
 {
     [DbContext(typeof(ArchiveDbContext))]
-    partial class ArchiveDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720063513_AddArchiveTimelineFields")]
+    partial class AddArchiveTimelineFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

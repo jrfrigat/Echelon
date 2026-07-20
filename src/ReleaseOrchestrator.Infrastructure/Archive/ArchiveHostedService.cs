@@ -110,6 +110,14 @@ public class ArchiveHostedService(
         await RunPhaseAsync("merge requests", c => runner.ArchiveMergeRequestsAsync(cutoff, c), ct);
         await RunPhaseAsync("tasks", c => runner.ArchiveTasksAsync(cutoff, c), ct);
 
+        // Last, and order-independent: the status journal has no foreign key to anything, so it
+        // neither blocks the phases above nor depends on them. It runs on its own, much longer
+        // retention because it is the raw material of a task's history.
+        await RunPhaseAsync(
+            "status journal",
+            c => runner.PruneStatusJournalAsync(clock.GetUtcNow().UtcDateTime, c),
+            ct);
+
         logger.LogInformation("Archive cycle completed");
     }
 

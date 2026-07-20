@@ -40,7 +40,7 @@ public class TrackerService(
             return false;
         }
 
-        var task = await UpsertTaskAsync(conn.Id, provider, info, ct);
+        var task = await UpsertTaskAsync(conn.Id, provider, info, $"tracker/{conn.Name}", ct);
         var parentChanged = await ApplyParentAsync(conn, provider, task, info.ParentKey, ct);
         var links = await ReadDependenciesAsync(provider, conn, externalTaskId, ct);
 
@@ -112,7 +112,14 @@ public class TrackerService(
         return await source.GetIssueDependenciesAsync(externalTaskId, ct);
     }
 
-    private async Task<TaskItem> UpsertTaskAsync(Guid connectionId, ITrackerProvider provider, TrackerIssue info, CancellationToken ct)
+    /// <param name="origin">
+    /// How this task came to be stored, recorded on insert. Required rather than defaulted: the two
+    /// callers mean genuinely different things — one is a task being synced in its own right, the
+    /// other is a task pulled in only because something else referenced it — and a default would let
+    /// the second silently inherit the first's story.
+    /// </param>
+    private async Task<TaskItem> UpsertTaskAsync(
+        Guid connectionId, ITrackerProvider provider, TrackerIssue info, string? origin, CancellationToken ct)
     {
         var task = await db.Tasks.FirstOrDefaultAsync(
             t => t.TrackerConnectionId == connectionId && t.ExternalId == info.Key, ct);
@@ -123,7 +130,9 @@ public class TrackerService(
             {
                 Id = Guid.NewGuid(),
                 ExternalId = info.Key,
-                TrackerConnectionId = connectionId
+                TrackerConnectionId = connectionId,
+                FirstSeenAt = clock.GetUtcNow().UtcDateTime,
+                FirstSeenSource = origin
             };
             db.Tasks.Add(task);
         }
@@ -222,7 +231,11 @@ public class TrackerService(
             return null;
         }
 
-        var fetched = await UpsertTaskAsync(conn.Id, provider, info, ct);
+        // Not an arrival: this task was fetched only because another one named it as a prerequisite
+        // or a parent. Recording the tracker as its source would assert an announcement that never
+        // happened, which is exactly the kind of confident-but-wrong entry the timeline must not
+        // contain.
+        var fetched = await UpsertTaskAsync(conn.Id, provider, info, "dependency-closure", ct);
         return fetched.Id;
     }
 }

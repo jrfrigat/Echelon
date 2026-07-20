@@ -34,6 +34,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations.ArchiveDb
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -94,6 +97,13 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations.ArchiveDb
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirstSeenSource")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 

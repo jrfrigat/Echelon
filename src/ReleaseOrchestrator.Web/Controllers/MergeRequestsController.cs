@@ -7,6 +7,7 @@ using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Core.Parsing;
+using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Web.Resources;
@@ -95,6 +96,13 @@ public class MergeRequestsController(
 
         if (MergeRequestStatusResolver.IsTerminal(mr.Status))
             return BadRequest(new { error = localizer["Mr_StatusFinal", mr.Status].Value });
+
+        // The one status change with a person behind it. IsStatusManual records that somebody
+        // intervened but not who or when, and it is cleared by the next terminal VCS event -- so
+        // without this row the intervention disappears from the history the moment the MR merges.
+        MergeRequestStatusJournal.Record(
+            db, mr, mr.Status, status,
+            MergeRequestStatusJournal.CauseManualPin, this.ResolveActor(), clock.GetUtcNow().UtcDateTime);
 
         mr.Status = status;
         mr.IsStatusManual = true;

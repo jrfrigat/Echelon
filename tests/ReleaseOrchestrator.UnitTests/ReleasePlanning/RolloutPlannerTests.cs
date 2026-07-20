@@ -35,7 +35,7 @@ public class RolloutPlannerTests : PlannerTestBase
         AddMergeRequest(repo, target);
         await Db.SaveChangesAsync(Ct);
 
-        var plan = await Rollout().RecalculateAsync(target.Id, Ct);
+        var plan = await Rollout().RecalculateAsync(target.Id, actor: null, Ct);
 
         Assert.True(plan.IsActive);
         Assert.Equal(2, plan.Nodes.Count);                       // target + prerequisite
@@ -56,7 +56,7 @@ public class RolloutPlannerTests : PlannerTestBase
         AddMergeRequest(repo, unrelated);
         await Db.SaveChangesAsync(Ct);
 
-        var plan = await Rollout().RecalculateAsync(target.Id, Ct);
+        var plan = await Rollout().RecalculateAsync(target.Id, actor: null, Ct);
 
         Assert.Single(plan.Nodes);
         Assert.Equal("PROJ-1", plan.Nodes[0].TaskKey);
@@ -83,7 +83,7 @@ public class RolloutPlannerTests : PlannerTestBase
         AddMergeRequest(repo, child);
         await Db.SaveChangesAsync(Ct);
 
-        var plan = await Rollout().RecalculateAsync(parent.Id, Ct);
+        var plan = await Rollout().RecalculateAsync(parent.Id, actor: null, Ct);
 
         Assert.Equal(2, plan.Nodes.Count);                       // parent + subtask
         Assert.Contains(plan.Nodes, n => n.IsTarget && n.TaskKey == "PROJ-1");
@@ -111,7 +111,7 @@ public class RolloutPlannerTests : PlannerTestBase
         AddMergeRequest(repo, sibling);
         await Db.SaveChangesAsync(Ct);
 
-        var plan = await Rollout().RecalculateAsync(child.Id, Ct);
+        var plan = await Rollout().RecalculateAsync(child.Id, actor: null, Ct);
 
         Assert.Single(plan.Nodes);
         Assert.Equal("PROJ-2", plan.Nodes[0].TaskKey);
@@ -153,8 +153,8 @@ public class RolloutPlannerTests : PlannerTestBase
         var task = AddTask("PROJ-1");
         await Db.SaveChangesAsync(Ct);
 
-        await Rollout().RecalculateAsync(task.Id, Ct);
-        await Rollout().RecalculateAsync(task.Id, Ct);
+        await Rollout().RecalculateAsync(task.Id, actor: null, Ct);
+        await Rollout().RecalculateAsync(task.Id, actor: null, Ct);
 
         var active = await Db.RolloutPlans.CountAsync(p => p.TargetTaskId == task.Id && p.IsActive, Ct);
         Assert.Equal(1, active);

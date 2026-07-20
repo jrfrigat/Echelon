@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
+using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Execution;
@@ -51,7 +52,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
 
         await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, null, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
     }
 
     [Fact]
@@ -62,10 +63,10 @@ public class RolloutServiceTests : PlannerTestBase
         AddMergeRequest(repo, task);
         var env = AddEnvironment();
         await Db.SaveChangesAsync(Ct);
-        await Planner_().RecalculateAsync(task.Id, Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, null, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
         Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -81,10 +82,10 @@ public class RolloutServiceTests : PlannerTestBase
         AddMergeRequest(repo, target);
         var env = AddEnvironment();
         await Db.SaveChangesAsync(Ct);
-        await Planner_().RecalculateAsync(target.Id, Ct);
+        await Planner_().RecalculateAsync(target.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(target.Id, env.Id, null, Ct));
+            () => Service().LaunchAsync(target.Id, env.Id, ActorRef.System, Ct));
         Assert.Contains("PROJ-1", ex.Message);
     }
 
@@ -101,9 +102,9 @@ public class RolloutServiceTests : PlannerTestBase
         var env = AddEnvironment();
         MarkDeployed(prereqMr.Id, env.Id); // prerequisite already deployed in this environment
         await Db.SaveChangesAsync(Ct);
-        await Planner_().RecalculateAsync(target.Id, Ct);
+        await Planner_().RecalculateAsync(target.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(target.Id, env.Id, null, Ct);
+        var rollout = await Service().LaunchAsync(target.Id, env.Id, ActorRef.System, Ct);
 
         Assert.Equal("Running", rollout.Status);
         Assert.Equal(2, rollout.Steps.Count);
@@ -125,10 +126,10 @@ public class RolloutServiceTests : PlannerTestBase
         AddMergeRequest(repo, task);
         var env = AddEnvironment();
         await Db.SaveChangesAsync(Ct);
-        await Planner_().RecalculateAsync(task.Id, Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var first = await Service().LaunchAsync(task.Id, env.Id, null, Ct);
-        var second = await Service().LaunchAsync(task.Id, env.Id, null, Ct);
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var second = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
 
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
@@ -149,9 +150,9 @@ public class RolloutServiceTests : PlannerTestBase
         AddMergeRequest(repo, task);
         var env = AddEnvironment();
         await Db.SaveChangesAsync(Ct);
-        await Planner_().RecalculateAsync(task.Id, Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var first = await Service().LaunchAsync(task.Id, env.Id, null, Ct);
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
 
         // Drive the run to a terminal state, as the coordinator would on success or failure.
         var rollout = await Db.Rollouts.FirstAsync(r => r.Id == first.Id, Ct);
@@ -159,7 +160,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, null, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
         Assert.Contains("already been rolled out", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
     }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Coordination;
+using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Infrastructure.Archive;
 using ReleaseOrchestrator.Infrastructure.Execution;
 using ReleaseOrchestrator.Infrastructure.Ingestion;
@@ -48,6 +49,8 @@ public static class InfrastructureExtensions
         services.AddScoped<TokenProtector>();
         services.AddScoped<IRolloutPlannerService, RolloutPlanner>();
         services.AddScoped<IRolloutService, RolloutService>();
+        // Reads both contexts: a task's history outlives the task, so the archive is part of it.
+        services.AddScoped<ITaskTimelineService, TaskTimelineService>();
         services.AddScoped<IVcsService, VcsService>();
         services.AddScoped<ITrackerService, TrackerService>();
 

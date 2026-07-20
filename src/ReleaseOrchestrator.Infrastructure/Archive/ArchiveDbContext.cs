@@ -16,6 +16,7 @@ public class ArchiveDbContext(DbContextOptions<ArchiveDbContext> options) : DbCo
             e.Property(x => x.ExternalId).HasMaxLength(200).IsRequired();
             e.Property(x => x.Title).HasMaxLength(500);
             e.Property(x => x.Status).HasMaxLength(100);
+            e.Property(x => x.FirstSeenSource).HasMaxLength(200);
             e.HasIndex(x => x.ExternalId);
             e.HasIndex(x => x.ClosedAt);
         });

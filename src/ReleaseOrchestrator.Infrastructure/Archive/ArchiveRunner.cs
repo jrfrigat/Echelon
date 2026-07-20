@@ -29,6 +29,29 @@ internal sealed class ArchiveRunner(
     public Task ArchiveTasksAsync(DateTime cutoff, CancellationToken ct) =>
         RunBatchLoopAsync("tasks", c => LoadTaskBatchAsync(cutoff, c), ArchiveTaskBatchAsync, ct);
 
+    /// <summary>
+    /// Deletes merge-request status transitions past their retention window.
+    /// </summary>
+    /// <param name="now">The current time; the cutoff is measured back from here.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Delete-only, unlike every other phase here, and deliberately so: these rows are read by the
+    /// task timeline and by nothing else, so moving them to a third database would preserve data no
+    /// tool can display. The journal has no foreign key in either direction, which is what makes
+    /// this safe to run independently of the archive phases above.
+    /// </remarks>
+    public async Task PruneStatusJournalAsync(DateTime now, CancellationToken ct)
+    {
+        var cutoff = now.AddDays(-options.StatusJournalRetentionDays);
+
+        var removed = await db.MergeRequestStatusChanges
+            .Where(c => c.At < cutoff)
+            .ExecuteDeleteAsync(ct);
+
+        if (removed > 0)
+            logger.LogInformation("Pruned {Count} merge-request status transition(s) older than {Cutoff:u}", removed, cutoff);
+    }
+
     // ---- merge requests ------------------------------------------------------------------
 
     private Task<List<MergeRequest>> LoadMergeRequestBatchAsync(DateTime cutoff, CancellationToken ct) =>
@@ -63,6 +86,9 @@ internal sealed class ArchiveRunner(
             TargetBranch = mr.TargetBranch,
             Status = mr.Status.ToString(),
             TaskExternalId = mr.Task?.ExternalId,
+            // The source row is deleted below, and this column exists nowhere else -- not copying it
+            // does not hide the merge request's opening from a task's history, it destroys it.
+            CreatedAt = mr.CreatedAt,
             MergedAt = mr.MergedAt,
             ClosedAt = mr.ClosedAt,
             ArchivedAt = clock.GetUtcNow().UtcDateTime
@@ -124,6 +150,8 @@ internal sealed class ArchiveRunner(
             Status = t.Status,
             ClosedAt = t.ClosedAt,
             DependenciesJson = JsonSerializer.Serialize(t.Dependencies.Select(d => d.DependsOnTaskId)),
+            FirstSeenAt = t.FirstSeenAt,
+            FirstSeenSource = t.FirstSeenSource,
             ArchivedAt = clock.GetUtcNow().UtcDateTime
         }).ToList();
 
