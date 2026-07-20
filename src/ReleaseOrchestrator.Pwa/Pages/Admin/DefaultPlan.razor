@@ -112,32 +112,31 @@ else
     }
     else
     {
-        <FlareTable TItem="RepositoryOrderingDto" Items="_rules">
-            <HeaderContent>
-                <tr>
-                    <th>@UiStrings.DefaultPlan_Col_From</th>
-                    <th>@UiStrings.DefaultPlan_Col_After</th>
-                    <th>@UiStrings.DefaultPlan_Col_Type</th>
-                    <th></th>
-                </tr>
-            </HeaderContent>
-            <RowTemplate Context="rule">
-                <td>@rule.FromRepositoryName</td>
-                <td>@rule.ToRepositoryName</td>
-                <td>
-                    <FlareChip Size="ChipSize.Sm" Color="@(rule.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)">
-                        @(rule.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)
-                    </FlareChip>
-                </td>
-                <td>
-                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, $"{rule.FromRepositoryName} / {rule.ToRepositoryName}")"
-                                     OnClick="@(() => Delete(rule))">
-                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                    </FlareIconButton>
-                </td>
-            </RowTemplate>
-        </FlareTable>
+        <FlareDataGrid TItem="RepositoryOrderingDto" Items="_rules" Dense="true" Striped="true" Hoverable="true">
+            <Columns>
+                <FlareColumn TItem="RepositoryOrderingDto" Id="from" Title="@UiStrings.DefaultPlan_Col_From"
+                             Field="@(r => (object?)r.FromRepositoryName)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="RepositoryOrderingDto" Id="after" Title="@UiStrings.DefaultPlan_Col_After"
+                             Field="@(r => (object?)r.ToRepositoryName)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="RepositoryOrderingDto" Id="type" Title="@UiStrings.DefaultPlan_Col_Type"
+                             Field="@(r => (object?)r.Type)" Sortable="true">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@(context.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)">
+                            @(context.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)
+                        </FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="RepositoryOrderingDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, $"{context.FromRepositoryName} / {context.ToRepositoryName}")"
+                                         OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
     }
 }
 

@@ -918,4 +918,10 @@
   <data name="Audit_Correlation_Tooltip" xml:space="preserve">
     <value>Request id {0} - search the log aggregator by it for the full error.</value>
   </data>
+  <data name="Common_Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Common_No" xml:space="preserve">
+    <value>No</value>
+  </data>
 </root>

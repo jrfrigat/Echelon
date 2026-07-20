@@ -5,10 +5,13 @@
 
 <PageTitle>@UiStrings.Login_Title</PageTitle>
 
+@* The one bare element left in the app. Centring a card in the viewport is a page-layout concern
+   with no Flare component for it, and the Flare reference app does exactly the same on its own
+   login screen. Everything inside is Flare. *@
 <div style="display:flex; justify-content:center; margin-top:4rem;">
-    <FlareCard Style="width: 100%; max-width: 22rem;">
+    <FlareCard Variant="CardVariant.Elevated" Style="width: 100%; max-width: 22rem;">
         <FlareCardContent>
-            <div style="display:flex; flex-direction:column; gap:1rem;">
+            <FlareStack Gap="FlareSpacing.Medium">
                 <FlareText Typo="TypographyScale.HeadlineSmall">@UiStrings.Login_Title</FlareText>
 
                 @if (_failed)
@@ -16,11 +19,12 @@
                     <FlareAlert Severity="AlertSeverity.Error">@UiStrings.Login_Failed</FlareAlert>
                 }
 
-                <FlareTextField Label="@UiStrings.Login_Username" @bind-Value="_username" />
-                <FlarePasswordField Label="@UiStrings.Login_Password" @bind-Value="_password" />
+                <FlareTextField Label="@UiStrings.Login_Username" @bind-Value="_username" autocomplete="username" />
+                <FlarePasswordField Label="@UiStrings.Login_Password" @bind-Value="_password" autocomplete="current-password" />
 
-                <FlareButton OnClick="SubmitAsync" Loading="_busy">@UiStrings.Login_Title</FlareButton>
-            </div>
+                <FlareButton Variant="ButtonVariant.Filled" Color="FlareColor.Primary"
+                             OnClick="SubmitAsync" Loading="_busy">@UiStrings.Login_Title</FlareButton>
+            </FlareStack>
         </FlareCardContent>
     </FlareCard>
 </div>

@@ -19,26 +19,29 @@ else if (_rollouts is null || _rollouts.Count == 0)
 }
 else
 {
-    <FlareTable TItem="RolloutSummaryDto" Items="_rollouts">
-        <HeaderContent>
-            <tr>
-                <th>@UiStrings.Rollouts_Col_Task</th>
-                <th>@UiStrings.Rollouts_Col_Env</th>
-                <th>@UiStrings.Rollouts_Col_Status</th>
-                <th>@UiStrings.Rollouts_Col_Progress</th>
-                <th>@UiStrings.Rollouts_Col_Started</th>
-                <th></th>
-            </tr>
-        </HeaderContent>
-        <RowTemplate Context="r">
-            <td>@r.TargetTaskKey</td>
-            <td>@r.EnvironmentKey</td>
-            <td><FlareChip Size="ChipSize.Sm" Color="@StatusColor(r.Status)">@r.Status</FlareChip></td>
-            <td>@r.SucceededCount / @r.StepCount</td>
-            <td>@r.StartedAt.ToString("g")</td>
-            <td><FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(r.Id))">@UiStrings.Rollouts_Open</FlareButton></td>
-        </RowTemplate>
-    </FlareTable>
+    <FlareDataGrid TItem="RolloutSummaryDto" Items="_rollouts" Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="RolloutSummaryDto" Id="task" Title="@UiStrings.Rollouts_Col_Task"
+                         Field="@(r => (object?)r.TargetTaskKey)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="RolloutSummaryDto" Id="env" Title="@UiStrings.Rollouts_Col_Env"
+                         Field="@(r => (object?)r.EnvironmentKey)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="RolloutSummaryDto" Id="status" Title="@UiStrings.Rollouts_Col_Status" Sortable="true"
+                         Field="@(r => (object?)r.Status)">
+                <Template>
+                    <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)">@context.Status</FlareChip>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="RolloutSummaryDto" Id="progress" Title="@UiStrings.Rollouts_Col_Progress"
+                         Field="@(r => (object?)$"{r.SucceededCount} / {r.StepCount}")" Align="ColumnAlign.End" />
+            <FlareColumn TItem="RolloutSummaryDto" Id="started" Title="@UiStrings.Rollouts_Col_Started"
+                         Field="@(r => (object?)r.StartedAt.ToString("g"))" Sortable="true" />
+            <FlareColumn TItem="RolloutSummaryDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Rollouts_Open</FlareButton>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 }
 
 @code {

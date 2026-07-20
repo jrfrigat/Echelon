@@ -14,19 +14,10 @@
         <FlareStack Gap="FlareSpacing.Small">
             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
                 <FlareTextField Label="@UiStrings.Actions_Event" @bind-Value="_eventType" HelperText="@UiStrings.Actions_EventHint" />
-                <div>
-                    <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Actions_Action</FlareText>
-                    <select value="@_actionType" @onchange="OnActionTypeChanged">
-                        <option value="">--</option>
-                        @if (_types is not null)
-                        {
-                            @foreach (var type in _types)
-                            {
-                                <option value="@type.ActionType">@type.ActionType</option>
-                            }
-                        }
-                    </select>
-                </div>
+                <FlareSelect TValue="string" Label="@UiStrings.Actions_Action"
+                             Value="_actionType" ValueChanged="OnActionTypeChanged"
+                             Items="ActionTypeOptions" ItemLabel="@(t => string.IsNullOrEmpty(t) ? "-" : t)"
+                             Style="min-width:14rem;" />
                 <FlareTextField Label="@UiStrings.Actions_Scope" @bind-Value="_scope" />
             </FlareStack>
 
@@ -52,11 +43,11 @@
                 </FlareStack>
             }
 
-            <div>
+            <FlareStack Row>
                 <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
                     @UiStrings.Actions_Add
                 </FlareButton>
-            </div>
+            </FlareStack>
         </FlareStack>
     </FlareCardContent>
 </FlareCard>
@@ -71,32 +62,32 @@ else if (_bindings is null || _bindings.Count == 0)
 }
 else
 {
-    <FlareTable TItem="ActionBindingDto" Items="_bindings">
-        <HeaderContent>
-            <tr>
-                <th>@UiStrings.Actions_Col_Event</th>
-                <th>@UiStrings.Actions_Col_Action</th>
-                <th>@UiStrings.Actions_Col_Scope</th>
-                <th>@UiStrings.Actions_Col_Enabled</th>
-                <th></th>
-            </tr>
-        </HeaderContent>
-        <RowTemplate Context="b">
-            <td>@b.EventType</td>
-            <td>@b.ActionType</td>
-            <td>@(string.IsNullOrEmpty(b.Scope) ? "-" : b.Scope)</td>
-            <td>
-                <FlareChip Size="ChipSize.Sm" Color="@(b.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                    @(b.Enabled ? "+" : "-")
-                </FlareChip>
-            </td>
-            <td>
-                <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error" OnClick="@(() => Delete(b))">
-                    <FlareIconView Value="MaterialDesign3Icons.Regular.Close" />
-                </FlareIconButton>
-            </td>
-        </RowTemplate>
-    </FlareTable>
+    <FlareDataGrid TItem="ActionBindingDto" Items="_bindings" Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="ActionBindingDto" Id="event" Title="@UiStrings.Actions_Col_Event"
+                         Field="@(b => (object?)b.EventType)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="ActionBindingDto" Id="action" Title="@UiStrings.Actions_Col_Action"
+                         Field="@(b => (object?)b.ActionType)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="ActionBindingDto" Id="scope" Title="@UiStrings.Actions_Col_Scope"
+                         Field="@(b => (object?)(string.IsNullOrEmpty(b.Scope) ? "-" : b.Scope))" Sortable="true" />
+            <FlareColumn TItem="ActionBindingDto" Id="enabled" Title="@UiStrings.Actions_Col_Enabled">
+                <Template>
+                    <FlareChip Size="ChipSize.Sm" Color="@(context.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
+                        @(context.Enabled ? UiStrings.Common_Yes : UiStrings.Common_No)
+                    </FlareChip>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="ActionBindingDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.ActionType)"
+                                     OnClick="@(() => Delete(context))">
+                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                    </FlareIconButton>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 }
 
 @code {
@@ -127,9 +118,13 @@ else
         _loading = false;
     }
 
-    void OnActionTypeChanged(ChangeEventArgs e)
+    /// <summary>The empty entry is the unselected state; the rest come from the server's schema.</summary>
+    IEnumerable<string> ActionTypeOptions =>
+        ["", .. _types?.Select(t => t.ActionType) ?? []];
+
+    void OnActionTypeChanged(string value)
     {
-        _actionType = e.Value?.ToString() ?? "";
+        _actionType = value;
         // Start a fresh settings map keyed by the chosen type's schema.
         _settings = SelectedType?.Settings.ToDictionary(s => s.Key, _ => "") ?? [];
     }

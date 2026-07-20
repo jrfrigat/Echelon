@@ -77,15 +77,11 @@ else
     <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
         @if (_environments is { Count: > 0 })
         {
-            <div>
-                <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_Environment</FlareText>
-                <select @bind="_selectedEnvironmentId">
-                    @foreach (var env in _environments.Where(e => e.IsEnabled))
-                    {
-                        <option value="@env.Id">@env.Name (@env.Key)</option>
-                    }
-                </select>
-            </div>
+            <FlareSelect TValue="Guid" Label="@UiStrings.TaskDetail_Environment"
+                         @bind-Value="_selectedEnvironmentId"
+                         Items="@_environments.Where(e => e.IsEnabled).Select(e => e.Id)"
+                         ItemLabel="@(id => EnvironmentLabel(id))"
+                         Style="min-width:14rem;" />
             <FlareButton OnClick="Launch" Loading="_busy" Disabled="@(_plan.Conflicts.Count > 0)">@UiStrings.TaskDetail_Launch</FlareButton>
         }
         else
@@ -232,6 +228,12 @@ else
     void RebuildKeyMap() => _keyById = _plan?.Nodes.ToDictionary(n => n.TaskId, n => n.TaskKey) ?? [];
 
     string KeyOf(Guid taskId) => _keyById.TryGetValue(taskId, out var k) ? k : taskId.ToString()[..8];
+
+    string EnvironmentLabel(Guid id)
+    {
+        var env = _environments?.FirstOrDefault(e => e.Id == id);
+        return env is null ? id.ToString() : $"{env.Name} ({env.Key})";
+    }
 
     void Back() => Nav.NavigateTo("/");
 

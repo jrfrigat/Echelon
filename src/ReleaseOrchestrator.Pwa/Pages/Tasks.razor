@@ -21,37 +21,35 @@ else if (_tasks is null || _tasks.Items.Count == 0)
 }
 else
 {
-    <FlareTable TItem="TaskListItemDto" Items="_tasks.Items">
-        <HeaderContent>
-            <tr>
-                <th>@UiStrings.Tasks_Col_Key</th>
-                <th>@UiStrings.Tasks_Col_Title</th>
-                <th>@UiStrings.Tasks_Col_Status</th>
-                <th>@UiStrings.Tasks_Col_Mrs</th>
-                <th>@UiStrings.Tasks_Col_Plan</th>
-                <th></th>
-            </tr>
-        </HeaderContent>
-        <RowTemplate Context="t">
-            <td>@t.ExternalId</td>
-            <td>@t.Title</td>
-            <td>@t.Status</td>
-            <td>@t.MergeRequestCount</td>
-            <td>
-                @if (t.HasActivePlan)
-                {
-                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
-                }
-                else
-                {
-                    <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
-                }
-            </td>
-            <td>
-                <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(t.Id))">@UiStrings.Tasks_Open</FlareButton>
-            </td>
-        </RowTemplate>
-    </FlareTable>
+    <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
+                         Field="@(t => (object?)t.ExternalId)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
+                         Field="@(t => (object?)t.Title)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
+                         Field="@(t => (object?)t.Status)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
+                         Field="@(t => (object?)t.MergeRequestCount)" Sortable="true" Align="ColumnAlign.End" />
+            <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
+                <Template>
+                    @if (context.HasActivePlan)
+                    {
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
+                    }
+                    else
+                    {
+                        <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
+                    }
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="TaskListItemDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Tasks_Open</FlareButton>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 }
 
 @code {

@@ -14,7 +14,10 @@
         <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
             <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
             <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
-            <FlareTextField Label="@UiStrings.Env_Col_Order" @bind-Value="_order" />
+            @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
+               0 when somebody typed a word, and the order decides the progression gate. *@
+            <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
+                               Style="max-width:8rem;" />
             <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
         </FlareStack>
     </FlareCardContent>
@@ -30,32 +33,32 @@ else if (_envs is null || _envs.Count == 0)
 }
 else
 {
-    <FlareTable TItem="EnvironmentDto" Items="_envs">
-        <HeaderContent>
-            <tr>
-                <th>@UiStrings.Env_Col_Key</th>
-                <th>@UiStrings.Env_Col_Name</th>
-                <th>@UiStrings.Env_Col_Order</th>
-                <th>@UiStrings.Env_Col_Enabled</th>
-                <th></th>
-            </tr>
-        </HeaderContent>
-        <RowTemplate Context="env">
-            <td>@env.Key</td>
-            <td>@env.Name</td>
-            <td>@env.Order</td>
-            <td>
-                <FlareChip Size="ChipSize.Sm" Color="@(env.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                    @(env.IsEnabled ? "+" : "-")
-                </FlareChip>
-            </td>
-            <td>
-                <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error" OnClick="@(() => Delete(env))">
-                    <FlareIconView Value="MaterialDesign3Icons.Regular.Close" />
-                </FlareIconButton>
-            </td>
-        </RowTemplate>
-    </FlareTable>
+    <FlareDataGrid TItem="EnvironmentDto" Items="_envs" Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="EnvironmentDto" Id="key" Title="@UiStrings.Env_Col_Key"
+                         Field="@(e => (object?)e.Key)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="EnvironmentDto" Id="name" Title="@UiStrings.Env_Col_Name"
+                         Field="@(e => (object?)e.Name)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="EnvironmentDto" Id="order" Title="@UiStrings.Env_Col_Order"
+                         Field="@(e => (object?)e.Order)" Sortable="true" Align="ColumnAlign.End" />
+            <FlareColumn TItem="EnvironmentDto" Id="enabled" Title="@UiStrings.Env_Col_Enabled">
+                <Template>
+                    <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
+                        @(context.IsEnabled ? UiStrings.Common_Yes : UiStrings.Common_No)
+                    </FlareChip>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="EnvironmentDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Key)"
+                                     OnClick="@(() => Delete(context))">
+                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                    </FlareIconButton>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 }
 
 @code {
@@ -64,7 +67,7 @@ else
     bool _busy;
     string _key = "";
     string _name = "";
-    string _order = "0";
+    int _order;
 
     protected override async Task OnInitializedAsync() => await Load();
 
@@ -76,11 +79,10 @@ else
 
     async Task Create()
     {
-        if (!int.TryParse(_order, out var order)) order = 0;
         _busy = true;
-        if (await RunAsync(async () => await Api.CreateEnvironmentAsync(_key.Trim(), _name.Trim(), order, isEnabled: true), UiStrings.Env_Created))
+        if (await RunAsync(async () => await Api.CreateEnvironmentAsync(_key.Trim(), _name.Trim(), _order, isEnabled: true), UiStrings.Env_Created))
         {
-            _key = ""; _name = ""; _order = "0";
+            _key = ""; _name = ""; _order = 0;
             await Load();
         }
         _busy = false;

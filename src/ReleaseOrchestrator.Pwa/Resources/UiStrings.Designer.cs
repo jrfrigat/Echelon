@@ -2549,5 +2549,23 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Audit_Correlation_Tooltip", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Yes.
+        /// </summary>
+        public static string Common_Yes {
+            get {
+                return ResourceManager.GetString("Common_Yes", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to No.
+        /// </summary>
+        public static string Common_No {
+            get {
+                return ResourceManager.GetString("Common_No", resourceCulture);
+            }
+        }
     }
 }
