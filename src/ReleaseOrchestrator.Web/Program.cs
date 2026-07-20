@@ -66,6 +66,18 @@ try
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
         o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        // KNOWN GAP, deliberately left as-is rather than guessed at. Clearing both lists means
+        // forwarded headers are honoured from ANY peer, so Connection.RemoteIpAddress downstream is
+        // whatever the caller claimed. Two consequences worth knowing before relying on it:
+        // the rate limiter's anonymous bucket can be reset per request by varying the header, and
+        // the ForwardedIp recorded in the request audit is caller-supplied (which is why the audit
+        // also stores the unforgeable transport peer separately, and labels the two differently).
+        //
+        // The fix is to name the actual proxy addresses or networks here, from configuration. That
+        // cannot be guessed: set it wrong and forwarded headers stop being honoured at all, so every
+        // client appears to come from the ingress and HTTPS detection breaks behind a TLS-terminating
+        // proxy. It needs whoever knows the deployment topology.
         o.KnownIPNetworks.Clear();
         o.KnownProxies.Clear();
     });
@@ -74,6 +86,13 @@ try
         .WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"])
         .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
+    // Partitioned by caller. The user branch is the trustworthy one and is only reachable because
+    // UseRateLimiter is registered after UseAuthentication -- see the comment there before moving
+    // either. The address fallback covers unauthenticated traffic and is NOT trustworthy: forwarded
+    // headers are currently accepted from any peer (see the ForwardedHeaders configuration above),
+    // so an anonymous caller can mint a fresh bucket per request by varying X-Forwarded-For.
+    // Closing that requires naming the real proxies in configuration, which is a deployment
+    // decision rather than a code one.
     builder.Services.AddRateLimiter(o =>
     {
         o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -162,8 +181,20 @@ try
     app.UseBlazorFrameworkFiles();
     app.UseStaticFiles();
     app.UseCors();
-    app.UseRateLimiter();
     app.UseAuthentication();
+
+    // AFTER authentication, which is the whole point. The limiter partitions on the caller's name
+    // and falls back to their address, but it used to run one line earlier -- before anything
+    // populated ctx.User -- so the name was always null, the fallback was the only live branch, and
+    // every authenticated caller was limited by an address that X-Forwarded-For lets them choose.
+    // Per-user partitioning now actually happens, and a signed-in caller cannot escape their bucket
+    // by rotating a header.
+    //
+    // The cost of the swap, stated plainly: token validation now runs before a request can be
+    // rejected, so a caller holding one valid token can make the service do that work. It is the
+    // standard ordering for user-partitioned limiting and the work is cached; being unable to limit
+    // authenticated callers at all was the worse end of the trade.
+    app.UseRateLimiter();
     app.UseAuthorization();
     app.MapControllers();
 

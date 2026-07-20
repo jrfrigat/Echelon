@@ -77,9 +77,11 @@ interval.
 
 Poll is slower and costs requests whether or not anything changed, so it is opt-in per connection.
 
-> **Current limitation:** the push/poll switch exists on the connection but is **not yet editable in
-> the admin UI**. New connections are created as Push. Changing one to Poll currently requires
-> updating the connection record directly.
+Set it per connection in **VCS connections** — the *Ingestion* field. New connections default to
+Push, and the connection list marks the polling ones so they are easy to spot.
+
+Editing a connection for any other reason leaves the mode alone: blank means "keep what is stored",
+the same rule the access token follows.
 
 ### Reconciliation - the periodic catch-up
 
