@@ -31,7 +31,25 @@ else if (Result is not null)
                 </Template>
             </FlareColumn>
             <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
-            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Tracker_Col_OrgId" Field="@(c => c.OrgId)" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Provider_Col_Settings">
+                <Template>
+                    @* Whatever the provider declared, rather than one provider's field. Secrets are
+                       never in this data, so nothing here can leak one. *@
+                    @if (context.Settings is not { Count: > 0 })
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">—</FlareText>
+                    }
+                    else
+                    {
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                            @foreach (var (key, value) in context.Settings.OrderBy(s => s.Key, StringComparer.Ordinal))
+                            {
+                                <FlareChip Size="ChipSize.Sm" Label="@($"{key}: {value}")" />
+                            }
+                        </FlareStack>
+                    }
+                </Template>
+            </FlareColumn>
             <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
@@ -62,10 +80,14 @@ else if (Result is not null)
             <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
             @if (!_editId.HasValue)
             {
-                <FlareSelect TValue="string" Label="@UiStrings.Common_Type" @bind-Value="_fType" Items="TrackerTypes" />
+                <FlareSelect TValue="string" Label="@UiStrings.Common_Type"
+                             Value="_fType" ValueChanged="OnTypeChanged" Items="TrackerTypes" />
             }
             <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://api.tracker.yandex.net" />
-            <FlareTextField Label="@UiStrings.Tracker_OrgId_Label" @bind-Value="_fOrgId" Placeholder="@UiStrings.Tracker_OrgId_Placeholder" />
+
+            @* Declared by the selected provider, not by this page. *@
+            <ProviderSettingsFields Schema="SelectedSchema" Values="_fSettings" OnChanged="StateHasChanged" />
+
             <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
@@ -77,15 +99,31 @@ else if (Result is not null)
 </FlareDialog>
 
 @code {
-    static readonly string[] TrackerTypes = ["YandexTracker"];
+    // Served by the API, not compiled in: this page used to hold a literal ["YandexTracker"]
+    // alongside that provider's own orgId field, so a second tracker meant editing the page.
+    List<ProviderTypeDto>? _providers;
 
     Guid? _editId;
-    string _fName = "", _fType = "YandexTracker", _fUrl = "", _fOrgId = "", _fToken = "";
+    string _fName = "", _fType = "", _fUrl = "", _fToken = "";
+    Dictionary<string, string> _fSettings = [];
+
+    IEnumerable<string> TrackerTypes => _providers?.Select(p => p.ProviderType) ?? [];
+
+    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+        _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
 
     // As with VCS connections, the type is fixed at creation and Update does not accept it.
     bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
                              || string.IsNullOrWhiteSpace(_fUrl)
-                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken));
+                             || string.IsNullOrWhiteSpace(_fType)
+                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken))
+                             || ProviderSettingsFields.MissingRequired(SelectedSchema, _fSettings, _editId.HasValue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _providers = await Api.GetTrackerProviderTypesAsync());
+        await base.OnInitializedAsync();
+    }
 
     protected override Task<PagedResult<TrackerConnectionDto>> FetchPageAsync(int page) =>
         Api.GetTrackerConnectionsAsync(page);
@@ -93,26 +131,38 @@ else if (Result is not null)
     void OpenCreate()
     {
         _editId = null;
-        _fName = ""; _fType = "YandexTracker"; _fUrl = ""; _fOrgId = ""; _fToken = "";
+        _fName = ""; _fUrl = ""; _fToken = "";
+        // The first registered provider, so a single-provider install needs no choice made; with
+        // several, the operator picks and the fields follow.
+        _fType = TrackerTypes.FirstOrDefault() ?? "";
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
         ShowModal = true;
     }
 
     void OpenEdit(TrackerConnectionDto c)
     {
         _editId = c.Id;
-        _fName = c.Name; _fType = c.TrackerType; _fUrl = c.ApiUrl; _fOrgId = c.OrgId ?? "";
+        _fName = c.Name; _fType = c.TrackerType; _fUrl = c.ApiUrl;
         _fToken = "";
+        _fSettings = ProviderSettingsFields.ForEdit(SelectedSchema, c.Settings);
         ShowModal = true;
+    }
+
+    /// <summary>Switching provider starts a fresh value map: the keys belong to the old schema.</summary>
+    void OnTypeChanged(string value)
+    {
+        _fType = value;
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
     }
 
     Task Save() => SaveAsync(async () =>
     {
-        var orgId = string.IsNullOrWhiteSpace(_fOrgId) ? null : _fOrgId.Trim();
+        var settings = ProviderSettingsFields.ForSubmit(_fSettings);
 
         if (_editId.HasValue)
-            await Api.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fUrl, orgId, _fToken);
+            await Api.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
         else
-            await Api.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, orgId, _fToken);
+            await Api.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
     });
 
     Task Delete(TrackerConnectionDto c) =>

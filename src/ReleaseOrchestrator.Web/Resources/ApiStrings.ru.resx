@@ -186,6 +186,15 @@
   <data name="Stack_RepositoryAlreadyIn" xml:space="preserve">
     <value>Этот репозиторий уже входит в стек.</value>
   </data>
+  <data name="Provider_UnknownSetting" xml:space="preserve">
+    <value>У этого провайдера нет настройки «{0}». Он объявляет: {1}</value>
+  </data>
+  <data name="Provider_MissingSetting" xml:space="preserve">
+    <value>Этот провайдер требует настройку «{0}».</value>
+  </data>
+  <data name="Provider_SettingsTooLong" xml:space="preserve">
+    <value>Настройки не помещаются: предел — {0} символов суммарно.</value>
+  </data>
   <data name="Tracker_UnknownType" xml:space="preserve">
     <value>Неизвестный trackerType «{0}». Допустимые: {1}</value>
   </data>

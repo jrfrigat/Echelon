@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using ReleaseOrchestrator.Providers.Abstractions;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
@@ -46,7 +47,7 @@ public class TrackerConnection
     /// such column. The adapter parses this into its own typed options and validates what it
     /// requires; nothing outside the adapter reads the contents.
     /// </remarks>
-    [MaxLength(4000)]
+    [MaxLength(ProviderSettingsBag.MaxJsonLength)]
     public string? ProviderSettingsJson { get; set; }
 
     /// <summary>Tasks imported from this tracker.</summary>

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ReleaseOrchestrator.Infrastructure.Auth;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions.Actions;
 
@@ -33,7 +34,7 @@ public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, To
             try
             {
                 var handler = factory.Resolve(binding.ActionType);
-                var settings = ActionSecretProtection.UnprotectForUse(binding.SettingsJson, handler.SettingsSchema, protector);
+                var settings = ProviderSettingsProtection.UnprotectForUse(binding.SettingsJson, handler.SettingsSchema, protector);
                 var result = await handler.ExecuteAsync(new ActionContext(eventType, settings, payload), ct).ConfigureAwait(false);
 
                 if (!result.Success)

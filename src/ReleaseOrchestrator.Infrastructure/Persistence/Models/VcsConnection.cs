@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Providers.Abstractions;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
@@ -35,6 +36,20 @@ public class VcsConnection
 
     /// <summary>The access token, encrypted at rest by the data-protection stack.</summary>
     public byte[] EncryptedAccessToken { get; set; } = [];
+
+    /// <summary>
+    /// Settings that only this connection's adapter understands, as a JSON object; null when it
+    /// needs none.
+    /// </summary>
+    /// <remarks>
+    /// The counterpart of <see cref="TrackerConnection.ProviderSettingsJson"/>, and added for the
+    /// same reason one step later: without it a VCS adapter had nowhere to put a setting, so the
+    /// only way to give one provider a field was a column every provider would carry. Every
+    /// key here is declared by the adapter's <c>SettingsSchema</c> and validated against it before
+    /// storage; nothing outside the adapter reads the contents.
+    /// </remarks>
+    [MaxLength(ProviderSettingsBag.MaxJsonLength)]
+    public string? ProviderSettingsJson { get; set; }
 
     /// <summary>
     /// VCS label that marks a merge request as deployable (README §5). When an opened MR

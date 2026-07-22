@@ -1119,6 +1119,10 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<int>("PollIntervalSeconds")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProviderSettingsJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("ProviderType")
                         .IsRequired()
                         .HasMaxLength(100)

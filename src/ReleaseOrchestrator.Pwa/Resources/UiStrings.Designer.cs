@@ -525,14 +525,23 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Org ID.
+        ///   Looks up a localized string similar to Settings.
         /// </summary>
-        public static string Tracker_Col_OrgId {
+        public static string Provider_Col_Settings {
             get {
-                return ResourceManager.GetString("Tracker_Col_OrgId", resourceCulture);
+                return ResourceManager.GetString("Provider_Col_Settings", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Leave blank to keep the stored value.
+        /// </summary>
+        public static string Provider_Secret_Keep {
+            get {
+                return ResourceManager.GetString("Provider_Secret_Keep", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Edit Tracker Connection.
         /// </summary>
@@ -548,24 +557,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         public static string Tracker_Dialog_New {
             get {
                 return ResourceManager.GetString("Tracker_Dialog_New", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Org ID (optional).
-        /// </summary>
-        public static string Tracker_OrgId_Label {
-            get {
-                return ResourceManager.GetString("Tracker_OrgId_Label", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Yandex organization ID.
-        /// </summary>
-        public static string Tracker_OrgId_Placeholder {
-            get {
-                return ResourceManager.GetString("Tracker_OrgId_Placeholder", resourceCulture);
             }
         }
         

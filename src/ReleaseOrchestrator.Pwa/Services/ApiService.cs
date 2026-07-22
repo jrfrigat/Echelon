@@ -31,31 +31,56 @@ public class ApiService(HttpClient http)
     public Task SetMergeRequestStatusAsync(Guid id, string status, CancellationToken ct = default) =>
         SendAsync(() => http.PatchAsJsonAsync($"api/merge-requests/{id}/status", new { Status = status }, ct), ct);
 
+    // ---- providers ------------------------------------------------------------
+
+    /// <summary>
+    /// The VCS providers this build registers, and the settings each declares.
+    /// </summary>
+    /// <remarks>
+    /// The connection form is built from this rather than from a list of provider names compiled
+    /// into the PWA. That list was previously a literal <c>["GitLab"]</c> next to a fixed set of
+    /// fields, so a second provider meant editing the page — and a provider needing its own field
+    /// had nowhere to put it.
+    /// </remarks>
+    public Task<List<ProviderTypeDto>> GetVcsProviderTypesAsync(CancellationToken ct = default) =>
+        GetAsync<List<ProviderTypeDto>>("api/providers/vcs", ct);
+
+    /// <summary>The tracker providers this build registers, and the settings each declares.</summary>
+    public Task<List<ProviderTypeDto>> GetTrackerProviderTypesAsync(CancellationToken ct = default) =>
+        GetAsync<List<ProviderTypeDto>>("api/providers/trackers", ct);
+
     // ---- VCS connections ------------------------------------------------------
 
     public Task<PagedResult<VcsConnectionDto>> GetVcsConnectionsAsync(int page = 1, CancellationToken ct = default) =>
         GetAsync<PagedResult<VcsConnectionDto>>($"api/vcs-connections?page={page}&pageSize=50", ct);
 
+    /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateVcsConnectionAsync(
         string name, string vcsType, string apiUrl, string accessToken, string? readyForDeployLabel,
-        string? ingestionMode = null, CancellationToken ct = default) =>
+        string? ingestionMode = null, Dictionary<string, string?>? settings = null,
+        CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/vcs-connections",
             new
             {
                 Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode
+                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode, Settings = settings
             }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
     /// <param name="ingestionMode">Blank keeps the stored mode, for the same reason.</param>
+    /// <param name="settings">
+    /// Provider-specific settings. An omitted secret keeps the stored one — the same convention as
+    /// the token, and why this sends only the keys the operator actually filled in.
+    /// </param>
     public Task UpdateVcsConnectionAsync(
         Guid id, string name, string apiUrl, string? accessToken, string? readyForDeployLabel,
-        string? ingestionMode = null, CancellationToken ct = default) =>
+        string? ingestionMode = null, Dictionary<string, string?>? settings = null,
+        CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/vcs-connections/{id}",
             new
             {
                 Name = name, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode
+                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode, Settings = settings
             }, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
@@ -66,18 +91,24 @@ public class ApiService(HttpClient http)
     public Task<PagedResult<TrackerConnectionDto>> GetTrackerConnectionsAsync(int page = 1, CancellationToken ct = default) =>
         GetAsync<PagedResult<TrackerConnectionDto>>($"api/tracker-connections?page={page}&pageSize=50", ct);
 
+    /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateTrackerConnectionAsync(
-        string name, string trackerType, string apiUrl, string? orgId, string accessToken,
-        CancellationToken ct = default) =>
+        string name, string trackerType, string apiUrl, string accessToken,
+        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/tracker-connections",
-            new { Name = name, TrackerType = trackerType, ApiUrl = apiUrl, OrgId = orgId, AccessToken = accessToken }, ct), ct);
+            new
+            {
+                Name = name, TrackerType = trackerType, ApiUrl = apiUrl,
+                AccessToken = accessToken, Settings = settings
+            }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
+    /// <param name="settings">An omitted secret keeps the stored one, as with the token.</param>
     public Task UpdateTrackerConnectionAsync(
-        Guid id, string name, string apiUrl, string? orgId, string? accessToken,
-        CancellationToken ct = default) =>
+        Guid id, string name, string apiUrl, string? accessToken,
+        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/tracker-connections/{id}",
-            new { Name = name, ApiUrl = apiUrl, OrgId = orgId, AccessToken = accessToken }, ct), ct);
+            new { Name = name, ApiUrl = apiUrl, AccessToken = accessToken, Settings = settings }, ct), ct);
 
     public Task DeleteTrackerConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/tracker-connections/{id}", ct), ct);

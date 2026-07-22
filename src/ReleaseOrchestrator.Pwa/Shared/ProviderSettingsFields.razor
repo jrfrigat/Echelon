@@ -1,0 +1,104 @@
+@*
+    Renders the fields a provider (or action handler) declares, from the schema the server sent.
+
+    This component is the answer to "the connection form should live with the plugin". The fields do
+    live with the plugin -- the adapter declares them as a SettingsSchema and the server serves that
+    at api/providers -- and this is the one place that turns such a declaration into inputs. Nothing
+    here names a provider or a setting, so a new provider, or a new setting on an existing one,
+    reaches every form that uses this component without a change in the PWA.
+*@
+
+@foreach (var setting in Schema)
+{
+    @if (setting.Secret)
+    {
+        @* Write-only. The API never sends a stored secret back, and this must not invent a
+           placeholder for one: a mask that reached the box would be submitted as though it were the
+           value, and the next save would store the mask over a working credential. An empty box is
+           the honest rendering, and the server reads blank-here as "keep what you have". *@
+        <FlarePasswordField Label="@setting.Label"
+                            HelperText="@SecretHelper(setting)"
+                            Value="@Values.GetValueOrDefault(setting.Key, "")"
+                            ValueChanged="@(v => Set(setting.Key, v))" />
+    }
+    else
+    {
+        <FlareTextField Label="@setting.Label"
+                        HelperText="@setting.Description"
+                        Value="@Values.GetValueOrDefault(setting.Key, "")"
+                        ValueChanged="@(v => Set(setting.Key, v))" />
+    }
+}
+
+@code {
+    /// <summary>The settings the chosen provider declares. Empty renders nothing at all.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProviderSettingDto> Schema { get; set; } = [];
+
+    /// <summary>The current values, keyed as the schema declares them. Mutated in place.</summary>
+    [Parameter, EditorRequired]
+    public Dictionary<string, string> Values { get; set; } = [];
+
+    /// <summary>Raised after any field changes, so the host can re-evaluate its save button.</summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    /// <summary>
+    /// True when a setting the schema marks required is still blank, for the host's save button.
+    /// </summary>
+    /// <remarks>
+    /// Advisory only — the server enforces the same rule and is what actually protects the data.
+    /// Disabling the button is so the operator learns it before a round trip, not instead of one.
+    /// </remarks>
+    public static bool MissingRequired(
+        IReadOnlyList<ProviderSettingDto> schema, IReadOnlyDictionary<string, string> values, bool editing) =>
+        schema.Any(s => s.Required
+                        // While editing, a blank secret means "keep the stored one", so it is not
+                        // missing. Treating it as missing would wedge the save button on every edit
+                        // of a connection whose credential the operator has no reason to retype.
+                        && !(editing && s.Secret)
+                        && string.IsNullOrWhiteSpace(values.GetValueOrDefault(s.Key, "")));
+
+    /// <summary>A fresh value map for a schema, with every declared key present and blank.</summary>
+    public static Dictionary<string, string> Blank(IEnumerable<ProviderSettingDto>? schema) =>
+        schema?.ToDictionary(s => s.Key, _ => "", StringComparer.Ordinal) ?? new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// A value map for editing: the stored non-secret values, with secrets left blank.
+    /// </summary>
+    /// <param name="schema">The provider's declared settings.</param>
+    /// <param name="stored">What the API returned for this connection; secrets are already absent.</param>
+    public static Dictionary<string, string> ForEdit(
+        IEnumerable<ProviderSettingDto>? schema, IReadOnlyDictionary<string, string>? stored)
+    {
+        var values = Blank(schema);
+        foreach (var (key, value) in stored ?? new Dictionary<string, string>())
+            if (values.ContainsKey(key))
+                values[key] = value;
+
+        return values;
+    }
+
+    /// <summary>
+    /// The values to send, dropping blanks.
+    /// </summary>
+    /// <remarks>
+    /// Blanks are dropped rather than sent as empty strings so that an untouched secret arrives as
+    /// an absent key, which the server keeps. A non-secret the operator actually cleared also
+    /// arrives absent — and absent is how the server stores "not set", so clearing still works.
+    /// </remarks>
+    public static Dictionary<string, string?> ForSubmit(IReadOnlyDictionary<string, string> values) =>
+        values.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+              .ToDictionary(kv => kv.Key, kv => (string?)kv.Value.Trim(), StringComparer.Ordinal);
+
+    string? SecretHelper(ProviderSettingDto setting) =>
+        string.IsNullOrWhiteSpace(setting.Description)
+            ? UiStrings.Provider_Secret_Keep
+            : $"{setting.Description} {UiStrings.Provider_Secret_Keep}";
+
+    async Task Set(string key, string value)
+    {
+        Values[key] = value;
+        await OnChanged.InvokeAsync();
+    }
+}

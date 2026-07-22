@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ReleaseOrchestrator.Infrastructure.Actions;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -61,7 +62,7 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
             Scope = string.IsNullOrWhiteSpace(req.Scope) ? null : req.Scope.Trim(),
             // Secret settings (e.g. a Telegram bot token) are encrypted before storage, so they are
             // never at rest in plaintext in SettingsJson -- the same treatment connection tokens get.
-            SettingsJson = ActionSecretProtection.ProtectForStorage(
+            SettingsJson = ProviderSettingsProtection.ProtectForStorage(
                 req.Settings, factory.GetSettingsSchema(req.ActionType), protector),
             Order = req.Order,
             Enabled = req.Enabled

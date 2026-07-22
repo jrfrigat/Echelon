@@ -83,7 +83,8 @@ else if (Result is not null)
             <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
             @if (!_editId.HasValue)
             {
-                <FlareSelect TValue="string" Label="@UiStrings.Common_Type" @bind-Value="_fType" Items="VcsTypes" />
+                <FlareSelect TValue="string" Label="@UiStrings.Common_Type"
+                             Value="_fType" ValueChanged="OnTypeChanged" Items="VcsTypes" />
             }
             <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
             <FlareTextField Label="@UiStrings.Vcs_Col_ReadyLabel" @bind-Value="_fLabel"
@@ -92,6 +93,10 @@ else if (Result is not null)
             <FlareSelect TValue="string" Label="@UiStrings.Vcs_IngestionMode" @bind-Value="_fIngestionMode"
                          Items="IngestionModes" ItemLabel="@(m => IngestionModeLabel(m))"
                          HelperText="@UiStrings.Vcs_IngestionMode_Helper" />
+
+            @* Declared by the selected provider, not by this page. *@
+            <ProviderSettingsFields Schema="SelectedSchema" Values="_fSettings" OnChanged="StateHasChanged" />
+
             <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
@@ -106,20 +111,36 @@ else if (Result is not null)
     // Mirrors VcsConnection.DefaultReadyForDeployLabel; the PWA does not reference Core.
     const string DefaultReadyForDeployLabel = "ready-for-deploy";
 
-    static readonly string[] VcsTypes = ["GitLab"];
+    // Served by the API, not compiled in: this was a literal ["GitLab"], so a second VCS meant
+    // editing the page — and a provider needing its own field had nowhere to declare one.
+    List<ProviderTypeDto>? _providers;
 
     /// <summary>Mirrors Core.Enums.IngestionMode; the PWA does not reference Core.</summary>
     static readonly string[] IngestionModes = ["Push", "Poll"];
 
     Guid? _editId;
-    string _fName = "", _fType = "GitLab", _fUrl = "", _fToken = "", _fLabel = "";
+    string _fName = "", _fType = "", _fUrl = "", _fToken = "", _fLabel = "";
     string _fIngestionMode = "Push";
+    Dictionary<string, string> _fSettings = [];
+
+    IEnumerable<string> VcsTypes => _providers?.Select(p => p.ProviderType) ?? [];
+
+    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+        _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
 
     // The type is fixed at creation: an existing connection's stored repositories and token are
     // meaningless against a different provider, so Update takes no vcsType.
     bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
                              || string.IsNullOrWhiteSpace(_fUrl)
-                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken));
+                             || string.IsNullOrWhiteSpace(_fType)
+                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken))
+                             || ProviderSettingsFields.MissingRequired(SelectedSchema, _fSettings, _editId.HasValue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _providers = await Api.GetVcsProviderTypesAsync());
+        await base.OnInitializedAsync();
+    }
 
     protected override Task<PagedResult<VcsConnectionDto>> FetchPageAsync(int page) =>
         Api.GetVcsConnectionsAsync(page);
@@ -127,9 +148,13 @@ else if (Result is not null)
     void OpenCreate()
     {
         _editId = null;
-        _fName = ""; _fType = "GitLab"; _fUrl = ""; _fToken = "";
+        _fName = ""; _fUrl = ""; _fToken = "";
         _fIngestionMode = "Push";
         _fLabel = DefaultReadyForDeployLabel;
+        // The first registered provider, so a single-provider install needs no choice made; with
+        // several, the operator picks and the fields follow.
+        _fType = VcsTypes.FirstOrDefault() ?? "";
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
         ShowModal = true;
     }
 
@@ -142,18 +167,27 @@ else if (Result is not null)
         // rather than leaving it blank and relying on the server to keep it.
         _fIngestionMode = c.IngestionMode ?? "Push";
         _fToken = "";
+        _fSettings = ProviderSettingsFields.ForEdit(SelectedSchema, c.Settings);
         ShowModal = true;
+    }
+
+    /// <summary>Switching provider starts a fresh value map: the keys belong to the old schema.</summary>
+    void OnTypeChanged(string value)
+    {
+        _fType = value;
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
     }
 
     Task Save() => SaveAsync(async () =>
     {
         // Blank label means "no label-driven promotion", which the API expresses as null.
         var label = string.IsNullOrWhiteSpace(_fLabel) ? null : _fLabel.Trim();
+        var settings = ProviderSettingsFields.ForSubmit(_fSettings);
 
         if (_editId.HasValue)
-            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, label, _fIngestionMode);
+            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, label, _fIngestionMode, settings);
         else
-            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, label, _fIngestionMode);
+            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, label, _fIngestionMode, settings);
     });
 
     static string IngestionModeLabel(string mode) =>

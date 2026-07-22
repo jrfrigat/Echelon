@@ -249,20 +249,17 @@
   <data name="Tracker_New" xml:space="preserve">
     <value>New Connection</value>
   </data>
-  <data name="Tracker_Col_OrgId" xml:space="preserve">
-    <value>Org ID</value>
+  <data name="Provider_Col_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Provider_Secret_Keep" xml:space="preserve">
+    <value>Leave blank to keep the stored value.</value>
   </data>
   <data name="Tracker_Dialog_Edit" xml:space="preserve">
     <value>Edit Tracker Connection</value>
   </data>
   <data name="Tracker_Dialog_New" xml:space="preserve">
     <value>New Tracker Connection</value>
-  </data>
-  <data name="Tracker_OrgId_Label" xml:space="preserve">
-    <value>Org ID (optional)</value>
-  </data>
-  <data name="Tracker_OrgId_Placeholder" xml:space="preserve">
-    <value>Yandex organization ID</value>
   </data>
   <data name="Tracker_Delete_What" xml:space="preserve">
     <value>tracker connection '{0}'</value>

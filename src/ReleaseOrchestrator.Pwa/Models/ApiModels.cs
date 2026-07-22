@@ -7,13 +7,36 @@ namespace ReleaseOrchestrator.Pwa.Models;
 public record PlanConflictDto(
     string Kind, Guid FromMergeRequestId, Guid ToMergeRequestId, string Reason);
 
+/// <summary>
+/// One field a provider declares for its connections, described well enough to render it.
+/// </summary>
+/// <remarks>
+/// This is why the connection dialogs contain no provider's vocabulary. The form is built from
+/// whatever the server says the selected provider needs, so a new provider — or a new setting on an
+/// existing one — reaches the UI without a change here.
+/// </remarks>
+/// <param name="Secret">Render write-only. The API never sends a stored secret back.</param>
+public record ProviderSettingDto(string Key, string Label, string? Description, bool Required, bool Secret);
+
+/// <summary>A provider that can back a connection, and the settings it declares.</summary>
+public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings);
+
 /// <param name="IngestionMode">"Push" (webhooks, the default) or "Poll" for a VCS that cannot reach us.</param>
+/// <param name="Settings">
+/// Provider-specific settings, keyed as the provider declares them. Secret ones are absent, not
+/// masked — a mask would be submitted back as though it were the value. See
+/// <c>ProviderSettingsFields</c>.
+/// </param>
 public record VcsConnectionDto(
     Guid Id, string Name, string VcsType, string ApiUrl,
     string? ReadyForDeployLabel = null, string? ConnectionName = null,
-    string? IngestionMode = null);
+    string? IngestionMode = null,
+    Dictionary<string, string>? Settings = null);
 
-public record TrackerConnectionDto(Guid Id, string Name, string TrackerType, string ApiUrl, string? OrgId);
+/// <param name="Settings">Provider-specific settings; secret ones are absent.</param>
+public record TrackerConnectionDto(
+    Guid Id, string Name, string TrackerType, string ApiUrl,
+    Dictionary<string, string>? Settings = null);
 
 public record RepositoryDto(Guid Id, string Name, string ExternalId, Guid ConnectionId, string ConnectionName);
 
@@ -126,6 +149,10 @@ public record RolloutSummaryDto(
 
 public record ActionBindingDto(Guid Id, string EventType, string ActionType, string? Scope, int Order, bool Enabled);
 
-public record ActionTypeDto(string ActionType, List<ActionSettingDto> Settings);
-
-public record ActionSettingDto(string Key, string Label, string? Description, bool Required, bool Secret);
+/// <summary>An action handler and the settings it declares, in the same shape a provider uses.</summary>
+/// <remarks>
+/// Shares <see cref="ProviderSettingDto"/> with connections because the server declares both through
+/// one <c>ProviderSettingSchema</c>; a separate mirror here would be a second thing to keep in step
+/// with it for no difference in content.
+/// </remarks>
+public record ActionTypeDto(string ActionType, List<ProviderSettingDto> Settings);

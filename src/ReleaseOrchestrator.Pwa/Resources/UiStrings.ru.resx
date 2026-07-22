@@ -249,20 +249,17 @@
   <data name="Tracker_New" xml:space="preserve">
     <value>Новое подключение</value>
   </data>
-  <data name="Tracker_Col_OrgId" xml:space="preserve">
-    <value>ID организации</value>
+  <data name="Provider_Col_Settings" xml:space="preserve">
+    <value>Настройки</value>
+  </data>
+  <data name="Provider_Secret_Keep" xml:space="preserve">
+    <value>Оставьте пустым, чтобы сохранить текущее значение.</value>
   </data>
   <data name="Tracker_Dialog_Edit" xml:space="preserve">
     <value>Изменение подключения к трекеру</value>
   </data>
   <data name="Tracker_Dialog_New" xml:space="preserve">
     <value>Новое подключение к трекеру</value>
-  </data>
-  <data name="Tracker_OrgId_Label" xml:space="preserve">
-    <value>ID организации (необязательно)</value>
-  </data>
-  <data name="Tracker_OrgId_Placeholder" xml:space="preserve">
-    <value>ID организации в Яндексе</value>
   </data>
   <data name="Tracker_Delete_What" xml:space="preserve">
     <value>подключение к трекеру «{0}»</value>

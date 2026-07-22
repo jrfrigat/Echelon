@@ -25,18 +25,6 @@ public class TrackerConnectionsController(
     IConfiguration config,
     IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
-    /// <summary>
-    /// The settings key the wire's <c>orgId</c> field maps to.
-    /// </summary>
-    /// <remarks>
-    /// A compatibility shim, and the last place a provider's vocabulary appears outside its own
-    /// adapter. The entity now stores an opaque settings bag, but the HTTP contract still has an
-    /// <c>orgId</c> field and the PWA still sends it. Replacing that field with a generic
-    /// <c>providerSettings</c> object is a UI change, so it is deliberately not bundled here.
-    /// Nothing reads this key's meaning — only the Yandex.Tracker adapter does.
-    /// </remarks>
-    private const string OrgIdSettingKey = "orgId";
-
     private string[] AllowedApiHosts => config.GetSection("Security:AllowedApiHosts").Get<string[]>() ?? [];
 
     [HttpGet]
@@ -47,7 +35,7 @@ public class TrackerConnectionsController(
         var total = await db.TrackerConnections.CountAsync(ct);
 
         // Projected to the database, then reshaped in memory: the settings bag is JSON in a
-        // column, so orgId cannot be read out of it in SQL.
+        // column, so it cannot be unpacked in SQL.
         var rows = await db.TrackerConnections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
             .Select(c => new { c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ProviderSettingsJson })
@@ -55,7 +43,14 @@ public class TrackerConnectionsController(
             .ToListAsync(ct);
 
         var items = rows
-            .Select(c => new { c.Id, c.Name, TrackerType = c.ProviderType, c.ApiUrl, OrgId = ReadOrgId(c.ProviderSettingsJson) })
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                TrackerType = c.ProviderType,
+                c.ApiUrl,
+                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
+            })
             .ToList();
 
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
@@ -71,33 +66,28 @@ public class TrackerConnectionsController(
 
         return row is null
             ? NotFound()
-            : Ok(new { row.Id, row.Name, TrackerType = row.ProviderType, row.ApiUrl, OrgId = ReadOrgId(row.ProviderSettingsJson) });
+            : Ok(new
+            {
+                row.Id,
+                row.Name,
+                TrackerType = row.ProviderType,
+                row.ApiUrl,
+                Settings = ReadSettings(row.ProviderType, row.ProviderSettingsJson)
+            });
     }
 
-    /// <summary>Reads the wire's orgId back out of the stored settings bag.</summary>
-    private static string? ReadOrgId(string? providerSettingsJson)
-    {
-        if (string.IsNullOrWhiteSpace(providerSettingsJson)) return null;
-
-        try
-        {
-            var settings = JsonSerializer.Deserialize<Dictionary<string, string?>>(providerSettingsJson);
-            return settings is not null && settings.TryGetValue(OrgIdSettingKey, out var orgId) ? orgId : null;
-        }
-        catch (JsonException)
-        {
-            // A row this endpoint cannot parse is still worth listing: swallowing the whole
-            // connection because one setting is malformed would hide the row an operator needs to
-            // fix. The provider factory raises the real error when the connection is used.
-            return null;
-        }
-    }
-
-    /// <summary>Writes the wire's orgId into the settings bag, dropping it when blank.</summary>
-    private static string? WriteOrgId(string? orgId) =>
-        string.IsNullOrWhiteSpace(orgId)
-            ? null
-            : JsonSerializer.Serialize(new Dictionary<string, string?> { [OrgIdSettingKey] = orgId.Trim() });
+    /// <summary>
+    /// The connection's non-secret settings, keyed as its provider declared them.
+    /// </summary>
+    /// <remarks>
+    /// A connection whose provider is no longer registered still lists, with no settings: the schema
+    /// needed to interpret the bag is gone, but hiding the row would hide the only thing an operator
+    /// could act on, which is that it points at a provider this build does not have.
+    /// </remarks>
+    private IReadOnlyDictionary<string, string> ReadSettings(string providerType, string? settingsJson) =>
+        providerFactory.AvailableProviders.Contains(providerType)
+            ? ProviderSettingsBinder.ReadForDisplay(settingsJson, providerFactory.GetSettingsSchema(providerType))
+            : new Dictionary<string, string>(StringComparer.Ordinal);
 
     [HttpPost]
     [Authorize(Policy = Permissions.ConfigEdit)]
@@ -117,13 +107,18 @@ public class TrackerConnectionsController(
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name, ct))
             return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
 
+        if (!ProviderSettingsBinder.TryBind(
+                req.Settings, providerFactory.GetSettingsSchema(providerType),
+                existingJson: null, protector, localizer, out var settingsJson, out var settingsError))
+            return BadRequest(new { error = settingsError });
+
         var entity = new TrackerConnection
         {
             Id = Guid.NewGuid(),
             Name = req.Name,
             ProviderType = providerType,
             ApiUrl = req.ApiUrl,
-            ProviderSettingsJson = WriteOrgId(req.OrgId),
+            ProviderSettingsJson = settingsJson,
             EncryptedAccessToken = protector.Protect(req.AccessToken)
         };
 
@@ -145,9 +140,26 @@ public class TrackerConnectionsController(
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
             return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
 
+        // The provider type is the stored one — this endpoint cannot change it. A connection whose
+        // provider is no longer registered is refused rather than saved against an empty schema,
+        // which would silently discard settings the absent adapter still needs.
+        if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+            return BadRequest(new
+            {
+                error = localizer[
+                    "Tracker_UnknownType", entity.ProviderType,
+                    string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
+
+        if (!ProviderSettingsBinder.TryBind(
+                req.Settings, providerFactory.GetSettingsSchema(entity.ProviderType),
+                entity.ProviderSettingsJson, protector, localizer,
+                out var settingsJson, out var settingsError))
+            return BadRequest(new { error = settingsError });
+
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
-        entity.ProviderSettingsJson = WriteOrgId(req.OrgId);
+        entity.ProviderSettingsJson = settingsJson;
 
         // Blank keeps the stored token — see the UI's "leave blank to keep current".
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
@@ -173,16 +185,25 @@ public class TrackerConnectionsController(
     }
 }
 
+/// <param name="Settings">
+/// Provider-specific settings, keyed as the chosen provider's schema declares them. Validated
+/// against that schema — an undeclared key is refused rather than stored and ignored.
+/// </param>
 public record CreateTrackerConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required] string TrackerType,
     [property: Required, MaxLength(500)] string ApiUrl,
-    [property: MaxLength(200)] string? OrgId,
+    Dictionary<string, string?>? Settings,
     [property: Required, MaxLength(500)] string AccessToken);
 
+/// <param name="Settings">
+/// Provider-specific settings. A blank value clears the setting, except for one the schema marks
+/// secret, where blank keeps what is stored — the form cannot show a secret back, so an empty box
+/// there means "untouched", the same convention <paramref name="AccessToken"/> uses.
+/// </param>
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 public record UpdateTrackerConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
-    [property: MaxLength(200)] string? OrgId,
+    Dictionary<string, string?>? Settings,
     [property: MaxLength(500)] string? AccessToken = null);

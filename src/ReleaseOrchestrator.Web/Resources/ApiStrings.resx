@@ -186,6 +186,15 @@
   <data name="Stack_RepositoryAlreadyIn" xml:space="preserve">
     <value>That repository is already in the stack.</value>
   </data>
+  <data name="Provider_UnknownSetting" xml:space="preserve">
+    <value>This provider has no setting named '{0}'. It declares: {1}</value>
+  </data>
+  <data name="Provider_MissingSetting" xml:space="preserve">
+    <value>This provider requires the setting '{0}'.</value>
+  </data>
+  <data name="Provider_SettingsTooLong" xml:space="preserve">
+    <value>These settings do not fit; the limit is {0} characters in total.</value>
+  </data>
   <data name="Tracker_UnknownType" xml:space="preserve">
     <value>Unknown trackerType '{0}'. Valid: {1}</value>
   </data>

@@ -40,15 +40,25 @@ public class VcsConnectionsController(
         // The wire keeps saying "vcsType" while the column is now ProviderType. The name was
         // never the problem — an enum in the domain was — and renaming the field would break
         // every client for no gain.
-        var items = await db.VcsConnections
+        // Reshaped in memory after paging: the settings bag is JSON in a column, so it cannot be
+        // unpacked in SQL.
+        var rows = await db.VcsConnections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
             .Select(c => new
             {
-                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel,
-                IngestionMode = c.IngestionMode.ToString()
+                c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel,
+                IngestionMode = c.IngestionMode.ToString(), c.ProviderSettingsJson
             })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
+
+        var items = rows
+            .Select(c => new
+            {
+                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel, c.IngestionMode,
+                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
+            })
+            .ToList();
 
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
@@ -58,11 +68,34 @@ public class VcsConnectionsController(
     {
         var c = await db.VcsConnections
             .Where(x => x.Id == id)
-            .Select(x => new { x.Id, x.Name, VcsType = x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel, IngestionMode = x.IngestionMode.ToString() })
+            .Select(x => new
+            {
+                x.Id, x.Name, x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel,
+                IngestionMode = x.IngestionMode.ToString(), x.ProviderSettingsJson
+            })
             .FirstOrDefaultAsync(ct);
 
-        return c is null ? NotFound() : Ok(c);
+        return c is null
+            ? NotFound()
+            : Ok(new
+            {
+                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel, c.IngestionMode,
+                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
+            });
     }
+
+    /// <summary>
+    /// The connection's non-secret settings, keyed as its provider declared them.
+    /// </summary>
+    /// <remarks>
+    /// A connection whose provider is no longer registered still lists, with no settings: the schema
+    /// needed to interpret the bag is gone, but hiding the row would hide the only thing an operator
+    /// could act on, which is that it points at a provider this build does not have.
+    /// </remarks>
+    private IReadOnlyDictionary<string, string> ReadSettings(string providerType, string? settingsJson) =>
+        providerFactory.AvailableProviders.Contains(providerType)
+            ? ProviderSettingsBinder.ReadForDisplay(settingsJson, providerFactory.GetSettingsSchema(providerType))
+            : new Dictionary<string, string>(StringComparer.Ordinal);
 
     [HttpPost]
     [Authorize(Policy = Permissions.ConfigEdit)]
@@ -88,6 +121,11 @@ public class VcsConnectionsController(
         if (!TryParseIngestionMode(req.IngestionMode, out var ingestionMode))
             return BadRequest(new { error = localizer["Vcs_UnknownIngestionMode", req.IngestionMode ?? "", string.Join(", ", Enum.GetNames<IngestionMode>())].Value });
 
+        if (!ProviderSettingsBinder.TryBind(
+                req.Settings, providerFactory.GetSettingsSchema(providerType),
+                existingJson: null, protector, localizer, out var settingsJson, out var settingsError))
+            return BadRequest(new { error = settingsError });
+
         var entity = new VcsConnection
         {
             Id = Guid.NewGuid(),
@@ -96,6 +134,7 @@ public class VcsConnectionsController(
             ApiUrl = req.ApiUrl,
             ReadyForDeployLabel = req.ReadyForDeployLabel,
             IngestionMode = ingestionMode,
+            ProviderSettingsJson = settingsJson,
             EncryptedAccessToken = protector.Protect(req.AccessToken)
         };
 
@@ -129,9 +168,27 @@ public class VcsConnectionsController(
             entity.IngestionMode = ingestionMode;
         }
 
+        // The provider type is the stored one — this endpoint cannot change it. A connection whose
+        // provider is no longer registered is refused rather than saved against an empty schema,
+        // which would silently discard settings the absent adapter still needs.
+        if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+            return BadRequest(new
+            {
+                error = localizer[
+                    "Vcs_UnknownType", entity.ProviderType,
+                    string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
+
+        if (!ProviderSettingsBinder.TryBind(
+                req.Settings, providerFactory.GetSettingsSchema(entity.ProviderType),
+                entity.ProviderSettingsJson, protector, localizer,
+                out var settingsJson, out var settingsError))
+            return BadRequest(new { error = settingsError });
+
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
         entity.ReadyForDeployLabel = req.ReadyForDeployLabel;
+        entity.ProviderSettingsJson = settingsJson;
 
         // Only replace the token when one is supplied. The UI says "leave blank to keep
         // current", but this used to overwrite unconditionally — so renaming a connection
@@ -180,13 +237,18 @@ public class VcsConnectionsController(
 }
 
 /// <param name="IngestionMode">"Push" (default) or "Poll" for a VCS that cannot deliver webhooks.</param>
+/// <param name="Settings">
+/// Provider-specific settings, keyed as the chosen provider's schema declares them. Validated
+/// against that schema — an undeclared key is refused rather than stored and ignored.
+/// </param>
 public record CreateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required] string VcsType,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: Required, MaxLength(500)] string AccessToken,
     [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
-    [property: MaxLength(20)] string? IngestionMode = null);
+    [property: MaxLength(20)] string? IngestionMode = null,
+    Dictionary<string, string?>? Settings = null);
 
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 /// <param name="ReadyForDeployLabel">Blank disables label-driven promotion for this connection.</param>
@@ -194,9 +256,15 @@ public record CreateVcsConnectionRequest(
 /// Blank keeps the stored mode; "Push" or "Poll" changes it. Blank means keep, not Push — resolving
 /// it to the default here would switch a polling connection back to webhooks on any unrelated edit.
 /// </param>
+/// <param name="Settings">
+/// Provider-specific settings. A blank value clears the setting, except for one the schema marks
+/// secret, where blank keeps what is stored — the form cannot show a secret back, so an empty box
+/// there means "untouched", the same convention <paramref name="AccessToken"/> uses.
+/// </param>
 public record UpdateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: MaxLength(500)] string? AccessToken = null,
     [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
-    [property: MaxLength(20)] string? IngestionMode = null);
+    [property: MaxLength(20)] string? IngestionMode = null,
+    Dictionary<string, string?>? Settings = null);

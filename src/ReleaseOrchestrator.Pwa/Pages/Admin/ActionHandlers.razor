@@ -24,22 +24,9 @@
             @if (SelectedType is { Settings.Count: > 0 } selected)
             {
                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-                    @foreach (var setting in selected.Settings)
-                    {
-                        @if (setting.Secret)
-                        {
-                            @* A secret (e.g. a Telegram bot token) is masked, not shown in cleartext. *@
-                            <FlarePasswordField Label="@setting.Label"
-                                                Value="@_settings.GetValueOrDefault(setting.Key, "")"
-                                                ValueChanged="@(v => _settings[setting.Key] = v)" />
-                        }
-                        else
-                        {
-                            <FlareTextField Label="@setting.Label"
-                                            Value="@_settings.GetValueOrDefault(setting.Key, "")"
-                                            ValueChanged="@(v => _settings[setting.Key] = v)" />
-                        }
-                    }
+                    @* The same renderer the connection forms use — one place that turns a declared
+                       schema into inputs, so the secret-handling rules cannot diverge between them. *@
+                    <ProviderSettingsFields Schema="selected.Settings" Values="_settings" OnChanged="StateHasChanged" />
                 </FlareStack>
             }
 
@@ -104,9 +91,11 @@ else
     ActionTypeDto? SelectedType => _types?.FirstOrDefault(t => t.ActionType == _actionType);
 
     // A setting the schema marks Required must be filled, or the binding would be enabled-but-broken
-    // (the server does not validate these). The Create button stays disabled until they are.
-    bool MissingRequired => SelectedType?.Settings
-        .Any(s => s.Required && string.IsNullOrWhiteSpace(_settings.GetValueOrDefault(s.Key, ""))) ?? false;
+    // (the server does not validate these -- unlike connections, which do). The Create button stays
+    // disabled until they are. Always "creating" here: this form has no edit mode, so a blank secret
+    // is genuinely missing rather than "keep the stored one".
+    bool MissingRequired =>
+        ProviderSettingsFields.MissingRequired(SelectedType?.Settings ?? [], _settings, editing: false);
 
     protected override async Task OnInitializedAsync()
     {
