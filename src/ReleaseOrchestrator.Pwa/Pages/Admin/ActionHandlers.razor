@@ -90,10 +90,9 @@ else
 
     ActionTypeDto? SelectedType => _types?.FirstOrDefault(t => t.ActionType == _actionType);
 
-    // A setting the schema marks Required must be filled, or the binding would be enabled-but-broken
-    // (the server does not validate these -- unlike connections, which do). The Create button stays
-    // disabled until they are. Always "creating" here: this form has no edit mode, so a blank secret
-    // is genuinely missing rather than "keep the stored one".
+    // A setting the schema marks Required must be filled. The server enforces this too, so this is
+    // only about learning it before a round trip. Always "creating" here: this form has no edit mode,
+    // so a blank secret is genuinely missing rather than "keep the stored one".
     bool MissingRequired =>
         ProviderSettingsFields.MissingRequired(SelectedType?.Settings ?? [], _settings, editing: false);
 

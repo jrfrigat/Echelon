@@ -7,6 +7,7 @@ using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Actions;
 
 namespace ReleaseOrchestrator.Web.Controllers;
@@ -54,6 +55,29 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
         if (!factory.AvailableActionTypes.Contains(req.ActionType, StringComparer.OrdinalIgnoreCase))
             return BadRequest(new { error = $"Unknown action type '{req.ActionType}'. Expected one of: {string.Join(", ", factory.AvailableActionTypes)}." });
 
+        // Checked against the handler's own schema, the same way a connection's settings are. Until
+        // this was here the admin form was the only thing enforcing it, so anything posting directly
+        // could store a binding that is enabled and broken -- discovered when the event fires and the
+        // handler asks for a setting nobody supplied, which is a dispatch-time failure on someone
+        // else's incident rather than a 400 on this request.
+        var schema = factory.GetSettingsSchema(req.ActionType);
+        var submitted = req.Settings?.ToDictionary(kv => kv.Key, kv => (string?)kv.Value, StringComparer.Ordinal);
+
+        switch (ProviderSettingsBag.Validate(submitted, schema, out var settings, out var key))
+        {
+            case ProviderSettingsError.UnknownKey:
+                return BadRequest(new
+                {
+                    error = $"Action type '{req.ActionType}' has no setting named '{key}'. It declares: {string.Join(", ", schema.Select(s => s.Key))}."
+                });
+
+            case ProviderSettingsError.MissingRequired:
+                return BadRequest(new { error = $"Action type '{req.ActionType}' requires the setting '{key}'." });
+
+            case ProviderSettingsError.TooLong:
+                return BadRequest(new { error = $"These settings do not fit; the limit is {ProviderSettingsBag.MaxJsonLength} characters in total." });
+        }
+
         var binding = new ActionBinding
         {
             Id = Guid.NewGuid(),
@@ -62,8 +86,11 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
             Scope = string.IsNullOrWhiteSpace(req.Scope) ? null : req.Scope.Trim(),
             // Secret settings (e.g. a Telegram bot token) are encrypted before storage, so they are
             // never at rest in plaintext in SettingsJson -- the same treatment connection tokens get.
-            SettingsJson = ProviderSettingsProtection.ProtectForStorage(
-                req.Settings, factory.GetSettingsSchema(req.ActionType), protector),
+            // Empty stores as null rather than "{}", which is what a handler needing no settings has
+            // always stored; both read back as an empty map, but only one of them is a new shape.
+            SettingsJson = settings.Count == 0
+                ? null
+                : ProviderSettingsProtection.ProtectForStorage(settings, schema, protector),
             Order = req.Order,
             Enabled = req.Enabled
         };
