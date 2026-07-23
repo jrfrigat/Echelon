@@ -9,6 +9,8 @@ using ReleaseOrchestrator.Ingress.Webhooks;
 using ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 using ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 using ReleaseOrchestrator.Observability;
+using ReleaseOrchestrator.Providers.GitLab;
+using ReleaseOrchestrator.Providers.YandexTracker;
 using Serilog;
 using Serilog.Events;
 
@@ -72,6 +74,12 @@ try
         .Transport(t => t.UseRabbitMqAsOneWayClient(IngressMessaging.RabbitMqConnectionString(builder.Configuration)))
         .Routing(r => r.TypeBased().MapAssemblyDerivedFrom<IMessage>(MessageRouting.InputQueue)));
 
+    // The webhook parsers, keyed by provider type. This is the ingress's only provider registration:
+    // it wants each provider's webhook knowledge but not its HTTP read-adapter (it never calls a
+    // provider's API), so it adds the parsers alone rather than the whole provider.
+    builder.Services.AddGitLabWebhookParser();
+    builder.Services.AddYandexTrackerWebhookParser();
+
     var app = builder.Build();
 
     app.UseForwardedHeaders();
@@ -89,8 +97,9 @@ try
     app.UseHttpsRedirection();
     app.UseRateLimiter();
 
-    app.MapGitLabWebhooks();
-    app.MapYandexTrackerWebhooks();
+    // One route per registered provider, built from the providers' own descriptors. No provider is
+    // named here — adding one is a parser registration above and nothing on this line.
+    app.MapProviderWebhooks();
 
     // AllowAnonymous for symmetry with the core host: this endpoint must stay reachable if
     // authentication is ever added here.

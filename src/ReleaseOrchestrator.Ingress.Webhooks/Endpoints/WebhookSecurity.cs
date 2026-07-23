@@ -1,34 +1,23 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 
-public static class WebhookTokens
-{
-    /// <summary>
-    /// Constant-time shared-secret check. Fails closed when no secret is configured, so a
-    /// connection without a token rejects everything rather than accepting anything.
-    /// </summary>
-    public static bool Matches(string? presented, string? expected)
-    {
-        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(presented))
-            return false;
-
-        var a = Encoding.UTF8.GetBytes(presented);
-        var b = Encoding.UTF8.GetBytes(expected);
-
-        // FixedTimeEquals requires equal lengths; comparing lengths first would leak the
-        // secret's length, so hash both sides to a fixed width and compare those.
-        return CryptographicOperations.FixedTimeEquals(SHA256.HashData(a), SHA256.HashData(b));
-    }
-}
-
+/// <summary>
+/// Validates the connection name a webhook route carries before it is used as a configuration key.
+/// </summary>
+/// <remarks>
+/// The token comparison that used to live beside this has moved to the providers — each provider
+/// knows which header carries its secret and how to check it (a shared secret today, an HMAC
+/// tomorrow), and they share the constant-time comparison through
+/// <c>Providers.Abstractions.Ingestion.WebhookSignatures</c>. What stays here is host-only: the
+/// route parameter is interpolated into a config key, and <c>:</c> delimits the config hierarchy, so
+/// the name is validated before it can reach that key.
+/// </remarks>
 public static class WebhookConnectionName
 {
-    // ':' delimits the configuration hierarchy, so an unfiltered name from the URL is
-    // interpolated straight into a config key. No exploit exists against the current key
-    // shape, but the pattern is one refactor away from being one.
+    // ':' delimits the configuration hierarchy, so an unfiltered name from the URL would be
+    // interpolated straight into a config key. No exploit exists against the current key shape, but
+    // the pattern is one refactor away from being one.
     private static readonly Regex Allowed = new(
         "^[A-Za-z0-9_-]{1,100}$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(50));
 

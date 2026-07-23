@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Deploy;
+using ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using ReleaseOrchestrator.Providers.GitLab.Webhooks;
 
 namespace ReleaseOrchestrator.Providers.GitLab;
 
@@ -74,6 +76,29 @@ public static class GitLabProviderExtensions
         services.AddHttpClient<GitLabPipelineStrategy>(c => c.Timeout = ApiTimeout);
         services.AddKeyedScoped<IDeployStrategy>(PipelineStrategyKey, (sp, _) => sp.GetRequiredService<GitLabPipelineStrategy>());
         services.AddSingleton(new DeployStrategyRegistration(PipelineStrategyKey));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the GitLab webhook parser, keyed by <see cref="ProviderType"/> and paired with a
+    /// <see cref="WebhookParserRegistration"/> so the host can enumerate the parsers and mount one
+    /// route per provider.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    /// <remarks>
+    /// Separate from <see cref="AddGitLabProvider"/> because the ingress host wants the webhook
+    /// parser but not the HTTP read-adapter (it never calls the GitLab API), and the API host wants
+    /// the reverse. Registering them together would drag one host's unused dependencies into the
+    /// other.
+    /// </remarks>
+    public static IServiceCollection AddGitLabWebhookParser(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddKeyedSingleton<IWebhookParser, GitLabWebhookParser>(ProviderType);
+        services.AddSingleton(new WebhookParserRegistration(ProviderType));
 
         return services;
     }
