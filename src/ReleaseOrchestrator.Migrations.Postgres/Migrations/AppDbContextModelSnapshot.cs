@@ -894,6 +894,11 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
 
                     b.HasIndex("RolloutPlanId");
 
+                    b.HasIndex("TargetTaskId", "EnvironmentId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Rollout_TargetTask_Environment_Live")
+                        .HasFilter("\"Status\" <> 5 AND \"Status\" <> 6 AND \"Status\" <> 7");
+
                     b.HasIndex(new[] { "IdempotencyKey" }, "IX_Rollout_IdempotencyKey")
                         .IsUnique();
 

@@ -175,6 +175,19 @@ public class LabelSetTests
     public void NormalizeIsNullSafe() => Assert.Empty(LabelSet.Normalize(null));
 
     /// <summary>
+    /// A label containing the join delimiter is dropped, not stored: it would otherwise be torn into
+    /// separate tokens when the canonical set is split at the readiness gate and could match a rule
+    /// label it never carried — a false admit into a gated environment.
+    /// </summary>
+    [Fact]
+    public void NormalizeDropsALabelContainingTheDelimiter()
+    {
+        Assert.Equal(["ok"], LabelSet.Normalize(["ok", "foo,ready-for-prod"]));
+        // The whole canonical set stays split-safe: nothing round-trips through the comma but real labels.
+        Assert.Equal("ok", LabelSet.Canonical(["ok", "sneaky,ready-for-prod"]));
+    }
+
+    /// <summary>
     /// Order must not matter: the canonical form is a change-detection key, and a provider that
     /// happens to list labels differently on two deliveries must not read as a change.
     /// </summary>

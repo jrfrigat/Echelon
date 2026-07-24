@@ -29,6 +29,12 @@ public static class LabelSet
         return [.. labels
             .Where(l => !string.IsNullOrWhiteSpace(l))
             .Select(l => l!.Trim().ToLowerInvariant())
+            // The canonical form joins on ',', and the readiness gate splits on it, so a label that
+            // itself contains a comma would be torn into separate tokens on the way back out and could
+            // match a rule label it never carried -- a false admit into a gated environment. No
+            // supported provider allows a comma in a label name, so such a value is malformed input;
+            // drop it rather than let it corrupt the set it joins into.
+            .Where(l => !l.Contains(',', StringComparison.Ordinal))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)];
     }

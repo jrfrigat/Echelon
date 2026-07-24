@@ -60,8 +60,14 @@ public class RolloutService(
             .Select(r => new { r.Id, r.Status, r.IdempotencyKey })
             .ToListAsync(ct);
 
-        var live = forPair.FirstOrDefault(r =>
-            r.Status is not (RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled));
+        // Prefer the exact-key live row when one exists, so a double-submit of the current plan
+        // version always coalesces rather than depending on which unordered row the query returned
+        // first. (Two live rows for one pair should not exist -- the database enforces that below --
+        // but if they ever did, this makes the decision deterministic instead of row-order dependent.)
+        bool IsLive(RolloutStatus s) => s is not (RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled);
+        var live =
+            forPair.FirstOrDefault(r => r.IdempotencyKey == idempotencyKey && IsLive(r.Status))
+            ?? forPair.FirstOrDefault(r => IsLive(r.Status));
         if (live is not null)
         {
             // Same plan version: a genuine double-submit, coalesced to a no-op that hands back the
@@ -238,11 +244,23 @@ public class RolloutService(
         }
         catch (DbUpdateException)
         {
-            // A concurrent launch inserted the same (task, environment, plan) between the check above
-            // and here -- the unique index on IdempotencyKey caught it. Report it cleanly rather than
-            // as a 500; rethrow anything that is not that conflict.
-            if (await db.Rollouts.AsNoTracking().AnyAsync(r => r.IdempotencyKey == idempotencyKey && r.Id != rollout.Id, ct))
+            // A concurrent launch slipped between the liveness check above and here. Two unique
+            // indexes can catch it: IdempotencyKey (the same plan version, double-submitted), or the
+            // filtered one that allows only a single live rollout per (task, environment) -- the case
+            // of two launches straddling a plan recalculation, whose rotating keys differ so the key
+            // index would not fire and the read-based check could not see. Re-query to report which,
+            // cleanly, rather than surfacing the raw constraint violation as a 500.
+            var others = await db.Rollouts.AsNoTracking()
+                .Where(r => r.Id != rollout.Id && r.TargetTaskId == taskId && r.EnvironmentId == environmentId)
+                .Select(r => new { r.Status, r.IdempotencyKey })
+                .ToListAsync(ct);
+
+            if (others.Any(r => r.IdempotencyKey == idempotencyKey))
                 throw new DomainValidationException($"This plan version is already being rolled out to '{env.Key}'.");
+            if (others.Any(r => IsLive(r.Status)))
+                throw new DomainValidationException(
+                    $"A rollout of this task to '{env.Key}' is already running. "
+                    + "Wait for it to finish or cancel it before launching again.");
             throw;
         }
 
@@ -445,11 +463,13 @@ public class RolloutService(
     /// <param name="deploying">The merge requests that would deploy (already-deployed ones excluded).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
-    /// The one place a rollout consults the readiness feature. <see cref="ReadyRule.NoGate"/>
-    /// short-circuits — an ungated environment admits anything the plan already contains, exactly as
-    /// before there was a gate — so an existing environment pays nothing for this. Otherwise a pin
-    /// decides if one exists, else the labels against the rule, through the same
-    /// <see cref="ReadinessEvaluator"/> the dispatch re-check uses, so the two cannot disagree.
+    /// The one place a rollout consults the readiness feature, evaluated once here at launch over the
+    /// merge requests the plan would deploy. <see cref="ReadyRule.NoGate"/> short-circuits — an ungated
+    /// environment admits anything the plan already contains, exactly as before there was a gate — so
+    /// an existing environment pays nothing for this. Otherwise a pin decides if one exists, else the
+    /// labels against the rule, through <see cref="ReadinessEvaluator"/>. There is no dispatch-time
+    /// re-check: a pin or label changed after launch does not affect a run already materialised, so an
+    /// operator who needs to hold a launched rollout cancels it rather than pinning mid-flight.
     /// </remarks>
     private async Task GuardReadinessAsync(
         DeploymentEnvironment env,

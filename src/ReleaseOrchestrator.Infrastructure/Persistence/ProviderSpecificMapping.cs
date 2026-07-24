@@ -100,5 +100,14 @@ public static class ProviderSpecificMapping
             .IsUnique()
             .HasFilter("\"IsActive\"")
             .HasDatabaseName("IX_RolloutPlan_TargetTaskId_Active");
+
+        // One live rollout per (task, environment) -- the SQL Server filter from RolloutConfiguration
+        // reaches PostgreSQL with the wrong identifier quoting otherwise. The integer terminal set and
+        // the <>/AND form are the same on both databases; only the brackets-to-quotes change.
+        builder.Entity<Rollout>()
+            .HasIndex(e => new { e.TargetTaskId, e.EnvironmentId })
+            .IsUnique()
+            .HasFilter("\"Status\" <> 5 AND \"Status\" <> 6 AND \"Status\" <> 7")
+            .HasDatabaseName("IX_Rollout_TargetTask_Environment_Live");
     }
 }
