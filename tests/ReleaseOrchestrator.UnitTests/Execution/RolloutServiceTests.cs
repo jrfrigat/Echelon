@@ -64,6 +64,24 @@ public class RolloutServiceTests : PlannerTestBase
     private Task<RolloutStep> StepAsync(Guid rolloutId) =>
         Db.RolloutSteps.AsNoTracking().FirstAsync(s => s.RolloutId == rolloutId, Ct);
 
+    private DeploymentEnvironment AddGatedEnvironment(string key, ReadyRule rule, string readyLabels)
+    {
+        var env = AddEnvironment(key);
+        env.ReadyRule = rule;
+        env.ReadyLabels = readyLabels;
+        return env;
+    }
+
+    private void AddPin(Guid mergeRequestId, Guid environmentId, bool isReady) =>
+        Db.MergeRequestReadinessPins.Add(new MergeRequestReadinessPin
+        {
+            Id = Guid.NewGuid(),
+            MergeRequestId = mergeRequestId,
+            EnvironmentId = environmentId,
+            IsReady = isReady,
+            At = Now
+        });
+
     [Fact]
     public async Task Launch_Fails_WhenNoPlan()
     {
@@ -283,5 +301,86 @@ public class RolloutServiceTests : PlannerTestBase
             () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
         Assert.Contains("prod", ex.Message);
         Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ---- the readiness gate (E5) ----------------------------------------------
+
+    /// <summary>
+    /// A gated environment refuses a merge request that does not carry its label, and names it — so a
+    /// production gate holds back work that has not been approved for production.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Blocks_WhenAMergeRequestIsNotReadyForTheEnvironment()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task, externalId: "7");   // status ReadyForDeploy, but no prod label
+        var env = AddGatedEnvironment("prod", ReadyRule.AnyOf, "ready-for-prod");
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+        Assert.Contains("prod", ex.Message);
+        Assert.Contains("7", ex.Message);   // the offending merge request is named
+        Assert.Equal(0, await Db.Rollouts.CountAsync(Ct));   // nothing was created
+    }
+
+    /// <summary>The same launch proceeds once the merge request carries the environment's label.</summary>
+    [Fact]
+    public async Task Launch_Proceeds_WhenTheMergeRequestCarriesTheEnvironmentsLabel()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);
+        mr.Labels = "ready-for-prod";
+        var env = AddGatedEnvironment("prod", ReadyRule.AnyOf, "ready-for-prod");
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+
+        Assert.Equal("Running", rollout.Status);
+    }
+
+    /// <summary>
+    /// A pin admits a merge request whose labels would fail the gate — the escape hatch for a merged
+    /// merge request whose approval could not be observed from labels.
+    /// </summary>
+    [Fact]
+    public async Task Launch_APinAdmitsAMergeRequestTheLabelsWouldRefuse()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);   // no prod label
+        var env = AddGatedEnvironment("prod", ReadyRule.AnyOf, "ready-for-prod");
+        AddPin(mr.Id, env.Id, isReady: true);
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+
+        Assert.Equal("Running", rollout.Status);
+    }
+
+    /// <summary>A pin can also hold: it refuses a merge request whose labels would admit it.</summary>
+    [Fact]
+    public async Task Launch_APinHoldsAMergeRequestTheLabelsWouldAdmit()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);
+        mr.Labels = "ready-for-prod";              // labels would pass
+        var env = AddGatedEnvironment("prod", ReadyRule.AnyOf, "ready-for-prod");
+        AddPin(mr.Id, env.Id, isReady: false);     // but a person holds it
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
     }
 }

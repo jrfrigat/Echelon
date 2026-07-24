@@ -8,6 +8,7 @@ using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Application.ReleasePlanning;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
@@ -135,7 +136,7 @@ public class RolloutService(
             .Where(m => mrIds.Contains(m.Id))
             .Select(m => new
             {
-                m.Id, m.ExternalId, m.TaskId, m.RepositoryId,
+                m.Id, m.ExternalId, m.TaskId, m.RepositoryId, m.Labels,
                 RepoName = m.Repository.Name,
                 RepoDeployKey = m.Repository.DeployStrategyKey,
                 RepoDeploySettings = m.Repository.DeployStrategySettingsJson
@@ -161,6 +162,18 @@ public class RolloutService(
                 .Select(s => s.MergeRequestId)
                 .ToListAsync(ct))
             .ToHashSet();
+
+        // Readiness gate: every merge request that would actually deploy must be ready for this
+        // environment. Blocks the whole launch rather than filtering the unready ones out silently --
+        // a task's merge requests have ordering dependencies, so deploying some and quietly dropping
+        // others is a partial rollout that reads as complete. The operator makes them ready (a label
+        // or a pin) or picks an ungated environment. Already-deployed merge requests are exempt:
+        // their readiness is moot, they are not deploying again here.
+        var deploying = mrDetails
+            .Where(m => !alreadyDeployed.Contains(m.Id))
+            .Select(m => (m.Id, m.ExternalId, m.Labels))
+            .ToList();
+        await GuardReadinessAsync(env, deploying, ct);
 
         var steps = new List<RolloutStep>();
         var snapshot = new List<StepSnapshot>();
@@ -423,6 +436,51 @@ public class RolloutService(
 
         return mrs.Where(m => !deployed.Contains(m.Id))
             .Select(m => m.TaskKey).Distinct().OrderBy(k => k, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Refuses the launch if any merge request that would deploy is not ready for the environment.
+    /// </summary>
+    /// <param name="env">The target environment, carrying its readiness rule and labels.</param>
+    /// <param name="deploying">The merge requests that would deploy (already-deployed ones excluded).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// The one place a rollout consults the readiness feature. <see cref="ReadyRule.NoGate"/>
+    /// short-circuits — an ungated environment admits anything the plan already contains, exactly as
+    /// before there was a gate — so an existing environment pays nothing for this. Otherwise a pin
+    /// decides if one exists, else the labels against the rule, through the same
+    /// <see cref="ReadinessEvaluator"/> the dispatch re-check uses, so the two cannot disagree.
+    /// </remarks>
+    private async Task GuardReadinessAsync(
+        DeploymentEnvironment env,
+        IReadOnlyList<(Guid Id, string ExternalId, string Labels)> deploying,
+        CancellationToken ct)
+    {
+        if (env.ReadyRule == ReadyRule.NoGate || deploying.Count == 0) return;
+
+        // Both sides are already canonical (LabelSet.Canonical produced them), so splitting is enough;
+        // no re-normalization is needed for the resolver's comparisons.
+        var ruleLabels = env.ReadyLabels.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        var mrIds = deploying.Select(m => m.Id).ToList();
+        var pinOf = (await db.MergeRequestReadinessPins
+                .Where(p => p.EnvironmentId == env.Id && mrIds.Contains(p.MergeRequestId))
+                .Select(p => new { p.MergeRequestId, p.IsReady })
+                .ToListAsync(ct))
+            .ToDictionary(p => p.MergeRequestId, p => (bool?)p.IsReady);
+
+        var notReady = deploying
+            .Where(m => !ReadinessEvaluator.Evaluate(
+                m.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries),
+                ruleLabels, env.ReadyRule, pinOf.GetValueOrDefault(m.Id)).IsReady)
+            .Select(m => m.ExternalId)
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .ToList();
+
+        if (notReady.Count > 0)
+            throw new DomainValidationException(
+                $"Not ready for '{env.Key}': merge request(s) {string.Join(", ", notReady)}. "
+                + "Add the environment's label to them or pin them ready, or launch to an ungated environment.");
     }
 
     /// <summary>The rollout's frozen plan, one entry per merge request.</summary>
