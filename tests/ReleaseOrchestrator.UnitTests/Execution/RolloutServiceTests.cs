@@ -156,6 +156,36 @@ public class RolloutServiceTests : PlannerTestBase
     }
 
     /// <summary>
+    /// A recalculation between two launches must not start a second concurrent run. The idempotency
+    /// key embeds the plan version, which recalculation rotates on every ingestion event, so a second
+    /// launch gets a fresh key — and a liveness check on the key alone would treat it as a brand-new
+    /// run. Liveness is per (task, environment): the still-running first rollout blocks it.
+    /// </summary>
+    [Fact]
+    public async Task Launch_WhileAnEarlierRunIsStillLive_IsRefused_EvenAfterARecalculation()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment();
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        Assert.Equal("Running", first.Status);
+
+        // A new ingestion event recalculates the plan, minting a new plan id and so a new key.
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+        Assert.Contains("already running", ex.Message, StringComparison.OrdinalIgnoreCase);
+        // Still exactly one rollout: the second launch created nothing.
+        Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
+    }
+
+    /// <summary>
     /// The idempotency key is unique across all statuses, so once a run for a plan version has
     /// reached a terminal state that version cannot launch to the same environment again. It must be
     /// a clean domain error pointing the operator at recalculation, not the raw unique-constraint

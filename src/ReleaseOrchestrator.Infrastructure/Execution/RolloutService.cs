@@ -47,31 +47,47 @@ public class RolloutService(
         if (!string.IsNullOrEmpty(plan.ConflictsJson))
             throw new DomainValidationException("The plan violates a mandatory dependency and cannot be launched. Fix the plan first.");
 
-        // Idempotent: the (task, environment, plan-version) launches at most once. A live run is
-        // returned unchanged, so a double-submit is a no-op. A terminal run means this plan version
-        // already ran here and the key (a unique index) is taken -- recalculating the plan mints a new
-        // version and a new key, which is how a re-deploy is requested. Reported as a clean domain
-        // error rather than surfacing the raw unique-constraint violation as a 500.
+        // Idempotent, and single-flight per (task, environment). The key embeds plan.Id, which a
+        // recalculation rotates on every ingestion event, so a liveness check on the key alone would
+        // let a fresh plan version launch a *second* concurrent run into the same environment while
+        // the first is still going -- the exact hole this closes. The deploy claims would still stop
+        // a merge request deploying twice, but two runs driving the same steps is wrong on its own,
+        // so liveness keys on the pair, not the key.
         var idempotencyKey = $"{taskId:N}:{environmentId:N}:{plan.Id:N}";
-        var existing = await db.Rollouts.AsNoTracking()
-            .Where(r => r.IdempotencyKey == idempotencyKey)
-            .Select(r => new { r.Id, r.Status })
+        var forPair = await db.Rollouts.AsNoTracking()
+            .Where(r => r.TargetTaskId == taskId && r.EnvironmentId == environmentId)
+            .Select(r => new { r.Id, r.Status, r.IdempotencyKey })
             .ToListAsync(ct);
-        var live = existing.FirstOrDefault(r =>
+
+        var live = forPair.FirstOrDefault(r =>
             r.Status is not (RolloutStatus.Succeeded or RolloutStatus.Failed or RolloutStatus.Cancelled));
         if (live is not null)
         {
-            // Record who asked before handing back somebody else's run. This path answers 200 and
-            // changes nothing, so without an event the second operator to press Launch leaves no
-            // trace at all and the audit credits the run entirely to the first -- on a production
-            // deploy, quite possibly the wrong person.
-            db.RolloutEvents.Add(NewEvent(live.Id, RolloutEventKinds.LaunchCoalesced, actor, now,
-                new { environment = env.Key, existingStatus = live.Status.ToString() }));
-            await db.SaveChangesAsync(ct);
+            // Same plan version: a genuine double-submit, coalesced to a no-op that hands back the
+            // running run. Record who asked first -- this path answers 200 and changes nothing, so
+            // without an event the second operator to press Launch leaves no trace and the audit
+            // credits the run entirely to the first, on a production deploy quite possibly the wrong
+            // person.
+            if (live.IdempotencyKey == idempotencyKey)
+            {
+                db.RolloutEvents.Add(NewEvent(live.Id, RolloutEventKinds.LaunchCoalesced, actor, now,
+                    new { environment = env.Key, existingStatus = live.Status.ToString() }));
+                await db.SaveChangesAsync(ct);
 
-            return (await GetAsync(live.Id, ct))!;
+                return (await GetAsync(live.Id, ct))!;
+            }
+
+            // A different plan version is already running here. Not a double-submit to coalesce and
+            // not a second run to start -- refuse, and say how to proceed.
+            throw new DomainValidationException(
+                $"A rollout of this task to '{env.Key}' is already running. "
+                + "Wait for it to finish or cancel it before launching again.");
         }
-        if (existing.Count > 0)
+
+        // No live run for the pair. If this exact plan version already ran here and finished, it is
+        // done -- recalculating the plan mints a new version, which is how a re-deploy is requested.
+        // (A finished run under a *different* version falls through: that is the redeploy path.)
+        if (forPair.Any(r => r.IdempotencyKey == idempotencyKey))
             throw new DomainValidationException(
                 $"This plan version has already been rolled out to '{env.Key}'. Recalculate the plan to roll out again.");
 
