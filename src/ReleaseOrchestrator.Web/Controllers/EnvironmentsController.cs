@@ -92,6 +92,13 @@ public class EnvironmentsController(AppDbContext db) : ControllerBase
             || await db.MrDeployClaims.AnyAsync(c => c.EnvironmentId == id, ct))
             return Conflict(new { error = $"Environment '{env.Key}' has rollout or deployment history and cannot be deleted. Disable it instead." });
 
+        // Deploy targets also reference the environment with Restrict. Unlike history, these are
+        // pure configuration, so the fix is to remove them first rather than to disable the
+        // environment -- say so, and name the count, rather than surfacing an opaque FK 500.
+        var targetCount = await db.RepositoryDeployTargets.CountAsync(t => t.EnvironmentId == id, ct);
+        if (targetCount > 0)
+            return Conflict(new { error = $"Environment '{env.Key}' still has {targetCount} repository deploy target(s); remove them first." });
+
         db.DeploymentEnvironments.Remove(env);
         await db.SaveChangesAsync(ct);
         return NoContent();

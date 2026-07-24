@@ -186,6 +186,21 @@
   <data name="Stack_RepositoryAlreadyIn" xml:space="preserve">
     <value>Этот репозиторий уже входит в стек.</value>
   </data>
+  <data name="DeployTarget_UnknownRepository" xml:space="preserve">
+    <value>Репозиторий не найден.</value>
+  </data>
+  <data name="DeployTarget_UnknownEnvironment" xml:space="preserve">
+    <value>Контур не найден.</value>
+  </data>
+  <data name="DeployTarget_UnknownStrategy" xml:space="preserve">
+    <value>Неизвестная стратегия выкатки «{0}». Допустимые: {1}</value>
+  </data>
+  <data name="DeployTarget_UnknownRedeployPolicy" xml:space="preserve">
+    <value>Неизвестная политика повторной выкатки «{0}». Допустимые: Once, Always, Inherit.</value>
+  </data>
+  <data name="DeployTarget_AlreadyExists" xml:space="preserve">
+    <value>У этого репозитория уже есть цель выкатки для этого контура.</value>
+  </data>
   <data name="Provider_UnknownSetting" xml:space="preserve">
     <value>У этого провайдера нет настройки «{0}». Он объявляет: {1}</value>
   </data>

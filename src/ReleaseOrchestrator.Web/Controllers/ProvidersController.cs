@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReleaseOrchestrator.Infrastructure.Auth;
+using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
@@ -23,7 +24,8 @@ namespace ReleaseOrchestrator.Web.Controllers;
 [Authorize(Policy = Permissions.ReleasePlanView)]
 public class ProvidersController(
     IVcsProviderFactory vcsFactory,
-    ITrackerProviderFactory trackerFactory) : ControllerBase
+    ITrackerProviderFactory trackerFactory,
+    IDeployStrategyFactory deployFactory) : ControllerBase
 {
     /// <summary>Lists the registered VCS providers and their settings.</summary>
     /// <returns>One entry per provider.</returns>
@@ -40,6 +42,17 @@ public class ProvidersController(
         Ok(trackerFactory.AvailableProviders
             .OrderBy(p => p, StringComparer.Ordinal)
             .Select(p => Describe(p, trackerFactory.GetSettingsSchema(p))));
+
+    /// <summary>
+    /// Lists the registered deploy strategies and their settings, so the deploy-target form can offer
+    /// them and render each one's fields — the same schema-driven shape the connection forms use.
+    /// </summary>
+    /// <returns>One entry per strategy, keyed by <c>ProviderType</c> (the strategy key).</returns>
+    [HttpGet("deploy-strategies")]
+    public IActionResult ListDeployStrategies() =>
+        Ok(deployFactory.AvailableStrategies
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .Select(k => Describe(k, deployFactory.GetSettingsSchema(k))));
 
     private static object Describe(
         string providerType, IEnumerable<Providers.Abstractions.ProviderSettingSchema> schema) =>

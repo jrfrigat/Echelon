@@ -186,6 +186,21 @@
   <data name="Stack_RepositoryAlreadyIn" xml:space="preserve">
     <value>That repository is already in the stack.</value>
   </data>
+  <data name="DeployTarget_UnknownRepository" xml:space="preserve">
+    <value>No such repository.</value>
+  </data>
+  <data name="DeployTarget_UnknownEnvironment" xml:space="preserve">
+    <value>No such environment.</value>
+  </data>
+  <data name="DeployTarget_UnknownStrategy" xml:space="preserve">
+    <value>Unknown deploy strategy '{0}'. Valid: {1}</value>
+  </data>
+  <data name="DeployTarget_UnknownRedeployPolicy" xml:space="preserve">
+    <value>Unknown redeploy policy '{0}'. Valid: Once, Always, Inherit.</value>
+  </data>
+  <data name="DeployTarget_AlreadyExists" xml:space="preserve">
+    <value>This repository already has a deploy target for that environment.</value>
+  </data>
   <data name="Provider_UnknownSetting" xml:space="preserve">
     <value>This provider has no setting named '{0}'. It declares: {1}</value>
   </data>
