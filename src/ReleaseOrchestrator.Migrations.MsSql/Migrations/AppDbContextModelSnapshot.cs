@@ -349,6 +349,11 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<bool>("IsStatusManual")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Labels")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<DateTime?>("MergedAt")
                         .HasColumnType("datetime2");
 
@@ -400,6 +405,60 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.HasIndex(new[] { "TaskId" }, "IX_MergeRequest_TaskId");
 
                     b.ToTable("MergeRequests");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestLabelChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ActorOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Cause")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("FromLabels")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("MergeRequestExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ToLabels")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "MergeRequestId", "At" }, "IX_MergeRequestLabelChange_MergeRequestId_At");
+
+                    b.HasIndex(new[] { "TaskId", "At" }, "IX_MergeRequestLabelChange_TaskId_At");
+
+                    b.ToTable("MergeRequestLabelChanges");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestStatusChange", b =>

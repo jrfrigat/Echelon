@@ -85,6 +85,7 @@ internal sealed class ArchiveRunner(
             SourceBranch = mr.SourceBranch,
             TargetBranch = mr.TargetBranch,
             Status = mr.Status.ToString(),
+            Labels = mr.Labels,
             TaskExternalId = mr.Task?.ExternalId,
             // The source row is deleted below, and this column exists nowhere else -- not copying it
             // does not hide the merge request's opening from a task's history, it destroys it.

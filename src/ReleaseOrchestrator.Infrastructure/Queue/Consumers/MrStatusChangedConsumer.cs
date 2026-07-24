@@ -69,6 +69,16 @@ public class MrStatusChangedConsumer(
             db, mr, previousStatus, msg.NewStatus,
             MergeRequestStatusJournal.CauseWebhook, ActorRef.System, msg.ChangedAt);
 
+        // A merge is the last moment labels are visible before the merged request leaves the
+        // open-request listing, so record them here for the readiness gate. Only when the event
+        // actually carries labels: an empty (or null) list means "no label information in this
+        // event", not "labels were removed" -- treating it as removal would wipe the set captured
+        // from the opened events. The null case is real: a message serialized before this field
+        // existed deserializes with no labels, and must not fault the handler.
+        if (msg.Labels is { Count: > 0 })
+            MergeRequestLabelJournal.Apply(
+                db, mr, msg.Labels, MergeRequestLabelJournal.CauseWebhook, ActorRef.System, msg.ChangedAt);
+
         // A terminal state is reported by the VCS and overrides any manual pin.
         if (MergeRequestStatusResolver.IsTerminal(msg.NewStatus))
             mr.IsStatusManual = false;

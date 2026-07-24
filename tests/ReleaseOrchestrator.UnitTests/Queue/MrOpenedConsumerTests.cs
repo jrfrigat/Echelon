@@ -380,4 +380,98 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
         Assert.Equal(2, _bus.AllSent<ReleasePlanRecalculationRequested>().Count);
     }
+
+    // ---- label persistence (E2) -----------------------------------------------
+
+    private Task<List<MergeRequestLabelChange>> LabelRowsAsync() =>
+        _db.MergeRequestLabelChanges.AsNoTracking().OrderBy(c => c.At).ToListAsync(Ct);
+
+    /// <summary>
+    /// The full label set is stored in canonical form — lower-cased, de-duplicated, sorted — which is
+    /// the form the readiness gate compares against, and a change is journalled from empty.
+    /// </summary>
+    [Fact]
+    public async Task LabelsArePersistedInCanonicalFormAndJournalled()
+    {
+        AddRepository();
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync(labels: ["Ready-For-Prod", "bug", "ready-for-prod"]);
+
+        Assert.Equal("bug,ready-for-prod", (await FindMrAsync())!.Labels);
+
+        var row = Assert.Single(await LabelRowsAsync());
+        Assert.Equal("", row.FromLabels);
+        Assert.Equal("bug,ready-for-prod", row.ToLabels);
+        Assert.Equal("1", row.MergeRequestExternalId);
+    }
+
+    /// <summary>A re-sent open event reasserting the same labels is not a change and writes no row.</summary>
+    [Fact]
+    public async Task UnchangedLabelsWriteNoSecondJournalRow()
+    {
+        AddRepository();
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync(labels: ["qa"]);
+        // Different spelling, same canonical set — must still be a no-op.
+        await OpenAsync(labels: ["QA"]);
+
+        Assert.Single(await LabelRowsAsync());
+    }
+
+    /// <summary>Removing a label is a real change and is recorded, from the old set to the new.</summary>
+    [Fact]
+    public async Task RemovingALabelIsRecorded()
+    {
+        AddRepository();
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync(labels: ["ready-for-prod", "qa"]);
+        await OpenAsync(labels: ["qa"]);
+
+        Assert.Equal("qa", (await FindMrAsync())!.Labels);
+
+        var rows = await LabelRowsAsync();
+        Assert.Equal(2, rows.Count);
+        Assert.Equal("qa,ready-for-prod", rows[1].FromLabels);
+        Assert.Equal("qa", rows[1].ToLabels);
+    }
+
+    /// <summary>A merge request that arrives with no labels records nothing: empty to empty is no change.</summary>
+    [Fact]
+    public async Task ANewMergeRequestWithNoLabelsWritesNoLabelRow()
+    {
+        AddRepository();
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync();
+
+        Assert.Equal("", (await FindMrAsync())!.Labels);
+        Assert.Empty(await LabelRowsAsync());
+    }
+
+    /// <summary>
+    /// A stale opened event for an already-merged merge request does not rewrite its labels, exactly
+    /// as it does not rewrite its status — both live behind the same guard.
+    /// </summary>
+    [Fact]
+    public async Task AStaleOpenedEventDoesNotRewriteMergedLabels()
+    {
+        AddRepository();
+        await _db.SaveChangesAsync(Ct);
+
+        await OpenAsync(labels: ["ready-for-prod"]);
+
+        // Force the stored MR terminal, as a merge webhook would have.
+        var stored = await _db.MergeRequests.FirstAsync(Ct);
+        stored.Status = MergeRequestStatus.Merged;
+        await _db.SaveChangesAsync(Ct);
+
+        // A late, out-of-order opened event carrying different labels must be ignored wholesale.
+        await OpenAsync(labels: ["ready-for-test"]);
+
+        Assert.Equal("ready-for-prod", (await FindMrAsync())!.Labels);
+        Assert.Single(await LabelRowsAsync());
+    }
 }

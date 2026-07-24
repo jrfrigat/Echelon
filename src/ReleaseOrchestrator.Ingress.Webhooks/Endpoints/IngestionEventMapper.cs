@@ -49,15 +49,16 @@ public static class IngestionEventMapper
                 Source: source,
                 EventId: e.ProviderEventId),
 
-            // MrStatusChanged does not carry labels yet; the readiness work adds that field, and the
-            // neutral event already provides them (e.Labels) for when it does. ChangedAt is the
-            // receiver's clock, exactly as the webhook front door has always stamped it.
+            // Labels ride along so a merge event can record the final set for the readiness gate.
+            // ChangedAt is the receiver's clock, exactly as the webhook front door has always
+            // stamped it — the payload carries no reliable event time.
             MrStatusChangedEvent e => new MrStatusChanged(
                 ConnectionName: connectionName,
                 RepositoryExternalId: e.RepositoryExternalId,
                 ExternalMrId: e.ExternalMrId,
                 NewStatus: e.NewStatus,
                 ChangedAt: clock.GetUtcNow().UtcDateTime,
+                Labels: e.Labels,
                 Source: source,
                 EventId: e.ProviderEventId),
 

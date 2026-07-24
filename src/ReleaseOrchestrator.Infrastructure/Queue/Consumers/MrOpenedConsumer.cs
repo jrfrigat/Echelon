@@ -92,6 +92,14 @@ public class MrOpenedConsumer(
             MergeRequestStatusJournal.Record(
                 db, mr, previousStatus, mr.Status,
                 MergeRequestStatusJournal.CauseLabel, ActorRef.System, clock.GetUtcNow().UtcDateTime);
+
+            // Persist the full label set the per-environment readiness gate consults, separate from
+            // the single ready-for-deploy label the status above turns on. GitLab re-sends an opened
+            // event on every label change, so this is where the stored set is kept current; the
+            // writer no-ops when nothing changed. Inside the same guard as the status update, so a
+            // stale opened event for an already-merged MR does not rewrite its labels either.
+            MergeRequestLabelJournal.Apply(
+                db, mr, msg.Labels, MergeRequestLabelJournal.CauseWebhook, ActorRef.System, now);
         }
         else
         {

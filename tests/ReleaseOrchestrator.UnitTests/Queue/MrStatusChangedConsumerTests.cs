@@ -90,8 +90,10 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
         MergeRequestStatus newStatus,
         string repositoryExternalId = "group/api",
         string mrId = "1",
-        DateTime? changedAt = null) =>
-        _handler.Handle(new MrStatusChanged("gitlab", repositoryExternalId, mrId, newStatus, changedAt ?? Now));
+        DateTime? changedAt = null,
+        IReadOnlyList<string>? labels = null) =>
+        _handler.Handle(new MrStatusChanged(
+            "gitlab", repositoryExternalId, mrId, newStatus, changedAt ?? Now, labels ?? []));
 
     private Task<MergeRequest> ReloadAsync() =>
         _db.MergeRequests.AsNoTracking().FirstAsync(m => m.ExternalId == "1", Ct);
@@ -108,6 +110,42 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
         Assert.Equal(MergeRequestStatus.Merged, mr.Status);
         Assert.Equal(Now.AddMinutes(-5), mr.MergedAt);
         Assert.Null(mr.ClosedAt);
+    }
+
+    // ---- labels at merge (E2) -------------------------------------------------
+
+    /// <summary>
+    /// A merge event carries the final label set, and captures it: a merged merge request has left
+    /// the open-request listing, so this is the last chance to learn what it was ready for.
+    /// </summary>
+    [Fact]
+    public async Task MergingCapturesTheFinalLabels()
+    {
+        AddMergeRequest(MergeRequestStatus.ReadyForDeploy);
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Merged, labels: ["Ready-For-Prod", "qa"]);
+
+        Assert.Equal("qa,ready-for-prod", (await ReloadAsync()).Labels);
+        Assert.Single(await _db.MergeRequestLabelChanges.AsNoTracking().ToListAsync(Ct));
+    }
+
+    /// <summary>
+    /// An event that carries no labels leaves the stored set alone. Empty means "no label
+    /// information here" — an older message from before the field existed — not "labels removed";
+    /// wiping the set captured from the opened events would be the wrong reading.
+    /// </summary>
+    [Fact]
+    public async Task AStatusChangeWithoutLabelsLeavesTheStoredSetAlone()
+    {
+        var mr = AddMergeRequest(MergeRequestStatus.ReadyForDeploy);
+        mr.Labels = "ready-for-prod";
+        await _db.SaveChangesAsync(Ct);
+
+        await ChangeAsync(MergeRequestStatus.Merged, labels: []);
+
+        Assert.Equal("ready-for-prod", (await ReloadAsync()).Labels);
+        Assert.Empty(await _db.MergeRequestLabelChanges.AsNoTracking().ToListAsync(Ct));
     }
 
     /// <summary>

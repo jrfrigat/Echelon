@@ -1,4 +1,4 @@
-# 009 — Provider-owned webhook ingestion
+# 010 — Provider-owned webhook ingestion
 
 Status: accepted (synthesis of four competing designs + one exhaustive ground-truth pass; the
 adversarial-verify and judge phases were cut short by a session limit, so the two flagged decisions

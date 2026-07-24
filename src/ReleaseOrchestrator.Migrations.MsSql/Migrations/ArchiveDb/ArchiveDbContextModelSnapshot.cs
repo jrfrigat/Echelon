@@ -42,6 +42,10 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations.ArchiveDb
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("Labels")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("MergedAt")
                         .HasColumnType("datetime2");
 

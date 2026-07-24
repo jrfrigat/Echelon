@@ -75,6 +75,30 @@ public class MergeRequest
     /// </summary>
     public bool IsStatusManual { get; set; }
 
+    /// <summary>
+    /// The merge request's current labels, in canonical form: normalized, de-duplicated, sorted and
+    /// comma-joined by <see cref="Core.Parsing.LabelSet.Canonical"/>. Empty string when it has none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is what a per-environment readiness gate consults: a merge request labelled
+    /// <c>ready-for-prod</c> satisfies the production environment's rule, and the labels have to be
+    /// stored because the gate runs at plan and dispatch time, long after the webhook that carried
+    /// them. Kept as one canonical string rather than a child table on purpose: the gate loads the
+    /// merge request and checks its labels in memory (<see cref="Core.Parsing.ReadinessResolver"/>),
+    /// nothing needs a per-label SQL query, and a plain column is copied by archiving and pruned by
+    /// deletion for free — a child table would need a cascade the archive's direct delete does not run.
+    /// </para>
+    /// <para>
+    /// Overwritten in place on each observation, so the transitions live in
+    /// <see cref="MergeRequestLabelChange"/> exactly as status transitions live in their journal.
+    /// Deliveries are unordered and carry no reliable label timestamp, so this is last-writer-wins;
+    /// an out-of-order delivery that regresses the set is corrected by the next observation.
+    /// </para>
+    /// </remarks>
+    [Required, MaxLength(2000)]
+    public string Labels { get; set; } = string.Empty;
+
     /// <summary>Concurrency token. Two replicas can process the same webhook at once.</summary>
     [Timestamp]
     public byte[]? RowVersion { get; set; }

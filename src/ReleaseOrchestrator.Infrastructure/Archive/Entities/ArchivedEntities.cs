@@ -29,6 +29,14 @@ public class ArchivedMergeRequest
     public string? TaskExternalId { get; set; }
 
     /// <summary>
+    /// The merge request's labels at archive time, canonical (comma-joined). Copied for the same
+    /// reason <see cref="Status"/> is: the source row is hard-deleted, and the snapshot should read
+    /// the same as the row it replaced. The change history is preserved separately by the label
+    /// journal, which is FK-free and pruned on its own schedule.
+    /// </summary>
+    public string Labels { get; set; } = string.Empty;
+
+    /// <summary>
     /// When the merge request was opened.
     /// </summary>
     /// <remarks>
