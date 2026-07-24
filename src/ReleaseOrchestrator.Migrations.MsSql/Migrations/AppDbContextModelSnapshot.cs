@@ -297,6 +297,16 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
+                    b.Property<string>("ReadyLabels")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ReadyRule")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("Id");
 
                     b.HasIndex(new[] { "Key" }, "IX_DeploymentEnvironment_Key")
@@ -459,6 +469,55 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.HasIndex(new[] { "TaskId", "At" }, "IX_MergeRequestLabelChange_TaskId_At");
 
                     b.ToTable("MergeRequestLabelChanges");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestReadinessPin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ActorOid")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsReady")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MergeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.HasIndex(new[] { "MergeRequestId", "EnvironmentId" }, "IX_MergeRequestReadinessPin_Mr_Environment")
+                        .IsUnique();
+
+                    b.ToTable("MergeRequestReadinessPins");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestStatusChange", b =>
@@ -1317,6 +1376,25 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequestReadinessPin", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
+                        .WithMany("ReadinessPins")
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.MergeRequest", "MergeRequest")
+                        .WithMany()
+                        .HasForeignKey("MergeRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("MergeRequest");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.MrDeployClaim", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
@@ -1598,6 +1676,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", b =>
                 {
                     b.Navigation("DeployTargets");
+
+                    b.Navigation("ReadinessPins");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", b =>

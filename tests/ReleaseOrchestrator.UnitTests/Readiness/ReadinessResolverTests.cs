@@ -99,6 +99,65 @@ public class ReadinessResolverTests
     }
 }
 
+/// <summary>
+/// Covers the combination of a person's pin with the label rule — the escape hatch that keeps a
+/// merged merge request from wedging a production gate, and the hold that keeps one out.
+/// </summary>
+public class ReadinessEvaluatorTests
+{
+    private static string[] Labels(params string[] labels) => LabelSet.Normalize(labels).ToArray();
+
+    /// <summary>A pin to ready admits the merge request, and the labels are never consulted.</summary>
+    [Fact]
+    public void APinToReadyAdmitsRegardlessOfLabels()
+    {
+        // Labels would fail the AllOf rule, but the pin overrides them.
+        var decision = ReadinessEvaluator.Evaluate(
+            Labels("nothing-matching"), Labels("approved", "qa"), ReadyRule.AllOf, pinnedReady: true);
+
+        Assert.True(decision.IsReady);
+        Assert.Equal(ReadinessSource.Pin, decision.Source);
+    }
+
+    /// <summary>A pin to not-ready holds the merge request out, even when its labels would admit it.</summary>
+    [Fact]
+    public void APinToNotReadyHoldsRegardlessOfLabels()
+    {
+        // Labels satisfy AnyOf, but the pin holds it.
+        var decision = ReadinessEvaluator.Evaluate(
+            Labels("ready-for-prod"), Labels("ready-for-prod"), ReadyRule.AnyOf, pinnedReady: false);
+
+        Assert.False(decision.IsReady);
+        Assert.Equal(ReadinessSource.Pin, decision.Source);
+    }
+
+    /// <summary>With no pin, the labels decide against the rule, and the source is the labels.</summary>
+    [Fact]
+    public void WithNoPinTheLabelsDecide()
+    {
+        var admitted = ReadinessEvaluator.Evaluate(
+            Labels("ready-for-prod"), Labels("ready-for-prod"), ReadyRule.AnyOf, pinnedReady: null);
+        Assert.True(admitted.IsReady);
+        Assert.Equal(ReadinessSource.Labels, admitted.Source);
+
+        var refused = ReadinessEvaluator.Evaluate(
+            Labels("ready-for-test"), Labels("ready-for-prod"), ReadyRule.AnyOf, pinnedReady: null);
+        Assert.False(refused.IsReady);
+        Assert.Equal(ReadinessSource.Labels, refused.Source);
+    }
+
+    /// <summary>An ungated environment admits through the labels path, not as a pin.</summary>
+    [Fact]
+    public void NoGateAdmitsThroughTheLabelsPath()
+    {
+        var decision = ReadinessEvaluator.Evaluate(
+            Labels(), Labels(), ReadyRule.NoGate, pinnedReady: null);
+
+        Assert.True(decision.IsReady);
+        Assert.Equal(ReadinessSource.Labels, decision.Source);
+    }
+}
+
 /// <summary>Covers label normalization, which decides whether two spellings are the same permission.</summary>
 public class LabelSetTests
 {
