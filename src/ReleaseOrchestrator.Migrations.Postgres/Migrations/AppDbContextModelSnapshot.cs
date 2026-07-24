@@ -743,6 +743,41 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.ToTable("RepositoryDependencies");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDeployTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeploySettingsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeployStrategyKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("EnvironmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RedeployPolicy")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("RepositoryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnvironmentId");
+
+                    b.HasIndex(new[] { "RepositoryId", "EnvironmentId" }, "IX_RepositoryDeployTarget_Repository_Environment")
+                        .IsUnique();
+
+                    b.ToTable("RepositoryDeployTargets");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", b =>
                 {
                     b.Property<Guid>("Id")
@@ -930,6 +965,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
 
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("DeploySettingsJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("DeployStrategyKey")
                         .IsRequired()
@@ -1407,6 +1445,25 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("ToRepository");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDeployTarget", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
+                        .WithMany("DeployTargets")
+                        .HasForeignKey("EnvironmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
+                        .WithMany("DeployTargets")
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Environment");
+
+                    b.Navigation("Repository");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Rollout", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", "Environment")
@@ -1542,6 +1599,11 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Navigation("PermissionClaim");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", b =>
+                {
+                    b.Navigation("DeployTargets");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", b =>
                 {
                     b.Navigation("GroupMappings");
@@ -1557,6 +1619,8 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
                     b.Navigation("DependsOn");
+
+                    b.Navigation("DeployTargets");
 
                     b.Navigation("MergeRequests");
 

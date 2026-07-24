@@ -63,6 +63,10 @@ public class Repository
     /// <summary>Strategy-specific settings for this repository, as JSON (schema-declared by the strategy).</summary>
     public string? DeployStrategySettingsJson { get; set; }
 
+    /// <summary>Per-environment deploy configuration, overriding <see cref="DeployStrategyKey"/> where an environment differs.</summary>
+    [InverseProperty(nameof(RepositoryDeployTarget.Repository))]
+    public ICollection<RepositoryDeployTarget> DeployTargets { get; set; } = [];
+
     /// <summary>Repository-ordering links where this repository waits (it deploys after their targets).</summary>
     [InverseProperty(nameof(RepositoryDependency.FromRepository))]
     public ICollection<RepositoryDependency> DependsOn { get; set; } = [];

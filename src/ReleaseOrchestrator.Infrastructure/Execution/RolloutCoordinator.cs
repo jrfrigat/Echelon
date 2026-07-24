@@ -12,6 +12,7 @@ using ReleaseOrchestrator.Infrastructure.Actions;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 
 namespace ReleaseOrchestrator.Infrastructure.Execution;
@@ -472,9 +473,13 @@ public class RolloutCoordinator(
         if (!Uri.TryCreate(conn.ApiUrl, UriKind.Absolute, out var apiUrl))
             throw new InvalidOperationException($"Connection '{conn.Name}' has an invalid ApiUrl.");
 
-        var settings = string.IsNullOrWhiteSpace(repo.DeployStrategySettingsJson)
-            ? new Dictionary<string, string>()
-            : JsonSerializer.Deserialize<Dictionary<string, string>>(repo.DeployStrategySettingsJson) ?? [];
+        // The settings frozen onto the step at launch, not re-read from the repository: the run
+        // deploys with the configuration it started with. Secret keys the strategy declares are
+        // decrypted here, the same treatment the connection token gets above -- without this a secret
+        // setting would reach the strategy as ciphertext. The schema comes from the factory, whose
+        // GetSettingsSchema existed for exactly this and had no caller until now.
+        var schema = sp.GetRequiredService<IDeployStrategyFactory>().GetSettingsSchema(step.DeployStrategyKey);
+        var settings = ProviderSettingsProtection.UnprotectForUse(step.DeploySettingsJson, schema, protector);
 
         return new DeployContext(
             ApiUrl: apiUrl,

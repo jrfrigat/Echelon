@@ -44,6 +44,26 @@ public class RolloutServiceTests : PlannerTestBase
             UpdatedAt = Now
         });
 
+    private RepositoryDeployTarget AddDeployTarget(
+        Repository repo, DeploymentEnvironment env, string strategyKey,
+        string? settingsJson = null, RedeployPolicy policy = RedeployPolicy.Once)
+    {
+        var target = new RepositoryDeployTarget
+        {
+            Id = Guid.NewGuid(),
+            RepositoryId = repo.Id,
+            EnvironmentId = env.Id,
+            DeployStrategyKey = strategyKey,
+            DeploySettingsJson = settingsJson,
+            RedeployPolicy = policy
+        };
+        Db.RepositoryDeployTargets.Add(target);
+        return target;
+    }
+
+    private Task<RolloutStep> StepAsync(Guid rolloutId) =>
+        Db.RolloutSteps.AsNoTracking().FirstAsync(s => s.RolloutId == rolloutId, Ct);
+
     [Fact]
     public async Task Launch_Fails_WhenNoPlan()
     {
@@ -163,5 +183,75 @@ public class RolloutServiceTests : PlannerTestBase
             () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
         Assert.Contains("already been rolled out", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
+    }
+
+    // ---- per-environment deploy targets (E4) ----------------------------------
+
+    /// <summary>
+    /// The same repository deploys differently per environment: a target for this environment
+    /// overrides the repository's default strategy, which is how prod merges but a test rig triggers
+    /// a pipeline.
+    /// </summary>
+    [Fact]
+    public async Task Launch_PrefersThePerEnvironmentTarget_OverTheRepositoryDefault()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";               // repository default
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment("test");
+        AddDeployTarget(repo, env, "gitlab-pipeline", settingsJson: """{"stage":"deploy-test"}""");
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+
+        var step = await StepAsync(rollout.Id);
+        Assert.Equal("gitlab-pipeline", step.DeployStrategyKey);
+        // The target's settings are frozen onto the step, not left to be re-read from the repository.
+        Assert.Equal("""{"stage":"deploy-test"}""", step.DeploySettingsJson);
+    }
+
+    /// <summary>With no target for the environment, the repository's own strategy and settings are used.</summary>
+    [Fact]
+    public async Task Launch_FallsBackToTheRepositoryDefault_WhenNoTargetForTheEnvironment()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        repo.DeployStrategySettingsJson = """{"squash":"true"}""";
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment("prod");
+        // A target for a DIFFERENT environment must not leak into this one.
+        var other = AddEnvironment("staging", order: 1);
+        AddDeployTarget(repo, other, "gitlab-pipeline");
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+
+        var step = await StepAsync(rollout.Id);
+        Assert.Equal("gitlab-merge", step.DeployStrategyKey);
+        Assert.Equal("""{"squash":"true"}""", step.DeploySettingsJson);
+    }
+
+    /// <summary>
+    /// With neither a target nor a repository default, launch refuses and names the environment, so
+    /// the operator knows exactly which (repository, environment) to configure.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Fails_NamingTheEnvironment_WhenNoStrategyAnywhere()
+    {
+        var repo = AddRepository("svc");   // no default, no target
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment("prod");
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+        Assert.Contains("prod", ex.Message);
+        Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -30,9 +30,20 @@ public class RolloutStep
     /// <summary>The execution wave (merge-request-level topological level).</summary>
     public int Wave { get; set; }
 
-    /// <summary>The deploy strategy key resolved at launch (per-item override or repository default).</summary>
+    /// <summary>The deploy strategy key resolved at launch (per-item override, per-environment target, or repository default).</summary>
     [Required, MaxLength(100)]
     public string DeployStrategyKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The strategy settings frozen at launch, as JSON, with any secret keys still encrypted.
+    /// </summary>
+    /// <remarks>
+    /// Frozen onto the step, not re-read from the repository at dispatch, so a configuration change
+    /// made while a rollout is in flight cannot alter how its remaining steps deploy — the run
+    /// executes the configuration it launched with. The strategy key was already frozen for this
+    /// reason; the settings were not, and were re-read live, which this closes.
+    /// </remarks>
+    public string? DeploySettingsJson { get; set; }
 
     /// <summary>Step lifecycle. See <see cref="RolloutStepState"/>.</summary>
     public RolloutStepState State { get; set; }

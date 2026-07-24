@@ -121,9 +121,20 @@ public class RolloutService(
             {
                 m.Id, m.ExternalId, m.TaskId, m.RepositoryId,
                 RepoName = m.Repository.Name,
-                RepoDeployKey = m.Repository.DeployStrategyKey
+                RepoDeployKey = m.Repository.DeployStrategyKey,
+                RepoDeploySettings = m.Repository.DeployStrategySettingsJson
             })
             .ToListAsync(ct);
+
+        // The per-environment deploy configuration, if any, for the repositories in this rollout.
+        // A target overrides the repository's default strategy for this one environment, which is
+        // how the same repository merges on prod but triggers a pipeline on a test rig.
+        var repoIds = mrDetails.Select(m => m.RepositoryId).Distinct().ToList();
+        var targetOf = (await db.RepositoryDeployTargets
+                .Where(t => t.EnvironmentId == environmentId && repoIds.Contains(t.RepositoryId))
+                .Select(t => new { t.RepositoryId, t.DeployStrategyKey, t.DeploySettingsJson })
+                .ToListAsync(ct))
+            .ToDictionary(t => t.RepositoryId);
 
         var overrideOf = plan.Nodes.SelectMany(n => n.Items)
             .ToDictionary(i => i.MergeRequestId, i => i.DeployStrategyKeyOverride);
@@ -139,10 +150,18 @@ public class RolloutService(
         var snapshot = new List<StepSnapshot>();
         foreach (var mr in mrDetails)
         {
-            var deployKey = overrideOf.GetValueOrDefault(mr.Id) ?? mr.RepoDeployKey;
+            // Per-item override first, then this environment's target, then the repository's default.
+            var target = targetOf.GetValueOrDefault(mr.RepositoryId);
+            var deployKey = overrideOf.GetValueOrDefault(mr.Id) ?? target?.DeployStrategyKey ?? mr.RepoDeployKey;
             if (string.IsNullOrWhiteSpace(deployKey))
                 throw new DomainValidationException(
-                    $"Repository '{mr.RepoName}' has no deploy strategy; set one before launching.");
+                    $"Repository '{mr.RepoName}' has no deploy strategy for environment '{env.Key}'; "
+                    + "configure a deploy target for it, or a repository default, before launching.");
+
+            // Settings track the strategy's source: the target's when the target supplied the key,
+            // the repository's otherwise. Frozen onto the step below so a later config edit cannot
+            // change how this run's remaining steps deploy.
+            var deploySettings = target?.DeploySettingsJson ?? mr.RepoDeploySettings;
 
             var wave = waveOf.GetValueOrDefault(mr.Id, 1);
             var skipped = alreadyDeployed.Contains(mr.Id);
@@ -153,6 +172,7 @@ public class RolloutService(
                 TaskId = mr.TaskId!.Value,
                 Wave = wave,
                 DeployStrategyKey = deployKey,
+                DeploySettingsJson = deploySettings,
                 State = skipped ? RolloutStepState.Skipped : RolloutStepState.Pending,
                 AttemptCount = 0,
                 StartedAt = skipped ? now : null,

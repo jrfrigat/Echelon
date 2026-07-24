@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -33,4 +34,8 @@ public class DeploymentEnvironment
 
     /// <summary>Whether rollouts may target this environment.</summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>Per-repository deploy configuration scoped to this environment.</summary>
+    [InverseProperty(nameof(RepositoryDeployTarget.Environment))]
+    public ICollection<RepositoryDeployTarget> DeployTargets { get; set; } = [];
 }
