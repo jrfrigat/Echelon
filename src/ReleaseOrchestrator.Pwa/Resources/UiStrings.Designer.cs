@@ -1260,6 +1260,13 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Deploy targets.</summary>
+        public static string Nav_DeployTargets {
+            get {
+                return ResourceManager.GetString("Nav_DeployTargets", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Environment.
         /// </summary>
@@ -1464,6 +1471,139 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         public static string Rollout_Steps_Title {
             get {
                 return ResourceManager.GetString("Rollout_Steps_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Deploy targets.</summary>
+        public static string Deploy_Title {
+            get {
+                return ResourceManager.GetString("Deploy_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Deploy targets.</summary>
+        public static string Deploy_Heading {
+            get {
+                return ResourceManager.GetString("Deploy_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-targets page intro.</summary>
+        public static string Deploy_Intro {
+            get {
+                return ResourceManager.GetString("Deploy_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-targets prerequisites title.</summary>
+        public static string Deploy_Prereq_Title {
+            get {
+                return ResourceManager.GetString("Deploy_Prereq_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-targets prerequisites description.</summary>
+        public static string Deploy_Prereq_Description {
+            get {
+                return ResourceManager.GetString("Deploy_Prereq_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Repository.</summary>
+        public static string Deploy_Col_Repository {
+            get {
+                return ResourceManager.GetString("Deploy_Col_Repository", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Environment.</summary>
+        public static string Deploy_Col_Environment {
+            get {
+                return ResourceManager.GetString("Deploy_Col_Environment", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Strategy.</summary>
+        public static string Deploy_Col_Strategy {
+            get {
+                return ResourceManager.GetString("Deploy_Col_Strategy", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Redeploy.</summary>
+        public static string Deploy_Col_Redeploy {
+            get {
+                return ResourceManager.GetString("Deploy_Col_Redeploy", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Add target.</summary>
+        public static string Deploy_Add {
+            get {
+                return ResourceManager.GetString("Deploy_Add", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to No deploy targets.</summary>
+        public static string Deploy_Empty_Title {
+            get {
+                return ResourceManager.GetString("Deploy_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the empty deploy-targets description.</summary>
+        public static string Deploy_Empty_Description {
+            get {
+                return ResourceManager.GetString("Deploy_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-target-created notice.</summary>
+        public static string Deploy_Created {
+            get {
+                return ResourceManager.GetString("Deploy_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-target-deleted notice.</summary>
+        public static string Deploy_Deleted {
+            get {
+                return ResourceManager.GetString("Deploy_Deleted", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-target delete-confirm title.</summary>
+        public static string Deploy_Delete_Title {
+            get {
+                return ResourceManager.GetString("Deploy_Delete_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the deploy-target delete-confirm message.</summary>
+        public static string Deploy_Delete_Message {
+            get {
+                return ResourceManager.GetString("Deploy_Delete_Message", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Once.</summary>
+        public static string Deploy_Redeploy_Once {
+            get {
+                return ResourceManager.GetString("Deploy_Redeploy_Once", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Always.</summary>
+        public static string Deploy_Redeploy_Always {
+            get {
+                return ResourceManager.GetString("Deploy_Redeploy_Always", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Inherit.</summary>
+        public static string Deploy_Redeploy_Inherit {
+            get {
+                return ResourceManager.GetString("Deploy_Redeploy_Inherit", resourceCulture);
             }
         }
 

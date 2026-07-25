@@ -35,6 +35,11 @@
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Dns" /></Icon>
             <ChildContent>@UiStrings.Nav_Environments</ChildContent>
         </FlareNavLink>
+        @* Directly after Environments: it configures how repositories deploy to them. *@
+        <FlareNavLink Href="/admin/deploy-targets">
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.RocketLaunch" /></Icon>
+            <ChildContent>@UiStrings.Nav_DeployTargets</ChildContent>
+        </FlareNavLink>
         <FlareNavLink Href="/admin/action-handlers">
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Notifications" /></Icon>
             <ChildContent>@UiStrings.Nav_ActionHandlers</ChildContent>

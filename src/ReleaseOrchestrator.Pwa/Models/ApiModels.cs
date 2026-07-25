@@ -130,7 +130,17 @@ public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);
 
 // ---- environments and rollouts (mirrors Application.DTOs.RolloutDto + EnvironmentsController) ----
 
-public record EnvironmentDto(Guid Id, string Key, string Name, int Order, bool IsEnabled);
+/// <param name="ReadyRule">"NoGate", "AnyOf", or "AllOf" — how the environment gates merge requests.</param>
+/// <param name="ReadyLabels">The labels the rule is evaluated against; empty for NoGate.</param>
+public record EnvironmentDto(
+    Guid Id, string Key, string Name, int Order, bool IsEnabled,
+    string? ReadyRule = null, List<string>? ReadyLabels = null);
+
+/// <summary>A repository's deploy configuration for one environment (mirrors DeployTargetsController).</summary>
+/// <param name="Settings">Strategy settings, keyed as the strategy declares them; secret ones absent.</param>
+public record DeployTargetDto(
+    Guid Id, Guid RepositoryId, string RepositoryName, Guid EnvironmentId, string EnvironmentKey,
+    string DeployStrategyKey, string RedeployPolicy, Dictionary<string, string>? Settings = null);
 
 public record RolloutDto(
     Guid Id, Guid TargetTaskId, string TargetTaskKey, Guid EnvironmentId, string EnvironmentKey,

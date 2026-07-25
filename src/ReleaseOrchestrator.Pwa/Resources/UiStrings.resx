@@ -420,6 +420,9 @@
   <data name="Nav_Environments" xml:space="preserve">
     <value>Environments</value>
   </data>
+  <data name="Nav_DeployTargets" xml:space="preserve">
+    <value>Deploy targets</value>
+  </data>
   <data name="DefaultPlan_Title" xml:space="preserve">
     <value>Default rollout plan</value>
   </data>
@@ -557,6 +560,63 @@
   </data>
   <data name="Rollout_Steps_Title" xml:space="preserve">
     <value>Steps</value>
+  </data>
+  <data name="Deploy_Title" xml:space="preserve">
+    <value>Deploy targets</value>
+  </data>
+  <data name="Deploy_Heading" xml:space="preserve">
+    <value>Deploy targets</value>
+  </data>
+  <data name="Deploy_Intro" xml:space="preserve">
+    <value>How each repository deploys to each environment. A rollout cannot launch without one.</value>
+  </data>
+  <data name="Deploy_Prereq_Title" xml:space="preserve">
+    <value>Configure the prerequisites first</value>
+  </data>
+  <data name="Deploy_Prereq_Description" xml:space="preserve">
+    <value>A deploy target needs at least one repository, one environment, and one registered deploy strategy.</value>
+  </data>
+  <data name="Deploy_Col_Repository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="Deploy_Col_Environment" xml:space="preserve">
+    <value>Environment</value>
+  </data>
+  <data name="Deploy_Col_Strategy" xml:space="preserve">
+    <value>Strategy</value>
+  </data>
+  <data name="Deploy_Col_Redeploy" xml:space="preserve">
+    <value>Redeploy</value>
+  </data>
+  <data name="Deploy_Add" xml:space="preserve">
+    <value>Add target</value>
+  </data>
+  <data name="Deploy_Empty_Title" xml:space="preserve">
+    <value>No deploy targets</value>
+  </data>
+  <data name="Deploy_Empty_Description" xml:space="preserve">
+    <value>Add one above so a repository can deploy to an environment.</value>
+  </data>
+  <data name="Deploy_Created" xml:space="preserve">
+    <value>Deploy target added.</value>
+  </data>
+  <data name="Deploy_Deleted" xml:space="preserve">
+    <value>Deploy target removed.</value>
+  </data>
+  <data name="Deploy_Delete_Title" xml:space="preserve">
+    <value>Remove deploy target</value>
+  </data>
+  <data name="Deploy_Delete_Message" xml:space="preserve">
+    <value>Remove how '{0}' deploys to '{1}'?</value>
+  </data>
+  <data name="Deploy_Redeploy_Once" xml:space="preserve">
+    <value>Once</value>
+  </data>
+  <data name="Deploy_Redeploy_Always" xml:space="preserve">
+    <value>Always</value>
+  </data>
+  <data name="Deploy_Redeploy_Inherit" xml:space="preserve">
+    <value>Inherit</value>
   </data>
   <data name="Env_Title" xml:space="preserve">
     <value>Environments</value>

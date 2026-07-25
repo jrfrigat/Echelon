@@ -420,6 +420,9 @@
   <data name="Nav_Environments" xml:space="preserve">
     <value>Окружения</value>
   </data>
+  <data name="Nav_DeployTargets" xml:space="preserve">
+    <value>Цели выкатки</value>
+  </data>
   <data name="DefaultPlan_Title" xml:space="preserve">
     <value>План выкатки по умолчанию</value>
   </data>
@@ -557,6 +560,63 @@
   </data>
   <data name="Rollout_Steps_Title" xml:space="preserve">
     <value>Шаги</value>
+  </data>
+  <data name="Deploy_Title" xml:space="preserve">
+    <value>Цели выкатки</value>
+  </data>
+  <data name="Deploy_Heading" xml:space="preserve">
+    <value>Цели выкатки</value>
+  </data>
+  <data name="Deploy_Intro" xml:space="preserve">
+    <value>Как каждый репозиторий выкатывается на каждый контур. Без этого выкатку не запустить.</value>
+  </data>
+  <data name="Deploy_Prereq_Title" xml:space="preserve">
+    <value>Сначала настройте предпосылки</value>
+  </data>
+  <data name="Deploy_Prereq_Description" xml:space="preserve">
+    <value>Для цели выкатки нужен хотя бы один репозиторий, один контур и одна зарегистрированная стратегия выкатки.</value>
+  </data>
+  <data name="Deploy_Col_Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Deploy_Col_Environment" xml:space="preserve">
+    <value>Контур</value>
+  </data>
+  <data name="Deploy_Col_Strategy" xml:space="preserve">
+    <value>Стратегия</value>
+  </data>
+  <data name="Deploy_Col_Redeploy" xml:space="preserve">
+    <value>Повтор</value>
+  </data>
+  <data name="Deploy_Add" xml:space="preserve">
+    <value>Добавить цель</value>
+  </data>
+  <data name="Deploy_Empty_Title" xml:space="preserve">
+    <value>Нет целей выкатки</value>
+  </data>
+  <data name="Deploy_Empty_Description" xml:space="preserve">
+    <value>Добавьте цель выше, чтобы репозиторий мог выкатываться на контур.</value>
+  </data>
+  <data name="Deploy_Created" xml:space="preserve">
+    <value>Цель выкатки добавлена.</value>
+  </data>
+  <data name="Deploy_Deleted" xml:space="preserve">
+    <value>Цель выкатки удалена.</value>
+  </data>
+  <data name="Deploy_Delete_Title" xml:space="preserve">
+    <value>Удалить цель выкатки</value>
+  </data>
+  <data name="Deploy_Delete_Message" xml:space="preserve">
+    <value>Удалить, как «{0}» выкатывается на «{1}»?</value>
+  </data>
+  <data name="Deploy_Redeploy_Once" xml:space="preserve">
+    <value>Один раз</value>
+  </data>
+  <data name="Deploy_Redeploy_Always" xml:space="preserve">
+    <value>Всегда</value>
+  </data>
+  <data name="Deploy_Redeploy_Inherit" xml:space="preserve">
+    <value>Наследовать</value>
   </data>
   <data name="Env_Title" xml:space="preserve">
     <value>Окружения</value>

@@ -176,6 +176,40 @@ public class ApiService(HttpClient http)
     public Task DeleteEnvironmentAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/environments/{id}", ct), ct);
 
+    // ---- deploy targets -------------------------------------------------------
+
+    /// <summary>The deploy strategies this build registers, and the settings each declares.</summary>
+    public Task<List<ProviderTypeDto>> GetDeployStrategiesAsync(CancellationToken ct = default) =>
+        GetAsync<List<ProviderTypeDto>>("api/providers/deploy-strategies", ct);
+
+    public Task<List<DeployTargetDto>> GetDeployTargetsAsync(CancellationToken ct = default) =>
+        GetAsync<List<DeployTargetDto>>("api/deploy-targets", ct);
+
+    /// <param name="settings">Strategy settings, keyed as the strategy declares them.</param>
+    public Task CreateDeployTargetAsync(
+        Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
+        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsJsonAsync("api/deploy-targets",
+            new
+            {
+                RepositoryId = repositoryId, EnvironmentId = environmentId,
+                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy, Settings = settings
+            }, ct), ct);
+
+    /// <param name="settings">An omitted secret keeps the stored one, as with a connection token.</param>
+    public Task UpdateDeployTargetAsync(
+        Guid id, Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
+        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync($"api/deploy-targets/{id}",
+            new
+            {
+                RepositoryId = repositoryId, EnvironmentId = environmentId,
+                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy, Settings = settings
+            }, ct), ct);
+
+    public Task DeleteDeployTargetAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.DeleteAsync($"api/deploy-targets/{id}", ct), ct);
+
     // ---- rollouts -------------------------------------------------------------
 
     public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, CancellationToken ct = default) =>
