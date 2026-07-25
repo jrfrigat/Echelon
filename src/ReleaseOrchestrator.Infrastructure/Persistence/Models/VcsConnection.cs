@@ -53,7 +53,8 @@ public class VcsConnection
 
     /// <summary>
     /// VCS label that marks a merge request as deployable (README §5). When an opened MR
-    /// carries it, the MR enters the release plan. Null disables label-driven promotion
+    /// carries it, the MR is promoted to <c>ReadyForDeploy</c> — the coarse deployable signal, not
+    /// plan membership, which every non-closed MR already has. Null disables label-driven promotion
     /// for this connection, leaving only the manual API.
     /// </summary>
     [MaxLength(200)]

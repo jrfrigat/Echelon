@@ -13,9 +13,13 @@ namespace ReleaseOrchestrator.UnitTests.Readiness;
 /// everything", and the second is reachable through nothing worse than <c>All()</c> over an empty
 /// sequence being vacuously true.
 ///
-/// This file also exists because the previous gate test was NAMED for a guarantee it did not check
-/// (<c>MissingLabelKeepsTheMrOutOfThePlan</c> asserted only that a resolver returned a status), and
-/// the test that did check it was deleted with the global plan and never replaced.
+/// This file covers the pure predicate. The predicate is now actually enforced: a launch is refused
+/// for any merge request that is not ready for its environment, in
+/// <c>RolloutService.GuardReadinessAsync</c>, covered by the launch-gate tests in
+/// <c>RolloutServiceTests</c> (blocked when unready, admitted by a label, admitted or held by a pin).
+/// That closes a gap this file was written against — an earlier test was NAMED for a guarantee it did
+/// not check (<c>MissingLabelKeepsTheMrOutOfThePlan</c> asserted only that a resolver returned a
+/// status), and for a while nothing checked the guarantee itself.
 /// </remarks>
 public class ReadinessResolverTests
 {

@@ -73,9 +73,9 @@ public class MergeRequestsController(
     }
 
     /// <summary>
-    /// Pins a merge request's status by hand — the second of the two routes into the plan
-    /// alongside the connection's ready-for-deploy label (README §5). The pin survives later
-    /// label-driven updates; a terminal state reported by the VCS clears it.
+    /// Pins a merge request's status by hand — the second of the two routes to marking a merge
+    /// request deployable, alongside the connection's ready-for-deploy label (README §5). The pin
+    /// survives later label-driven updates; a terminal state reported by the VCS clears it.
     /// </summary>
     [HttpPatch("{id:guid}/status")]
     [Authorize(Policy = Permissions.ReleasePlanApprove)]

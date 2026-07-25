@@ -10,10 +10,12 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <remarks>
 /// <para>
 /// The one part of a task's history that cannot be derived. <see cref="MergeRequest.Status"/> is
-/// overwritten in place, so the promotion to <c>ReadyForDeploy</c> — the gate that decides whether a
-/// merge request enters the plan at all — leaves no trace: no column, no timestamp, nothing to read
-/// afterwards. <c>CreatedAt</c>, <c>MergedAt</c> and <c>ClosedAt</c> cover three moments; everything
-/// between them was invisible.
+/// overwritten in place, so the promotion to <c>ReadyForDeploy</c> — the moment a merge request
+/// became deployable — leaves no trace: no column, no timestamp, nothing to read afterwards.
+/// (Plan membership is a separate, coarser thing: the plan holds every non-closed merge request the
+/// task owns, and the per-environment readiness gate decides at launch which may deploy.)
+/// <c>CreatedAt</c>, <c>MergedAt</c> and <c>ClosedAt</c> cover three moments; everything between them
+/// was invisible.
 /// </para>
 /// <para>
 /// Deliberately has NO foreign key and NO navigation on <see cref="MergeRequest"/>. An FK would

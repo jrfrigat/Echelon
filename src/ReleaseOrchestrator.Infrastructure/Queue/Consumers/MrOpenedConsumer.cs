@@ -86,8 +86,9 @@ public class MrOpenedConsumer(
             mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
                 msg.Labels, repo.Connection.ReadyForDeployLabel, mr.IsStatusManual, mr.Status);
 
-            // The label-driven promotion to ReadyForDeploy happens here and nowhere else. It decides
-            // whether this merge request is in the plan at all, and it overwrites the column in
+            // The label-driven promotion to ReadyForDeploy happens here and nowhere else -- the
+            // coarse "is this deployable" signal from the connection's single ready-for-deploy label,
+            // distinct from the per-environment readiness gate below. It overwrites the column in
             // place, so without this row nothing afterwards can say when it became deployable.
             MergeRequestStatusJournal.Record(
                 db, mr, previousStatus, mr.Status,
