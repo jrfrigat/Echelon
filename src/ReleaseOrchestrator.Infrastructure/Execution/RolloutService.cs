@@ -27,7 +27,7 @@ public class RolloutService(
     ILogger<RolloutService> logger) : IRolloutService
 {
     /// <inheritdoc/>
-    public async Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, CancellationToken ct = default)
+    public async Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, bool redeploy = false, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow().UtcDateTime;
 
@@ -155,7 +155,7 @@ public class RolloutService(
         var repoIds = mrDetails.Select(m => m.RepositoryId).Distinct().ToList();
         var targetOf = (await db.RepositoryDeployTargets
                 .Where(t => t.EnvironmentId == environmentId && repoIds.Contains(t.RepositoryId))
-                .Select(t => new { t.RepositoryId, t.DeployStrategyKey, t.DeploySettingsJson })
+                .Select(t => new { t.RepositoryId, t.DeployStrategyKey, t.DeploySettingsJson, t.RedeployPolicy })
                 .ToListAsync(ct))
             .ToDictionary(t => t.RepositoryId);
 
@@ -169,14 +169,27 @@ public class RolloutService(
                 .ToListAsync(ct))
             .ToHashSet();
 
+        // Redeploy: an already-deployed merge request is deployed again only when the launch asks for
+        // it AND its repository's target for this environment permits it (RedeployPolicy.Always). Two
+        // independent conditions -- production defaults to Once, so a stray redeploy flag cannot touch
+        // it, and a standing Always policy cannot redeploy without the flag. Absent a target the
+        // policy is unknown, so it is not redeployable.
+        var redeploying = !redeploy
+            ? new HashSet<Guid>()
+            : mrDetails
+                .Where(m => alreadyDeployed.Contains(m.Id)
+                            && targetOf.GetValueOrDefault(m.RepositoryId)?.RedeployPolicy == RedeployPolicy.Always)
+                .Select(m => m.Id)
+                .ToHashSet();
+
         // Readiness gate: every merge request that would actually deploy must be ready for this
         // environment. Blocks the whole launch rather than filtering the unready ones out silently --
         // a task's merge requests have ordering dependencies, so deploying some and quietly dropping
         // others is a partial rollout that reads as complete. The operator makes them ready (a label
-        // or a pin) or picks an ungated environment. Already-deployed merge requests are exempt:
-        // their readiness is moot, they are not deploying again here.
+        // or a pin) or picks an ungated environment. Already-deployed merge requests are exempt unless
+        // they are being redeployed -- a redeploy is a fresh deploy and must clear the gate again.
         var deploying = mrDetails
-            .Where(m => !alreadyDeployed.Contains(m.Id))
+            .Where(m => !alreadyDeployed.Contains(m.Id) || redeploying.Contains(m.Id))
             .Select(m => (m.Id, m.ExternalId, m.Labels))
             .ToList();
         await GuardReadinessAsync(env, deploying, ct);
@@ -199,7 +212,8 @@ public class RolloutService(
             var deploySettings = target?.DeploySettingsJson ?? mr.RepoDeploySettings;
 
             var wave = waveOf.GetValueOrDefault(mr.Id, 1);
-            var skipped = alreadyDeployed.Contains(mr.Id);
+            // Already-deployed skips, unless it is being redeployed.
+            var skipped = alreadyDeployed.Contains(mr.Id) && !redeploying.Contains(mr.Id);
             steps.Add(new RolloutStep
             {
                 Id = Guid.NewGuid(),
@@ -214,6 +228,22 @@ public class RolloutService(
                 FinishedAt = skipped ? now : null
             });
             snapshot.Add(new StepSnapshot(mr.Id, mr.TaskId!.Value, wave, deployKey));
+        }
+
+        // Clear the deployment state of the merge requests being redeployed, in the same unit of work
+        // as the rollout below, so it commits atomically. The coordinator treats a Deployed/Skipped
+        // state as "already done" and short-circuits; resetting to NotStarted lets it re-claim (the
+        // claim was Released when the earlier deploy settled) and deploy again.
+        if (redeploying.Count > 0)
+        {
+            var states = await db.MrDeploymentStates
+                .Where(s => s.EnvironmentId == environmentId && redeploying.Contains(s.MergeRequestId))
+                .ToListAsync(ct);
+            foreach (var s in states)
+            {
+                s.State = DeploymentState.NotStarted;
+                s.UpdatedAt = now;
+            }
         }
 
         var rollout = new Rollout

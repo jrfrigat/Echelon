@@ -90,11 +90,15 @@ public class TasksController(
     [Authorize(Policy = Permissions.ReleaseExecute)]
     public async Task<IActionResult> Launch(Guid id, [FromBody] LaunchRolloutRequest req, CancellationToken ct)
     {
-        var rollout = await rollouts.LaunchAsync(id, req.EnvironmentId, this.ResolveActor(), ct);
+        var rollout = await rollouts.LaunchAsync(id, req.EnvironmentId, this.ResolveActor(), req.Redeploy, ct);
         return Ok(rollout);
     }
 }
 
 /// <summary>Request to launch a rollout.</summary>
 /// <param name="EnvironmentId">The target environment.</param>
-public record LaunchRolloutRequest([property: Required] Guid EnvironmentId);
+/// <param name="Redeploy">
+/// When true, redeploy merge requests already deployed to this environment — honoured only where the
+/// repository's deploy target for the environment sets <c>RedeployPolicy.Always</c>.
+/// </param>
+public record LaunchRolloutRequest([property: Required] Guid EnvironmentId, bool Redeploy = false);

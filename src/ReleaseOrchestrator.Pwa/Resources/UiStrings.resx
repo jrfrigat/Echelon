@@ -537,6 +537,9 @@
   <data name="TaskDetail_Launch" xml:space="preserve">
     <value>Launch rollout</value>
   </data>
+  <data name="TaskDetail_Redeploy" xml:space="preserve">
+    <value>Redeploy</value>
+  </data>
   <data name="TaskDetail_Launched" xml:space="preserve">
     <value>Rollout launched.</value>
   </data>

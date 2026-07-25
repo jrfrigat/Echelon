@@ -17,7 +17,13 @@ public interface IRolloutService
     /// <param name="environmentId">The target environment.</param>
     /// <param name="actor">Who launched it, for the audit trail.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, CancellationToken ct = default);
+    /// <param name="redeploy">
+    /// When true, a merge request already deployed to this environment is deployed again — but only
+    /// where its repository's deploy target for this environment permits it
+    /// (<c>RedeployPolicy.Always</c>). Two independent conditions, so neither a stray flag nor a
+    /// standing policy redeploys on its own.
+    /// </param>
+    Task<RolloutDto> LaunchAsync(Guid taskId, Guid environmentId, ActorRef actor, bool redeploy = false, CancellationToken ct = default);
 
     /// <summary>The run and its steps, or <c>null</c> when it does not exist.</summary>
     /// <param name="rolloutId">The run id.</param>

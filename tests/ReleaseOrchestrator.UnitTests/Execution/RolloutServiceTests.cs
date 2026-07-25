@@ -90,7 +90,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
 
         await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -123,7 +123,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Planner_().RecalculateAsync(target.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(target.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(target.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("PROJ-1", ex.Message);
     }
 
@@ -142,7 +142,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(target.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(target.Id, env.Id, ActorRef.System, Ct);
+        var rollout = await Service().LaunchAsync(target.Id, env.Id, ActorRef.System, ct: Ct);
 
         Assert.Equal("Running", rollout.Status);
         Assert.Equal(2, rollout.Steps.Count);
@@ -166,8 +166,8 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
-        var second = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
+        var second = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
@@ -190,14 +190,14 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
         Assert.Equal("Running", first.Status);
 
         // A new ingestion event recalculates the plan, minting a new plan id and so a new key.
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("already running", ex.Message, StringComparison.OrdinalIgnoreCase);
         // Still exactly one rollout: the second launch created nothing.
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
@@ -220,7 +220,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var first = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         // Drive the run to a terminal state, as the coordinator would on success or failure.
         var rollout = await Db.Rollouts.FirstAsync(r => r.Id == first.Id, Ct);
@@ -228,7 +228,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("already been rolled out", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, await Db.Rollouts.CountAsync(r => r.TargetTaskId == task.Id, Ct));
     }
@@ -252,7 +252,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         var step = await StepAsync(rollout.Id);
         Assert.Equal("gitlab-pipeline", step.DeployStrategyKey);
@@ -276,7 +276,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         var step = await StepAsync(rollout.Id);
         Assert.Equal("gitlab-merge", step.DeployStrategyKey);
@@ -298,7 +298,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("prod", ex.Message);
         Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -321,7 +321,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         var ex = await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
         Assert.Contains("prod", ex.Message);
         Assert.Contains("7", ex.Message);   // the offending merge request is named
         Assert.Equal(0, await Db.Rollouts.CountAsync(Ct));   // nothing was created
@@ -340,7 +340,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         Assert.Equal("Running", rollout.Status);
     }
@@ -361,7 +361,7 @@ public class RolloutServiceTests : PlannerTestBase
         await Db.SaveChangesAsync(Ct);
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
-        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct);
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
 
         Assert.Equal("Running", rollout.Status);
     }
@@ -381,6 +381,62 @@ public class RolloutServiceTests : PlannerTestBase
         await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
 
         await Assert.ThrowsAsync<DomainValidationException>(
-            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, Ct));
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
+    }
+
+    // ---- redeploy (E5) --------------------------------------------------------
+
+    private async Task<(Repository, TaskItem, MergeRequest, DeploymentEnvironment)> ReadyToRedeployAsync(RedeployPolicy policy)
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);
+        var env = AddEnvironment("test");
+        AddDeployTarget(repo, env, "gitlab-merge", policy: policy);
+        MarkDeployed(mr.Id, env.Id);   // already deployed here
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+        return (repo, task, mr, env);
+    }
+
+    /// <summary>
+    /// With the redeploy flag AND a target that allows it, an already-deployed merge request deploys
+    /// again: its step is Pending, not Skipped, and its deployment state is reset so the coordinator
+    /// does not short-circuit it.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Redeploys_WhenRequestedAndTheTargetPolicyIsAlways()
+    {
+        var (_, task, mr, env) = await ReadyToRedeployAsync(RedeployPolicy.Always);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, redeploy: true, ct: Ct);
+
+        Assert.Equal(RolloutStepState.Pending, (await StepAsync(rollout.Id)).State);
+        var state = await Db.MrDeploymentStates.AsNoTracking()
+            .FirstAsync(s => s.MergeRequestId == mr.Id && s.EnvironmentId == env.Id, Ct);
+        Assert.Equal(DeploymentState.NotStarted, state.State);
+    }
+
+    /// <summary>The flag alone is not enough: a target whose policy is Once still skips.</summary>
+    [Fact]
+    public async Task Launch_DoesNotRedeploy_WhenTheTargetPolicyIsOnce()
+    {
+        var (_, task, _, env) = await ReadyToRedeployAsync(RedeployPolicy.Once);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, redeploy: true, ct: Ct);
+
+        Assert.Equal(RolloutStepState.Skipped, (await StepAsync(rollout.Id)).State);
+    }
+
+    /// <summary>And the policy alone is not enough: without the flag, an Always target still skips.</summary>
+    [Fact]
+    public async Task Launch_DoesNotRedeploy_WithoutTheFlag()
+    {
+        var (_, task, _, env) = await ReadyToRedeployAsync(RedeployPolicy.Always);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, redeploy: false, ct: Ct);
+
+        Assert.Equal(RolloutStepState.Skipped, (await StepAsync(rollout.Id)).State);
     }
 }

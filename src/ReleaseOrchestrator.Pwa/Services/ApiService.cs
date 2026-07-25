@@ -237,9 +237,10 @@ public class ApiService(HttpClient http)
 
     // ---- rollouts -------------------------------------------------------------
 
-    public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, CancellationToken ct = default) =>
+    /// <param name="redeploy">Redeploy already-deployed merge requests, where their target permits it.</param>
+    public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, bool redeploy = false, CancellationToken ct = default) =>
         SendAsync<RolloutDto>(
-            () => http.PostAsJsonAsync($"api/tasks/{taskId}/rollouts", new { EnvironmentId = environmentId }, ct), ct);
+            () => http.PostAsJsonAsync($"api/tasks/{taskId}/rollouts", new { EnvironmentId = environmentId, Redeploy = redeploy }, ct), ct);
 
     public Task<RolloutDto?> GetRolloutAsync(Guid id, CancellationToken ct = default) =>
         GetOrNullAsync<RolloutDto>($"api/rollouts/{id}", ct);

@@ -89,6 +89,8 @@ else
                          Disabled="@(_plan.Conflicts.Count > 0 || _selectedEnvironmentId == Guid.Empty)">
                 @UiStrings.TaskDetail_Launch
             </FlareButton>
+            @* Off by default: a redeploy only happens with both this and a target that permits it. *@
+            <FlareSwitch @bind-Value="_redeploy" Label="@UiStrings.TaskDetail_Redeploy" />
         }
         else
         {
@@ -234,6 +236,7 @@ else
     RolloutPlanDto? _plan;
     List<EnvironmentDto>? _environments;
     Guid _selectedEnvironmentId;
+    bool _redeploy;
     bool _loading = true;
     bool _busy;
     Dictionary<Guid, string> _keyById = [];
@@ -299,7 +302,7 @@ else
         if (_selectedEnvironmentId == Guid.Empty) return;
         _busy = true;
         RolloutDto? rollout = null;
-        var ok = await RunAsync(async () => rollout = await Api.LaunchRolloutAsync(Id, _selectedEnvironmentId), UiStrings.TaskDetail_Launched);
+        var ok = await RunAsync(async () => rollout = await Api.LaunchRolloutAsync(Id, _selectedEnvironmentId, _redeploy), UiStrings.TaskDetail_Launched);
         _busy = false;
         if (ok && rollout is not null) Nav.NavigateTo($"/rollouts/{rollout.Id}");
     }

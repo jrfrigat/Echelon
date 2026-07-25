@@ -1376,6 +1376,13 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Redeploy.</summary>
+        public static string TaskDetail_Redeploy {
+            get {
+                return ResourceManager.GetString("TaskDetail_Redeploy", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Rollout launched..
         /// </summary>

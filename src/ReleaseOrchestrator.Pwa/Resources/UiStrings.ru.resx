@@ -537,6 +537,9 @@
   <data name="TaskDetail_Launch" xml:space="preserve">
     <value>Запустить выкатку</value>
   </data>
+  <data name="TaskDetail_Redeploy" xml:space="preserve">
+    <value>Повторно</value>
+  </data>
   <data name="TaskDetail_Launched" xml:space="preserve">
     <value>Выкатка запущена.</value>
   </data>
