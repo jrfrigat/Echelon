@@ -323,4 +323,45 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
         Assert.Empty(await _db.Tasks.ToListAsync(Ct));
         Assert.Single(await _archiveDb.ArchivedTasks.ToListAsync(Ct));
     }
+
+    /// <summary>
+    /// The label journal is foreign-key-free and grows by one row per label change on every merge
+    /// request, forever — so, like the status journal, it must be pruned on its own retention window
+    /// or it grows without bound. This asserts the pruner drops what is past the window and keeps
+    /// what is inside it.
+    /// </summary>
+    [Fact]
+    public async Task LabelJournalRowsPastRetentionArePrunedAndRecentOnesKept()
+    {
+        var options = new ArchiveOptions { StatusJournalRetentionDays = 90 };
+        var retentionCutoff = Now.AddDays(-options.StatusJournalRetentionDays);
+
+        _db.MergeRequestLabelChanges.AddRange(
+            new MergeRequestLabelChange
+            {
+                Id = Guid.NewGuid(),
+                MergeRequestId = Guid.NewGuid(),
+                MergeRequestExternalId = "1",
+                FromLabels = string.Empty,
+                ToLabels = "ready-for-prod",
+                Cause = "webhook",
+                At = retentionCutoff.AddDays(-1)
+            },
+            new MergeRequestLabelChange
+            {
+                Id = Guid.NewGuid(),
+                MergeRequestId = Guid.NewGuid(),
+                MergeRequestExternalId = "2",
+                FromLabels = string.Empty,
+                ToLabels = "ready-for-test",
+                Cause = "poll",
+                At = retentionCutoff.AddDays(1)
+            });
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner(options).PruneLabelJournalAsync(Now, Ct);
+
+        var remaining = Assert.Single(await _db.MergeRequestLabelChanges.ToListAsync(Ct));
+        Assert.Equal("2", remaining.MergeRequestExternalId);
+    }
 }

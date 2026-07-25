@@ -52,6 +52,30 @@ internal sealed class ArchiveRunner(
             logger.LogInformation("Pruned {Count} merge-request status transition(s) older than {Cutoff:u}", removed, cutoff);
     }
 
+    /// <summary>
+    /// Prunes label-change journal rows past the retention window.
+    /// </summary>
+    /// <param name="now">The current time, UTC.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// The sibling of <see cref="PruneStatusJournalAsync"/>, and under the same retention: a merge
+    /// request's status history and label history are read together in the timeline, so they age out
+    /// together. Like the status journal this table is foreign-key-free, which is what makes pruning
+    /// it safe to run on its own schedule independent of the archive phases. Without this the table
+    /// grew without bound -- every label change on every merge request, kept forever.
+    /// </remarks>
+    public async Task PruneLabelJournalAsync(DateTime now, CancellationToken ct)
+    {
+        var cutoff = now.AddDays(-options.StatusJournalRetentionDays);
+
+        var removed = await db.MergeRequestLabelChanges
+            .Where(c => c.At < cutoff)
+            .ExecuteDeleteAsync(ct);
+
+        if (removed > 0)
+            logger.LogInformation("Pruned {Count} merge-request label change(s) older than {Cutoff:u}", removed, cutoff);
+    }
+
     // ---- merge requests ------------------------------------------------------------------
 
     private Task<List<MergeRequest>> LoadMergeRequestBatchAsync(DateTime cutoff, CancellationToken ct) =>
