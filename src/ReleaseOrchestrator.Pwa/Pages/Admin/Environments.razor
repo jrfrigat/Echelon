@@ -11,14 +11,24 @@
 
 <FlareCard>
     <FlareCardContent>
-        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-            <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
-            <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
-            @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
-               0 when somebody typed a word, and the order decides the progression gate. *@
-            <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
-                               Style="max-width:8rem;" />
-            <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+        <FlareStack Gap="FlareSpacing.Small">
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+                <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
+                <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
+                @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
+                   0 when somebody typed a word, and the order decides the progression gate. *@
+                <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
+                                   Style="max-width:8rem;" />
+                <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
+                             @bind-Value="_rule" Items="Rules" ItemLabel="@(r => RuleLabel(r))"
+                             Style="min-width:12rem;" />
+                @if (_rule != NoGate)
+                {
+                    <FlareTextField Label="@UiStrings.Env_ReadyLabels_Label" @bind-Value="_labels"
+                                    HelperText="@UiStrings.Env_ReadyLabels_Hint" Style="min-width:16rem;" />
+                }
+                <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+            </FlareStack>
         </FlareStack>
     </FlareCardContent>
 </FlareCard>
@@ -41,6 +51,24 @@ else
                          Field="@(e => (object?)e.Name)" Sortable="true" Filterable="true" />
             <FlareColumn TItem="EnvironmentDto" Id="order" Title="@UiStrings.Env_Col_Order"
                          Field="@(e => (object?)e.Order)" Sortable="true" Align="ColumnAlign.End" />
+            <FlareColumn TItem="EnvironmentDto" Id="gate" Title="@UiStrings.Env_Col_Gate">
+                <Template>
+                    @if (string.IsNullOrEmpty(context.ReadyRule) || context.ReadyRule == NoGate)
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Env_Ungated</FlareText>
+                    }
+                    else
+                    {
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@RuleLabel(context.ReadyRule)</FlareChip>
+                            @foreach (var l in context.ReadyLabels ?? [])
+                            {
+                                <FlareCode>@l</FlareCode>
+                            }
+                        </FlareStack>
+                    }
+                </Template>
+            </FlareColumn>
             <FlareColumn TItem="EnvironmentDto" Id="enabled" Title="@UiStrings.Env_Col_Enabled">
                 <Template>
                     <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
@@ -50,24 +78,68 @@ else
             </FlareColumn>
             <FlareColumn TItem="EnvironmentDto" Id="actions" Title="" Align="ColumnAlign.End">
                 <Template>
-                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Key)"
-                                     OnClick="@(() => Delete(context))">
-                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                    </FlareIconButton>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton Size="ButtonSize.Sm"
+                                         AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Key)"
+                                         OnClick="@(() => OpenEdit(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Key)"
+                                         OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
                 </Template>
             </FlareColumn>
         </Columns>
     </FlareDataGrid>
 }
 
+<FlareDialog Visible="_showEdit" Title="@UiStrings.Env_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
+    <ChildContent>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_eName" />
+            <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_eOrder" Style="max-width:8rem;" />
+            <FlareSwitch @bind-Value="_eEnabled" Label="@UiStrings.Env_Col_Enabled" />
+            <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
+                         @bind-Value="_eRule" Items="Rules" ItemLabel="@(r => RuleLabel(r))" />
+            @if (_eRule != NoGate)
+            {
+                <FlareTextField Label="@UiStrings.Env_ReadyLabels_Label" @bind-Value="_eLabels"
+                                HelperText="@UiStrings.Env_ReadyLabels_Hint" />
+            }
+        </FlareStack>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="@(() => _showEdit = false)">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="SaveEdit" Loading="_busy" Disabled="@string.IsNullOrWhiteSpace(_eName)">@UiStrings.Common_Save</FlareButton>
+    </Actions>
+</FlareDialog>
+
 @code {
+    const string NoGate = "NoGate";
+
+    // Mirrors Core.Enums.ReadyRule; the PWA does not reference Core.
+    static readonly string[] Rules = ["NoGate", "AnyOf", "AllOf"];
+
     List<EnvironmentDto>? _envs;
     bool _loading = true;
     bool _busy;
+
     string _key = "";
     string _name = "";
     int _order;
+    string _rule = NoGate;
+    string _labels = "";
+
+    bool _showEdit;
+    Guid _eId;
+    string _eName = "";
+    int _eOrder;
+    bool _eEnabled = true;
+    string _eRule = NoGate;
+    string _eLabels = "";
 
     protected override async Task OnInitializedAsync() => await Load();
 
@@ -80,9 +152,37 @@ else
     async Task Create()
     {
         _busy = true;
-        if (await RunAsync(async () => await Api.CreateEnvironmentAsync(_key.Trim(), _name.Trim(), _order, isEnabled: true), UiStrings.Env_Created))
+        if (await RunAsync(
+                async () => await Api.CreateEnvironmentAsync(
+                    _key.Trim(), _name.Trim(), _order, isEnabled: true, _rule, SplitLabels(_labels)),
+                UiStrings.Env_Created))
         {
-            _key = ""; _name = ""; _order = 0;
+            _key = ""; _name = ""; _order = 0; _rule = NoGate; _labels = "";
+            await Load();
+        }
+        _busy = false;
+    }
+
+    void OpenEdit(EnvironmentDto env)
+    {
+        _eId = env.Id;
+        _eName = env.Name;
+        _eOrder = env.Order;
+        _eEnabled = env.IsEnabled;
+        _eRule = string.IsNullOrEmpty(env.ReadyRule) ? NoGate : env.ReadyRule;
+        _eLabels = string.Join(" ", env.ReadyLabels ?? []);
+        _showEdit = true;
+    }
+
+    async Task SaveEdit()
+    {
+        _busy = true;
+        if (await RunAsync(
+                async () => await Api.UpdateEnvironmentAsync(
+                    _eId, _eName.Trim(), _eOrder, _eEnabled, _eRule, SplitLabels(_eLabels)),
+                UiStrings.Env_Updated))
+        {
+            _showEdit = false;
             await Load();
         }
         _busy = false;
@@ -94,4 +194,15 @@ else
         if (await RunAsync(async () => await Api.DeleteEnvironmentAsync(env.Id), UiStrings.Env_Deleted))
             await Load();
     }
+
+    /// <summary>Splits the labels field on commas and whitespace; the server canonicalizes them.</summary>
+    static List<string> SplitLabels(string text) =>
+        text.Split([',', ' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).ToList();
+
+    static string RuleLabel(string rule) => rule switch
+    {
+        "AnyOf" => UiStrings.Env_Rule_AnyOf,
+        "AllOf" => UiStrings.Env_Rule_AllOf,
+        _ => UiStrings.Env_Rule_NoGate
+    };
 }

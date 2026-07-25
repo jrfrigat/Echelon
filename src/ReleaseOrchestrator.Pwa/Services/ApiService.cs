@@ -169,9 +169,20 @@ public class ApiService(HttpClient http)
     public Task<List<EnvironmentDto>> GetEnvironmentsAsync(CancellationToken ct = default) =>
         GetAsync<List<EnvironmentDto>>("api/environments", ct);
 
-    public Task CreateEnvironmentAsync(string key, string name, int order, bool isEnabled, CancellationToken ct = default) =>
+    /// <param name="readyRule">"NoGate", "AnyOf", or "AllOf". Setting NoGate needs approval permission.</param>
+    /// <param name="readyLabels">The labels the rule is evaluated against; ignored for NoGate.</param>
+    public Task CreateEnvironmentAsync(
+        string key, string name, int order, bool isEnabled,
+        string? readyRule = null, IReadOnlyList<string>? readyLabels = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/environments",
-            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled }, ct), ct);
+            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled, ReadyRule = readyRule, ReadyLabels = readyLabels }, ct), ct);
+
+    /// <param name="readyRule">"NoGate", "AnyOf", or "AllOf". Changing TO NoGate needs approval permission.</param>
+    public Task UpdateEnvironmentAsync(
+        Guid id, string name, int order, bool isEnabled,
+        string? readyRule = null, IReadOnlyList<string>? readyLabels = null, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync($"api/environments/{id}",
+            new { Key = "", Name = name, Order = order, IsEnabled = isEnabled, ReadyRule = readyRule, ReadyLabels = readyLabels }, ct), ct);
 
     public Task DeleteEnvironmentAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/environments/{id}", ct), ct);

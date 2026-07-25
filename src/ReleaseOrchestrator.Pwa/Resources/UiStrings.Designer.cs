@@ -1625,6 +1625,76 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Readiness gate.</summary>
+        public static string Env_Col_Gate {
+            get {
+                return ResourceManager.GetString("Env_Col_Gate", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Ungated.</summary>
+        public static string Env_Ungated {
+            get {
+                return ResourceManager.GetString("Env_Ungated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Gate.</summary>
+        public static string Env_ReadyRule_Label {
+            get {
+                return ResourceManager.GetString("Env_ReadyRule_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Required labels.</summary>
+        public static string Env_ReadyLabels_Label {
+            get {
+                return ResourceManager.GetString("Env_ReadyLabels_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the ready-labels field hint.</summary>
+        public static string Env_ReadyLabels_Hint {
+            get {
+                return ResourceManager.GetString("Env_ReadyLabels_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to No gate.</summary>
+        public static string Env_Rule_NoGate {
+            get {
+                return ResourceManager.GetString("Env_Rule_NoGate", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Any of.</summary>
+        public static string Env_Rule_AnyOf {
+            get {
+                return ResourceManager.GetString("Env_Rule_AnyOf", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to All of.</summary>
+        public static string Env_Rule_AllOf {
+            get {
+                return ResourceManager.GetString("Env_Rule_AllOf", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Edit environment.</summary>
+        public static string Env_Dialog_Edit {
+            get {
+                return ResourceManager.GetString("Env_Dialog_Edit", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Environment saved.</summary>
+        public static string Env_Updated {
+            get {
+                return ResourceManager.GetString("Env_Updated", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to No environments.
         /// </summary>

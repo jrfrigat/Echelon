@@ -624,6 +624,36 @@
   <data name="Env_Heading" xml:space="preserve">
     <value>Environments</value>
   </data>
+  <data name="Env_Col_Gate" xml:space="preserve">
+    <value>Readiness gate</value>
+  </data>
+  <data name="Env_Ungated" xml:space="preserve">
+    <value>Ungated</value>
+  </data>
+  <data name="Env_ReadyRule_Label" xml:space="preserve">
+    <value>Gate</value>
+  </data>
+  <data name="Env_ReadyLabels_Label" xml:space="preserve">
+    <value>Required labels</value>
+  </data>
+  <data name="Env_ReadyLabels_Hint" xml:space="preserve">
+    <value>Space- or comma-separated. A merge request is ready when its labels satisfy the gate.</value>
+  </data>
+  <data name="Env_Rule_NoGate" xml:space="preserve">
+    <value>No gate</value>
+  </data>
+  <data name="Env_Rule_AnyOf" xml:space="preserve">
+    <value>Any of</value>
+  </data>
+  <data name="Env_Rule_AllOf" xml:space="preserve">
+    <value>All of</value>
+  </data>
+  <data name="Env_Dialog_Edit" xml:space="preserve">
+    <value>Edit environment</value>
+  </data>
+  <data name="Env_Updated" xml:space="preserve">
+    <value>Environment saved.</value>
+  </data>
   <data name="Env_Empty_Title" xml:space="preserve">
     <value>No environments</value>
   </data>

@@ -624,6 +624,36 @@
   <data name="Env_Heading" xml:space="preserve">
     <value>Окружения</value>
   </data>
+  <data name="Env_Col_Gate" xml:space="preserve">
+    <value>Готовность</value>
+  </data>
+  <data name="Env_Ungated" xml:space="preserve">
+    <value>Без проверки</value>
+  </data>
+  <data name="Env_ReadyRule_Label" xml:space="preserve">
+    <value>Проверка</value>
+  </data>
+  <data name="Env_ReadyLabels_Label" xml:space="preserve">
+    <value>Требуемые метки</value>
+  </data>
+  <data name="Env_ReadyLabels_Hint" xml:space="preserve">
+    <value>Через пробел или запятую. MR готов, когда его метки удовлетворяют проверке.</value>
+  </data>
+  <data name="Env_Rule_NoGate" xml:space="preserve">
+    <value>Без проверки</value>
+  </data>
+  <data name="Env_Rule_AnyOf" xml:space="preserve">
+    <value>Любая из</value>
+  </data>
+  <data name="Env_Rule_AllOf" xml:space="preserve">
+    <value>Все из</value>
+  </data>
+  <data name="Env_Dialog_Edit" xml:space="preserve">
+    <value>Изменить контур</value>
+  </data>
+  <data name="Env_Updated" xml:space="preserve">
+    <value>Контур сохранён.</value>
+  </data>
   <data name="Env_Empty_Title" xml:space="preserve">
     <value>Нет окружений</value>
   </data>
