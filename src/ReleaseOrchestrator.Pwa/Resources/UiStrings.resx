@@ -411,6 +411,45 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Wave {0}</value>
   </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Pin_Aria" xml:space="preserve">
+    <value>Manage readiness for merge request {0}</value>
+  </data>
+  <data name="Pin_Dialog_Title" xml:space="preserve">
+    <value>Readiness — merge request {0}</value>
+  </data>
+  <data name="Pin_NoEnvironments" xml:space="preserve">
+    <value>No environments to pin for.</value>
+  </data>
+  <data name="Pin_Intro" xml:space="preserve">
+    <value>Override this merge request's readiness per environment. A pin wins over its labels.</value>
+  </data>
+  <data name="Pin_State_Labels" xml:space="preserve">
+    <value>By labels</value>
+  </data>
+  <data name="Pin_State_Ready" xml:space="preserve">
+    <value>Pinned ready</value>
+  </data>
+  <data name="Pin_State_Held" xml:space="preserve">
+    <value>Held</value>
+  </data>
+  <data name="Pin_SetReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Pin_SetHeld" xml:space="preserve">
+    <value>Hold</value>
+  </data>
+  <data name="Pin_Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Pin_Saved" xml:space="preserve">
+    <value>Readiness pin saved.</value>
+  </data>
+  <data name="Pin_Cleared" xml:space="preserve">
+    <value>Readiness pin cleared.</value>
+  </data>
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Rollouts</value>
   </data>

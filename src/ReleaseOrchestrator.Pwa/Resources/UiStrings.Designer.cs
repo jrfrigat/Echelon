@@ -1025,6 +1025,97 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Close.</summary>
+        public static string Common_Close {
+            get {
+                return ResourceManager.GetString("Common_Close", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the readiness-pin button aria label.</summary>
+        public static string Pin_Aria {
+            get {
+                return ResourceManager.GetString("Pin_Aria", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the readiness-pin dialog title.</summary>
+        public static string Pin_Dialog_Title {
+            get {
+                return ResourceManager.GetString("Pin_Dialog_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the no-environments-to-pin message.</summary>
+        public static string Pin_NoEnvironments {
+            get {
+                return ResourceManager.GetString("Pin_NoEnvironments", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the readiness-pin dialog intro.</summary>
+        public static string Pin_Intro {
+            get {
+                return ResourceManager.GetString("Pin_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to By labels.</summary>
+        public static string Pin_State_Labels {
+            get {
+                return ResourceManager.GetString("Pin_State_Labels", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Pinned ready.</summary>
+        public static string Pin_State_Ready {
+            get {
+                return ResourceManager.GetString("Pin_State_Ready", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Held.</summary>
+        public static string Pin_State_Held {
+            get {
+                return ResourceManager.GetString("Pin_State_Held", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Ready.</summary>
+        public static string Pin_SetReady {
+            get {
+                return ResourceManager.GetString("Pin_SetReady", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Hold.</summary>
+        public static string Pin_SetHeld {
+            get {
+                return ResourceManager.GetString("Pin_SetHeld", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Clear.</summary>
+        public static string Pin_Clear {
+            get {
+                return ResourceManager.GetString("Pin_Clear", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the pin-saved notice.</summary>
+        public static string Pin_Saved {
+            get {
+                return ResourceManager.GetString("Pin_Saved", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up the pin-cleared notice.</summary>
+        public static string Pin_Cleared {
+            get {
+                return ResourceManager.GetString("Pin_Cleared", resourceCulture);
+            }
+        }
+
 
         /// <summary>
         ///   Looks up a localized string similar to Rollouts.

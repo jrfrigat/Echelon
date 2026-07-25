@@ -221,6 +221,20 @@ public class ApiService(HttpClient http)
     public Task DeleteDeployTargetAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/deploy-targets/{id}", ct), ct);
 
+    // ---- readiness pins -------------------------------------------------------
+
+    public Task<List<ReadinessPinDto>> GetReadinessPinsAsync(Guid mergeRequestId, CancellationToken ct = default) =>
+        GetAsync<List<ReadinessPinDto>>($"api/readiness-pins?mergeRequestId={mergeRequestId}", ct);
+
+    /// <param name="isReady">True admits the merge request into the environment; false holds it out.</param>
+    public Task SetReadinessPinAsync(
+        Guid mergeRequestId, Guid environmentId, bool isReady, string? reason = null, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync("api/readiness-pins",
+            new { MergeRequestId = mergeRequestId, EnvironmentId = environmentId, IsReady = isReady, Reason = reason }, ct), ct);
+
+    public Task DeleteReadinessPinAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.DeleteAsync($"api/readiness-pins/{id}", ct), ct);
+
     // ---- rollouts -------------------------------------------------------------
 
     public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, CancellationToken ct = default) =>

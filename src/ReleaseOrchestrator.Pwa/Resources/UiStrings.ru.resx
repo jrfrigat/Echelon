@@ -411,6 +411,45 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Волна {0}</value>
   </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="Pin_Aria" xml:space="preserve">
+    <value>Управление готовностью MR {0}</value>
+  </data>
+  <data name="Pin_Dialog_Title" xml:space="preserve">
+    <value>Готовность — MR {0}</value>
+  </data>
+  <data name="Pin_NoEnvironments" xml:space="preserve">
+    <value>Нет контуров для закрепления.</value>
+  </data>
+  <data name="Pin_Intro" xml:space="preserve">
+    <value>Переопределите готовность этого MR по контурам. Закрепление важнее меток.</value>
+  </data>
+  <data name="Pin_State_Labels" xml:space="preserve">
+    <value>По меткам</value>
+  </data>
+  <data name="Pin_State_Ready" xml:space="preserve">
+    <value>Закреплён готовым</value>
+  </data>
+  <data name="Pin_State_Held" xml:space="preserve">
+    <value>Удержан</value>
+  </data>
+  <data name="Pin_SetReady" xml:space="preserve">
+    <value>Готов</value>
+  </data>
+  <data name="Pin_SetHeld" xml:space="preserve">
+    <value>Удержать</value>
+  </data>
+  <data name="Pin_Clear" xml:space="preserve">
+    <value>Снять</value>
+  </data>
+  <data name="Pin_Saved" xml:space="preserve">
+    <value>Закрепление готовности сохранено.</value>
+  </data>
+  <data name="Pin_Cleared" xml:space="preserve">
+    <value>Закрепление готовности снято.</value>
+  </data>
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Выкатки</value>
   </data>

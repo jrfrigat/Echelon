@@ -142,6 +142,11 @@ public record DeployTargetDto(
     Guid Id, Guid RepositoryId, string RepositoryName, Guid EnvironmentId, string EnvironmentKey,
     string DeployStrategyKey, string RedeployPolicy, Dictionary<string, string>? Settings = null);
 
+/// <summary>A person's readiness override for one merge request in one environment (mirrors ReadinessPinsController).</summary>
+public record ReadinessPinDto(
+    Guid Id, Guid MergeRequestId, Guid EnvironmentId, string EnvironmentKey,
+    bool IsReady, string? Reason, string? ActorName, DateTime At);
+
 public record RolloutDto(
     Guid Id, Guid TargetTaskId, string TargetTaskKey, Guid EnvironmentId, string EnvironmentKey,
     string Status, DateTime StartedAt, DateTime? FinishedAt, List<RolloutStepDto> Steps);

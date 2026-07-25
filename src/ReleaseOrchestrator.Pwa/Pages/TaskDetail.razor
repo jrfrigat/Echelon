@@ -162,6 +162,14 @@ else
                                             @item.SourceBranch -> @item.TargetBranch
                                         </FlareText>
                                     </FlareStack>
+                                    <FlareSpacer />
+                                    @* The readiness escape hatch: pin this merge request ready or held for an
+                                       environment, overriding its labels -- needed when a merged MR's approval
+                                       could not be observed. *@
+                                    <FlareIconButton Size="ButtonSize.Sm" AriaLabel="@string.Format(UiStrings.Pin_Aria, item.MrExternalId)"
+                                                     OnClick="@(() => OpenPins(item.MergeRequestId, item.MrExternalId))">
+                                        <FlareIconView Value="MaterialDesign3Icons.Regular.Approval" />
+                                    </FlareIconButton>
                                 </FlareStack>
                             }
                         </FlareStack>
@@ -171,6 +179,52 @@ else
         }
     </FlareStack>
 }
+
+<FlareDialog Visible="_showPins" Title="@string.Format(UiStrings.Pin_Dialog_Title, _pinMrExternalId)"
+             VisibleChanged="@(v => _showPins = v)">
+    <ChildContent>
+        @if (_environments is null || _environments.Count == 0)
+        {
+            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Pin_NoEnvironments</FlareText>
+        }
+        else
+        {
+            <FlareStack Gap="FlareSpacing.Small">
+                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Pin_Intro</FlareText>
+                @foreach (var env in _environments.OrderBy(e => e.Order))
+                {
+                    var pin = _pins.FirstOrDefault(p => p.EnvironmentId == env.Id);
+                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                        <FlareText Typo="TypographyScale.BodyMedium" Style="min-width:8rem;">@env.Key</FlareText>
+                        @if (pin is null)
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant">@UiStrings.Pin_State_Labels</FlareChip>
+                        }
+                        else
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="@(pin.IsReady ? FlareColor.Success : FlareColor.Error)">
+                                @(pin.IsReady ? UiStrings.Pin_State_Ready : UiStrings.Pin_State_Held)
+                            </FlareChip>
+                        }
+                        <FlareSpacer />
+                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" Color="FlareColor.Success"
+                                     OnClick="@(() => SetPin(env.Id, true))">@UiStrings.Pin_SetReady</FlareButton>
+                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" Color="FlareColor.Error"
+                                     OnClick="@(() => SetPin(env.Id, false))">@UiStrings.Pin_SetHeld</FlareButton>
+                        @if (pin is not null)
+                        {
+                            <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text"
+                                         OnClick="@(() => ClearPin(pin.Id))">@UiStrings.Pin_Clear</FlareButton>
+                        }
+                    </FlareStack>
+                }
+            </FlareStack>
+        }
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="@(() => _showPins = false)">@UiStrings.Common_Close</FlareButton>
+    </Actions>
+</FlareDialog>
 
 @code {
     [Parameter] public Guid Id { get; set; }
@@ -184,6 +238,33 @@ else
     bool _busy;
     Dictionary<Guid, string> _keyById = [];
     Guid _loadedId;
+
+    // Readiness-pin dialog for one merge request.
+    bool _showPins;
+    Guid _pinMrId;
+    string _pinMrExternalId = "";
+    List<ReadinessPinDto> _pins = [];
+
+    async Task OpenPins(Guid mergeRequestId, string mrExternalId)
+    {
+        _pinMrId = mergeRequestId;
+        _pinMrExternalId = mrExternalId;
+        _pins = [];
+        _showPins = true;
+        await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(mergeRequestId));
+    }
+
+    async Task SetPin(Guid environmentId, bool isReady)
+    {
+        if (await RunAsync(async () => await Api.SetReadinessPinAsync(_pinMrId, environmentId, isReady), UiStrings.Pin_Saved))
+            await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(_pinMrId));
+    }
+
+    async Task ClearPin(Guid pinId)
+    {
+        if (await RunAsync(async () => await Api.DeleteReadinessPinAsync(pinId), UiStrings.Pin_Cleared))
+            await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(_pinMrId));
+    }
 
     /// <summary>
     /// Keyed on the route parameter rather than on first render: the parent and subtask chips
