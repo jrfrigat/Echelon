@@ -260,6 +260,32 @@ public class RolloutServiceTests : PlannerTestBase
         Assert.Equal("""{"stage":"deploy-test"}""", step.DeploySettingsJson);
     }
 
+    /// <summary>
+    /// A target that supplies the key but has no settings does NOT inherit the repository's settings.
+    /// Those were saved for the repository's own (different) strategy, and freezing them onto a step
+    /// whose key is the target's would hand the strategy another strategy's settings — and decrypt its
+    /// secrets under the wrong schema at dispatch. The key's source and the settings' source must match.
+    /// </summary>
+    [Fact]
+    public async Task Launch_DoesNotBorrowRepositorySettings_WhenTheTargetSuppliesTheKey()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        repo.DeployStrategySettingsJson = """{"squash":"true"}""";     // for gitlab-merge, not the target's strategy
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment("test");
+        AddDeployTarget(repo, env, "gitlab-pipeline", settingsJson: null);   // key only, no settings
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var step = await StepAsync((await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct)).Id);
+
+        Assert.Equal("gitlab-pipeline", step.DeployStrategyKey);
+        // Not the repository's gitlab-merge settings: the target supplied the key, so its (null) settings win.
+        Assert.Null(step.DeploySettingsJson);
+    }
+
     /// <summary>With no target for the environment, the repository's own strategy and settings are used.</summary>
     [Fact]
     public async Task Launch_FallsBackToTheRepositoryDefault_WhenNoTargetForTheEnvironment()

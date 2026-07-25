@@ -198,18 +198,41 @@ public class RolloutService(
         var snapshot = new List<StepSnapshot>();
         foreach (var mr in mrDetails)
         {
-            // Per-item override first, then this environment's target, then the repository's default.
+            // Resolve the key and its settings from the SAME source: per-item override, then this
+            // environment's target, then the repository's default. Decoupling them is a real hazard --
+            // the strategy would receive another strategy's settings, and its secret values as
+            // ciphertext, because dispatch decrypts using the schema of the key it actually runs. So a
+            // target that supplies the key supplies its settings too, even when those are null (that
+            // strategy needs none); only a repository-default key uses the repository's settings.
+            // Frozen onto the step below so a later config edit cannot change how this run deploys.
             var target = targetOf.GetValueOrDefault(mr.RepositoryId);
-            var deployKey = overrideOf.GetValueOrDefault(mr.Id) ?? target?.DeployStrategyKey ?? mr.RepoDeployKey;
+            var overrideKey = overrideOf.GetValueOrDefault(mr.Id);
+
+            string? deployKey;
+            string? deploySettings;
+            if (overrideKey is { Length: > 0 })
+            {
+                // A per-item override names only a key; it carries no settings of its own, and no
+                // current path writes one. A future override feature must decide its settings source
+                // rather than inherit a mismatched one.
+                deployKey = overrideKey;
+                deploySettings = null;
+            }
+            else if (target is not null)
+            {
+                deployKey = target.DeployStrategyKey;
+                deploySettings = target.DeploySettingsJson;
+            }
+            else
+            {
+                deployKey = mr.RepoDeployKey;
+                deploySettings = mr.RepoDeploySettings;
+            }
+
             if (string.IsNullOrWhiteSpace(deployKey))
                 throw new DomainValidationException(
                     $"Repository '{mr.RepoName}' has no deploy strategy for environment '{env.Key}'; "
                     + "configure a deploy target for it, or a repository default, before launching.");
-
-            // Settings track the strategy's source: the target's when the target supplied the key,
-            // the repository's otherwise. Frozen onto the step below so a later config edit cannot
-            // change how this run's remaining steps deploy.
-            var deploySettings = target?.DeploySettingsJson ?? mr.RepoDeploySettings;
 
             var wave = waveOf.GetValueOrDefault(mr.Id, 1);
             // Already-deployed skips, unless it is being redeployed.
