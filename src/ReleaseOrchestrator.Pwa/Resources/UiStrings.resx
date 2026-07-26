@@ -1053,18 +1053,6 @@
   <data name="Common_No" xml:space="preserve">
     <value>No</value>
   </data>
-  <data name="Vcs_IngestionMode" xml:space="preserve">
-    <value>Ingestion</value>
-  </data>
-  <data name="Vcs_IngestionMode_Push" xml:space="preserve">
-    <value>Push (webhooks)</value>
-  </data>
-  <data name="Vcs_IngestionMode_Poll" xml:space="preserve">
-    <value>Poll</value>
-  </data>
-  <data name="Vcs_IngestionMode_Helper" xml:space="preserve">
-    <value>Push is the default: the VCS calls us when something changes. Poll asks the VCS on a timer instead - slower and costs requests, for a VCS that cannot reach this service.</value>
-  </data>
   <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
     <value>Cancellation requested</value>
   </data>

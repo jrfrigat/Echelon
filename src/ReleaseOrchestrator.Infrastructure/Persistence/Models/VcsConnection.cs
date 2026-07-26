@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Providers.Abstractions;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -63,14 +62,9 @@ public class VcsConnection
     /// <summary>The label assumed when a connection does not name one.</summary>
     public const string DefaultReadyForDeployLabel = "ready-for-deploy";
 
-    /// <summary>
-    /// How merge-request events reach the service: pushed by webhook (the default), or polled by the
-    /// service for a setup that cannot send webhooks.
-    /// </summary>
-    public IngestionMode IngestionMode { get; set; } = IngestionMode.Push;
-
-    /// <summary>How often the poller lists this connection's merge requests, in seconds (poll mode only).</summary>
-    public int PollIntervalSeconds { get; set; } = 300;
+    // How events arrive (push vs poll) is no longer a column: it is a property of the provider TYPE
+    // (gitlab-webhook vs gitlab-poll), and the poll interval a poll type needs lives in the provider
+    // settings bag under VcsPollSettings.IntervalKey. See VcsProviderRegistration.Ingestion.
 
     /// <summary>Repositories served by this connection.</summary>
     [InverseProperty(nameof(Repository.Connection))]

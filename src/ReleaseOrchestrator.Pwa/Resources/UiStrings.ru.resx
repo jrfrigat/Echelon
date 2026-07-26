@@ -1053,18 +1053,6 @@
   <data name="Common_No" xml:space="preserve">
     <value>Нет</value>
   </data>
-  <data name="Vcs_IngestionMode" xml:space="preserve">
-    <value>Приём событий</value>
-  </data>
-  <data name="Vcs_IngestionMode_Push" xml:space="preserve">
-    <value>Push (вебхуки)</value>
-  </data>
-  <data name="Vcs_IngestionMode_Poll" xml:space="preserve">
-    <value>Опрос</value>
-  </data>
-  <data name="Vcs_IngestionMode_Helper" xml:space="preserve">
-    <value>Push - по умолчанию: VCS сама вызывает нас при изменениях. Poll вместо этого опрашивает VCS по таймеру - медленнее и тратит запросы, для VCS, которая не может достучаться до сервиса.</value>
-  </data>
   <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
     <value>Запрошена отмена</value>
   </data>

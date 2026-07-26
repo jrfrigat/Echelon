@@ -2868,42 +2868,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Ingestion.
-        /// </summary>
-        public static string Vcs_IngestionMode {
-            get {
-                return ResourceManager.GetString("Vcs_IngestionMode", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to Push (webhooks).
-        /// </summary>
-        public static string Vcs_IngestionMode_Push {
-            get {
-                return ResourceManager.GetString("Vcs_IngestionMode_Push", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to Poll.
-        /// </summary>
-        public static string Vcs_IngestionMode_Poll {
-            get {
-                return ResourceManager.GetString("Vcs_IngestionMode_Poll", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized string similar to Push is the default: the VCS calls us when something changes. Poll asks the VCS on a timer instead - slower and costs requests, for a VCS that cannot reach this service..
-        /// </summary>
-        public static string Vcs_IngestionMode_Helper {
-            get {
-                return ResourceManager.GetString("Vcs_IngestionMode_Helper", resourceCulture);
-            }
-        }
-
-        /// <summary>
         ///   Looks up a localized string similar to Cancellation requested.
         /// </summary>
         public static string Timeline_Kind_CancelRequested {

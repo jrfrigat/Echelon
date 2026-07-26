@@ -57,30 +57,29 @@ public class ApiService(HttpClient http)
     /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateVcsConnectionAsync(
         string name, string vcsType, string apiUrl, string accessToken, string? readyForDeployLabel,
-        string? ingestionMode = null, Dictionary<string, string?>? settings = null,
+        Dictionary<string, string?>? settings = null,
         CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/vcs-connections",
             new
             {
                 Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode, Settings = settings
+                ReadyForDeployLabel = readyForDeployLabel, Settings = settings
             }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
-    /// <param name="ingestionMode">Blank keeps the stored mode, for the same reason.</param>
     /// <param name="settings">
     /// Provider-specific settings. An omitted secret keeps the stored one — the same convention as
     /// the token, and why this sends only the keys the operator actually filled in.
     /// </param>
     public Task UpdateVcsConnectionAsync(
         Guid id, string name, string apiUrl, string? accessToken, string? readyForDeployLabel,
-        string? ingestionMode = null, Dictionary<string, string?>? settings = null,
+        Dictionary<string, string?>? settings = null,
         CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/vcs-connections/{id}",
             new
             {
                 Name = name, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, IngestionMode = ingestionMode, Settings = settings
+                ReadyForDeployLabel = readyForDeployLabel, Settings = settings
             }, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>

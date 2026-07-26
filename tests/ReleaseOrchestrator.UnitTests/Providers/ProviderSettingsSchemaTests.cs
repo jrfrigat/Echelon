@@ -59,21 +59,41 @@ public class ProviderSettingsSchemaTests
     }
 
     /// <summary>
-    /// GitLab needs nothing beyond a URL and a token, and that has to be expressible. A contract
-    /// where every provider must have settings is how Yandex's organization id ended up in the
-    /// shared entity in the first place.
+    /// The webhook GitLab type needs nothing beyond a URL and a token, and that has to be
+    /// expressible. A contract where every provider must have settings is how Yandex's organization
+    /// id ended up in the shared entity in the first place.
     /// </summary>
     [Fact]
-    public void GitLabDeclaresNoSettings()
+    public void GitLabWebhookDeclaresNoSettings()
     {
         using var provider = BuildProvider();
         using var scope = provider.CreateScope();
 
         var schema = scope.ServiceProvider
             .GetRequiredService<IVcsProviderFactory>()
-            .GetSettingsSchema("gitlab");
+            .GetSettingsSchema("gitlab-webhook");
 
         Assert.Empty(schema);
+    }
+
+    /// <summary>
+    /// The poll GitLab type declares exactly the one setting polling needs — its interval — under the
+    /// neutral key the poller reads, typed as a bounded integer so a non-numeric value is refused at
+    /// the form rather than stored and failing when the poller first runs.
+    /// </summary>
+    [Fact]
+    public void GitLabPollDeclaresItsInterval()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var schema = scope.ServiceProvider
+            .GetRequiredService<IVcsProviderFactory>()
+            .GetSettingsSchema("gitlab-poll");
+
+        var interval = Assert.Single(schema);
+        Assert.Equal(VcsPollSettings.IntervalKey, interval.Key);
+        Assert.Equal(ProviderSettingKind.Int, interval.Kind);
     }
 
     [Theory]

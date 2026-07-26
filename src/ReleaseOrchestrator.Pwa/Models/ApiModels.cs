@@ -29,7 +29,7 @@ public record ProviderSettingDto(
 /// <summary>A provider that can back a connection, and the settings it declares.</summary>
 public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings);
 
-/// <param name="IngestionMode">"Push" (webhooks, the default) or "Poll" for a VCS that cannot reach us.</param>
+/// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> — this is what carries push vs poll.</param>
 /// <param name="Settings">
 /// Provider-specific settings, keyed as the provider declares them. Secret ones are absent, not
 /// masked — a mask would be submitted back as though it were the value. See
@@ -38,7 +38,6 @@ public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Sett
 public record VcsConnectionDto(
     Guid Id, string Name, string VcsType, string ApiUrl,
     string? ReadyForDeployLabel = null, string? ConnectionName = null,
-    string? IngestionMode = null,
     Dictionary<string, string>? Settings = null);
 
 /// <param name="Settings">Provider-specific settings; secret ones are absent.</param>

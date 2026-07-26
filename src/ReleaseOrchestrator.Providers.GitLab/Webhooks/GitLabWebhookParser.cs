@@ -29,8 +29,13 @@ internal sealed class GitLabWebhookParser : IWebhookParser
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Keyed by the webhook provider type, since only that type has a webhook. The route, config
+    /// section and source prefix stay <c>gitlab</c>: they are cosmetic provenance, and keeping them
+    /// stable leaves webhook URLs and secret config keys unchanged by the split.
+    /// </remarks>
     public WebhookEndpointDescriptor Descriptor { get; } = new(
-        ProviderType: GitLabProviderExtensions.ProviderType,  // "gitlab"
+        ProviderType: GitLabProviderExtensions.WebhookProviderType,  // "gitlab-webhook"
         RouteSegment: "gitlab",
         SecretConfigSection: "GitLab",
         SourcePrefix: "gitlab");

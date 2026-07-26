@@ -25,9 +25,9 @@ public class VcsPollingOptions
 }
 
 /// <summary>
-/// Polls the merge requests of connections set to <see cref="IngestionMode.Poll"/> and emits the same
-/// <see cref="MrOpened"/> events the webhook front door does -- the pull half of the symmetric
-/// ingestion seam (docs/issues/008-ingestion-and-messaging.md).
+/// Polls the merge requests of connections whose provider type is registered <see cref="IngestionMode.Poll"/>
+/// and emits the same <see cref="MrOpened"/> events the webhook front door does -- the pull half of the
+/// symmetric ingestion seam (docs/issues/008-ingestion-and-messaging.md).
 /// </summary>
 /// <remarks>
 /// Reuses the read provider (<see cref="IVcsProvider.GetOpenMergeRequestsAsync"/>): no provider-side
@@ -35,8 +35,9 @@ public class VcsPollingOptions
 /// drops an unchanged merge request and only a change (status, labels) is processed. Leased, so one
 /// replica polls at a time.
 ///
-/// Each connection is swept on its own <c>PollIntervalSeconds</c>, with the global tick
-/// (<c>IntervalSeconds</c>) as the floor -- the poller cannot wake more often than it ticks.
+/// Each connection is swept on its own interval -- the <see cref="VcsPollSettings.IntervalKey"/>
+/// setting the poll provider type declares -- with the global tick (<c>IntervalSeconds</c>) as the
+/// floor, since the poller cannot wake more often than it ticks.
 ///
 /// NOT VERIFIED against a live GitLab. Remaining limitation for this cut: it lists OPEN merge
 /// requests, so a transition to merged/closed (the merge request leaving the open list) is not
@@ -47,12 +48,21 @@ public class VcsPollingCoordinator(
     IDistributedLease lease,
     TimeProvider clock,
     IOptions<VcsPollingOptions> options,
+    IEnumerable<VcsProviderRegistration> registrations,
     ILogger<VcsPollingCoordinator> logger) : BackgroundService
 {
     private const string LeaseName = "vcs-polling";
 
-    // Per-connection last-sweep wall-clock, so PollIntervalSeconds is honoured. In-memory and per
-    // replica: on a lease hand-off the new holder starts fresh and sweeps each connection once
+    // The provider types whose events arrive by polling, not push. This replaced the per-connection
+    // IngestionMode column: push versus poll is now a property of the provider type, so a connection
+    // is polled exactly when its type is registered Poll.
+    private readonly HashSet<string> _pollTypes = registrations
+        .Where(r => r.Ingestion == IngestionMode.Poll)
+        .Select(r => ProviderKey.Normalize(r.ProviderType))
+        .ToHashSet(StringComparer.Ordinal);
+
+    // Per-connection last-sweep wall-clock, so each connection's interval is honoured. In-memory and
+    // per replica: on a lease hand-off the new holder starts fresh and sweeps each connection once
     // immediately, which is harmless -- the deterministic event id dedups an unchanged merge request.
     private readonly Dictionary<Guid, DateTime> _lastPolled = [];
 
@@ -97,11 +107,14 @@ public class VcsPollingCoordinator(
         var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
         var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 
-        var connections = await db.VcsConnections
-            .Where(c => c.IngestionMode == IngestionMode.Poll)
-            .Include(c => c.Repositories)
-            .AsNoTracking()
-            .ToListAsync(ct);
+        // Filtered in memory by normalized provider type: the poll-type set is small and the provider
+        // type is compared canonically, which a SQL string match would not do.
+        var connections = (await db.VcsConnections
+                .Include(c => c.Repositories)
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .Where(c => _pollTypes.Contains(ProviderKey.Normalize(c.ProviderType)))
+            .ToList();
 
         var now = clock.GetUtcNow().UtcDateTime;
 
@@ -112,8 +125,10 @@ public class VcsPollingCoordinator(
 
         foreach (var connection in connections)
         {
-            // Honour the per-connection cadence, with the global interval as the floor.
-            var due = TimeSpan.FromSeconds(Math.Max(connection.PollIntervalSeconds, options.Value.IntervalSeconds));
+            // Honour the per-connection cadence, with the global interval as the floor. The interval
+            // is now a provider setting (the poll type declares it) rather than a column.
+            var configured = VcsPollSettings.IntervalFrom(ProviderSettingsBag.Deserialize(connection.ProviderSettingsJson));
+            var due = TimeSpan.FromSeconds(Math.Max(configured, options.Value.IntervalSeconds));
             if (_lastPolled.TryGetValue(connection.Id, out var last) && now - last < due)
                 continue;
             _lastPolled[connection.Id] = now;

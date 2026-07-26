@@ -1269,16 +1269,10 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
 
-                    b.Property<int>("IngestionMode")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("PollIntervalSeconds")
-                        .HasColumnType("int");
 
                     b.Property<string>("ProviderSettingsJson")
                         .HasMaxLength(4000)

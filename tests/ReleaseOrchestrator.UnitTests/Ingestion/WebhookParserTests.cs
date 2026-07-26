@@ -22,7 +22,7 @@ public class WebhookParserTests
 {
     private static IWebhookParser GitLab() =>
         new ServiceCollection().AddGitLabWebhookParser().BuildServiceProvider()
-            .GetRequiredKeyedService<IWebhookParser>(GitLabProviderExtensions.ProviderType);
+            .GetRequiredKeyedService<IWebhookParser>(GitLabProviderExtensions.WebhookProviderType);
 
     private static IWebhookParser Yandex() =>
         new ServiceCollection().AddYandexTrackerWebhookParser().BuildServiceProvider()
@@ -195,7 +195,9 @@ public class WebhookParserTests
     public void GitLabDescriptorPreservesItsProductionStrings()
     {
         var d = GitLab().Descriptor;
-        Assert.Equal("gitlab", d.ProviderType);
+        // The provider type gained the ingestion suffix in the webhook/poll split; the route, config
+        // section and source prefix stay the production strings so no webhook URL or secret key moved.
+        Assert.Equal("gitlab-webhook", d.ProviderType);
         Assert.Equal("gitlab", d.RouteSegment);
         Assert.Equal("GitLab", d.SecretConfigSection);
         Assert.Equal("gitlab", d.SourcePrefix);

@@ -150,7 +150,8 @@ public class DependencyInjectionTests
     /// report the provider as unknown.
     /// </remarks>
     [Theory]
-    [InlineData("gitlab")]
+    [InlineData("gitlab-webhook")]
+    [InlineData("gitlab-poll")]
     public void VcsProviderIsRegisteredAndDiscoverable(string providerType)
     {
         using var provider = BuildProvider(Configuration());
@@ -206,8 +207,8 @@ public class DependencyInjectionTests
     /// the database stores ("gitlab") are the same provider.
     /// </summary>
     [Theory]
-    [InlineData("GitLab")]
-    [InlineData("  gitlab  ")]
+    [InlineData("GitLab-Webhook")]
+    [InlineData("  gitlab-poll  ")]
     public async Task VcsProviderTypeIsMatchedCaseInsensitively(string providerType)
     {
         using var provider = BuildProvider(Configuration());

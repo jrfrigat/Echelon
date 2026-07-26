@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 using ReleaseOrchestrator.Providers.Abstractions.Ingestion;
@@ -11,9 +12,19 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 public static class GitLabProviderExtensions
 {
     /// <summary>
-    /// The provider type this adapter serves. Stored on <c>VcsConnection.ProviderType</c>.
+    /// The provider type for a GitLab connection reached by webhooks. Stored on
+    /// <c>VcsConnection.ProviderType</c>.
     /// </summary>
-    public const string ProviderType = "gitlab";
+    /// <remarks>
+    /// GitLab is two provider types, not one with a push/poll toggle: <see cref="WebhookProviderType"/>
+    /// pushes events to the ingress and declares no extra settings, while
+    /// <see cref="PollProviderType"/> is polled and declares its interval. Both share one API adapter
+    /// and one set of deploy strategies — only ingestion differs.
+    /// </remarks>
+    public const string WebhookProviderType = "gitlab-webhook";
+
+    /// <summary>The provider type for a GitLab connection this service polls. See <see cref="WebhookProviderType"/>.</summary>
+    public const string PollProviderType = "gitlab-poll";
 
     private static readonly TimeSpan ApiTimeout = TimeSpan.FromSeconds(30);
 
@@ -22,7 +33,7 @@ public static class GitLabProviderExtensions
     /// <returns>The same collection, for chaining.</returns>
     /// <remarks>
     /// <para>
-    /// Keyed by <see cref="ProviderType"/>, because the key the factory looks up arrives from the
+    /// Keyed by provider type, because the key the factory looks up arrives from the
     /// database at runtime. That rules out <c>[FromKeyedServices]</c>, which binds a key at
     /// compile time; the lookup is a <c>GetRequiredKeyedService</c> inside the factory instead.
     /// </para>
@@ -43,11 +54,17 @@ public static class GitLabProviderExtensions
         // concrete type nobody resolves is how these registrations went dead before.
         services.AddHttpClient<GitLabProviderAdapter>(c => c.Timeout = ApiTimeout);
 
+        // Two provider types over one shared connect logic: the wrappers differ only in provider type
+        // and declared settings (the poll type carries an interval; the webhook type carries none).
         services.AddKeyedScoped<IVcsProviderAdapter>(
-            ProviderType,
-            (sp, _) => sp.GetRequiredService<GitLabProviderAdapter>());
+            WebhookProviderType,
+            (sp, _) => new GitLabWebhookProviderAdapter(sp.GetRequiredService<GitLabProviderAdapter>()));
+        services.AddKeyedScoped<IVcsProviderAdapter>(
+            PollProviderType,
+            (sp, _) => new GitLabPollProviderAdapter(sp.GetRequiredService<GitLabProviderAdapter>()));
 
-        services.AddSingleton(new VcsProviderRegistration(ProviderType));
+        services.AddSingleton(new VcsProviderRegistration(WebhookProviderType, IngestionMode.Push));
+        services.AddSingleton(new VcsProviderRegistration(PollProviderType, IngestionMode.Poll));
 
         return services;
     }
@@ -81,7 +98,7 @@ public static class GitLabProviderExtensions
     }
 
     /// <summary>
-    /// Adds the GitLab webhook parser, keyed by <see cref="ProviderType"/> and paired with a
+    /// Adds the GitLab webhook parser, keyed by <see cref="WebhookProviderType"/> and paired with a
     /// <see cref="WebhookParserRegistration"/> so the host can enumerate the parsers and mount one
     /// route per provider.
     /// </summary>
@@ -97,8 +114,10 @@ public static class GitLabProviderExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddKeyedSingleton<IWebhookParser, GitLabWebhookParser>(ProviderType);
-        services.AddSingleton(new WebhookParserRegistration(ProviderType));
+        // Only the webhook type has a webhook: the poll type receives no pushes, so no parser and no
+        // route are mounted for it.
+        services.AddKeyedSingleton<IWebhookParser, GitLabWebhookParser>(WebhookProviderType);
+        services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
 
         return services;
     }
