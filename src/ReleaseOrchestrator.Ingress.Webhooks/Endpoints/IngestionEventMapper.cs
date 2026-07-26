@@ -44,7 +44,7 @@ public static class IngestionEventMapper
                 ExternalMrId: e.ExternalMrId,
                 SourceBranch: e.SourceBranch,
                 TargetBranch: e.TargetBranch,
-                TaskExternalId: e.TaskExternalId,
+                Title: e.Title,
                 Labels: e.Labels,
                 Source: source,
                 EventId: e.ProviderEventId),

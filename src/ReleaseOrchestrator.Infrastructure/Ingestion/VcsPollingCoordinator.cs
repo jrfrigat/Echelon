@@ -150,7 +150,9 @@ public class VcsPollingCoordinator(
                             ExternalMrId: mr.Id,
                             SourceBranch: mr.SourceBranch,
                             TargetBranch: mr.TargetBranch,
-                            TaskExternalId: provider.ParseTaskKeyFromBranch(mr.SourceBranch),
+                            // The task key is resolved by the consumer from the connection's rule; the
+                            // poll carries the raw candidates, like the webhook path.
+                            Title: mr.Title,
                             Labels: mr.Labels,
                             Source: source,
                             EventId: PollingEventId.For(source, repository.ExternalId, mr.Id, mr.Status?.ToString() ?? string.Empty, mr.Labels)));

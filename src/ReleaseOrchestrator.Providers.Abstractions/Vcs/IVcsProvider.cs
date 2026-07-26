@@ -34,16 +34,7 @@ public interface IVcsProvider
     /// <returns>The open merge requests; empty when there are none.</returns>
     Task<IReadOnlyList<VcsMergeRequest>> GetOpenMergeRequestsAsync(string projectPath, CancellationToken ct);
 
-    /// <summary>
-    /// Extracts a tracker issue key from a branch name, e.g. <c>feature/PROJ-123-thing</c>.
-    /// </summary>
-    /// <param name="branchName">The branch name; may be null or blank.</param>
-    /// <returns>The issue key, or <c>null</c> when the branch does not name one.</returns>
-    /// <remarks>
-    /// On the provider because the key format is a dialect, not a universal rule: <c>PROJ-123</c>
-    /// is the Jira and Yandex.Tracker shape, while GitHub Issues would want <c>#123</c>. It sits
-    /// behind this port so that the sync path can ask for the answer without knowing whose
-    /// dialect produced it.
-    /// </remarks>
-    string? ParseTaskKeyFromBranch(string? branchName);
+    // Task-key extraction used to live here, as a provider dialect. It is now a per-connection rule
+    // (source + pattern) applied by the ingestion through Core.Parsing.TaskKeyExtractor, so a provider
+    // no longer owns the link format -- an operator configures it. See TaskLinkSettings.
 }

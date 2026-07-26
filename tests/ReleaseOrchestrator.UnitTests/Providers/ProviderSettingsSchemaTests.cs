@@ -59,30 +59,31 @@ public class ProviderSettingsSchemaTests
     }
 
     /// <summary>
-    /// The webhook GitLab type needs nothing beyond a URL and a token, and that has to be
-    /// expressible. A contract where every provider must have settings is how Yandex's organization
-    /// id ended up in the shared entity in the first place.
+    /// The webhook GitLab type declares only the task-linking rule (source + pattern): no webhook
+    /// secret field, because that is ingress configuration, and no poll interval, because it is pushed.
     /// </summary>
     [Fact]
-    public void GitLabWebhookDeclaresNoSettings()
+    public void GitLabWebhookDeclaresTheLinkingRuleOnly()
     {
         using var provider = BuildProvider();
         using var scope = provider.CreateScope();
 
-        var schema = scope.ServiceProvider
+        var keys = scope.ServiceProvider
             .GetRequiredService<IVcsProviderFactory>()
-            .GetSettingsSchema("gitlab-webhook");
+            .GetSettingsSchema("gitlab-webhook")
+            .Select(s => s.Key)
+            .ToList();
 
-        Assert.Empty(schema);
+        Assert.Equal([TaskLinkSettings.SourceKey, TaskLinkSettings.PatternKey], keys);
     }
 
     /// <summary>
-    /// The poll GitLab type declares exactly the one setting polling needs — its interval — under the
-    /// neutral key the poller reads, typed as a bounded integer so a non-numeric value is refused at
-    /// the form rather than stored and failing when the poller first runs.
+    /// The poll GitLab type declares its interval (a bounded integer, so a non-numeric value is
+    /// refused at the form rather than failing when the poller first runs) on top of the same linking
+    /// rule every GitLab connection carries.
     /// </summary>
     [Fact]
-    public void GitLabPollDeclaresItsInterval()
+    public void GitLabPollDeclaresItsIntervalAndTheLinkingRule()
     {
         using var provider = BuildProvider();
         using var scope = provider.CreateScope();
@@ -91,9 +92,11 @@ public class ProviderSettingsSchemaTests
             .GetRequiredService<IVcsProviderFactory>()
             .GetSettingsSchema("gitlab-poll");
 
-        var interval = Assert.Single(schema);
-        Assert.Equal(VcsPollSettings.IntervalKey, interval.Key);
+        var interval = Assert.Single(schema, s => s.Key == VcsPollSettings.IntervalKey);
         Assert.Equal(ProviderSettingKind.Int, interval.Kind);
+
+        Assert.Contains(schema, s => s.Key == TaskLinkSettings.SourceKey);
+        Assert.Contains(schema, s => s.Key == TaskLinkSettings.PatternKey);
     }
 
     [Theory]

@@ -9,6 +9,8 @@ using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
@@ -45,7 +47,14 @@ public class MrOpenedConsumer(
             return;
         }
 
-        var taskId = await ResolveTaskIdAsync(repo, msg.TaskExternalId, msg.ExternalMrId, ct);
+        // Which field the task key comes from, and by what pattern, is the connection's rule. The
+        // parser could not apply it -- it runs in the ingress with no connection -- so the raw
+        // candidates (branch, title, labels) travelled and the key is resolved here.
+        var (source, pattern) = TaskLinkSettings.RuleFrom(
+            ProviderSettingsBag.Deserialize(repo.Connection.ProviderSettingsJson));
+        var taskExternalId = TaskKeyExtractor.Extract(source, pattern, msg.SourceBranch, msg.Title, msg.Labels);
+
+        var taskId = await ResolveTaskIdAsync(repo, taskExternalId, msg.ExternalMrId, ct);
 
         var mr = await db.MergeRequests.FirstOrDefaultAsync(
             m => m.RepositoryId == repo.Id && m.ExternalId == msg.ExternalMrId, ct);
@@ -69,7 +78,7 @@ public class MrOpenedConsumer(
         mr.TargetBranch = msg.TargetBranch;
         // Recorded even when the task is unknown, so TaskSyncConsumer can attach this MR once
         // the task lands rather than leaving it unordered forever.
-        mr.TaskExternalId = msg.TaskExternalId;
+        mr.TaskExternalId = taskExternalId;
         if (taskId is not null) mr.TaskId = taskId;
 
         // A merge is final: GitLab cannot reopen a merged merge request, so an 'opened' delivery for

@@ -22,10 +22,6 @@ internal sealed class GitLabProvider(
     public VcsCapabilities Capabilities => capabilities;
 
     /// <inheritdoc/>
-    public string? ParseTaskKeyFromBranch(string? branchName) =>
-        GitLabBranchTaskParser.ParseTaskId(branchName);
-
-    /// <inheritdoc/>
     public async Task<VcsMergeRequest?> GetMergeRequestAsync(string projectPath, string mergeRequestId, CancellationToken ct)
     {
         using var request = Authorized(HttpMethod.Get, GitLabUrls.MergeRequest(context.ApiUrl, projectPath, mergeRequestId));

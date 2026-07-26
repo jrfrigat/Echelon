@@ -33,21 +33,27 @@ public abstract record IngestionEvent;
 /// <param name="ExternalMrId">The merge request's provider-side identifier.</param>
 /// <param name="SourceBranch">The branch being merged from.</param>
 /// <param name="TargetBranch">The branch being merged into.</param>
-/// <param name="TaskExternalId">The task key parsed from the branch, or null when none was found.</param>
+/// <param name="Title">The merge request title — a candidate the task-key rule may read from.</param>
 /// <param name="Labels">
 /// The merge request's labels, already normalized through <see cref="Core.Parsing.LabelSet"/> so
-/// two spellings of the same label are one value — the form the readiness gate compares against.
+/// two spellings of the same label are one value — the form the readiness gate compares against, and
+/// another candidate the task-key rule may read from.
 /// </param>
 /// <param name="ProviderEventId">
 /// The provider's own delivery id, for dedup, or empty when the provider does not supply one. The
 /// host combines it with the source to form the inbox key; empty means "not deduplicated".
 /// </param>
+/// <remarks>
+/// The parser no longer resolves the task key: which field it comes from and by what pattern is a
+/// per-connection rule, and the parser (in the ingress) cannot see connection settings. It carries
+/// the raw candidates instead, and the consumer — which has the connection — extracts the key.
+/// </remarks>
 public sealed record MrOpenedEvent(
     string RepositoryExternalId,
     string ExternalMrId,
     string SourceBranch,
     string TargetBranch,
-    string? TaskExternalId,
+    string? Title,
     IReadOnlyList<string> Labels,
     string ProviderEventId) : IngestionEvent;
 

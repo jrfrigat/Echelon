@@ -15,7 +15,8 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 internal sealed class GitLabWebhookProviderAdapter(GitLabProviderAdapter inner) : IVcsProviderAdapter
 {
     /// <inheritdoc/>
-    public IReadOnlyList<ProviderSettingSchema> SettingsSchema => [];
+    /// <remarks>Only the task-linking rule: the webhook secret is ingress configuration, not a connection field.</remarks>
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } = [.. TaskLinkSettings.Schema];
 
     /// <inheritdoc/>
     public Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct) =>
@@ -34,6 +35,7 @@ internal sealed class GitLabWebhookProviderAdapter(GitLabProviderAdapter inner) 
 internal sealed class GitLabPollProviderAdapter(GitLabProviderAdapter inner) : IVcsProviderAdapter
 {
     /// <inheritdoc/>
+    /// <remarks>The poll interval plus the task-linking rule every GitLab connection carries.</remarks>
     public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } =
     [
         new(VcsPollSettings.IntervalKey,
@@ -42,7 +44,8 @@ internal sealed class GitLabPollProviderAdapter(GitLabProviderAdapter inner) : I
             Kind: ProviderSettingKind.Int,
             Default: VcsPollSettings.DefaultIntervalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
             Min: VcsPollSettings.MinIntervalSeconds,
-            Max: VcsPollSettings.MaxIntervalSeconds)
+            Max: VcsPollSettings.MaxIntervalSeconds),
+        .. TaskLinkSettings.Schema
     ];
 
     /// <inheritdoc/>

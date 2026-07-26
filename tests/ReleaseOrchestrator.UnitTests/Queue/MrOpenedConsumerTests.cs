@@ -72,6 +72,25 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _connection.DisposeAsync();
     }
 
+    [Fact]
+    public async Task LinksFromTheTitleWhenTheConnectionConfiguresThatSource()
+    {
+        // The connection's rule reads the key from the title, so a branch with no key still links.
+        _vcs.ProviderSettingsJson = """{"taskKeySource":"title"}""";
+        AddRepository();
+        AddTask("PROJ-9");
+        await _db.SaveChangesAsync(Ct);
+
+        await _handler.Handle(new MrOpened(
+            "gitlab", "group/api", "1",
+            SourceBranch: "feature/no-key-in-branch", TargetBranch: "main",
+            Title: "PROJ-9: add the thing", Labels: []));
+
+        var mr = await FindMrAsync();
+        Assert.NotNull(mr);
+        Assert.Equal("PROJ-9", mr!.TaskExternalId);
+    }
+
     private Repository AddRepository(string name = "api", Guid? trackerConnectionId = null)
     {
         var repo = new Repository
@@ -105,8 +124,10 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         string mrId = "1",
         string? taskExternalId = null,
         params string[] labels) =>
+        // The key rides in the branch (the connection's default rule reads it from there); the
+        // consumer resolves it, so the message carries no pre-resolved key. Title is unused here.
         _handler.Handle(
-            new MrOpened("gitlab", repositoryExternalId, mrId, $"feature/{taskExternalId ?? "x"}", "main", taskExternalId, labels));
+            new MrOpened("gitlab", repositoryExternalId, mrId, $"feature/{taskExternalId ?? "x"}", "main", Title: null, labels));
 
     private Task<MergeRequest?> FindMrAsync(string externalId = "1") =>
         _db.MergeRequests.AsNoTracking().FirstOrDefaultAsync(m => m.ExternalId == externalId, Ct);

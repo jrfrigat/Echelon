@@ -7,6 +7,7 @@ using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Audit;
 using ReleaseOrchestrator.Infrastructure.Providers;
 using ReleaseOrchestrator.Infrastructure.Persistence;
+using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
 namespace ReleaseOrchestrator.Infrastructure.Vcs;
@@ -68,9 +69,11 @@ public class VcsService(
 
         mr.SourceBranch = info.SourceBranch;
         mr.TargetBranch = info.TargetBranch;
-        // The provider owns the branch-key dialect: the key format belongs to whoever spells it,
-        // not to this service.
-        mr.TaskExternalId = provider.ParseTaskKeyFromBranch(info.SourceBranch);
+        // The task key comes from the connection's rule -- which field, which pattern -- applied to the
+        // same candidates the ingestion paths use, so reconcile and the webhook agree on the link.
+        var (source, pattern) = TaskLinkSettings.RuleFrom(
+            ProviderSettingsBag.Deserialize(repo.Connection.ProviderSettingsJson));
+        mr.TaskExternalId = TaskKeyExtractor.Extract(source, pattern, info.SourceBranch, info.Title, info.Labels);
         mr.TaskId = await ResolveTaskIdAsync(repo, mr.TaskExternalId, ct) ?? mr.TaskId;
 
         // Captured around the call rather than inside it: ApplyStatus assigns the status in three

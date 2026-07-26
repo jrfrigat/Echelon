@@ -57,7 +57,9 @@ public class WebhookParserTests
         Assert.Equal("group/app", opened.RepositoryExternalId);
         Assert.Equal("42", opened.ExternalMrId);
         Assert.Equal("main", opened.TargetBranch);
-        Assert.Equal("PROJ-7", opened.TaskExternalId);
+        // The parser no longer resolves the task key -- that is the connection's rule, applied by the
+        // consumer. It carries the raw candidates instead: the source branch and the title.
+        Assert.Equal("feature/PROJ-7-thing", opened.SourceBranch);
         // Normalized through LabelSet: lower-cased, sorted, de-duplicated.
         Assert.Equal(["bug", "ready-for-prod"], opened.Labels);
     }

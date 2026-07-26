@@ -93,7 +93,9 @@ internal sealed class GitLabWebhookParser : IWebhookParser
                     ExternalMrId: externalMrId,
                     SourceBranch: attributes.SourceBranch ?? string.Empty,
                     TargetBranch: attributes.TargetBranch ?? string.Empty,
-                    TaskExternalId: GitLabBranchTaskParser.ParseTaskId(attributes.SourceBranch),
+                    // The task key is resolved downstream from the connection's rule, not here: the
+                    // parser carries the raw candidates (branch, title, labels) instead.
+                    Title: attributes.Title,
                     Labels: labels,
                     ProviderEventId: deliveryId)
             ];
