@@ -39,8 +39,7 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     ActorOid = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     ActorKind = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
                     ActorName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    At = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                    At = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

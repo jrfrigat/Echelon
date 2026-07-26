@@ -121,7 +121,7 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// Concurrency is a real token on both, by different means.
+    /// Concurrency is a real token on both, by different means — for every entity that carries one.
     /// </summary>
     /// <remarks>
     /// This is the mapping that fails silently, which is why it is asserted rather than trusted.
@@ -132,14 +132,19 @@ public class ModelMappingTests
     ///
     /// PostgreSQL's equivalent is the system column <c>xmin</c>, which it bumps on every update, so
     /// the model uses that and drops RowVersion entirely.
+    ///
+    /// The cases are discovered by reflection over the model, not hard-coded, on purpose: a hard-coded
+    /// list is exactly what let a new RowVersion entity ship unmapped once. Every entity SQL Server
+    /// gives a RowVersion token is required to get an xmin token on PostgreSQL — so forgetting the
+    /// <c>ProviderSpecificMapping</c> entry for the next one fails here instead of in production on
+    /// the second database.
     /// </remarks>
     [Theory]
-    [InlineData(typeof(MergeRequest))]
-    [InlineData(typeof(TaskItem))]
-    public void EachDatabaseGetsAConcurrencyTokenItActuallyMaintains(Type entityType)
+    [MemberData(nameof(RowVersionEntities))]
+    public void EachDatabaseGetsAConcurrencyTokenItActuallyMaintains(string entityName)
     {
-        var sqlServer = BuildModel(DatabaseProviders.SqlServer).FindEntityType(entityType)!;
-        var postgres = BuildModel(DatabaseProviders.PostgreSql).FindEntityType(entityType)!;
+        var sqlServer = BuildModel(DatabaseProviders.SqlServer).GetEntityTypes().Single(e => e.ClrType.Name == entityName);
+        var postgres = BuildModel(DatabaseProviders.PostgreSql).GetEntityTypes().Single(e => e.ClrType.Name == entityName);
 
         var onSqlServer = Assert.Single(sqlServer.GetProperties(), p => p.IsConcurrencyToken);
         Assert.Equal("RowVersion", onSqlServer.Name);
@@ -152,5 +157,21 @@ public class ModelMappingTests
 
         // The bytea that PostgreSQL would never fill must not survive alongside it.
         Assert.Null(postgres.FindProperty("RowVersion"));
+    }
+
+    /// <summary>
+    /// Every entity the SQL Server model gives a <c>RowVersion</c> concurrency token — the set that
+    /// must each be remapped to <c>xmin</c> for PostgreSQL.
+    /// </summary>
+    public static TheoryData<string> RowVersionEntities()
+    {
+        var data = new TheoryData<string>();
+        foreach (var entity in BuildModel(DatabaseProviders.SqlServer).GetEntityTypes())
+        {
+            if (entity.GetProperties().Any(p => p.IsConcurrencyToken && p.Name == "RowVersion"))
+                data.Add(entity.ClrType.Name);
+        }
+
+        return data;
     }
 }

@@ -79,6 +79,13 @@ public static class ProviderSpecificMapping
 
         builder.Entity<MrDeploymentState>().Ignore(e => e.RowVersion);
         builder.Entity<MrDeploymentState>().Property<uint>("xmin").IsRowVersion();
+
+        // The readiness pin is also per-(MR, environment) live state two operators can write at once,
+        // and it declares the same [Timestamp] token -- so it needs the same swap, or the token it
+        // carries to reject the second concurrent pin is an unwritten bytea on PostgreSQL and the
+        // rejection never happens there while it does on SQL Server.
+        builder.Entity<MergeRequestReadinessPin>().Ignore(e => e.RowVersion);
+        builder.Entity<MergeRequestReadinessPin>().Property<uint>("xmin").IsRowVersion();
     }
 
     /// <summary>
