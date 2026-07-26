@@ -77,7 +77,9 @@ internal sealed class GitLabProvider(
         [property: JsonPropertyName("title")] string? Title,
         [property: JsonPropertyName("created_at")] DateTime CreatedAt,
         [property: JsonPropertyName("merged_at")] DateTime? MergedAt,
-        [property: JsonPropertyName("labels")] IReadOnlyList<string>? Labels)
+        [property: JsonPropertyName("labels")] IReadOnlyList<string>? Labels,
+        // head_pipeline is part of the merge-request representation; null when the head has no pipeline.
+        [property: JsonPropertyName("head_pipeline")] GitLabPipelineDto? HeadPipeline)
     {
         internal VcsMergeRequest ToMergeRequest() => new(
             Id: Iid.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -88,6 +90,10 @@ internal sealed class GitLabProvider(
             Title: Title ?? string.Empty,
             CreatedAt: CreatedAt,
             MergedAt: MergedAt,
-            Labels: Labels ?? []);
+            Labels: Labels ?? [],
+            PipelineStatus: HeadPipeline?.Status);
     }
+
+    private sealed record GitLabPipelineDto(
+        [property: JsonPropertyName("status")] string? Status);
 }

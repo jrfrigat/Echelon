@@ -46,6 +46,7 @@ public static class IngestionEventMapper
                 TargetBranch: e.TargetBranch,
                 Title: e.Title,
                 Labels: e.Labels,
+                PipelineResult: e.PipelineResult,
                 Source: source,
                 EventId: e.ProviderEventId),
 

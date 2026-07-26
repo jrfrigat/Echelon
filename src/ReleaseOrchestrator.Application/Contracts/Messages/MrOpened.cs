@@ -16,6 +16,9 @@ public record MrOpened(
     // connection's settings the parser cannot see), so the raw fields travel and the consumer extracts.
     string? Title,
     IReadOnlyList<string> Labels,
+    // The latest pipeline result, when the source knows it (the poll path reads it from the API); null
+    // from the webhook path, which does not carry pipeline status. A readiness rule can require it.
+    string? PipelineResult = null,
     // Event identity for dedup. Defaulted so non-ingestion construction (tests) stays terse; the
     // webhook front door sets them, and an empty EventId means "not deduplicated".
     string Source = "",

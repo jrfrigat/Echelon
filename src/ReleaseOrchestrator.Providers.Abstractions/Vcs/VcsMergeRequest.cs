@@ -28,6 +28,10 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// Labels currently on the merge request. Empty when the provider cannot report labels — check
 /// <see cref="VcsCapabilities.SupportsMergeRequestLabels"/> to tell "no labels" from "cannot say".
 /// </param>
+/// <param name="PipelineStatus">
+/// The latest CI pipeline result for the head, as the provider reports it (e.g. <c>success</c>), or
+/// null when the provider does not report one. A readiness rule can require it as <c>pipeline:*</c>.
+/// </param>
 public sealed record VcsMergeRequest(
     string Id,
     string SourceBranch,
@@ -36,4 +40,5 @@ public sealed record VcsMergeRequest(
     string Title,
     DateTime CreatedAt,
     DateTime? MergedAt,
-    IReadOnlyList<string> Labels);
+    IReadOnlyList<string> Labels,
+    string? PipelineStatus = null);

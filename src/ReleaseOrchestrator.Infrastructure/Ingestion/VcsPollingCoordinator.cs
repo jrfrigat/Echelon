@@ -154,8 +154,13 @@ public class VcsPollingCoordinator(
                             // poll carries the raw candidates, like the webhook path.
                             Title: mr.Title,
                             Labels: mr.Labels,
+                            // Read from the API here, unlike the webhook path, so a poll-mode connection
+                            // can gate on pipeline:* even though a merge-request webhook omits it.
+                            PipelineResult: mr.PipelineStatus,
                             Source: source,
-                            EventId: PollingEventId.For(source, repository.ExternalId, mr.Id, mr.Status?.ToString() ?? string.Empty, mr.Labels)));
+                            EventId: PollingEventId.For(
+                                source, repository.ExternalId, mr.Id, mr.Status?.ToString() ?? string.Empty,
+                                mr.Labels, mr.PipelineStatus)));
                         emitted++;
                     }
                 }

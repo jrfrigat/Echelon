@@ -362,6 +362,10 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<DateTime?>("MergedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PipelineResult")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<Guid>("RepositoryId")
                         .HasColumnType("uniqueidentifier");
 

@@ -55,7 +55,10 @@ public sealed record MrOpenedEvent(
     string TargetBranch,
     string? Title,
     IReadOnlyList<string> Labels,
-    string ProviderEventId) : IngestionEvent;
+    string ProviderEventId,
+    // The latest pipeline result when the source knows it; null from a webhook, which does not carry
+    // pipeline status. Populated by the poll path, which reads the merge request from the API.
+    string? PipelineResult = null) : IngestionEvent;
 
 /// <summary>A merge request changed to a non-open state (merged, closed).</summary>
 /// <param name="RepositoryExternalId">The repository's provider-side identifier.</param>

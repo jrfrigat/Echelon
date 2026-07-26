@@ -142,7 +142,7 @@ public class RolloutService(
             .Where(m => mrIds.Contains(m.Id))
             .Select(m => new
             {
-                m.Id, m.ExternalId, m.TaskId, m.RepositoryId, m.Labels, m.Status,
+                m.Id, m.ExternalId, m.TaskId, m.RepositoryId, m.Labels, m.Status, m.PipelineResult,
                 RepoName = m.Repository.Name,
                 RepoDeployKey = m.Repository.DeployStrategyKey,
                 RepoDeploySettings = m.Repository.DeployStrategySettingsJson
@@ -190,7 +190,7 @@ public class RolloutService(
         // they are being redeployed -- a redeploy is a fresh deploy and must clear the gate again.
         var deploying = mrDetails
             .Where(m => !alreadyDeployed.Contains(m.Id) || redeploying.Contains(m.Id))
-            .Select(m => (m.Id, m.ExternalId, m.Labels, m.Status, m.RepositoryId))
+            .Select(m => (m.Id, m.ExternalId, m.Labels, m.Status, m.RepositoryId, m.PipelineResult))
             .ToList();
         // The readiness rule per merge request: its repository's override for this environment, else
         // the environment's default. Null on either means "no gate" for that repository.
@@ -536,7 +536,7 @@ public class RolloutService(
     private async Task GuardReadinessAsync(
         DeploymentEnvironment env,
         IReadOnlyDictionary<Guid, Guid?> ruleOverrideByRepo,
-        IReadOnlyList<(Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId)> deploying,
+        IReadOnlyList<(Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId, string? PipelineResult)> deploying,
         CancellationToken ct)
     {
         if (deploying.Count == 0) return;
@@ -561,7 +561,7 @@ public class RolloutService(
                 .ToListAsync(ct))
             .ToDictionary(p => p.MergeRequestId, p => (bool?)p.IsReady);
 
-        bool IsReady((Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId) mr)
+        bool IsReady((Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId, string? PipelineResult) mr)
         {
             var pin = pinOf.GetValueOrDefault(mr.Id);
 
@@ -569,9 +569,12 @@ public class RolloutService(
             if (RuleIdFor(mr.RepositoryId) is not { } id || !rules.TryGetValue(id, out var rule))
                 return pin ?? true;
 
-            // Both sides canonical already, so splitting is enough; RemoveEmptyEntries so an empty set
-            // is [] and the resolver's non-empty guard refuses it rather than admitting everything.
-            var signals = ReadinessSignals.For(mr.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries), mr.Status);
+            // The merge request's current signals: a token per label, one for its status, one for its
+            // pipeline result when known. The rule's required set is canonical already, so splitting
+            // it is enough; RemoveEmptyEntries so an empty set is [] and the resolver's non-empty guard
+            // refuses it rather than admitting everything.
+            var signals = ReadinessSignals.For(
+                mr.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries), mr.Status, mr.PipelineResult);
             var required = rule.RequiredSignals.Split(',', StringSplitOptions.RemoveEmptyEntries);
             return ReadinessEvaluator.Evaluate(signals, required, rule.Mode, pin).IsReady;
         }

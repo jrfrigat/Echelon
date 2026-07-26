@@ -102,13 +102,17 @@ public class MrOpenedConsumer(
                 db, mr, previousStatus, mr.Status,
                 MergeRequestStatusJournal.CauseWebhook, ActorRef.System, clock.GetUtcNow().UtcDateTime);
 
-            // Persist the full label set the per-environment readiness gate consults, separate from
-            // the single ready-for-deploy label the status above turns on. GitLab re-sends an opened
-            // event on every label change, so this is where the stored set is kept current; the
-            // writer no-ops when nothing changed. Inside the same guard as the status update, so a
+            // Persist the full label set the per-environment readiness gate consults. GitLab re-sends
+            // an opened event on every label change, so this is where the stored set is kept current;
+            // the writer no-ops when nothing changed. Inside the same guard as the status update, so a
             // stale opened event for an already-merged MR does not rewrite its labels either.
             MergeRequestLabelJournal.Apply(
                 db, mr, msg.Labels, MergeRequestLabelJournal.CauseWebhook, ActorRef.System, now);
+
+            // The other readiness signal, when the source knows it (the poll path does; a webhook does
+            // not). Null is "no information" -- it must not clear a pipeline result already observed.
+            if (!string.IsNullOrEmpty(msg.PipelineResult))
+                mr.PipelineResult = msg.PipelineResult;
         }
         else
         {

@@ -69,9 +69,9 @@ public class MergeRequest
     public DateTime? ClosedAt { get; set; }
 
     /// <summary>
-    /// True when an operator set <see cref="Status"/> by hand. Label-driven promotion then
-    /// leaves it alone, so a webhook cannot silently undo a deliberate decision. Terminal
-    /// states reported by the VCS (merged/closed) still win and clear the flag.
+    /// True when an operator set <see cref="Status"/> by hand. Status resolution then leaves it
+    /// alone, so a later observation cannot silently undo a deliberate decision. Terminal states
+    /// reported by the VCS (merged/closed) still win and clear the flag.
     /// </summary>
     public bool IsStatusManual { get; set; }
 
@@ -98,6 +98,20 @@ public class MergeRequest
     /// </remarks>
     [Required, MaxLength(2000)]
     public string Labels { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The latest CI pipeline result for the merge request's head, as the provider reports it (e.g.
+    /// <c>success</c>, <c>failed</c>, <c>running</c>), or null when none is known.
+    /// </summary>
+    /// <remarks>
+    /// The other readiness signal a rule can require (<c>pipeline:success</c>). Stored like
+    /// <see cref="Labels"/> and for the same reason — the gate reads it at launch, long after the
+    /// observation — and populated only by the API-reading paths (reconcile and poll), since a
+    /// merge-request webhook does not carry pipeline status; null there is "no information", never a
+    /// reason to clear a result already known. See <see cref="Core.Parsing.ReadinessSignals"/>.
+    /// </remarks>
+    [MaxLength(50)]
+    public string? PipelineResult { get; set; }
 
     /// <summary>Concurrency token. Two replicas can process the same webhook at once.</summary>
     [Timestamp]

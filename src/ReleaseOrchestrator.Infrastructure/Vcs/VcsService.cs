@@ -99,6 +99,11 @@ public class VcsService(
                 db, mr, info.Labels, MergeRequestStatusJournal.CausePoll, ActorRef.System,
                 clock.GetUtcNow().UtcDateTime);
 
+        // The pipeline readiness signal, read from the API here. Null is "no information", not a
+        // reason to clear a result already observed (the same distinction the label set draws).
+        if (!string.IsNullOrEmpty(info.PipelineStatus))
+            mr.PipelineResult = info.PipelineStatus;
+
         await db.SaveChangesAsync(ct);
     }
 

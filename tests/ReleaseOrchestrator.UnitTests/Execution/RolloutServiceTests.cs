@@ -455,6 +455,49 @@ public class RolloutServiceTests : PlannerTestBase
         Assert.Equal(0, await Db.Rollouts.CountAsync(Ct));
     }
 
+    /// <summary>A rule can require a pipeline result: an MR whose pipeline is not green is held back.</summary>
+    [Fact]
+    public async Task Launch_Blocks_WhenARuleRequiresAGreenPipelineAndItIsNot()
+    {
+        var (task, env) = await SetUpPipelineGate(pipelineResult: "failed");
+
+        await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
+    }
+
+    /// <summary>The same launch proceeds once the pipeline is green.</summary>
+    [Fact]
+    public async Task Launch_Proceeds_WhenARuleRequiresAGreenPipelineAndItIs()
+    {
+        var (task, env) = await SetUpPipelineGate(pipelineResult: "success");
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
+
+        Assert.Equal("Running", rollout.Status);
+    }
+
+    private async Task<(TaskItem Task, DeploymentEnvironment Env)> SetUpPipelineGate(string pipelineResult)
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);
+        mr.PipelineResult = pipelineResult;
+        var env = AddEnvironment("prod");
+        var rule = new ReadinessRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "prod-pipeline",
+            Mode = ReadyRule.AllOf,
+            RequiredSignals = ReadinessSignals.Pipeline("success")
+        };
+        Db.ReadinessRules.Add(rule);
+        env.ReadinessRuleId = rule.Id;
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+        return (task, env);
+    }
+
     // ---- redeploy (E5) --------------------------------------------------------
 
     private async Task<(Repository, TaskItem, MergeRequest, DeploymentEnvironment)> ReadyToRedeployAsync(RedeployPolicy policy)

@@ -139,6 +139,21 @@ public sealed class VcsServiceTests : IAsyncLifetime
         Assert.Equal("ready-for-prod", mr.Labels);
     }
 
+    /// <summary>The reconcile reads the pipeline result from the API and stores it for the readiness gate.</summary>
+    [Fact]
+    public async Task Reconcile_PersistsThePipelineResult()
+    {
+        var (repoId, mrId) = await SeedAsync(storedLabels: "");
+        var info = new VcsMergeRequest(
+            "1", "feature/PROJ-1", "main", MergeRequestStatus.Opened, "t", Now, null,
+            [], PipelineStatus: "success");
+
+        await Service(info).SyncMergeRequestAsync(repoId, mrId, Ct);
+
+        var mr = await _db.MergeRequests.SingleAsync(Ct);
+        Assert.Equal("success", mr.PipelineResult);
+    }
+
     private sealed class FakeVcsProviderFactory(IVcsProvider provider) : IVcsProviderFactory
     {
         public IReadOnlyCollection<string> AvailableProviders => ["gitlab"];
