@@ -85,6 +85,19 @@ public class VcsService(
             db, mr, previousStatus, mr.Status,
             MergeRequestStatusJournal.CausePoll, ActorRef.System, clock.GetUtcNow().UtcDateTime);
 
+        // Persist the full label set the per-environment readiness gate reads, exactly as the webhook
+        // consumers do -- and the whole reason this reconcile exists. The dangerous case is a missed
+        // "label removed" delivery: without refreshing the set here, the gate would keep admitting a
+        // merge request to an environment on a ready-for-<env> label the provider no longer reports,
+        // because the status re-derivation above only touches the coarse ready-for-deploy promotion,
+        // not the labels the gate compares. Only when the provider can actually report labels: when it
+        // cannot, an empty list means "cannot say", not "none", and clearing the set on that would
+        // wipe what the webhook path captured -- the same distinction ApplyStatus draws for the status.
+        if (provider.Capabilities.SupportsMergeRequestLabels)
+            MergeRequestLabelJournal.Apply(
+                db, mr, info.Labels, MergeRequestStatusJournal.CausePoll, ActorRef.System,
+                clock.GetUtcNow().UtcDateTime);
+
         await db.SaveChangesAsync(ct);
     }
 
