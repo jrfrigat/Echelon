@@ -2875,5 +2875,124 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Timeline_Kind_CancelRequested", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Readiness rules.</summary>
+        public static string Nav_ReadinessRules {
+            get {
+                return ResourceManager.GetString("Nav_ReadinessRules", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Readiness rules.</summary>
+        public static string RR_Title {
+            get {
+                return ResourceManager.GetString("RR_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Readiness rules.</summary>
+        public static string RR_Heading {
+            get {
+                return ResourceManager.GetString("RR_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to No readiness rules.</summary>
+        public static string RR_Empty_Title {
+            get {
+                return ResourceManager.GetString("RR_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Create a rule, then assign it....</summary>
+        public static string RR_Empty_Description {
+            get {
+                return ResourceManager.GetString("RR_Empty_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Match.</summary>
+        public static string RR_Col_Mode {
+            get {
+                return ResourceManager.GetString("RR_Col_Mode", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Required signals.</summary>
+        public static string RR_Col_Signals {
+            get {
+                return ResourceManager.GetString("RR_Col_Signals", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Match.</summary>
+        public static string RR_Mode_Label {
+            get {
+                return ResourceManager.GetString("RR_Mode_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Required signals.</summary>
+        public static string RR_Signals_Label {
+            get {
+                return ResourceManager.GetString("RR_Signals_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to the signals hint.</summary>
+        public static string RR_Signals_Hint {
+            get {
+                return ResourceManager.GetString("RR_Signals_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Add rule.</summary>
+        public static string RR_Add {
+            get {
+                return ResourceManager.GetString("RR_Add", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Edit readiness rule.</summary>
+        public static string RR_Dialog_Edit {
+            get {
+                return ResourceManager.GetString("RR_Dialog_Edit", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Readiness rule created.</summary>
+        public static string RR_Created {
+            get {
+                return ResourceManager.GetString("RR_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Readiness rule updated.</summary>
+        public static string RR_Updated {
+            get {
+                return ResourceManager.GetString("RR_Updated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Readiness rule deleted.</summary>
+        public static string RR_Deleted {
+            get {
+                return ResourceManager.GetString("RR_Deleted", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Delete readiness rule?.</summary>
+        public static string RR_Delete_Title {
+            get {
+                return ResourceManager.GetString("RR_Delete_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Delete the readiness rule '{0}'?.</summary>
+        public static string RR_Delete_Message {
+            get {
+                return ResourceManager.GetString("RR_Delete_Message", resourceCulture);
+            }
+        }
     }
 }

@@ -1,0 +1,169 @@
+@page "/admin/readiness-rules"
+@attribute [Authorize]
+@inherits PageBase
+
+<PageTitle>@UiStrings.RR_Title</PageTitle>
+
+<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.RR_Heading</FlareText>
+
+<PageAlerts Error="@Error" Success="@Success"
+            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+<FlareCard>
+    <FlareCardContent>
+        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" />
+            <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                         @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
+            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
+                            HelperText="@UiStrings.RR_Signals_Hint" Style="min-width:22rem;" />
+            <FlareButton OnClick="Create" Loading="_busy"
+                         Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
+        </FlareStack>
+    </FlareCardContent>
+</FlareCard>
+
+@if (_loading)
+{
+    <FlareProgress Variant="ProgressVariant.Circular" />
+}
+else if (_rules is null || _rules.Count == 0)
+{
+    <FlareEmptyState Title="@UiStrings.RR_Empty_Title" Description="@UiStrings.RR_Empty_Description" />
+}
+else
+{
+    <FlareDataGrid TItem="ReadinessRuleDto" Items="_rules" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+        <Columns>
+            <FlareColumn TItem="ReadinessRuleDto" Id="name" Title="@UiStrings.Common_Name"
+                         Field="@(r => (object?)r.Name)" Sortable="true" Filterable="true" />
+            <FlareColumn TItem="ReadinessRuleDto" Id="mode" Title="@UiStrings.RR_Col_Mode">
+                <Template>
+                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@ModeLabel(context.Mode)</FlareChip>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="ReadinessRuleDto" Id="signals" Title="@UiStrings.RR_Col_Signals">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                        @foreach (var s in context.RequiredSignals)
+                        {
+                            <FlareCode>@s</FlareCode>
+                        }
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="ReadinessRuleDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton Size="ButtonSize.Sm"
+                                         AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)"
+                                         OnClick="@(() => OpenEdit(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)"
+                                         OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
+}
+
+<FlareDialog Visible="_showEdit" Title="@UiStrings.RR_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
+    <ChildContent>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_eName" />
+            <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                         @bind-Value="_eMode" Items="Modes" ItemLabel="@(ModeLabel)" />
+            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals"
+                            HelperText="@UiStrings.RR_Signals_Hint" />
+        </FlareStack>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="@(() => _showEdit = false)">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="SaveEdit" Loading="_busy"
+                     Disabled="@(string.IsNullOrWhiteSpace(_eName) || string.IsNullOrWhiteSpace(_eSignals))">@UiStrings.Common_Save</FlareButton>
+    </Actions>
+</FlareDialog>
+
+@code {
+    // Mirrors the gating modes a named rule may take (ReadyRule minus NoGate); the PWA does not reference Core.
+    static readonly string[] Modes = ["AllOf", "AnyOf"];
+
+    List<ReadinessRuleDto>? _rules;
+    bool _loading = true;
+    bool _busy;
+
+    string _name = "";
+    string _mode = "AllOf";
+    string _signals = "";
+
+    bool _showEdit;
+    Guid _eId;
+    string _eName = "";
+    string _eMode = "AllOf";
+    string _eSignals = "";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    async Task Load()
+    {
+        await RunAsync(async () => _rules = await Api.GetReadinessRulesAsync());
+        _loading = false;
+    }
+
+    async Task Create()
+    {
+        _busy = true;
+        if (await RunAsync(
+                async () => await Api.CreateReadinessRuleAsync(_name.Trim(), _mode, SplitSignals(_signals)),
+                UiStrings.RR_Created))
+        {
+            _name = ""; _mode = "AllOf"; _signals = "";
+            await Load();
+        }
+        _busy = false;
+    }
+
+    void OpenEdit(ReadinessRuleDto rule)
+    {
+        _eId = rule.Id;
+        _eName = rule.Name;
+        _eMode = rule.Mode;
+        _eSignals = string.Join(" ", rule.RequiredSignals);
+        _showEdit = true;
+    }
+
+    async Task SaveEdit()
+    {
+        _busy = true;
+        if (await RunAsync(
+                async () => await Api.UpdateReadinessRuleAsync(_eId, _eName.Trim(), _eMode, SplitSignals(_eSignals)),
+                UiStrings.RR_Updated))
+        {
+            _showEdit = false;
+            await Load();
+        }
+        _busy = false;
+    }
+
+    async Task Delete(ReadinessRuleDto rule)
+    {
+        if (!await ConfirmAsync(UiStrings.RR_Delete_Title, string.Format(UiStrings.RR_Delete_Message, rule.Name))) return;
+        if (await RunAsync(async () => await Api.DeleteReadinessRuleAsync(rule.Id), UiStrings.RR_Deleted))
+            await Load();
+    }
+
+    /// <summary>Splits the signals field on commas and whitespace; the server canonicalizes them.</summary>
+    static List<string> SplitSignals(string text) =>
+        text.Split([',', ' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).ToList();
+
+    static string ModeLabel(string mode) => mode switch
+    {
+        "AnyOf" => UiStrings.Env_Rule_AnyOf,
+        _ => UiStrings.Env_Rule_AllOf
+    };
+}

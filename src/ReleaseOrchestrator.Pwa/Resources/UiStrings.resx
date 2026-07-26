@@ -1056,4 +1056,55 @@
   <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
     <value>Cancellation requested</value>
   </data>
+  <data name="Nav_ReadinessRules" xml:space="preserve">
+    <value>Readiness rules</value>
+  </data>
+  <data name="RR_Title" xml:space="preserve">
+    <value>Readiness rules</value>
+  </data>
+  <data name="RR_Heading" xml:space="preserve">
+    <value>Readiness rules</value>
+  </data>
+  <data name="RR_Empty_Title" xml:space="preserve">
+    <value>No readiness rules</value>
+  </data>
+  <data name="RR_Empty_Description" xml:space="preserve">
+    <value>Create a rule, then assign it to an environment or a repository deploy target.</value>
+  </data>
+  <data name="RR_Col_Mode" xml:space="preserve">
+    <value>Match</value>
+  </data>
+  <data name="RR_Col_Signals" xml:space="preserve">
+    <value>Required signals</value>
+  </data>
+  <data name="RR_Mode_Label" xml:space="preserve">
+    <value>Match</value>
+  </data>
+  <data name="RR_Signals_Label" xml:space="preserve">
+    <value>Required signals</value>
+  </data>
+  <data name="RR_Signals_Hint" xml:space="preserve">
+    <value>Space- or comma-separated, e.g. label:ready-for-prod mr-status:merged pipeline:success</value>
+  </data>
+  <data name="RR_Add" xml:space="preserve">
+    <value>Add rule</value>
+  </data>
+  <data name="RR_Dialog_Edit" xml:space="preserve">
+    <value>Edit readiness rule</value>
+  </data>
+  <data name="RR_Created" xml:space="preserve">
+    <value>Readiness rule created.</value>
+  </data>
+  <data name="RR_Updated" xml:space="preserve">
+    <value>Readiness rule updated.</value>
+  </data>
+  <data name="RR_Deleted" xml:space="preserve">
+    <value>Readiness rule deleted.</value>
+  </data>
+  <data name="RR_Delete_Title" xml:space="preserve">
+    <value>Delete readiness rule?</value>
+  </data>
+  <data name="RR_Delete_Message" xml:space="preserve">
+    <value>Delete the readiness rule '{0}'? It must not be assigned to any environment or target.</value>
+  </data>
 </root>

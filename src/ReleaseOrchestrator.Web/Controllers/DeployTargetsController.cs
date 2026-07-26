@@ -53,7 +53,11 @@ public class DeployTargetsController(
                 EnvironmentKey = t.Environment.Key,
                 t.DeployStrategyKey,
                 RedeployPolicy = t.RedeployPolicy.ToString(),
-                t.DeploySettingsJson
+                t.DeploySettingsJson,
+                t.ReadinessRuleId,
+                // Null when this target uses the environment's default rule; the name lets the UI show
+                // the override without a second call.
+                ReadinessRuleName = t.ReadinessRule != null ? t.ReadinessRule.Name : null
             })
             .ToListAsync(ct);
 
@@ -61,7 +65,7 @@ public class DeployTargetsController(
         var items = rows.Select(t => new
         {
             t.Id, t.RepositoryId, t.RepositoryName, t.EnvironmentId, t.EnvironmentKey,
-            t.DeployStrategyKey, t.RedeployPolicy,
+            t.DeployStrategyKey, t.RedeployPolicy, t.ReadinessRuleId, t.ReadinessRuleName,
             Settings = ReadSettings(t.DeployStrategyKey, t.DeploySettingsJson)
         });
 
@@ -99,6 +103,9 @@ public class DeployTargetsController(
         if (!TryReadPolicy(req.RedeployPolicy, out var policy))
             return BadRequest(new { error = localizer["DeployTarget_UnknownRedeployPolicy", req.RedeployPolicy ?? ""].Value });
 
+        if (req.ReadinessRuleId is { } createRuleId && !await db.ReadinessRules.AnyAsync(r => r.Id == createRuleId, ct))
+            return BadRequest(new { error = "No such readiness rule." });
+
         if (await db.RepositoryDeployTargets.AnyAsync(
                 t => t.RepositoryId == req.RepositoryId && t.EnvironmentId == req.EnvironmentId, ct))
             return Conflict(new { error = localizer["DeployTarget_AlreadyExists"].Value });
@@ -115,7 +122,8 @@ public class DeployTargetsController(
             EnvironmentId = req.EnvironmentId,
             DeployStrategyKey = strategyKey,
             DeploySettingsJson = settingsJson,
-            RedeployPolicy = policy
+            RedeployPolicy = policy,
+            ReadinessRuleId = req.ReadinessRuleId
         };
 
         db.RepositoryDeployTargets.Add(target);
@@ -146,6 +154,9 @@ public class DeployTargetsController(
         if (!TryReadPolicy(req.RedeployPolicy, out var policy))
             return BadRequest(new { error = localizer["DeployTarget_UnknownRedeployPolicy", req.RedeployPolicy ?? ""].Value });
 
+        if (req.ReadinessRuleId is { } updateRuleId && !await db.ReadinessRules.AnyAsync(r => r.Id == updateRuleId, ct))
+            return BadRequest(new { error = "No such readiness rule." });
+
         // Existing settings passed in so a secret left blank on the form keeps its stored value,
         // the same convention the connection editors use.
         if (!ProviderSettingsBinder.TryBind(
@@ -156,6 +167,7 @@ public class DeployTargetsController(
         target.DeployStrategyKey = strategyKey;
         target.DeploySettingsJson = settingsJson;
         target.RedeployPolicy = policy;
+        target.ReadinessRuleId = req.ReadinessRuleId;
 
         await db.SaveChangesAsync(ct);
         return NoContent();
@@ -201,9 +213,14 @@ public class DeployTargetsController(
 /// it; an undeclared key is refused, a secret one is encrypted.
 /// </param>
 /// <param name="RedeployPolicy">"Once" (default), "Always", or "Inherit". Blank keeps Once.</param>
+/// <param name="ReadinessRuleId">
+/// The readiness rule this repository uses for this environment, overriding the environment's default;
+/// null falls back to that default.
+/// </param>
 public record SaveDeployTargetRequest(
     [property: Required] Guid RepositoryId,
     [property: Required] Guid EnvironmentId,
     [property: Required, MaxLength(100)] string DeployStrategyKey,
     Dictionary<string, string?>? Settings,
-    [property: MaxLength(20)] string? RedeployPolicy = null);
+    [property: MaxLength(20)] string? RedeployPolicy = null,
+    Guid? ReadinessRuleId = null);

@@ -168,23 +168,42 @@ public class ApiService(HttpClient http)
     public Task<List<EnvironmentDto>> GetEnvironmentsAsync(CancellationToken ct = default) =>
         GetAsync<List<EnvironmentDto>>("api/environments", ct);
 
-    /// <param name="readyRule">"NoGate", "AnyOf", or "AllOf". Setting NoGate needs approval permission.</param>
-    /// <param name="readyLabels">The labels the rule is evaluated against; ignored for NoGate.</param>
+    /// <param name="readinessRuleId">The environment's default readiness rule, or null for no gate (needs approval).</param>
     public Task CreateEnvironmentAsync(
         string key, string name, int order, bool isEnabled,
-        string? readyRule = null, IReadOnlyList<string>? readyLabels = null, CancellationToken ct = default) =>
+        Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/environments",
-            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled, ReadyRule = readyRule, ReadyLabels = readyLabels }, ct), ct);
+            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, ct), ct);
 
-    /// <param name="readyRule">"NoGate", "AnyOf", or "AllOf". Changing TO NoGate needs approval permission.</param>
+    /// <param name="readinessRuleId">The default readiness rule, or null for no gate; removing a gate needs approval.</param>
     public Task UpdateEnvironmentAsync(
         Guid id, string name, int order, bool isEnabled,
-        string? readyRule = null, IReadOnlyList<string>? readyLabels = null, CancellationToken ct = default) =>
+        Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/environments/{id}",
-            new { Key = "", Name = name, Order = order, IsEnabled = isEnabled, ReadyRule = readyRule, ReadyLabels = readyLabels }, ct), ct);
+            new { Key = "", Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, ct), ct);
 
     public Task DeleteEnvironmentAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/environments/{id}", ct), ct);
+
+    // ---- readiness rules ------------------------------------------------------
+
+    public Task<List<ReadinessRuleDto>> GetReadinessRulesAsync(CancellationToken ct = default) =>
+        GetAsync<List<ReadinessRuleDto>>("api/readiness-rules", ct);
+
+    /// <param name="mode">"AnyOf" or "AllOf".</param>
+    /// <param name="requiredSignals">The signal tokens a merge request must carry, e.g. label:ready-for-prod.</param>
+    public Task CreateReadinessRuleAsync(
+        string name, string mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
+        SendAsync(() => http.PostAsJsonAsync("api/readiness-rules",
+            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, ct), ct);
+
+    public Task UpdateReadinessRuleAsync(
+        Guid id, string name, string mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync($"api/readiness-rules/{id}",
+            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, ct), ct);
+
+    public Task DeleteReadinessRuleAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync(() => http.DeleteAsync($"api/readiness-rules/{id}", ct), ct);
 
     // ---- deploy targets -------------------------------------------------------
 
@@ -196,25 +215,29 @@ public class ApiService(HttpClient http)
         GetAsync<List<DeployTargetDto>>("api/deploy-targets", ct);
 
     /// <param name="settings">Strategy settings, keyed as the strategy declares them.</param>
+    /// <param name="readinessRuleId">Readiness-rule override for this pair, or null to use the environment default.</param>
     public Task CreateDeployTargetAsync(
         Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
-        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
+        Dictionary<string, string?>? settings = null, Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/deploy-targets",
             new
             {
                 RepositoryId = repositoryId, EnvironmentId = environmentId,
-                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy, Settings = settings
+                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy,
+                Settings = settings, ReadinessRuleId = readinessRuleId
             }, ct), ct);
 
     /// <param name="settings">An omitted secret keeps the stored one, as with a connection token.</param>
+    /// <param name="readinessRuleId">Readiness-rule override for this pair, or null to use the environment default.</param>
     public Task UpdateDeployTargetAsync(
         Guid id, Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
-        Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
+        Dictionary<string, string?>? settings = null, Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/deploy-targets/{id}",
             new
             {
                 RepositoryId = repositoryId, EnvironmentId = environmentId,
-                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy, Settings = settings
+                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy,
+                Settings = settings, ReadinessRuleId = readinessRuleId
             }, ct), ct);
 
     public Task DeleteDeployTargetAsync(Guid id, CancellationToken ct = default) =>

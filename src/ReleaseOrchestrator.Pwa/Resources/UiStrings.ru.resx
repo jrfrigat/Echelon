@@ -1056,4 +1056,55 @@
   <data name="Timeline_Kind_CancelRequested" xml:space="preserve">
     <value>Запрошена отмена</value>
   </data>
+  <data name="Nav_ReadinessRules" xml:space="preserve">
+    <value>Правила готовности</value>
+  </data>
+  <data name="RR_Title" xml:space="preserve">
+    <value>Правила готовности</value>
+  </data>
+  <data name="RR_Heading" xml:space="preserve">
+    <value>Правила готовности</value>
+  </data>
+  <data name="RR_Empty_Title" xml:space="preserve">
+    <value>Правил готовности нет</value>
+  </data>
+  <data name="RR_Empty_Description" xml:space="preserve">
+    <value>Создайте правило и назначьте его окружению или deploy-target репозитория.</value>
+  </data>
+  <data name="RR_Col_Mode" xml:space="preserve">
+    <value>Совпадение</value>
+  </data>
+  <data name="RR_Col_Signals" xml:space="preserve">
+    <value>Требуемые сигналы</value>
+  </data>
+  <data name="RR_Mode_Label" xml:space="preserve">
+    <value>Совпадение</value>
+  </data>
+  <data name="RR_Signals_Label" xml:space="preserve">
+    <value>Требуемые сигналы</value>
+  </data>
+  <data name="RR_Signals_Hint" xml:space="preserve">
+    <value>Через пробел или запятую, напр. label:ready-for-prod mr-status:merged pipeline:success</value>
+  </data>
+  <data name="RR_Add" xml:space="preserve">
+    <value>Добавить правило</value>
+  </data>
+  <data name="RR_Dialog_Edit" xml:space="preserve">
+    <value>Изменить правило готовности</value>
+  </data>
+  <data name="RR_Created" xml:space="preserve">
+    <value>Правило готовности создано.</value>
+  </data>
+  <data name="RR_Updated" xml:space="preserve">
+    <value>Правило готовности обновлено.</value>
+  </data>
+  <data name="RR_Deleted" xml:space="preserve">
+    <value>Правило готовности удалено.</value>
+  </data>
+  <data name="RR_Delete_Title" xml:space="preserve">
+    <value>Удалить правило готовности?</value>
+  </data>
+  <data name="RR_Delete_Message" xml:space="preserve">
+    <value>Удалить правило готовности «{0}»? Оно не должно быть назначено ни окружению, ни target.</value>
+  </data>
 </root>

@@ -20,13 +20,8 @@
                 <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
                                    Style="max-width:8rem;" />
                 <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
-                             @bind-Value="_rule" Items="Rules" ItemLabel="@(r => RuleLabel(r))"
-                             Style="min-width:12rem;" />
-                @if (_rule != NoGate)
-                {
-                    <FlareTextField Label="@UiStrings.Env_ReadyLabels_Label" @bind-Value="_labels"
-                                    HelperText="@UiStrings.Env_ReadyLabels_Hint" Style="min-width:16rem;" />
-                }
+                             @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
+                             Style="min-width:14rem;" />
                 <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
             </FlareStack>
         </FlareStack>
@@ -53,19 +48,13 @@ else
                          Field="@(e => (object?)e.Order)" Sortable="true" Align="ColumnAlign.End" />
             <FlareColumn TItem="EnvironmentDto" Id="gate" Title="@UiStrings.Env_Col_Gate">
                 <Template>
-                    @if (string.IsNullOrEmpty(context.ReadyRule) || context.ReadyRule == NoGate)
+                    @if (context.ReadinessRuleId is null)
                     {
                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Env_Ungated</FlareText>
                     }
                     else
                     {
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@RuleLabel(context.ReadyRule)</FlareChip>
-                            @foreach (var l in context.ReadyLabels ?? [])
-                            {
-                                <FlareCode>@l</FlareCode>
-                            }
-                        </FlareStack>
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
                     }
                 </Template>
             </FlareColumn>
@@ -103,12 +92,7 @@ else
             <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_eOrder" Style="max-width:8rem;" />
             <FlareSwitch @bind-Value="_eEnabled" Label="@UiStrings.Env_Col_Enabled" />
             <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
-                         @bind-Value="_eRule" Items="Rules" ItemLabel="@(r => RuleLabel(r))" />
-            @if (_eRule != NoGate)
-            {
-                <FlareTextField Label="@UiStrings.Env_ReadyLabels_Label" @bind-Value="_eLabels"
-                                HelperText="@UiStrings.Env_ReadyLabels_Hint" />
-            }
+                         @bind-Value="_eRuleId" Items="RuleOptions" ItemLabel="@(RuleName)" />
         </FlareStack>
     </ChildContent>
     <Actions>
@@ -118,34 +102,38 @@ else
 </FlareDialog>
 
 @code {
-    const string NoGate = "NoGate";
-
-    // Mirrors Core.Enums.ReadyRule; the PWA does not reference Core.
-    static readonly string[] Rules = ["NoGate", "AnyOf", "AllOf"];
+    // "" is the "no gate" option in the rule selector; any other value is a rule id.
+    const string NoGate = "";
 
     List<EnvironmentDto>? _envs;
+    List<ReadinessRuleDto> _rules = [];
     bool _loading = true;
     bool _busy;
 
     string _key = "";
     string _name = "";
     int _order;
-    string _rule = NoGate;
-    string _labels = "";
+    string _ruleId = NoGate;
 
     bool _showEdit;
     Guid _eId;
     string _eName = "";
     int _eOrder;
     bool _eEnabled = true;
-    string _eRule = NoGate;
-    string _eLabels = "";
+    string _eRuleId = NoGate;
+
+    // The selector's options: no gate first, then one per rule (by id).
+    IEnumerable<string> RuleOptions => new[] { NoGate }.Concat(_rules.Select(r => r.Id.ToString()));
 
     protected override async Task OnInitializedAsync() => await Load();
 
     async Task Load()
     {
-        await RunAsync(async () => _envs = await Api.GetEnvironmentsAsync());
+        await RunAsync(async () =>
+        {
+            _rules = await Api.GetReadinessRulesAsync();
+            _envs = await Api.GetEnvironmentsAsync();
+        });
         _loading = false;
     }
 
@@ -154,10 +142,10 @@ else
         _busy = true;
         if (await RunAsync(
                 async () => await Api.CreateEnvironmentAsync(
-                    _key.Trim(), _name.Trim(), _order, isEnabled: true, _rule, SplitLabels(_labels)),
+                    _key.Trim(), _name.Trim(), _order, isEnabled: true, RuleIdOf(_ruleId)),
                 UiStrings.Env_Created))
         {
-            _key = ""; _name = ""; _order = 0; _rule = NoGate; _labels = "";
+            _key = ""; _name = ""; _order = 0; _ruleId = NoGate;
             await Load();
         }
         _busy = false;
@@ -169,8 +157,7 @@ else
         _eName = env.Name;
         _eOrder = env.Order;
         _eEnabled = env.IsEnabled;
-        _eRule = string.IsNullOrEmpty(env.ReadyRule) ? NoGate : env.ReadyRule;
-        _eLabels = string.Join(" ", env.ReadyLabels ?? []);
+        _eRuleId = env.ReadinessRuleId?.ToString() ?? NoGate;
         _showEdit = true;
     }
 
@@ -179,7 +166,7 @@ else
         _busy = true;
         if (await RunAsync(
                 async () => await Api.UpdateEnvironmentAsync(
-                    _eId, _eName.Trim(), _eOrder, _eEnabled, _eRule, SplitLabels(_eLabels)),
+                    _eId, _eName.Trim(), _eOrder, _eEnabled, RuleIdOf(_eRuleId)),
                 UiStrings.Env_Updated))
         {
             _showEdit = false;
@@ -195,14 +182,10 @@ else
             await Load();
     }
 
-    /// <summary>Splits the labels field on commas and whitespace; the server canonicalizes them.</summary>
-    static List<string> SplitLabels(string text) =>
-        text.Split([',', ' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).ToList();
+    static Guid? RuleIdOf(string value) => Guid.TryParse(value, out var id) ? id : null;
 
-    static string RuleLabel(string rule) => rule switch
-    {
-        "AnyOf" => UiStrings.Env_Rule_AnyOf,
-        "AllOf" => UiStrings.Env_Rule_AllOf,
-        _ => UiStrings.Env_Rule_NoGate
-    };
+    string RuleName(string value) =>
+        value == NoGate
+            ? UiStrings.Env_Rule_NoGate
+            : _rules.FirstOrDefault(r => r.Id.ToString() == value)?.Name ?? value;
 }

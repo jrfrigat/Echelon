@@ -137,17 +137,23 @@ public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);
 
 // ---- environments and rollouts (mirrors Application.DTOs.RolloutDto + EnvironmentsController) ----
 
-/// <param name="ReadyRule">"NoGate", "AnyOf", or "AllOf" — how the environment gates merge requests.</param>
-/// <param name="ReadyLabels">The labels the rule is evaluated against; empty for NoGate.</param>
+/// <param name="ReadinessRuleId">The environment's default readiness rule, or null for no gate.</param>
+/// <param name="ReadinessRuleName">The rule's name, for display; null when ungated.</param>
 public record EnvironmentDto(
     Guid Id, string Key, string Name, int Order, bool IsEnabled,
-    string? ReadyRule = null, List<string>? ReadyLabels = null);
+    Guid? ReadinessRuleId = null, string? ReadinessRuleName = null);
+
+/// <summary>A named readiness rule (mirrors ReadinessRulesController).</summary>
+/// <param name="Mode">"AnyOf" or "AllOf".</param>
+/// <param name="RequiredSignals">The signal tokens a merge request must carry, e.g. label:ready-for-prod.</param>
+public record ReadinessRuleDto(Guid Id, string Name, string Mode, List<string> RequiredSignals);
 
 /// <summary>A repository's deploy configuration for one environment (mirrors DeployTargetsController).</summary>
 /// <param name="Settings">Strategy settings, keyed as the strategy declares them; secret ones absent.</param>
 public record DeployTargetDto(
     Guid Id, Guid RepositoryId, string RepositoryName, Guid EnvironmentId, string EnvironmentKey,
-    string DeployStrategyKey, string RedeployPolicy, Dictionary<string, string>? Settings = null);
+    string DeployStrategyKey, string RedeployPolicy, Dictionary<string, string>? Settings = null,
+    Guid? ReadinessRuleId = null, string? ReadinessRuleName = null);
 
 /// <summary>A person's readiness override for one merge request in one environment (mirrors ReadinessPinsController).</summary>
 public record ReadinessPinDto(
