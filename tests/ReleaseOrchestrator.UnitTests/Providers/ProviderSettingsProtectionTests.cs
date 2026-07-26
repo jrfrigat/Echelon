@@ -184,4 +184,93 @@ public class ProviderSettingsBagTests
 
         Assert.Equal(normalized, ProviderSettingsBag.Deserialize(ProviderSettingsBag.Serialize(normalized)));
     }
+
+    // A value that cannot work for the kind its setting declares is caught at entry, not stored to
+    // fail when the poller or the linker first reads it.
+
+    [Theory]
+    [InlineData("300")]
+    [InlineData("30")]
+    [InlineData("3600")]
+    public void AnIntWithinItsBoundsIsAccepted(string value)
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("interval", "Interval", Kind: ProviderSettingKind.Int, Min: 30, Max: 3600)];
+
+        var result = ProviderSettingsBag.Validate(
+            Submit(("interval", value)), schema, out var normalized, out _);
+
+        Assert.Equal(ProviderSettingsError.None, result);
+        Assert.Equal(value, normalized["interval"]);
+    }
+
+    [Theory]
+    [InlineData("soon")]   // not a number
+    [InlineData("3.5")]    // not an integer
+    [InlineData("29")]     // below Min
+    [InlineData("3601")]   // above Max
+    public void AnIntOutsideItsKindOrBoundsIsRefusedByName(string value)
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("interval", "Interval", Kind: ProviderSettingKind.Int, Min: 30, Max: 3600)];
+
+        var result = ProviderSettingsBag.Validate(Submit(("interval", value)), schema, out _, out var key);
+
+        Assert.Equal(ProviderSettingsError.InvalidValue, result);
+        Assert.Equal("interval", key);
+    }
+
+    [Fact]
+    public void AnEnumValueInTheOptionSetIsAccepted()
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("source", "Source", Kind: ProviderSettingKind.Enum, Options: ["branch", "title", "label"])];
+
+        var result = ProviderSettingsBag.Validate(Submit(("source", "title")), schema, out var normalized, out _);
+
+        Assert.Equal(ProviderSettingsError.None, result);
+        Assert.Equal("title", normalized["source"]);
+    }
+
+    [Theory]
+    [InlineData("description")]  // not offered
+    [InlineData("Branch")]       // right word, wrong case: options are ordinal identifiers
+    public void AnEnumValueOutsideTheOptionSetIsRefusedByName(string value)
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("source", "Source", Kind: ProviderSettingKind.Enum, Options: ["branch", "title", "label"])];
+
+        var result = ProviderSettingsBag.Validate(Submit(("source", value)), schema, out _, out var key);
+
+        Assert.Equal(ProviderSettingsError.InvalidValue, result);
+        Assert.Equal("source", key);
+    }
+
+    [Fact]
+    public void ACompilableRegexIsAcceptedAndAnUncompilableOneRefused()
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("pattern", "Pattern", Kind: ProviderSettingKind.Regex)];
+
+        Assert.Equal(
+            ProviderSettingsError.None,
+            ProviderSettingsBag.Validate(Submit(("pattern", @"([A-Z]+-\d+)")), schema, out _, out _));
+
+        var bad = ProviderSettingsBag.Validate(Submit(("pattern", "([unclosed")), schema, out _, out var key);
+        Assert.Equal(ProviderSettingsError.InvalidValue, bad);
+        Assert.Equal("pattern", key);
+    }
+
+    /// <summary>A blank optional typed value is dropped, not validated — an empty box is "not set".</summary>
+    [Fact]
+    public void ABlankOptionalTypedValueIsDroppedNotRefused()
+    {
+        IReadOnlyList<ProviderSettingSchema> schema =
+            [new("interval", "Interval", Kind: ProviderSettingKind.Int, Min: 30)];
+
+        var result = ProviderSettingsBag.Validate(Submit(("interval", "   ")), schema, out var normalized, out _);
+
+        Assert.Equal(ProviderSettingsError.None, result);
+        Assert.False(normalized.ContainsKey("interval"));
+    }
 }

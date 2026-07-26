@@ -21,10 +21,23 @@
                             Value="@Values.GetValueOrDefault(setting.Key, "")"
                             ValueChanged="@(v => Set(setting.Key, v))" />
     }
+    else if (setting.Kind == "Enum" && setting.Options is { Count: > 0 } options)
+    {
+        @* A fixed choice: a dropdown, so an invalid value cannot be typed. The server still
+           re-validates the value against the same option set. *@
+        <FlareSelect TValue="string" Label="@setting.Label"
+                     HelperText="@setting.Description"
+                     Value="@Values.GetValueOrDefault(setting.Key, "")"
+                     ValueChanged="@(v => Set(setting.Key, v))"
+                     Items="@options"
+                     ItemLabel="@(o => o)" />
+    }
     else
     {
+        @* Text, Int and Regex all render as a text box; the kind drives server-side validation
+           (an integer within bounds, a compilable pattern) and the hint below. *@
         <FlareTextField Label="@setting.Label"
-                        HelperText="@setting.Description"
+                        HelperText="@FieldHelper(setting)"
                         Value="@Values.GetValueOrDefault(setting.Key, "")"
                         ValueChanged="@(v => Set(setting.Key, v))" />
     }
@@ -59,9 +72,13 @@
                         && !(editing && s.Secret)
                         && string.IsNullOrWhiteSpace(values.GetValueOrDefault(s.Key, "")));
 
-    /// <summary>A fresh value map for a schema, with every declared key present and blank.</summary>
+    /// <summary>
+    /// A fresh value map for a schema, with every declared key present and seeded with its default
+    /// (blank when it has none). A secret never gets a default — its box stays empty.
+    /// </summary>
     public static Dictionary<string, string> Blank(IEnumerable<ProviderSettingDto>? schema) =>
-        schema?.ToDictionary(s => s.Key, _ => "", StringComparer.Ordinal) ?? new(StringComparer.Ordinal);
+        schema?.ToDictionary(s => s.Key, s => s.Secret ? "" : s.Default ?? "", StringComparer.Ordinal)
+        ?? new(StringComparer.Ordinal);
 
     /// <summary>
     /// A value map for editing: the stored non-secret values, with secrets left blank.
@@ -95,6 +112,24 @@
         string.IsNullOrWhiteSpace(setting.Description)
             ? UiStrings.Provider_Secret_Keep
             : $"{setting.Description} {UiStrings.Provider_Secret_Keep}";
+
+    // For an Int field with bounds, append the accepted range to the hint so the operator learns it
+    // before a rejected save rather than after. Other kinds just show their description.
+    static string? FieldHelper(ProviderSettingDto setting)
+    {
+        if (setting.Kind != "Int" || (setting.Min is null && setting.Max is null))
+            return setting.Description;
+
+        var range = (setting.Min, setting.Max) switch
+        {
+            ({ } min, { } max) => $"{min}–{max}",
+            ({ } min, null) => $"≥ {min}",
+            (null, { } max) => $"≤ {max}",
+            _ => ""
+        };
+
+        return string.IsNullOrWhiteSpace(setting.Description) ? range : $"{setting.Description} ({range})";
+    }
 
     async Task Set(string key, string value)
     {

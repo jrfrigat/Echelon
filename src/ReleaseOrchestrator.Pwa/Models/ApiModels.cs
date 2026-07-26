@@ -16,7 +16,15 @@ public record PlanConflictDto(
 /// existing one — reaches the UI without a change here.
 /// </remarks>
 /// <param name="Secret">Render write-only. The API never sends a stored secret back.</param>
-public record ProviderSettingDto(string Key, string Label, string? Description, bool Required, bool Secret);
+/// <param name="Kind">"Text" (default), "Int", "Enum" or "Regex" — which control to render and how to validate.</param>
+/// <param name="Options">Allowed values, for an "Enum" field. Null otherwise.</param>
+/// <param name="Default">Value to pre-fill for a new connection. Null when there is none.</param>
+/// <param name="Min">Inclusive lower bound for an "Int" field; null for no bound.</param>
+/// <param name="Max">Inclusive upper bound for an "Int" field; null for no bound.</param>
+public record ProviderSettingDto(
+    string Key, string Label, string? Description, bool Required, bool Secret,
+    string Kind = "Text", List<string>? Options = null, string? Default = null,
+    int? Min = null, int? Max = null);
 
 /// <summary>A provider that can back a connection, and the settings it declares.</summary>
 public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings);

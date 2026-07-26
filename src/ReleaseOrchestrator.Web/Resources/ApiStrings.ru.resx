@@ -210,6 +210,9 @@
   <data name="Provider_SettingsTooLong" xml:space="preserve">
     <value>Настройки не помещаются: предел — {0} символов суммарно.</value>
   </data>
+  <data name="Provider_InvalidSetting" xml:space="preserve">
+    <value>Значение настройки «{0}» не соответствует её типу.</value>
+  </data>
   <data name="Tracker_UnknownType" xml:space="preserve">
     <value>Неизвестный trackerType «{0}». Допустимые: {1}</value>
   </data>

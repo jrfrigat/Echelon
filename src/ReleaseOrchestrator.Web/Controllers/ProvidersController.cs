@@ -60,7 +60,12 @@ public class ProvidersController(
         {
             ProviderType = providerType,
             // Secret settings are declared but their values are never read back — the schema tells
-            // the UI to render a write-only field, and nothing here can leak one.
-            Settings = schema.Select(s => new { s.Key, s.Label, s.Description, s.Required, s.Secret })
+            // the UI to render a write-only field, and nothing here can leak one. Kind/Options/etc.
+            // let the UI render a number, a dropdown or a pattern rather than a text box for all.
+            Settings = schema.Select(s => new
+            {
+                s.Key, s.Label, s.Description, s.Required, s.Secret,
+                Kind = s.Kind.ToString(), s.Options, s.Default, s.Min, s.Max
+            })
         };
 }

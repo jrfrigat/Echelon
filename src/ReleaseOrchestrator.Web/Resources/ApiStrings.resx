@@ -210,6 +210,9 @@
   <data name="Provider_SettingsTooLong" xml:space="preserve">
     <value>These settings do not fit; the limit is {0} characters in total.</value>
   </data>
+  <data name="Provider_InvalidSetting" xml:space="preserve">
+    <value>The value for setting '{0}' is not valid for its type.</value>
+  </data>
   <data name="Tracker_UnknownType" xml:space="preserve">
     <value>Unknown trackerType '{0}'. Valid: {1}</value>
   </data>

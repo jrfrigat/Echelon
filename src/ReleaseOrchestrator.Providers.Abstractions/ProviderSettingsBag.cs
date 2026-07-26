@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ReleaseOrchestrator.Providers.Abstractions;
 
@@ -23,7 +25,18 @@ public enum ProviderSettingsError
     MissingRequired = 2,
 
     /// <summary>The bag does not fit the column it is stored in.</summary>
-    TooLong = 3
+    TooLong = 3,
+
+    /// <summary>
+    /// A value does not match the kind its setting declares — not an integer, not one of the
+    /// allowed options, or not a compilable pattern.
+    /// </summary>
+    /// <remarks>
+    /// Caught here, at entry, rather than left to storage: a poll interval of "soon" or a task-key
+    /// pattern that does not compile would otherwise be stored happily and fail only when the poller
+    /// or the linker first used it, far from the form that set it.
+    /// </remarks>
+    InvalidValue = 4
 }
 
 /// <summary>
@@ -100,11 +113,59 @@ public static class ProviderSettingsBag
             return ProviderSettingsError.MissingRequired;
         }
 
+        // Typed validation runs only over accepted (present, non-blank) values: a blank optional
+        // value was already dropped, and a blank required one already failed above.
+        foreach (var setting in schema)
+        {
+            if (!accepted.TryGetValue(setting.Key, out var value)) continue;
+            if (IsValidForKind(setting, value)) continue;
+
+            offendingKey = setting.Key;
+            return ProviderSettingsError.InvalidValue;
+        }
+
         if (Serialize(accepted)?.Length > MaxJsonLength)
             return ProviderSettingsError.TooLong;
 
         normalized = accepted;
         return ProviderSettingsError.None;
+    }
+
+    /// <summary>True when <paramref name="value"/> satisfies the kind and bounds <paramref name="setting"/> declares.</summary>
+    private static bool IsValidForKind(ProviderSettingSchema setting, string value) =>
+        setting.Kind switch
+        {
+            ProviderSettingKind.Int => IsValidInt(setting, value),
+            // Ordinal: an option is a stable identifier, not display text, so casing is significant.
+            ProviderSettingKind.Enum => setting.Options is { } options && options.Contains(value, StringComparer.Ordinal),
+            ProviderSettingKind.Regex => IsCompilableRegex(value),
+            _ => true
+        };
+
+    private static bool IsValidInt(ProviderSettingSchema setting, string value)
+    {
+        if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n))
+            return false;
+
+        if (setting.Min is { } min && n < min) return false;
+        if (setting.Max is { } max && n > max) return false;
+
+        return true;
+    }
+
+    private static bool IsCompilableRegex(string value)
+    {
+        try
+        {
+            // Construction is the compile; the timeout guards a pathological pattern from hanging
+            // validation, not the stored value's own matching (that carries its own timeout).
+            _ = new Regex(value, RegexOptions.None, TimeSpan.FromMilliseconds(100));
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Renders a validated bag for storage; null when there is nothing to store.</summary>

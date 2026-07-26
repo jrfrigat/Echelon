@@ -64,6 +64,10 @@ public static class ProviderSettingsBinder
             case ProviderSettingsError.TooLong:
                 error = localizer["Provider_SettingsTooLong", ProviderSettingsBag.MaxJsonLength];
                 return false;
+
+            case ProviderSettingsError.InvalidValue:
+                error = localizer["Provider_InvalidSetting", key ?? "?"];
+                return false;
         }
 
         settingsJson = ProviderSettingsProtection.ProtectForStorage(normalized, schema, protector);
