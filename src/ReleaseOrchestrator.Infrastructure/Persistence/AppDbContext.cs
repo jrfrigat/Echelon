@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<TrackerConnection> TrackerConnections => Set<TrackerConnection>();
     public DbSet<Repository> Repositories => Set<Repository>();
     public DbSet<DeploymentEnvironment> DeploymentEnvironments => Set<DeploymentEnvironment>();
+    public DbSet<ReadinessRule> ReadinessRules => Set<ReadinessRule>();
     public DbSet<RepositoryDeployTarget> RepositoryDeployTargets => Set<RepositoryDeployTarget>();
     public DbSet<MergeRequestReadinessPin> MergeRequestReadinessPins => Set<MergeRequestReadinessPin>();
     public DbSet<RepositoryDependency> RepositoryDependencies => Set<RepositoryDependency>();

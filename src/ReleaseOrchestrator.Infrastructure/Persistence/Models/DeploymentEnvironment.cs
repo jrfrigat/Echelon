@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Enums;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
@@ -37,30 +36,23 @@ public class DeploymentEnvironment
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>
-    /// How this environment decides a merge request is ready for it.
+    /// The readiness rule this environment applies by default, or null for no gate.
     /// </summary>
     /// <remarks>
-    /// Defaults to <see cref="Core.Enums.ReadyRule.NoGate"/>, which is the behaviour that existed
-    /// before there was a gate: a merge request that is ready-for-deploy may enter. So an existing
-    /// environment keeps working unchanged until an operator deliberately gates it. Stored as text
-    /// (see the configuration) because the enum has no zero member — an integer-defaulted column
-    /// would hold a value it does not define.
+    /// Readiness moved from inline columns (a mode plus a label set) to a named, reusable
+    /// <see cref="Models.ReadinessRule"/> an environment points at, so the same policy is written once
+    /// and a repository can override it for one environment (see
+    /// <see cref="RepositoryDeployTarget.ReadinessRuleId"/>). Null is the successor to the old
+    /// <c>NoGate</c>: no rule assigned means the environment gates nothing — the absence of a rule, not
+    /// a rule that admits everything.
     /// </remarks>
-    public ReadyRule ReadyRule { get; set; } = ReadyRule.NoGate;
+    public Guid? ReadinessRuleId { get; set; }
 
-    /// <summary>
-    /// The labels this environment's rule is evaluated against, canonical (comma-joined), empty when
-    /// none are configured. Ignored when <see cref="ReadyRule"/> is <see cref="Core.Enums.ReadyRule.NoGate"/>.
-    /// </summary>
-    /// <remarks>
-    /// One canonical string rather than a child table, for the same reasons as
-    /// <see cref="MergeRequest.Labels"/>: the gate loads the environment and compares in memory
-    /// (<see cref="Core.Parsing.ReadinessResolver"/>), and a plain column needs no cascade. A gate
-    /// switched on with this empty admits nothing — the resolver guards that — so an environment
-    /// cannot be gated by accident into admitting everything.
-    /// </remarks>
-    [Required, MaxLength(2000)]
-    public string ReadyLabels { get; set; } = string.Empty;
+    /// <summary>The readiness rule. Restrict: a rule in use cannot be deleted out from under an environment.</summary>
+    [ForeignKey(nameof(ReadinessRuleId))]
+    [InverseProperty(nameof(Models.ReadinessRule.Environments))]
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public ReadinessRule? ReadinessRule { get; set; }
 
     /// <summary>Per-repository deploy configuration scoped to this environment.</summary>
     [InverseProperty(nameof(RepositoryDeployTarget.Environment))]

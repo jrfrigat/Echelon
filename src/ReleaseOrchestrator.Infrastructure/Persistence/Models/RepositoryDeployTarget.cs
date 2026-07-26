@@ -56,6 +56,24 @@ public class RepositoryDeployTarget
     /// </summary>
     public RedeployPolicy RedeployPolicy { get; set; } = RedeployPolicy.Once;
 
+    /// <summary>
+    /// The readiness rule this repository uses for this environment, overriding the environment's
+    /// default; null means fall back to that default.
+    /// </summary>
+    /// <remarks>
+    /// This is the per-repository override the operator asked for: a repository that must clear a
+    /// stricter (or looser) bar than the rest of the environment points at its own named rule here.
+    /// It resolves ahead of <see cref="DeploymentEnvironment.ReadinessRuleId"/> and behind a manual
+    /// pin.
+    /// </remarks>
+    public Guid? ReadinessRuleId { get; set; }
+
+    /// <summary>The readiness rule override. Restrict: a rule in use cannot be deleted out from under a target.</summary>
+    [ForeignKey(nameof(ReadinessRuleId))]
+    [InverseProperty(nameof(Models.ReadinessRule.DeployTargets))]
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public ReadinessRule? ReadinessRule { get; set; }
+
     /// <summary>The repository. Cascade: the target is owned by it and is meaningless without it.</summary>
     [ForeignKey(nameof(RepositoryId))]
     [InverseProperty(nameof(Models.Repository.DeployTargets))]

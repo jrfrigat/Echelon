@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ReleaseOrchestrator.Core.Enums;
-using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Auth;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -26,17 +24,17 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
-        var rows = await db.DeploymentEnvironments
+        var items = await db.DeploymentEnvironments
             .OrderBy(e => e.Order).ThenBy(e => e.Key)
-            .Select(e => new { e.Id, e.Key, e.Name, e.Order, e.IsEnabled, e.ReadyRule, e.ReadyLabels })
+            .Select(e => new
+            {
+                e.Id, e.Key, e.Name, e.Order, e.IsEnabled,
+                e.ReadinessRuleId,
+                // Null when ungated; the name lets the UI show which rule without a second call.
+                ReadinessRuleName = e.ReadinessRule != null ? e.ReadinessRule.Name : null
+            })
             .ToListAsync(ct);
 
-        var items = rows.Select(e => new
-        {
-            e.Id, e.Key, e.Name, e.Order, e.IsEnabled,
-            ReadyRule = e.ReadyRule.ToString(),
-            ReadyLabels = e.ReadyLabels.Split(',', StringSplitOptions.RemoveEmptyEntries)
-        });
         return Ok(items);
     }
 
@@ -52,9 +50,10 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
         if (await db.DeploymentEnvironments.AnyAsync(e => e.Key == key, ct))
             return Conflict(new { error = $"An environment with key '{key}' already exists." });
 
-        if (!TryReadReadiness(req, out var rule, out var readyLabels, out var readinessError))
-            return BadRequest(new { error = readinessError });
-        if (await RequiresApprovalDenied(rule, ct))
+        if (req.ReadinessRuleId is { } ruleId && !await db.ReadinessRules.AnyAsync(r => r.Id == ruleId, ct))
+            return BadRequest(new { error = "No such readiness rule." });
+        // Creating an ungated environment (no rule) is an approval decision, not a config one.
+        if (req.ReadinessRuleId is null && await ApprovalDenied(ct))
             return Forbid();
 
         var env = new DeploymentEnvironment
@@ -64,8 +63,7 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
             Name = req.Name,
             Order = req.Order,
             IsEnabled = req.IsEnabled,
-            ReadyRule = rule,
-            ReadyLabels = readyLabels
+            ReadinessRuleId = req.ReadinessRuleId
         };
         db.DeploymentEnvironments.Add(env);
         await db.SaveChangesAsync(ct);
@@ -83,18 +81,17 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
         var env = await db.DeploymentEnvironments.FirstOrDefaultAsync(e => e.Id == id, ct);
         if (env is null) return NotFound();
 
-        if (!TryReadReadiness(req, out var rule, out var readyLabels, out var readinessError))
-            return BadRequest(new { error = readinessError });
-        // Only a change TO NoGate needs approval -- leaving an already-ungated environment as it was
-        // is not a new decision, so a routine rename does not demand the approver.
-        if (rule == ReadyRule.NoGate && env.ReadyRule != ReadyRule.NoGate && await RequiresApprovalDenied(rule, ct))
+        if (req.ReadinessRuleId is { } ruleId && !await db.ReadinessRules.AnyAsync(r => r.Id == ruleId, ct))
+            return BadRequest(new { error = "No such readiness rule." });
+        // Only removing the gate (to no rule) on an environment that had one is a new approval
+        // decision; a routine rename that leaves an already-ungated environment ungated is not.
+        if (req.ReadinessRuleId is null && env.ReadinessRuleId is not null && await ApprovalDenied(ct))
             return Forbid();
 
         env.Name = req.Name;
         env.Order = req.Order;
         env.IsEnabled = req.IsEnabled;
-        env.ReadyRule = rule;
-        env.ReadyLabels = readyLabels;
+        env.ReadinessRuleId = req.ReadinessRuleId;
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
@@ -134,45 +131,17 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
     }
 
     /// <summary>
-    /// Reads the readiness rule and labels from the request, defaulting an absent rule to
-    /// <see cref="ReadyRule.NoGate"/> and canonicalising the labels.
-    /// </summary>
-    private static bool TryReadReadiness(
-        SaveEnvironmentRequest req, out ReadyRule rule, out string readyLabels, out string error)
-    {
-        readyLabels = LabelSet.Canonical(req.ReadyLabels);
-        error = string.Empty;
-
-        // Absent means NoGate -- an environment created without a stated rule is ungated, the
-        // behaviour that existed before there was a gate. A present but unrecognised value is
-        // rejected rather than defaulted, so a typo does not quietly ungate a production environment.
-        if (string.IsNullOrWhiteSpace(req.ReadyRule))
-        {
-            rule = ReadyRule.NoGate;
-            return true;
-        }
-
-        if (!Enum.TryParse(req.ReadyRule, ignoreCase: true, out rule) || !Enum.IsDefined(rule))
-        {
-            error = $"Unknown readiness rule '{req.ReadyRule}'. Valid: NoGate, AnyOf, AllOf.";
-            return false;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// True when the rule needs approval permission the caller does not have.
+    /// True when the caller lacks the approval permission that ungating an environment requires.
     /// </summary>
     /// <remarks>
-    /// Ungating an environment (<see cref="ReadyRule.NoGate"/>) is an approval decision, not a
-    /// configuration one -- it removes the check between unreviewed code and that environment -- so it
-    /// is gated on <see cref="Permissions.ReleasePlanApprove"/> even though the rest of the edit is
-    /// ordinary config. Tightening a gate (AnyOf/AllOf) or setting labels stays at config-edit.
+    /// Leaving an environment without a readiness rule removes the check between unreviewed code and
+    /// that environment, so it is an approval decision gated on
+    /// <see cref="Permissions.ReleasePlanApprove"/> rather than ordinary config editing. Assigning a
+    /// rule (which gates) stays at config-edit.
     /// </remarks>
-    private async Task<bool> RequiresApprovalDenied(ReadyRule rule, CancellationToken ct)
+    private async Task<bool> ApprovalDenied(CancellationToken ct)
     {
-        if (rule != ReadyRule.NoGate) return false;
+        _ = ct;
         var result = await authz.AuthorizeAsync(User, Permissions.ReleasePlanApprove);
         return !result.Succeeded;
     }
@@ -183,12 +152,13 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
 /// <param name="Name">Operator-facing name.</param>
 /// <param name="Order">Promotion order; lower deploys first.</param>
 /// <param name="IsEnabled">Whether rollouts may target it.</param>
-/// <param name="ReadyRule">"NoGate" (default), "AnyOf", or "AllOf". Setting NoGate needs approval permission.</param>
-/// <param name="ReadyLabels">The labels the rule is evaluated against; ignored when the rule is NoGate.</param>
+/// <param name="ReadinessRuleId">
+/// The named readiness rule this environment applies, or null for no gate. Setting it to null (or
+/// creating without one) needs approval permission, because it removes the gate.
+/// </param>
 public record SaveEnvironmentRequest(
     [property: Required] string Key,
     [property: Required] string Name,
     int Order,
     bool IsEnabled,
-    string? ReadyRule = null,
-    IReadOnlyList<string>? ReadyLabels = null);
+    Guid? ReadinessRuleId = null);

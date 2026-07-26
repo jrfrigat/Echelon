@@ -142,7 +142,7 @@ public class RolloutService(
             .Where(m => mrIds.Contains(m.Id))
             .Select(m => new
             {
-                m.Id, m.ExternalId, m.TaskId, m.RepositoryId, m.Labels,
+                m.Id, m.ExternalId, m.TaskId, m.RepositoryId, m.Labels, m.Status,
                 RepoName = m.Repository.Name,
                 RepoDeployKey = m.Repository.DeployStrategyKey,
                 RepoDeploySettings = m.Repository.DeployStrategySettingsJson
@@ -155,7 +155,7 @@ public class RolloutService(
         var repoIds = mrDetails.Select(m => m.RepositoryId).Distinct().ToList();
         var targetOf = (await db.RepositoryDeployTargets
                 .Where(t => t.EnvironmentId == environmentId && repoIds.Contains(t.RepositoryId))
-                .Select(t => new { t.RepositoryId, t.DeployStrategyKey, t.DeploySettingsJson, t.RedeployPolicy })
+                .Select(t => new { t.RepositoryId, t.DeployStrategyKey, t.DeploySettingsJson, t.RedeployPolicy, t.ReadinessRuleId })
                 .ToListAsync(ct))
             .ToDictionary(t => t.RepositoryId);
 
@@ -190,9 +190,14 @@ public class RolloutService(
         // they are being redeployed -- a redeploy is a fresh deploy and must clear the gate again.
         var deploying = mrDetails
             .Where(m => !alreadyDeployed.Contains(m.Id) || redeploying.Contains(m.Id))
-            .Select(m => (m.Id, m.ExternalId, m.Labels))
+            .Select(m => (m.Id, m.ExternalId, m.Labels, m.Status, m.RepositoryId))
             .ToList();
-        await GuardReadinessAsync(env, deploying, ct);
+        // The readiness rule per merge request: its repository's override for this environment, else
+        // the environment's default. Null on either means "no gate" for that repository.
+        var ruleOverrideOf = mrDetails
+            .Select(m => m.RepositoryId).Distinct()
+            .ToDictionary(id => id, id => targetOf.GetValueOrDefault(id)?.ReadinessRuleId);
+        await GuardReadinessAsync(env, ruleOverrideOf, deploying, ct);
 
         var steps = new List<RolloutStep>();
         var snapshot = new List<StepSnapshot>();
@@ -512,28 +517,42 @@ public class RolloutService(
     /// <summary>
     /// Refuses the launch if any merge request that would deploy is not ready for the environment.
     /// </summary>
-    /// <param name="env">The target environment, carrying its readiness rule and labels.</param>
+    /// <param name="env">The target environment, carrying its default readiness rule (or none).</param>
+    /// <param name="ruleOverrideByRepo">
+    /// Each repository's readiness-rule override for this environment (its deploy target's rule), or
+    /// null where the repository has no override and falls back to the environment default.
+    /// </param>
     /// <param name="deploying">The merge requests that would deploy (already-deployed ones excluded).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
-    /// The one place a rollout consults the readiness feature, evaluated once here at launch over the
-    /// merge requests the plan would deploy. <see cref="ReadyRule.NoGate"/> short-circuits — an ungated
-    /// environment admits anything the plan already contains, exactly as before there was a gate — so
-    /// an existing environment pays nothing for this. Otherwise a pin decides if one exists, else the
-    /// labels against the rule, through <see cref="ReadinessEvaluator"/>. There is no dispatch-time
-    /// re-check: a pin or label changed after launch does not affect a run already materialised, so an
-    /// operator who needs to hold a launched rollout cancels it rather than pinning mid-flight.
+    /// The one place a rollout consults the readiness feature, evaluated once here at launch. Each
+    /// merge request's rule is resolved as pin &gt; repository override &gt; environment default &gt; no
+    /// gate, then its current signals — a token per label, one for its status, one for its pipeline
+    /// result when known (<see cref="ReadinessSignals"/>) — are checked against the rule. A merge
+    /// request whose rule resolves to none is ungated and pays nothing, exactly as before there was a
+    /// gate. There is no dispatch-time re-check: a pin or signal changed after launch does not affect a
+    /// run already materialised, so an operator who needs to hold a launched rollout cancels it.
     /// </remarks>
     private async Task GuardReadinessAsync(
         DeploymentEnvironment env,
-        IReadOnlyList<(Guid Id, string ExternalId, string Labels)> deploying,
+        IReadOnlyDictionary<Guid, Guid?> ruleOverrideByRepo,
+        IReadOnlyList<(Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId)> deploying,
         CancellationToken ct)
     {
-        if (env.ReadyRule == ReadyRule.NoGate || deploying.Count == 0) return;
+        if (deploying.Count == 0) return;
 
-        // Both sides are already canonical (LabelSet.Canonical produced them), so splitting is enough;
-        // no re-normalization is needed for the resolver's comparisons.
-        var ruleLabels = env.ReadyLabels.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        Guid? RuleIdFor(Guid repositoryId) =>
+            ruleOverrideByRepo.GetValueOrDefault(repositoryId) ?? env.ReadinessRuleId;
+
+        // Nothing to load or check when every deploying merge request resolves to no gate.
+        var ruleIds = deploying.Select(m => RuleIdFor(m.RepositoryId)).OfType<Guid>().Distinct().ToList();
+        if (ruleIds.Count == 0) return;
+
+        var rules = (await db.ReadinessRules.AsNoTracking()
+                .Where(r => ruleIds.Contains(r.Id))
+                .Select(r => new { r.Id, r.Mode, r.RequiredSignals })
+                .ToListAsync(ct))
+            .ToDictionary(r => r.Id);
 
         var mrIds = deploying.Select(m => m.Id).ToList();
         var pinOf = (await db.MergeRequestReadinessPins
@@ -542,10 +561,23 @@ public class RolloutService(
                 .ToListAsync(ct))
             .ToDictionary(p => p.MergeRequestId, p => (bool?)p.IsReady);
 
+        bool IsReady((Guid Id, string ExternalId, string Labels, MergeRequestStatus Status, Guid RepositoryId) mr)
+        {
+            var pin = pinOf.GetValueOrDefault(mr.Id);
+
+            // No rule resolved: the merge request is ungated, ready unless a pin deliberately holds it.
+            if (RuleIdFor(mr.RepositoryId) is not { } id || !rules.TryGetValue(id, out var rule))
+                return pin ?? true;
+
+            // Both sides canonical already, so splitting is enough; RemoveEmptyEntries so an empty set
+            // is [] and the resolver's non-empty guard refuses it rather than admitting everything.
+            var signals = ReadinessSignals.For(mr.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries), mr.Status);
+            var required = rule.RequiredSignals.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            return ReadinessEvaluator.Evaluate(signals, required, rule.Mode, pin).IsReady;
+        }
+
         var notReady = deploying
-            .Where(m => !ReadinessEvaluator.Evaluate(
-                m.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries),
-                ruleLabels, env.ReadyRule, pinOf.GetValueOrDefault(m.Id)).IsReady)
+            .Where(m => !IsReady(m))
             .Select(m => m.ExternalId)
             .OrderBy(k => k, StringComparer.Ordinal)
             .ToList();
@@ -553,7 +585,8 @@ public class RolloutService(
         if (notReady.Count > 0)
             throw new DomainValidationException(
                 $"Not ready for '{env.Key}': merge request(s) {string.Join(", ", notReady)}. "
-                + "Add the environment's label to them or pin them ready, or launch to an ungated environment.");
+                + "Give them the signals their rule requires (a label, a merge, a green pipeline) or pin them ready, "
+                + "or launch to an ungated environment.");
     }
 
     /// <summary>The rollout's frozen plan, one entry per merge request.</summary>

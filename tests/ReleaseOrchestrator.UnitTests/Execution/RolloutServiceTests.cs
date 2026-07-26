@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using ReleaseOrchestrator.Application.DTOs;
 using ReleaseOrchestrator.Application.Exceptions;
 using ReleaseOrchestrator.Core.Enums;
+using ReleaseOrchestrator.Core.Parsing;
 using ReleaseOrchestrator.Infrastructure.Execution;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.ReleasePlanning;
@@ -64,11 +65,23 @@ public class RolloutServiceTests : PlannerTestBase
     private Task<RolloutStep> StepAsync(Guid rolloutId) =>
         Db.RolloutSteps.AsNoTracking().FirstAsync(s => s.RolloutId == rolloutId, Ct);
 
-    private DeploymentEnvironment AddGatedEnvironment(string key, ReadyRule rule, string readyLabels)
+    private DeploymentEnvironment AddGatedEnvironment(string key, ReadyRule mode, string readyLabels)
     {
         var env = AddEnvironment(key);
-        env.ReadyRule = rule;
-        env.ReadyLabels = readyLabels;
+        // Readiness is a named rule now, not inline columns: build one whose required signals are the
+        // given labels as label: tokens -- the same set the old inline label gate compared against.
+        var required = string.Join(',', readyLabels
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(ReadinessSignals.Label));
+        var rule = new ReadinessRule
+        {
+            Id = Guid.NewGuid(),
+            Name = $"{key}-rule",
+            Mode = mode,
+            RequiredSignals = required
+        };
+        Db.ReadinessRules.Add(rule);
+        env.ReadinessRuleId = rule.Id;
         return env;
     }
 
@@ -408,6 +421,38 @@ public class RolloutServiceTests : PlannerTestBase
 
         await Assert.ThrowsAsync<DomainValidationException>(
             () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
+    }
+
+    /// <summary>
+    /// A repository's own readiness rule for an environment applies even when the environment itself is
+    /// ungated — the per-repository override the operator asked for: a stricter repository gates while
+    /// the rest of the environment does not.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Blocks_WhenARepositoryOverrideRuleIsNotSatisfied_EvenIfTheEnvironmentIsUngated()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task, externalId: "7");   // no prod label
+        var env = AddEnvironment("prod");                        // ungated: no environment default rule
+
+        var rule = new ReadinessRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "prod-strict",
+            Mode = ReadyRule.AnyOf,
+            RequiredSignals = ReadinessSignals.Label("ready-for-prod")
+        };
+        Db.ReadinessRules.Add(rule);
+        AddDeployTarget(repo, env, "gitlab-merge").ReadinessRuleId = rule.Id;
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
+        Assert.Contains("7", ex.Message);
+        Assert.Equal(0, await Db.Rollouts.CountAsync(Ct));
     }
 
     // ---- redeploy (E5) --------------------------------------------------------

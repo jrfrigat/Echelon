@@ -297,17 +297,12 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
-                    b.Property<string>("ReadyLabels")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("ReadyRule")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid?>("ReadinessRuleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReadinessRuleId");
 
                     b.HasIndex(new[] { "Key" }, "IX_DeploymentEnvironment_Key")
                         .IsUnique();
@@ -738,6 +733,35 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("ProcessedEvents");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReadinessRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RequiredSignals")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "Name" }, "IX_ReadinessRule_Name")
+                        .IsUnique();
+
+                    b.ToTable("ReadinessRules");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
                 {
                     b.Property<Guid>("Id")
@@ -819,6 +843,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<Guid>("EnvironmentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ReadinessRuleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("RedeployPolicy")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -830,6 +857,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EnvironmentId");
+
+                    b.HasIndex("ReadinessRuleId");
 
                     b.HasIndex(new[] { "RepositoryId", "EnvironmentId" }, "IX_RepositoryDeployTarget_Repository_Environment")
                         .IsUnique();
@@ -1346,6 +1375,16 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.DeploymentEnvironment", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReadinessRule", "ReadinessRule")
+                        .WithMany("Environments")
+                        .HasForeignKey("ReadinessRuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ReadinessRule");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.GroupPermissionMapping", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", "PermissionClaim")
@@ -1526,6 +1565,11 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReadinessRule", "ReadinessRule")
+                        .WithMany("DeployTargets")
+                        .HasForeignKey("ReadinessRuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
                         .WithMany("DeployTargets")
                         .HasForeignKey("RepositoryId")
@@ -1533,6 +1577,8 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired();
 
                     b.Navigation("Environment");
+
+                    b.Navigation("ReadinessRule");
 
                     b.Navigation("Repository");
                 });
@@ -1689,6 +1735,13 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ReadinessRule", b =>
+                {
+                    b.Navigation("DeployTargets");
+
+                    b.Navigation("Environments");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", b =>
