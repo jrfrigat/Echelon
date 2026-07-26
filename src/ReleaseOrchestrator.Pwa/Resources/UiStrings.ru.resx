@@ -1104,4 +1104,25 @@
   <data name="Deploy_Readiness_Default" xml:space="preserve">
     <value>По умолчанию окружения</value>
   </data>
+  <data name="LinkPreview_Title" xml:space="preserve">
+    <value>Как merge request связывается с задачей</value>
+  </data>
+  <data name="LinkPreview_Explanation" xml:space="preserve">
+    <value>Входящий merge request сопоставляется с задачей трекера: из выбранного источника читается ключ и применяется шаблон. У соединения с опросом другой связи нет; webhook применяет то же правило. Введите пример ниже, чтобы увидеть, какой ключ извлечёт это правило.</value>
+  </data>
+  <data name="LinkPreview_Sample_Branch" xml:space="preserve">
+    <value>Пример имени ветки</value>
+  </data>
+  <data name="LinkPreview_Sample_Title" xml:space="preserve">
+    <value>Пример заголовка merge request</value>
+  </data>
+  <data name="LinkPreview_Sample_Label" xml:space="preserve">
+    <value>Пример метки</value>
+  </data>
+  <data name="LinkPreview_Match" xml:space="preserve">
+    <value>Свяжется с задачей {0}</value>
+  </data>
+  <data name="LinkPreview_NoMatch" xml:space="preserve">
+    <value>Ключ не найден — этот merge request не свяжется с задачей.</value>
+  </data>
 </root>

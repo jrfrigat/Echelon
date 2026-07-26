@@ -2981,5 +2981,54 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Deploy_Readiness_Default", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to How merge requests link to tasks.</summary>
+        public static string LinkPreview_Title {
+            get {
+                return ResourceManager.GetString("LinkPreview_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to An incoming merge request is matched to a tracker task....</summary>
+        public static string LinkPreview_Explanation {
+            get {
+                return ResourceManager.GetString("LinkPreview_Explanation", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Sample branch name.</summary>
+        public static string LinkPreview_Sample_Branch {
+            get {
+                return ResourceManager.GetString("LinkPreview_Sample_Branch", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Sample merge-request title.</summary>
+        public static string LinkPreview_Sample_Title {
+            get {
+                return ResourceManager.GetString("LinkPreview_Sample_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Sample label.</summary>
+        public static string LinkPreview_Sample_Label {
+            get {
+                return ResourceManager.GetString("LinkPreview_Sample_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Links to task {0}.</summary>
+        public static string LinkPreview_Match {
+            get {
+                return ResourceManager.GetString("LinkPreview_Match", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to No key matched — this merge request would not link to a task.</summary>
+        public static string LinkPreview_NoMatch {
+            get {
+                return ResourceManager.GetString("LinkPreview_NoMatch", resourceCulture);
+            }
+        }
     }
 }

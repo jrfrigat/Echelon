@@ -1,6 +1,7 @@
 @page "/admin/vcs"
 @attribute [Authorize]
 @inherits CrudPageBase<VcsConnectionDto>
+@using ReleaseOrchestrator.Providers.Abstractions.Vcs
 
 <PageTitle>@UiStrings.Vcs_Title</PageTitle>
 
@@ -71,6 +72,14 @@ else if (Result is not null)
             @* Declared by the selected provider, not by this page. *@
             <ProviderSettingsFields Schema="SelectedSchema" Values="_fSettings" OnChanged="StateHasChanged" />
 
+            @* Shown only when this provider carries the linking rule, so a provider without one gets
+               no preview. The scalar source/pattern re-render it as the operator edits the fields. *@
+            @if (DeclaresLinkRule)
+            {
+                <TaskLinkPreview Source="@_fSettings.GetValueOrDefault(TaskLinkSettings.SourceKey, "")"
+                                 Pattern="@_fSettings.GetValueOrDefault(TaskLinkSettings.PatternKey, "")" />
+            }
+
             <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
@@ -94,6 +103,10 @@ else if (Result is not null)
 
     IReadOnlyList<ProviderSettingDto> SelectedSchema =>
         _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
+
+    // Every GitLab type carries the linking rule; a future provider that links some other way would
+    // not declare these keys and simply gets no preview.
+    bool DeclaresLinkRule => SelectedSchema.Any(s => s.Key == TaskLinkSettings.SourceKey);
 
     // The type is fixed at creation: an existing connection's stored repositories and token are
     // meaningless against a different provider, so Update takes no vcsType.

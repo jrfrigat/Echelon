@@ -29,6 +29,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The client links to the domain contracts, not just the API: the merge-request→task linking
+         rule is previewed in the browser by the very same TaskKeyExtractor the ingestion runs, so
+         what the operator sees while configuring is what will actually happen. Both projects are
+         inward, pure, zero-runtime-dependency assemblies (Core, and Abstractions over it), so this
+         is an onion-legal inward reference and WASM-safe. -->
+    <ProjectReference Include="..\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 

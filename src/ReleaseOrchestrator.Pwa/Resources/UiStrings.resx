@@ -1104,4 +1104,25 @@
   <data name="Deploy_Readiness_Default" xml:space="preserve">
     <value>Environment default</value>
   </data>
+  <data name="LinkPreview_Title" xml:space="preserve">
+    <value>How merge requests link to tasks</value>
+  </data>
+  <data name="LinkPreview_Explanation" xml:space="preserve">
+    <value>An incoming merge request is matched to a tracker task by reading a key from the source you chose and applying the pattern. A polled connection has no other link; a webhook applies the same rule. Enter a sample below to see the key this rule extracts.</value>
+  </data>
+  <data name="LinkPreview_Sample_Branch" xml:space="preserve">
+    <value>Sample branch name</value>
+  </data>
+  <data name="LinkPreview_Sample_Title" xml:space="preserve">
+    <value>Sample merge-request title</value>
+  </data>
+  <data name="LinkPreview_Sample_Label" xml:space="preserve">
+    <value>Sample label</value>
+  </data>
+  <data name="LinkPreview_Match" xml:space="preserve">
+    <value>Links to task {0}</value>
+  </data>
+  <data name="LinkPreview_NoMatch" xml:space="preserve">
+    <value>No key matched — this merge request would not link to a task.</value>
+  </data>
 </root>
