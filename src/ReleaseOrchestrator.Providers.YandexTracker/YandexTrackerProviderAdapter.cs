@@ -19,7 +19,12 @@ internal sealed class YandexTrackerProviderAdapter(HttpClient http) : ITrackerPr
         new(YandexTrackerOptions.OrgIdKey,
             Label: "Organization ID",
             Description: "Yandex.Tracker organization the token belongs to; sent as the X-Org-Id header.",
-            Required: true)
+            Required: true),
+        new(YandexTrackerOptions.ClosedStatusesKey,
+            Label: "Closed statuses",
+            Description: "Comma-separated status keys that mean a task is done. Leave blank for the defaults.",
+            Kind: ProviderSettingKind.Text,
+            Default: string.Join(", ", YandexTrackerStatusRules.DefaultClosedStatuses))
     ];
 
     /// <inheritdoc/>

@@ -23,7 +23,13 @@ internal sealed class YandexTrackerProvider(
     public TrackerCapabilities Capabilities => TrackerCapabilities.None;
 
     /// <inheritdoc/>
-    public bool IsClosedStatus(string? statusKey) => YandexTrackerStatusRules.IsClosed(statusKey);
+    /// <remarks>
+    /// Reads the connection's own closed set, not the static default: which statuses mean "done" is
+    /// a per-project decision. Both the sync consumer and the reconcile go through this method, so
+    /// making it connection-scoped covers both at once.
+    /// </remarks>
+    public bool IsClosedStatus(string? statusKey) =>
+        statusKey is not null && options.ClosedStatuses.Contains(statusKey.Trim());
 
     /// <inheritdoc/>
     public async Task<TrackerIssue?> GetIssueAsync(string issueKey, CancellationToken ct)

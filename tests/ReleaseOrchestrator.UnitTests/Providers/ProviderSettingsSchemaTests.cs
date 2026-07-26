@@ -48,14 +48,18 @@ public class ProviderSettingsSchemaTests
             .GetRequiredService<ITrackerProviderFactory>()
             .GetSettingsSchema("yandextracker");
 
-        var orgId = Assert.Single(schema);
-
         // The key is the contract between the form and YandexTrackerOptions.From. A rename on one
         // side alone leaves the adapter throwing "requires an organization id" at a connection the
         // operator plainly filled in.
-        Assert.Equal(YandexTrackerOptions.OrgIdKey, orgId.Key);
+        var orgId = Assert.Single(schema, s => s.Key == YandexTrackerOptions.OrgIdKey);
         Assert.True(orgId.Required);
         Assert.False(string.IsNullOrWhiteSpace(orgId.Label));
+
+        // The closed-status set is per-project, so the adapter declares it too — optional, and
+        // pre-filled with the defaults so a fresh connection reads the same set the form shows.
+        var closed = Assert.Single(schema, s => s.Key == YandexTrackerOptions.ClosedStatusesKey);
+        Assert.False(closed.Required);
+        Assert.False(string.IsNullOrWhiteSpace(closed.Default));
     }
 
     /// <summary>

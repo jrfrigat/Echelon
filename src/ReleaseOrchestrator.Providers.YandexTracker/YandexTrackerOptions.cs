@@ -19,10 +19,14 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// </para>
 /// </remarks>
 /// <param name="OrgId">The organization the token belongs to; sent as the <c>X-Org-Id</c> header.</param>
-public sealed record YandexTrackerOptions(string OrgId)
+/// <param name="ClosedStatuses">The status keys this connection treats as "done", case-insensitive.</param>
+public sealed record YandexTrackerOptions(string OrgId, IReadOnlySet<string> ClosedStatuses)
 {
     /// <summary>The settings key that carries the organization id.</summary>
     public const string OrgIdKey = "orgId";
+
+    /// <summary>The settings key that carries the comma-separated closed-status keys.</summary>
+    public const string ClosedStatusesKey = "closedStatuses";
 
     /// <summary>Reads the options out of a connection's settings bag.</summary>
     /// <param name="context">The connection being bound.</param>
@@ -43,6 +47,14 @@ public sealed record YandexTrackerOptions(string OrgId)
                 $"Tracker connection '{context.ConnectionName}' is served by the Yandex.Tracker provider, "
                 + $"which requires an organization id. Set '{OrgIdKey}' in the connection's provider settings.");
 
-        return new YandexTrackerOptions(orgId.Trim());
+        // Which statuses mean "done" is a per-project decision (a workflow may call it "done" or
+        // "deployed"), so it is configurable; an unset value keeps the default set.
+        context.ProviderSettings.TryGetValue(ClosedStatusesKey, out var closed);
+        var closedStatuses = string.IsNullOrWhiteSpace(closed)
+            ? new HashSet<string>(YandexTrackerStatusRules.DefaultClosedStatuses, StringComparer.OrdinalIgnoreCase)
+            : closed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return new YandexTrackerOptions(orgId.Trim(), closedStatuses);
     }
 }

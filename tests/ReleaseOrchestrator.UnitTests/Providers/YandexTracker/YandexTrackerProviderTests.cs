@@ -72,6 +72,49 @@ public class YandexTrackerOptionsTests
     public void EmptySettingsBagIsAlsoAConfigurationError()
         => Assert.Throws<InvalidOperationException>(() => YandexTrackerOptions.From(Context()));
 
+    [Fact]
+    public void ClosedStatusesDefaultToTheProviderDefaultsWhenUnset()
+    {
+        var options = YandexTrackerOptions.From(Context(("orgId", "org-42")));
+
+        Assert.Equal(
+            new HashSet<string>(YandexTrackerStatusRules.DefaultClosedStatuses, StringComparer.OrdinalIgnoreCase),
+            options.ClosedStatuses);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BlankClosedStatusesFallBackToTheDefaults(string closed)
+    {
+        var options = YandexTrackerOptions.From(Context(("orgId", "org-42"), ("closedStatuses", closed)));
+
+        Assert.Equal(
+            new HashSet<string>(YandexTrackerStatusRules.DefaultClosedStatuses, StringComparer.OrdinalIgnoreCase),
+            options.ClosedStatuses);
+    }
+
+    [Fact]
+    public void ClosedStatusesReplaceTheDefaultsWhenConfigured()
+    {
+        // A workflow whose terminal state is "done"/"deployed" — not one of the built-in defaults.
+        var options = YandexTrackerOptions.From(Context(("orgId", "org-42"), ("closedStatuses", "done, deployed")));
+
+        Assert.Contains("done", options.ClosedStatuses);
+        Assert.Contains("deployed", options.ClosedStatuses);
+        // The defaults no longer apply once the connection names its own set.
+        Assert.DoesNotContain("closed", options.ClosedStatuses);
+    }
+
+    [Fact]
+    public void ClosedStatusesAreTrimmedAndCaseInsensitive()
+    {
+        var options = YandexTrackerOptions.From(Context(("orgId", "org-42"), ("closedStatuses", "  Done ,  DEPLOYED  ")));
+
+        Assert.Contains("done", options.ClosedStatuses);
+        Assert.Contains("deployed", options.ClosedStatuses);
+    }
+
     private static TrackerProviderContext Context(params (string Key, string? Value)[] settings) =>
         new(
             ConnectionName: "my-tracker",
