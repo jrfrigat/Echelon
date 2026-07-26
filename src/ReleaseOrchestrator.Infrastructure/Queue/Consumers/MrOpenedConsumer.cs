@@ -92,16 +92,15 @@ public class MrOpenedConsumer(
             mr.ClosedAt = null;
 
             var previousStatus = isNew ? (MergeRequestStatus?)null : mr.Status;
-            mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
-                msg.Labels, repo.Connection.ReadyForDeployLabel, mr.IsStatusManual, mr.Status);
+            // An open merge request is simply Opened (a manual pin aside): deploy readiness is a
+            // per-environment rule over signals now, not a status a label promotes it to.
+            mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(mr.IsStatusManual, mr.Status);
 
-            // The label-driven promotion to ReadyForDeploy happens here and nowhere else -- the
-            // coarse "is this deployable" signal from the connection's single ready-for-deploy label,
-            // distinct from the per-environment readiness gate below. It overwrites the column in
-            // place, so without this row nothing afterwards can say when it became deployable.
+            // Records the arrival (null -> Opened) or a reopen (Closed -> Opened); a no-op when the
+            // status did not change. The full label set the readiness gate reads is persisted below.
             MergeRequestStatusJournal.Record(
                 db, mr, previousStatus, mr.Status,
-                MergeRequestStatusJournal.CauseLabel, ActorRef.System, clock.GetUtcNow().UtcDateTime);
+                MergeRequestStatusJournal.CauseWebhook, ActorRef.System, clock.GetUtcNow().UtcDateTime);
 
             // Persist the full label set the per-environment readiness gate consults, separate from
             // the single ready-for-deploy label the status above turns on. GitLab re-sends an opened

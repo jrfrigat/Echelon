@@ -225,20 +225,11 @@
   <data name="Vcs_New" xml:space="preserve">
     <value>Новое подключение</value>
   </data>
-  <data name="Vcs_Col_ReadyLabel" xml:space="preserve">
-    <value>Метка готовности к развёртыванию</value>
-  </data>
-  <data name="Vcs_Label_Disabled" xml:space="preserve">
-    <value>выключено</value>
-  </data>
   <data name="Vcs_Dialog_Edit" xml:space="preserve">
     <value>Изменение подключения к VCS</value>
   </data>
   <data name="Vcs_Dialog_New" xml:space="preserve">
     <value>Новое подключение к VCS</value>
-  </data>
-  <data name="Vcs_ReadyLabel_Helper" xml:space="preserve">
-    <value>Merge-запросы с этой меткой в {0} попадают в план релиза автоматически. Оставьте поле пустым, чтобы отключить: тогда merge-запросы этого подключения будут попадать в план только вручную.</value>
   </data>
   <data name="Vcs_Delete_What" xml:space="preserve">
     <value>подключение к VCS «{0}»</value>

@@ -56,14 +56,14 @@ public class ApiService(HttpClient http)
 
     /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateVcsConnectionAsync(
-        string name, string vcsType, string apiUrl, string accessToken, string? readyForDeployLabel,
+        string name, string vcsType, string apiUrl, string accessToken,
         Dictionary<string, string?>? settings = null,
         CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/vcs-connections",
             new
             {
                 Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, Settings = settings
+                Settings = settings
             }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
@@ -72,14 +72,13 @@ public class ApiService(HttpClient http)
     /// the token, and why this sends only the keys the operator actually filled in.
     /// </param>
     public Task UpdateVcsConnectionAsync(
-        Guid id, string name, string apiUrl, string? accessToken, string? readyForDeployLabel,
+        Guid id, string name, string apiUrl, string? accessToken,
         Dictionary<string, string?>? settings = null,
         CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/vcs-connections/{id}",
             new
             {
-                Name = name, ApiUrl = apiUrl, AccessToken = accessToken,
-                ReadyForDeployLabel = readyForDeployLabel, Settings = settings
+                Name = name, ApiUrl = apiUrl, AccessToken = accessToken, Settings = settings
             }, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>

@@ -82,7 +82,7 @@ public class VcsService(
         // is covered without anyone remembering to instrument it.
         var previousStatus = isNew ? (Core.Enums.MergeRequestStatus?)null : mr.Status;
 
-        ApplyStatus(mr, info, provider.Capabilities, repo.Connection.ReadyForDeployLabel);
+        ApplyStatus(mr, info);
 
         MergeRequestStatusJournal.Record(
             db, mr, previousStatus, mr.Status,
@@ -91,11 +91,9 @@ public class VcsService(
         // Persist the full label set the per-environment readiness gate reads, exactly as the webhook
         // consumers do -- and the whole reason this reconcile exists. The dangerous case is a missed
         // "label removed" delivery: without refreshing the set here, the gate would keep admitting a
-        // merge request to an environment on a ready-for-<env> label the provider no longer reports,
-        // because the status re-derivation above only touches the coarse ready-for-deploy promotion,
-        // not the labels the gate compares. Only when the provider can actually report labels: when it
-        // cannot, an empty list means "cannot say", not "none", and clearing the set on that would
-        // wipe what the webhook path captured -- the same distinction ApplyStatus draws for the status.
+        // merge request to an environment on a ready-for-<env> label the provider no longer reports.
+        // Only when the provider can actually report labels: when it cannot, an empty list means
+        // "cannot say", not "none", and clearing the set on that would wipe what the webhook captured.
         if (provider.Capabilities.SupportsMergeRequestLabels)
             MergeRequestLabelJournal.Apply(
                 db, mr, info.Labels, MergeRequestStatusJournal.CausePoll, ActorRef.System,
@@ -106,11 +104,10 @@ public class VcsService(
 
     /// <summary>
     /// Mirrors the webhook consumers' rules exactly: a terminal state is final and clears a manual
-    /// pin, an open MR's deployability comes from the connection's label unless an operator pinned
-    /// it, and merged and closed carry distinct timestamps — archiving needs one of them set.
+    /// pin, an open MR is Opened unless an operator pinned its status, and merged and closed carry
+    /// distinct timestamps — archiving needs one of them set.
     /// </summary>
-    private void ApplyStatus(
-        MergeRequest mr, VcsMergeRequest info, VcsCapabilities capabilities, string? readyForDeployLabel)
+    private void ApplyStatus(MergeRequest mr, VcsMergeRequest info)
     {
         // Already normalized by the adapter; a null means the provider reported a state its
         // adapter does not model, which is not something to guess at.
@@ -139,22 +136,11 @@ public class VcsService(
         mr.MergedAt = null;
         mr.ClosedAt = null;
 
-        // Re-derive promotion from the labels the provider reports, exactly as the webhook does.
-        // This is the whole point of a reconcile: a missed "label removed" event otherwise leaves an
-        // MR sitting in the release plan forever, because nothing else ever revisits it — and the
-        // sync would keep confirming the stale status as if it were current.
-        if (capabilities.SupportsMergeRequestLabels)
-        {
-            mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(
-                info.Labels, readyForDeployLabel, mr.IsStatusManual, mr.Status);
-            return;
-        }
-
-        // The provider cannot report labels, so an empty list means "cannot say", not "none".
-        // Demoting on that would drop an MR out of the plan on missing evidence; leave a promoted
-        // status alone and let the webhook own it.
-        if (!mr.IsStatusManual && mr.Status != Core.Enums.MergeRequestStatus.ReadyForDeploy)
-            mr.Status = status.Value;
+        // An open merge request is Opened unless an operator pinned its status. Deploy readiness is a
+        // per-environment rule over signals evaluated at launch, not a status a label promotes it to,
+        // so the reconcile no longer re-derives a status from labels -- the label SET the gate reads is
+        // refreshed separately by the caller.
+        mr.Status = MergeRequestStatusResolver.ResolveOpenStatus(mr.IsStatusManual, mr.Status);
     }
 
     private async Task<Guid?> ResolveTaskIdAsync(Repository repo, string? taskExternalId, CancellationToken ct)

@@ -50,17 +50,9 @@ public class VcsConnection
     [MaxLength(ProviderSettingsBag.MaxJsonLength)]
     public string? ProviderSettingsJson { get; set; }
 
-    /// <summary>
-    /// VCS label that marks a merge request as deployable (README §5). When an opened MR
-    /// carries it, the MR is promoted to <c>ReadyForDeploy</c> — the coarse deployable signal, not
-    /// plan membership, which every non-closed MR already has. Null disables label-driven promotion
-    /// for this connection, leaving only the manual API.
-    /// </summary>
-    [MaxLength(200)]
-    public string? ReadyForDeployLabel { get; set; } = DefaultReadyForDeployLabel;
-
-    /// <summary>The label assumed when a connection does not name one.</summary>
-    public const string DefaultReadyForDeployLabel = "ready-for-deploy";
+    // There is no ready-for-deploy label column any more: a single label promoting a merge request to
+    // a "deployable" status was replaced by per-environment readiness rules over signals (label,
+    // mr-status, pipeline). See ReadinessRule and DeploymentEnvironment.ReadinessRuleId.
 
     // How events arrive (push vs poll) is no longer a column: it is a property of the provider TYPE
     // (gitlab-webhook vs gitlab-poll), and the poll interval a poll type needs lives in the provider

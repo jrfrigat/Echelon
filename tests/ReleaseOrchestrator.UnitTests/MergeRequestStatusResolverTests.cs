@@ -5,14 +5,15 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests;
 
 /// <summary>
-/// The rules that decide whether a merge request enters the release plan. Both the webhook
-/// consumers and the VCS sync route through here — they used to keep separate mappings, so the
-/// same MR got a different status depending on which path imported it.
+/// The rules over the normalized merge-request status. Both the webhook consumers and the VCS sync
+/// route through here — they used to keep separate mappings, so the same MR got a different status
+/// depending on which path imported it.
 /// </summary>
 /// <remarks>
-/// Raw-state mapping used to be tested here too. It was GitLab's dictionary, so it moved to that
-/// adapter along with its cases — see <c>Providers.GitLab.GitLabMergeRequestStateTests</c>. What
-/// remains operates only on the normalized status and the connection's own label.
+/// Raw-state mapping used to be tested here (it moved to the GitLab adapter), and so did a coarse
+/// "ready-for-deploy label" promotion — which is gone: deploy readiness is a per-environment rule over
+/// signals now, not a status a label promotes an MR to. What remains is: terminal detection, and that
+/// an open MR is Opened unless an operator pinned its status.
 /// </remarks>
 public class MergeRequestStatusResolverTests
 {
@@ -24,73 +25,18 @@ public class MergeRequestStatusResolverTests
     public void TerminalStatesAreTheOnesTheVcsDecides(MergeRequestStatus status, bool expected)
         => Assert.Equal(expected, MergeRequestStatusResolver.IsTerminal(status));
 
-    // ---- label-driven promotion (README §5) -----------------------------------
-
     [Fact]
-    public void LabelPromotesToReadyForDeploy()
-        => Assert.Equal(
-            MergeRequestStatus.ReadyForDeploy,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                ["ready-for-deploy"], "ready-for-deploy", isStatusManual: false, MergeRequestStatus.Opened));
-
-    [Fact]
-    public void MissingLabelKeepsTheMrOutOfThePlan()
+    public void AnOpenMergeRequestIsOpened()
         => Assert.Equal(
             MergeRequestStatus.Opened,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                ["bug", "backend"], "ready-for-deploy", isStatusManual: false, MergeRequestStatus.Opened));
+            MergeRequestStatusResolver.ResolveOpenStatus(isStatusManual: false, MergeRequestStatus.Opened));
 
-    [Fact]
-    public void RemovingTheLabelDemotesAnAlreadyPromotedMr()
-        => Assert.Equal(
-            MergeRequestStatus.Opened,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                [], "ready-for-deploy", isStatusManual: false, MergeRequestStatus.ReadyForDeploy));
-
+    /// <summary>An operator's manually pinned status survives a later observation.</summary>
     [Theory]
-    [InlineData("Ready-For-Deploy")]
-    [InlineData("  ready-for-deploy  ")]
-    public void LabelMatchIsCaseInsensitiveAndTrimmed(string label)
+    [InlineData(MergeRequestStatus.ReadyForDeploy)]
+    [InlineData(MergeRequestStatus.Opened)]
+    public void ManualStatusIsPreserved(MergeRequestStatus pinned)
         => Assert.Equal(
-            MergeRequestStatus.ReadyForDeploy,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                [label], "ready-for-deploy", isStatusManual: false, MergeRequestStatus.Opened));
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void NoConfiguredLabelDisablesPromotion(string? configured)
-    {
-        // A connection without a marker label opts out of label-driven promotion entirely;
-        // its MRs reach the plan only through the manual API.
-        Assert.Equal(
-            MergeRequestStatus.Opened,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                ["ready-for-deploy"], configured, isStatusManual: false, MergeRequestStatus.Opened));
-    }
-
-    [Fact]
-    public void ManualPinSurvivesAWebhookWithoutTheLabel()
-    {
-        // An operator promoted this MR by hand; a later push must not silently undo that.
-        Assert.Equal(
-            MergeRequestStatus.ReadyForDeploy,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                [], "ready-for-deploy", isStatusManual: true, MergeRequestStatus.ReadyForDeploy));
-    }
-
-    [Fact]
-    public void ManualPinAlsoSurvivesWhenTheLabelIsPresent()
-        => Assert.Equal(
-            MergeRequestStatus.Opened,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                ["ready-for-deploy"], "ready-for-deploy", isStatusManual: true, MergeRequestStatus.Opened));
-
-    [Fact]
-    public void NullLabelCollectionIsTreatedAsNoLabels()
-        => Assert.Equal(
-            MergeRequestStatus.Opened,
-            MergeRequestStatusResolver.ResolveOpenStatus(
-                null, "ready-for-deploy", isStatusManual: false, MergeRequestStatus.Opened));
+            pinned,
+            MergeRequestStatusResolver.ResolveOpenStatus(isStatusManual: true, pinned));
 }

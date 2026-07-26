@@ -37,8 +37,7 @@ public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Sett
 /// </param>
 public record VcsConnectionDto(
     Guid Id, string Name, string VcsType, string ApiUrl,
-    string? ReadyForDeployLabel = null, string? ConnectionName = null,
-    Dictionary<string, string>? Settings = null);
+    string? ConnectionName = null, Dictionary<string, string>? Settings = null);
 
 /// <param name="Settings">Provider-specific settings; secret ones are absent.</param>
 public record TrackerConnectionDto(

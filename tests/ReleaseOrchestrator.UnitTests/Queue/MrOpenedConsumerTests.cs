@@ -51,8 +51,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Name = "gitlab",
             ProviderType = "gitlab",
-            ApiUrl = "https://gitlab.example.com",
-            ReadyForDeployLabel = ReadyLabel
+            ApiUrl = "https://gitlab.example.com"
         };
         _tracker = new TrackerConnection
         {
@@ -144,14 +143,18 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TheReadyLabelPromotesTheMergeRequest()
+    public async Task AnObservedLabelIsPersistedButDoesNotChangeStatus()
     {
         AddRepository();
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(labels: ReadyLabel);
 
-        Assert.Equal(MergeRequestStatus.ReadyForDeploy, (await FindMrAsync())!.Status);
+        var mr = (await FindMrAsync())!;
+        // No coarse promotion any more: an open MR is Opened. The label is persisted so a readiness
+        // rule can consult it (label:ready-for-deploy) at launch.
+        Assert.Equal(MergeRequestStatus.Opened, mr.Status);
+        Assert.Contains("ready-for-deploy", mr.Labels, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -180,7 +183,9 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await OpenAsync(labels: ReadyLabel);
 
         var mr = Assert.Single(await _db.MergeRequests.ToListAsync(Ct));
-        Assert.Equal(MergeRequestStatus.ReadyForDeploy, mr.Status);
+        Assert.Equal(MergeRequestStatus.Opened, mr.Status);
+        // The second event updated the same row: its label is now captured.
+        Assert.Contains("ready-for-deploy", mr.Labels, StringComparison.Ordinal);
     }
 
     /// <summary>

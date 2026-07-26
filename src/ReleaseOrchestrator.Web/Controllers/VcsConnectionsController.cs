@@ -45,7 +45,7 @@ public class VcsConnectionsController(
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
             .Select(c => new
             {
-                c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel, c.ProviderSettingsJson
+                c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ProviderSettingsJson
             })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
@@ -53,7 +53,7 @@ public class VcsConnectionsController(
         var items = rows
             .Select(c => new
             {
-                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel,
+                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl,
                 Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
             })
             .ToList();
@@ -68,7 +68,7 @@ public class VcsConnectionsController(
             .Where(x => x.Id == id)
             .Select(x => new
             {
-                x.Id, x.Name, x.ProviderType, x.ApiUrl, x.ReadyForDeployLabel, x.ProviderSettingsJson
+                x.Id, x.Name, x.ProviderType, x.ApiUrl, x.ProviderSettingsJson
             })
             .FirstOrDefaultAsync(ct);
 
@@ -76,7 +76,7 @@ public class VcsConnectionsController(
             ? NotFound()
             : Ok(new
             {
-                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl, c.ReadyForDeployLabel,
+                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl,
                 Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
             });
     }
@@ -126,7 +126,6 @@ public class VcsConnectionsController(
             Name = req.Name,
             ProviderType = providerType,
             ApiUrl = req.ApiUrl,
-            ReadyForDeployLabel = req.ReadyForDeployLabel,
             ProviderSettingsJson = settingsJson,
             EncryptedAccessToken = protector.Protect(req.AccessToken)
         };
@@ -168,7 +167,6 @@ public class VcsConnectionsController(
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
-        entity.ReadyForDeployLabel = req.ReadyForDeployLabel;
         entity.ProviderSettingsJson = settingsJson;
 
         // Only replace the token when one is supplied. The UI says "leave blank to keep
@@ -210,11 +208,9 @@ public record CreateVcsConnectionRequest(
     [property: Required] string VcsType,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: Required, MaxLength(500)] string AccessToken,
-    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
     Dictionary<string, string?>? Settings = null);
 
 /// <param name="AccessToken">Blank keeps the stored token.</param>
-/// <param name="ReadyForDeployLabel">Blank disables label-driven promotion for this connection.</param>
 /// <param name="Settings">
 /// Provider-specific settings. A blank value clears the setting, except for one the schema marks
 /// secret, where blank keeps what is stored — the form cannot show a secret back, so an empty box
@@ -224,5 +220,4 @@ public record UpdateVcsConnectionRequest(
     [property: Required, MaxLength(200)] string Name,
     [property: Required, MaxLength(500)] string ApiUrl,
     [property: MaxLength(500)] string? AccessToken = null,
-    [property: MaxLength(200)] string? ReadyForDeployLabel = VcsConnection.DefaultReadyForDeployLabel,
     Dictionary<string, string?>? Settings = null);

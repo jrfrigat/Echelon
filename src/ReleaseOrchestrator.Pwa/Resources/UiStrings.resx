@@ -225,20 +225,11 @@
   <data name="Vcs_New" xml:space="preserve">
     <value>New Connection</value>
   </data>
-  <data name="Vcs_Col_ReadyLabel" xml:space="preserve">
-    <value>Ready-for-deploy label</value>
-  </data>
-  <data name="Vcs_Label_Disabled" xml:space="preserve">
-    <value>disabled</value>
-  </data>
   <data name="Vcs_Dialog_Edit" xml:space="preserve">
     <value>Edit VCS Connection</value>
   </data>
   <data name="Vcs_Dialog_New" xml:space="preserve">
     <value>New VCS Connection</value>
-  </data>
-  <data name="Vcs_ReadyLabel_Helper" xml:space="preserve">
-    <value>Merge requests carrying this {0} label are picked up into the release plan automatically. Leave blank to turn that off — merge requests from this connection will then only enter a plan when added by hand.</value>
   </data>
   <data name="Vcs_Delete_What" xml:space="preserve">
     <value>VCS connection '{0}'</value>

@@ -22,12 +22,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// The decrypted access token. Decryption happens in the factory so that adapters never touch
 /// the data-protection stack, and so a token is never stored on a provider-facing entity in clear.
 /// </param>
-/// <param name="ReadyForDeployLabel">
-/// The label that marks a merge request deployable, or <c>null</c> when this connection does not
-/// use label-driven promotion.
-/// </param>
 public sealed record VcsProviderContext(
     string ConnectionName,
     Uri ApiUrl,
-    string AccessToken,
-    string? ReadyForDeployLabel);
+    string AccessToken);

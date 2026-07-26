@@ -453,24 +453,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Ready-for-deploy label.
-        /// </summary>
-        public static string Vcs_Col_ReadyLabel {
-            get {
-                return ResourceManager.GetString("Vcs_Col_ReadyLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to disabled.
-        /// </summary>
-        public static string Vcs_Label_Disabled {
-            get {
-                return ResourceManager.GetString("Vcs_Label_Disabled", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Edit VCS Connection.
         /// </summary>
         public static string Vcs_Dialog_Edit {
@@ -485,15 +467,6 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         public static string Vcs_Dialog_New {
             get {
                 return ResourceManager.GetString("Vcs_Dialog_New", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Merge requests carrying this {0} label are picked up into the release plan automatically. Leave blank to turn that off — merge requests from this connection will then only enter a plan when added by hand..
-        /// </summary>
-        public static string Vcs_ReadyLabel_Helper {
-            get {
-                return ResourceManager.GetString("Vcs_ReadyLabel_Helper", resourceCulture);
             }
         }
         

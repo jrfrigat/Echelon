@@ -6,19 +6,13 @@ namespace ReleaseOrchestrator.Core.Parsing;
 /// Rules over the normalized <see cref="MergeRequestStatus"/>.
 /// </summary>
 /// <remarks>
-/// <para>
 /// What remains here operates only on values the domain owns. Translating a provider's raw state
 /// string — GitLab's <c>opened</c>/<c>merged</c>/<c>closed</c> — used to live here too, which put
-/// one vendor's vocabulary in the domain; that mapping now belongs to each VCS adapter, which
-/// hands back a <see cref="MergeRequestStatus"/> already resolved.
-/// </para>
-/// <para>
-/// Label-driven promotion stays because it is not a dialect: the label to look for is per
-/// connection (<c>VcsConnection.ReadyForDeployLabel</c>) and the rule applies to whatever list of
-/// labels a provider reports. Both the webhook ingress and the sync path route through here — two
-/// copies of this rule is what let the same merge request end up with different statuses
-/// depending on its arrival path.
-/// </para>
+/// one vendor's vocabulary in the domain; that mapping now belongs to each VCS adapter, which hands
+/// back a <see cref="MergeRequestStatus"/> already resolved. A coarse "ready-for-deploy label"
+/// promotion lived here as well; it is gone — deploy readiness is a per-environment rule over signals
+/// (<see cref="ReadinessSignals"/>, <see cref="ReadinessResolver"/>), not a single label promoting a
+/// merge request to a status.
 /// </remarks>
 public static class MergeRequestStatusResolver
 {
@@ -29,26 +23,17 @@ public static class MergeRequestStatusResolver
         status is MergeRequestStatus.Merged or MergeRequestStatus.Closed;
 
     /// <summary>
-    /// Resolves the status to store for an open merge request (README §5: an MR is deployable
-    /// when it carries the connection's ready-for-deploy label).
+    /// Resolves the status to store for an open merge request: simply <see cref="MergeRequestStatus.Opened"/>,
+    /// unless an operator pinned the status, in which case the pinned status is kept.
     /// </summary>
-    /// <param name="labels">Labels currently on the MR.</param>
-    /// <param name="readyForDeployLabel">The connection's marker label; null disables promotion.</param>
-    /// <param name="isStatusManual">True when an operator pinned the status; label rules defer to them.</param>
-    /// <param name="currentStatus">Status already stored, preserved when an operator pinned it.</param>
+    /// <param name="isStatusManual">True when an operator pinned the status; it is then preserved.</param>
+    /// <param name="currentStatus">The stored status, kept when the status is manual.</param>
     /// <returns>The status to store.</returns>
-    public static MergeRequestStatus ResolveOpenStatus(
-        IEnumerable<string>? labels,
-        string? readyForDeployLabel,
-        bool isStatusManual,
-        MergeRequestStatus currentStatus)
-    {
-        if (isStatusManual) return currentStatus;
-        if (string.IsNullOrWhiteSpace(readyForDeployLabel)) return MergeRequestStatus.Opened;
-
-        var hasLabel = labels?.Any(l =>
-            string.Equals(l?.Trim(), readyForDeployLabel.Trim(), StringComparison.OrdinalIgnoreCase)) ?? false;
-
-        return hasLabel ? MergeRequestStatus.ReadyForDeploy : MergeRequestStatus.Opened;
-    }
+    /// <remarks>
+    /// There is no label promotion any more: an open merge request is Opened, and whether it may deploy
+    /// to a given environment is decided at launch by that environment's readiness rule, not by a
+    /// status. Both ingestion paths route through here so they cannot disagree.
+    /// </remarks>
+    public static MergeRequestStatus ResolveOpenStatus(bool isStatusManual, MergeRequestStatus currentStatus) =>
+        isStatusManual ? currentStatus : MergeRequestStatus.Opened;
 }

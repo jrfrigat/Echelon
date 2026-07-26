@@ -17,8 +17,7 @@ internal static class ConnectionDescriptors
         new(connection.Name,
             connection.ProviderType,
             connection.ApiUrl,
-            connection.EncryptedAccessToken,
-            connection.ReadyForDeployLabel);
+            connection.EncryptedAccessToken);
 
     public static TrackerConnectionDescriptor ToDescriptor(this TrackerConnection connection) =>
         new(connection.Name,

@@ -52,8 +52,7 @@ public sealed class VcsServiceTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Name = "conn",
             ProviderType = "gitlab",
-            ApiUrl = "https://gitlab.example.com",
-            ReadyForDeployLabel = "ready-for-deploy"
+            ApiUrl = "https://gitlab.example.com"
         };
         var repository = new Repository
         {

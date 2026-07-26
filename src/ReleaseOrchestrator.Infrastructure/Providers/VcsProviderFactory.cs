@@ -65,8 +65,7 @@ internal sealed class VcsProviderFactory(
         var context = new VcsProviderContext(
             ConnectionName: connection.Name,
             ApiUrl: apiUrl,
-            AccessToken: protector.Unprotect(connection.EncryptedAccessToken),
-            ReadyForDeployLabel: connection.ReadyForDeployLabel);
+            AccessToken: protector.Unprotect(connection.EncryptedAccessToken));
 
         return await adapter.ConnectAsync(context, ct).ConfigureAwait(false);
     }

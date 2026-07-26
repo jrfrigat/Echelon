@@ -192,8 +192,7 @@ public class DependencyInjectionTests
             Name: "typo-connection",
             ProviderType: "gitab",
             ApiUrl: "https://gitlab.example.com",
-            EncryptedAccessToken: [],
-            ReadyForDeployLabel: null);
+            EncryptedAccessToken: []);
 
         var exception = await Assert.ThrowsAsync<UnknownProviderException>(
             () => factory.CreateAsync(connection, CancellationToken.None));
@@ -220,8 +219,7 @@ public class DependencyInjectionTests
             Name: "gitlab-connection",
             ProviderType: providerType,
             ApiUrl: "https://gitlab.example.com",
-            EncryptedAccessToken: [],
-            ReadyForDeployLabel: null);
+            EncryptedAccessToken: []);
 
         // Only the lookup is under test. Binding goes on to fail on the empty token, which no
         // data-protection stack reachable from a unit test can decrypt — so the assertion is the

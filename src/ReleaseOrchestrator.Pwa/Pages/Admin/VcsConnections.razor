@@ -31,18 +31,6 @@ else if (Result is not null)
                 </Template>
             </FlareColumn>
             <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
-            <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Vcs_Col_ReadyLabel">
-                <Template>
-                    @if (string.IsNullOrWhiteSpace(context.ReadyForDeployLabel))
-                    {
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Vcs_Label_Disabled</FlareText>
-                    }
-                    else
-                    {
-                        <FlareCode>@context.ReadyForDeployLabel</FlareCode>
-                    }
-                </Template>
-            </FlareColumn>
             <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
@@ -79,9 +67,6 @@ else if (Result is not null)
                              Value="_fType" ValueChanged="OnTypeChanged" Items="VcsTypes" />
             }
             <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
-            <FlareTextField Label="@UiStrings.Vcs_Col_ReadyLabel" @bind-Value="_fLabel"
-                            Placeholder="@DefaultReadyForDeployLabel"
-                            HelperText="@string.Format(UiStrings.Vcs_ReadyLabel_Helper, _fType)" />
 
             @* Declared by the selected provider, not by this page. *@
             <ProviderSettingsFields Schema="SelectedSchema" Values="_fSettings" OnChanged="StateHasChanged" />
@@ -97,15 +82,12 @@ else if (Result is not null)
 </FlareDialog>
 
 @code {
-    // Mirrors VcsConnection.DefaultReadyForDeployLabel; the PWA does not reference Core.
-    const string DefaultReadyForDeployLabel = "ready-for-deploy";
-
     // Served by the API, not compiled in: this was a literal ["GitLab"], so a second VCS meant
     // editing the page — and a provider needing its own field had nowhere to declare one.
     List<ProviderTypeDto>? _providers;
 
     Guid? _editId;
-    string _fName = "", _fType = "", _fUrl = "", _fToken = "", _fLabel = "";
+    string _fName = "", _fType = "", _fUrl = "", _fToken = "";
     Dictionary<string, string> _fSettings = [];
 
     IEnumerable<string> VcsTypes => _providers?.Select(p => p.ProviderType) ?? [];
@@ -134,7 +116,6 @@ else if (Result is not null)
     {
         _editId = null;
         _fName = ""; _fUrl = ""; _fToken = "";
-        _fLabel = DefaultReadyForDeployLabel;
         // The first registered provider, so a single-provider install needs no choice made; with
         // several, the operator picks and the fields follow.
         _fType = VcsTypes.FirstOrDefault() ?? "";
@@ -146,7 +127,6 @@ else if (Result is not null)
     {
         _editId = c.Id;
         _fName = c.Name; _fType = c.VcsType; _fUrl = c.ApiUrl;
-        _fLabel = c.ReadyForDeployLabel ?? "";
         _fToken = "";
         _fSettings = ProviderSettingsFields.ForEdit(SelectedSchema, c.Settings);
         ShowModal = true;
@@ -161,14 +141,12 @@ else if (Result is not null)
 
     Task Save() => SaveAsync(async () =>
     {
-        // Blank label means "no label-driven promotion", which the API expresses as null.
-        var label = string.IsNullOrWhiteSpace(_fLabel) ? null : _fLabel.Trim();
         var settings = ProviderSettingsFields.ForSubmit(_fSettings);
 
         if (_editId.HasValue)
-            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, label, settings);
+            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
         else
-            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, label, settings);
+            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
     });
 
     Task Delete(VcsConnectionDto c) =>
