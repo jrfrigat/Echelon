@@ -34,6 +34,10 @@ else
                     <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Redeploy"
                                  @bind-Value="_redeployPolicy" Items="RedeployPolicies"
                                  ItemLabel="@(p => RedeployLabel(p))" Style="min-width:10rem;" />
+                    @* Optional per-repository readiness override; empty falls back to the environment's rule. *@
+                    <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Readiness"
+                                 @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
+                                 Style="min-width:12rem;" />
                 </FlareStack>
 
                 @* Whatever the selected strategy declared, rendered from its schema. *@
@@ -74,6 +78,18 @@ else
                     </FlareChip>
                 </Template>
             </FlareColumn>
+            <FlareColumn TItem="DeployTargetDto" Id="readiness" Title="@UiStrings.Deploy_Col_Readiness">
+                <Template>
+                    @if (context.ReadinessRuleId is null)
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Deploy_Readiness_Default</FlareText>
+                    }
+                    else
+                    {
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
+                    }
+                </Template>
+            </FlareColumn>
             <FlareColumn TItem="DeployTargetDto" Id="actions" Title="" Align="ColumnAlign.End">
                 <Template>
                     <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
@@ -95,6 +111,7 @@ else
     List<EnvironmentDto>? _envs;
     List<ProviderTypeDto>? _strategies;
     List<DeployTargetDto>? _targets;
+    List<ReadinessRuleDto> _rules = [];
     bool _loading = true;
     bool _busy;
 
@@ -102,7 +119,11 @@ else
     Guid? _envId;
     string _strategyKey = "";
     string _redeployPolicy = "Once";
+    string _ruleId = "";   // "" = use the environment's default readiness rule
     Dictionary<string, string> _settings = [];
+
+    // The override selector's options: environment default first, then one per rule (by id).
+    IEnumerable<string> RuleOptions => new[] { "" }.Concat(_rules.Select(r => r.Id.ToString()));
 
     IEnumerable<Guid?> RepoOptions => _repos?.Select(r => (Guid?)r.Id) ?? [];
     IEnumerable<Guid?> EnvOptions => _envs?.Select(e => (Guid?)e.Id) ?? [];
@@ -121,6 +142,7 @@ else
             _repos = (await Api.GetRepositoriesAsync()).Items;
             _envs = await Api.GetEnvironmentsAsync();
             _strategies = await Api.GetDeployStrategiesAsync();
+            _rules = await Api.GetReadinessRulesAsync();
             _targets = await Api.GetDeployTargetsAsync();
         });
         _repoId = RepoOptions.FirstOrDefault();
@@ -142,10 +164,11 @@ else
         var settings = ProviderSettingsFields.ForSubmit(_settings);
         if (await RunAsync(
                 async () => await Api.CreateDeployTargetAsync(
-                    _repoId!.Value, _envId!.Value, _strategyKey, _redeployPolicy, settings),
+                    _repoId!.Value, _envId!.Value, _strategyKey, _redeployPolicy, settings, RuleIdOf(_ruleId)),
                 UiStrings.Deploy_Created))
         {
             _settings = ProviderSettingsFields.Blank(SelectedSchema);
+            _ruleId = "";
             await Reload();
         }
         _busy = false;
@@ -167,4 +190,11 @@ else
         "Inherit" => UiStrings.Deploy_Redeploy_Inherit,
         _ => UiStrings.Deploy_Redeploy_Once
     };
+
+    static Guid? RuleIdOf(string value) => Guid.TryParse(value, out var id) ? id : null;
+
+    string RuleName(string value) =>
+        value == ""
+            ? UiStrings.Deploy_Readiness_Default
+            : _rules.FirstOrDefault(r => r.Id.ToString() == value)?.Name ?? value;
 }

@@ -1107,4 +1107,10 @@
   <data name="RR_Delete_Message" xml:space="preserve">
     <value>Удалить правило готовности «{0}»? Оно не должно быть назначено ни окружению, ни target.</value>
   </data>
+  <data name="Deploy_Col_Readiness" xml:space="preserve">
+    <value>Готовность</value>
+  </data>
+  <data name="Deploy_Readiness_Default" xml:space="preserve">
+    <value>По умолчанию окружения</value>
+  </data>
 </root>

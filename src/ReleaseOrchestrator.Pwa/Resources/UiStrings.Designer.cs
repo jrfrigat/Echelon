@@ -2994,5 +2994,19 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("RR_Delete_Message", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Readiness.</summary>
+        public static string Deploy_Col_Readiness {
+            get {
+                return ResourceManager.GetString("Deploy_Col_Readiness", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Environment default.</summary>
+        public static string Deploy_Readiness_Default {
+            get {
+                return ResourceManager.GetString("Deploy_Readiness_Default", resourceCulture);
+            }
+        }
     }
 }

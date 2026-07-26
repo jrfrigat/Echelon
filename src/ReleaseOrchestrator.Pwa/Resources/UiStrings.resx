@@ -1107,4 +1107,10 @@
   <data name="RR_Delete_Message" xml:space="preserve">
     <value>Delete the readiness rule '{0}'? It must not be assigned to any environment or target.</value>
   </data>
+  <data name="Deploy_Col_Readiness" xml:space="preserve">
+    <value>Readiness</value>
+  </data>
+  <data name="Deploy_Readiness_Default" xml:space="preserve">
+    <value>Environment default</value>
+  </data>
 </root>
