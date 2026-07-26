@@ -102,12 +102,17 @@ set them up in - each depends on the ones above it.
 
 **Why:** the orchestrator has to reach your GitLab to read merge requests and to deploy them.
 
-**How:** add one connection per GitLab instance - name, API URL, access token.
+**How:** add one connection per GitLab instance - name, type, API URL, access token. The **type** is
+`gitlab-webhook` (GitLab pushes events to the orchestrator) or `gitlab-poll` (the orchestrator polls
+on an interval you set).
 
-The **"ready for deploy" label** is the important field. A merge request is not a deploy candidate
-just because it is open; it becomes one when it carries this label. That is the signal your reviewers
-already give, reused as the entry condition into the plan. (A merge request's status can also be
-pinned by hand from the merge-requests screen when you need to override.)
+Each connection carries a **linking rule**: which tracker task an incoming merge request belongs to,
+as a *source* (branch, title or label) and a *pattern*. The connection form previews the task key the
+rule would extract from a sample you type, so you can get it right before saving. (A merge request's
+status can also be pinned by hand from the merge-requests screen when you need to override.)
+
+What makes a merge request *deployable* is no longer a single label - see readiness rules under
+Environments (4.5).
 
 ### 4.2 Tracker connections
 
@@ -157,6 +162,12 @@ merge request can be live on staging and not on prod.
 
 **How:** add each target with a key (`prod`), a display name and an order. Disabled environments
 cannot be launched into.
+
+Each environment can carry a **readiness rule** - what a merge request must show before it may deploy
+*here*. A rule is a set of normalized signals (a label, the merge-request status, or a pipeline
+result) combined as all-of or any-of; you define rules on the **Readiness Rules** page and assign one
+per environment, overriding it per repository where a project needs something different. An
+environment with no rule gates nothing.
 
 ### 4.6 Action handlers
 
@@ -275,11 +286,12 @@ identical plan is recognised as the same rollout.
 
 ## 7. When something is not as expected
 
-**A task is not in the list.** Nothing has imported it. Check the tracker connection, and that a
-merge request's branch actually names the task key (the branch is what links an MR to a task).
+**A task is not in the list.** Nothing has imported it. Check the tracker connection, and that a merge
+request actually matches the connection's linking rule (that rule is what links an MR to a task).
 
-**A merge request is missing from the plan.** Either it does not carry the "ready for deploy" label,
-or its branch does not name the task, or it is closed. Closed merge requests are excluded on purpose.
+**A merge request is missing from the plan.** Either it does not match the linking rule, or the
+readiness rule for the target environment is not satisfied, or it is closed. Closed merge requests are
+excluded on purpose.
 
 **A subtask is not in the parent's plan.** Its parent link comes from the tracker - confirm the
 tracker really shows it as a subtask, then recalculate.

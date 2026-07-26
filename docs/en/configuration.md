@@ -179,18 +179,23 @@ Providers are configured per **connection** (stored in database), not globally. 
 
 ### VCS Provider Settings
 
-Configured when adding a VCS Connection in Admin UI:
+Configured when adding a VCS Connection in the Admin UI. The generic fields:
 - **API URL** — endpoint of GitLab or other VCS
 - **Access Token** — encrypted at rest
-- **Ready-for-Deploy Label** — (optional) label name marking MRs ready for deployment
+
+Everything else is declared by the chosen provider and rendered from its schema, so it varies by type:
+- **Type** — `gitlab-webhook` (GitLab pushes events to the ingress) or `gitlab-poll` (the orchestrator polls; adds a **poll interval**, in seconds)
+- **Linking rule** — how an incoming merge request is matched to its tracker task: a **task-key source** (branch, title or label) and a **pattern** (regex). The connection form previews the key the rule would extract from a sample.
+
+Deploy readiness is **not** a connection field. It is configured per environment (and optionally per repository) as a named **readiness rule** over normalized signals — a label, a merge-request status, or a pipeline result — on the Environments and Readiness Rules admin pages.
 
 ### Tracker Provider Settings
 
-Configured when adding a Tracker Connection:
-- **API URL** — endpoint of Yandex Tracker or other tracker
-- **Access Token** — encrypted at rest
-- **Organization ID** — (Yandex Tracker only) numeric org ID
-- **Provider-Specific Settings** — opaque JSON stored in `TrackerConnection.ProviderSettingsJson`
+Configured when adding a Tracker Connection. Generic fields are **API URL** and **Access Token** (encrypted at rest); the rest are declared by the provider and rendered from its schema:
+- **Organization ID** — (Yandex Tracker) sent as the `X-Org-Id` header
+- **Closed statuses** — (Yandex Tracker) comma-separated status keys that mean a task is done; blank uses the defaults (`closed, cancelled, rejected, resolved`)
+
+Provider settings are stored as JSON in `TrackerConnection.ProviderSettingsJson`; secret settings are encrypted with the same key ring as the access token.
 
 Example:
 ```json
