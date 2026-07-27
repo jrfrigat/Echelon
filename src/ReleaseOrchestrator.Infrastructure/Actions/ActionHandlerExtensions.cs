@@ -25,15 +25,18 @@ public static class ActionHandlerExtensions
 
         services.AddHttpClient<TelegramActionHandler>(c => c.Timeout = HttpTimeout);
         services.AddKeyedScoped<IActionHandler>(TelegramActionHandler.ActionType, (sp, _) => sp.GetRequiredService<TelegramActionHandler>());
-        services.AddSingleton(new ActionHandlerRegistration(TelegramActionHandler.ActionType));
+        services.AddSingleton(new ActionHandlerRegistration(TelegramActionHandler.ActionType,
+            "Sends a Telegram message when a rollout event fires."));
 
         services.AddScoped<TrackerStatusActionHandler>();
         services.AddKeyedScoped<IActionHandler>(TrackerStatusActionHandler.ActionType, (sp, _) => sp.GetRequiredService<TrackerStatusActionHandler>());
-        services.AddSingleton(new ActionHandlerRegistration(TrackerStatusActionHandler.ActionType));
+        services.AddSingleton(new ActionHandlerRegistration(TrackerStatusActionHandler.ActionType,
+            "Moves the tracker issue to a status when a rollout event fires."));
 
         services.AddScoped<TrackerCommentActionHandler>();
         services.AddKeyedScoped<IActionHandler>(TrackerCommentActionHandler.ActionType, (sp, _) => sp.GetRequiredService<TrackerCommentActionHandler>());
-        services.AddSingleton(new ActionHandlerRegistration(TrackerCommentActionHandler.ActionType));
+        services.AddSingleton(new ActionHandlerRegistration(TrackerCommentActionHandler.ActionType,
+            "Posts a comment to the tracker issue when a rollout event fires."));
 
         return services;
     }

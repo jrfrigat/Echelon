@@ -1131,4 +1131,25 @@
   <data name="Vcs_Polled" xml:space="preserve">
     <value>Polled '{0}': {1} open merge request(s).</value>
   </data>
+  <data name="Nav_Plugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="Plugins_Title" xml:space="preserve">
+    <value>Installed plugins</value>
+  </data>
+  <data name="Plugins_Intro" xml:space="preserve">
+    <value>The connectors and handlers this build has wired in.</value>
+  </data>
+  <data name="Plugins_Cat_Vcs" xml:space="preserve">
+    <value>VCS connectors</value>
+  </data>
+  <data name="Plugins_Cat_Tracker" xml:space="preserve">
+    <value>Tracker connectors</value>
+  </data>
+  <data name="Plugins_Cat_Deploy" xml:space="preserve">
+    <value>Deploy strategies</value>
+  </data>
+  <data name="Plugins_Cat_Action" xml:space="preserve">
+    <value>Action handlers</value>
+  </data>
 </root>

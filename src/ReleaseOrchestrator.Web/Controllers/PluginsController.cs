@@ -1,0 +1,46 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ReleaseOrchestrator.Infrastructure.Auth;
+using ReleaseOrchestrator.Providers.Abstractions;
+using ReleaseOrchestrator.Providers.Abstractions.Actions;
+using ReleaseOrchestrator.Providers.Abstractions.Deploy;
+
+namespace ReleaseOrchestrator.Web.Controllers;
+
+/// <summary>
+/// The plugins this build has installed — VCS and tracker connectors, deploy strategies and action
+/// handlers — so an operator can see at a glance what the deployment can talk to and what each does.
+/// </summary>
+/// <remarks>
+/// Read straight from the marker registrations the composition root added, so the list is exactly what
+/// is wired in, and each plugin's own one-line description travels with it. Webhook route details live
+/// in each connector's description rather than being resolved here, because the webhook parsers are
+/// registered in the ingress host, not this API host.
+/// </remarks>
+[ApiController]
+[Route("api/plugins")]
+[Authorize(Policy = Permissions.ReleasePlanView)]
+public class PluginsController(
+    IEnumerable<VcsProviderRegistration> vcs,
+    IEnumerable<TrackerProviderRegistration> trackers,
+    IEnumerable<DeployStrategyRegistration> deployStrategies,
+    IEnumerable<ActionHandlerRegistration> actionHandlers) : ControllerBase
+{
+    /// <summary>Lists every registered plugin with its category, key, ingestion (VCS only) and description.</summary>
+    /// <returns>One entry per installed plugin.</returns>
+    [HttpGet]
+    public IActionResult List() => Ok(
+        vcs.Select(r => new PluginView("vcs", r.ProviderType, r.Ingestion.ToString(), r.Description))
+            .Concat(trackers.Select(r => new PluginView("tracker", r.ProviderType, null, r.Description)))
+            .Concat(deployStrategies.Select(r => new PluginView("deploy", r.Key, null, r.Description)))
+            .Concat(actionHandlers.Select(r => new PluginView("action", r.ActionType, null, r.Description)))
+            .OrderBy(p => p.Category, StringComparer.Ordinal)
+            .ThenBy(p => p.Key, StringComparer.Ordinal));
+
+    /// <summary>One installed plugin.</summary>
+    /// <param name="Category">Which kind: <c>vcs</c>, <c>tracker</c>, <c>deploy</c> or <c>action</c>.</param>
+    /// <param name="Key">The registered key (provider type, strategy key, or action type).</param>
+    /// <param name="Ingestion">"Push" or "Poll" for a VCS connector; null otherwise.</param>
+    /// <param name="Description">The plugin's own one-line description; null when it declared none.</param>
+    public sealed record PluginView(string Category, string Key, string? Ingestion, string? Description);
+}

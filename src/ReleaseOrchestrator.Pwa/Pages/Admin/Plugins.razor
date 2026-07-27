@@ -1,0 +1,79 @@
+@page "/admin/plugins"
+@attribute [Authorize]
+@inherits PageBase
+
+@* An overview, not a CRUD screen: plugins are wired in at build time, so this only shows what is
+   installed and what each does — the connectors, deploy strategies and action handlers this build has. *@
+
+<PageTitle>@UiStrings.Plugins_Title</PageTitle>
+
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Plugins_Title" />
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Plugins_Intro</FlareText>
+
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_plugins is { Count: > 0 })
+    {
+        @foreach (var group in _plugins.GroupBy(p => p.Category).OrderBy(g => CategoryOrder(g.Key)))
+        {
+            <FlareText Typo="TypographyScale.TitleMedium">@CategoryLabel(group.Key)</FlareText>
+            <FlareStack Gap="FlareSpacing.Small">
+                @foreach (var plugin in group)
+                {
+                    <FlareCard Variant="CardVariant.Outlined">
+                        <FlareCardContent>
+                            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center" Wrap>
+                                <FlareCode>@plugin.Key</FlareCode>
+                                @if (!string.IsNullOrEmpty(plugin.Ingestion))
+                                {
+                                    <FlareChip Size="ChipSize.Sm"
+                                               Color="@(plugin.Ingestion == "Poll" ? FlareColor.Secondary : FlareColor.Primary)">
+                                        @plugin.Ingestion
+                                    </FlareChip>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(plugin.Description))
+                                {
+                                    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                        @plugin.Description
+                                    </FlareText>
+                                }
+                            </FlareStack>
+                        </FlareCardContent>
+                    </FlareCard>
+                }
+            </FlareStack>
+        }
+    }
+</FlareStack>
+
+@code {
+    List<PluginDto>? _plugins;
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _plugins = await Api.GetPluginsAsync());
+        _loading = false;
+    }
+
+    // Connectors first (VCS, then tracker), then the things a rollout does with them.
+    static int CategoryOrder(string category) => category switch
+    {
+        "vcs" => 0, "tracker" => 1, "deploy" => 2, "action" => 3, _ => 9
+    };
+
+    static string CategoryLabel(string category) => category switch
+    {
+        "vcs" => UiStrings.Plugins_Cat_Vcs,
+        "tracker" => UiStrings.Plugins_Cat_Tracker,
+        "deploy" => UiStrings.Plugins_Cat_Deploy,
+        "action" => UiStrings.Plugins_Cat_Action,
+        _ => category
+    };
+}

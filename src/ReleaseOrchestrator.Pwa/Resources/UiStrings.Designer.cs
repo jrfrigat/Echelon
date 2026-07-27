@@ -3044,5 +3044,54 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Vcs_Polled", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Plugins.</summary>
+        public static string Nav_Plugins {
+            get {
+                return ResourceManager.GetString("Nav_Plugins", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Installed plugins.</summary>
+        public static string Plugins_Title {
+            get {
+                return ResourceManager.GetString("Plugins_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to The connectors and handlers this build has wired in.</summary>
+        public static string Plugins_Intro {
+            get {
+                return ResourceManager.GetString("Plugins_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to VCS connectors.</summary>
+        public static string Plugins_Cat_Vcs {
+            get {
+                return ResourceManager.GetString("Plugins_Cat_Vcs", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Tracker connectors.</summary>
+        public static string Plugins_Cat_Tracker {
+            get {
+                return ResourceManager.GetString("Plugins_Cat_Tracker", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Deploy strategies.</summary>
+        public static string Plugins_Cat_Deploy {
+            get {
+                return ResourceManager.GetString("Plugins_Cat_Deploy", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Action handlers.</summary>
+        public static string Plugins_Cat_Action {
+            get {
+                return ResourceManager.GetString("Plugins_Cat_Action", resourceCulture);
+            }
+        }
     }
 }

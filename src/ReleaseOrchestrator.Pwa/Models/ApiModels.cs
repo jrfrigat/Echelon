@@ -33,6 +33,11 @@ public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Sett
 /// <summary>How many merge-request observations a manual poll emitted.</summary>
 public record PollResultDto(int Emitted);
 
+/// <summary>An installed plugin (a connector, deploy strategy or action handler) for the admin overview.</summary>
+/// <param name="Category">Which kind: <c>vcs</c>, <c>tracker</c>, <c>deploy</c> or <c>action</c>.</param>
+/// <param name="Ingestion">"Push" or "Poll" for a VCS connector; null otherwise.</param>
+public record PluginDto(string Category, string Key, string? Ingestion, string? Description);
+
 /// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> — this is what carries push vs poll.</param>
 /// <param name="Settings">
 /// Provider-specific settings, keyed as the provider declares them. Secret ones are absent, not

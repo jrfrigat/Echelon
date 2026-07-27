@@ -9,4 +9,5 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Deploy;
 /// validate a strategy key before writing it to a repository.
 /// </remarks>
 /// <param name="Key">The canonical key, as produced by <see cref="ProviderKey.Normalize"/>.</param>
-public sealed record DeployStrategyRegistration(string Key);
+/// <param name="Description">A short, human sentence for the admin "installed plugins" view; null when none.</param>
+public sealed record DeployStrategyRegistration(string Key, string? Description = null);

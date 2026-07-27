@@ -30,7 +30,8 @@ public static class YandexTrackerProviderExtensions
             ProviderType,
             (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
 
-        services.AddSingleton(new TrackerProviderRegistration(ProviderType));
+        services.AddSingleton(new TrackerProviderRegistration(ProviderType,
+            "Yandex.Tracker. Reads issues and statuses; receives task webhooks at /webhooks/tracker/{connection}."));
 
         return services;
     }

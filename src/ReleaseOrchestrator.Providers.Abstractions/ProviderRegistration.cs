@@ -20,11 +20,14 @@ namespace ReleaseOrchestrator.Providers.Abstractions;
 /// </remarks>
 /// <param name="ProviderType">The canonical key, as produced by <see cref="ProviderKey.Normalize"/>.</param>
 /// <param name="Ingestion">How this type's events arrive: pushed by webhook, or pulled by the poller.</param>
-public sealed record VcsProviderRegistration(string ProviderType, IngestionMode Ingestion = IngestionMode.Push);
+/// <param name="Description">A short, human sentence for the admin "installed plugins" view; null when none.</param>
+public sealed record VcsProviderRegistration(
+    string ProviderType, IngestionMode Ingestion = IngestionMode.Push, string? Description = null);
 
 /// <summary>
 /// Declares that a tracker provider is registered under <paramref name="ProviderType"/>.
 /// </summary>
 /// <param name="ProviderType">The canonical key, as produced by <see cref="ProviderKey.Normalize"/>.</param>
+/// <param name="Description">A short, human sentence for the admin "installed plugins" view; null when none.</param>
 /// <seealso cref="VcsProviderRegistration"/>
-public sealed record TrackerProviderRegistration(string ProviderType);
+public sealed record TrackerProviderRegistration(string ProviderType, string? Description = null);

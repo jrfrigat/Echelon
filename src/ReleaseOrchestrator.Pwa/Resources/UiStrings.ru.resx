@@ -1131,4 +1131,25 @@
   <data name="Vcs_Polled" xml:space="preserve">
     <value>Опрошено «{0}»: {1} открытых merge request'ов.</value>
   </data>
+  <data name="Nav_Plugins" xml:space="preserve">
+    <value>Плагины</value>
+  </data>
+  <data name="Plugins_Title" xml:space="preserve">
+    <value>Установленные плагины</value>
+  </data>
+  <data name="Plugins_Intro" xml:space="preserve">
+    <value>Коннекторы и обработчики, включённые в эту сборку.</value>
+  </data>
+  <data name="Plugins_Cat_Vcs" xml:space="preserve">
+    <value>Коннекторы VCS</value>
+  </data>
+  <data name="Plugins_Cat_Tracker" xml:space="preserve">
+    <value>Коннекторы трекеров</value>
+  </data>
+  <data name="Plugins_Cat_Deploy" xml:space="preserve">
+    <value>Стратегии выкатки</value>
+  </data>
+  <data name="Plugins_Cat_Action" xml:space="preserve">
+    <value>Обработчики действий</value>
+  </data>
 </root>

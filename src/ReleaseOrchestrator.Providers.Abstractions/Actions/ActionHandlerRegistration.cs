@@ -9,4 +9,5 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Actions;
 /// types and the API validate a binding's action type before storing it.
 /// </remarks>
 /// <param name="ActionType">The canonical key, as produced by <see cref="ProviderKey.Normalize"/>.</param>
-public sealed record ActionHandlerRegistration(string ActionType);
+/// <param name="Description">A short, human sentence for the admin "installed plugins" view; null when none.</param>
+public sealed record ActionHandlerRegistration(string ActionType, string? Description = null);

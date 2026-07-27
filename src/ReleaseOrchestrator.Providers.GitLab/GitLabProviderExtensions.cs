@@ -63,8 +63,10 @@ public static class GitLabProviderExtensions
             PollProviderType,
             (sp, _) => new GitLabPollProviderAdapter(sp.GetRequiredService<GitLabProviderAdapter>()));
 
-        services.AddSingleton(new VcsProviderRegistration(WebhookProviderType, IngestionMode.Push));
-        services.AddSingleton(new VcsProviderRegistration(PollProviderType, IngestionMode.Poll));
+        services.AddSingleton(new VcsProviderRegistration(WebhookProviderType, IngestionMode.Push,
+            "GitLab (webhook). Receives merge-request events GitLab pushes to /webhooks/gitlab/{connection}."));
+        services.AddSingleton(new VcsProviderRegistration(PollProviderType, IngestionMode.Poll,
+            "GitLab (polling). Lists open merge requests on a timer you set; no webhook endpoint."));
 
         return services;
     }
@@ -88,11 +90,11 @@ public static class GitLabProviderExtensions
 
         services.AddHttpClient<GitLabMergeStrategy>(c => c.Timeout = ApiTimeout);
         services.AddKeyedScoped<IDeployStrategy>(MergeStrategyKey, (sp, _) => sp.GetRequiredService<GitLabMergeStrategy>());
-        services.AddSingleton(new DeployStrategyRegistration(MergeStrategyKey));
+        services.AddSingleton(new DeployStrategyRegistration(MergeStrategyKey, "Deploys by merging the merge request."));
 
         services.AddHttpClient<GitLabPipelineStrategy>(c => c.Timeout = ApiTimeout);
         services.AddKeyedScoped<IDeployStrategy>(PipelineStrategyKey, (sp, _) => sp.GetRequiredService<GitLabPipelineStrategy>());
-        services.AddSingleton(new DeployStrategyRegistration(PipelineStrategyKey));
+        services.AddSingleton(new DeployStrategyRegistration(PipelineStrategyKey, "Deploys by triggering a pipeline."));
 
         return services;
     }

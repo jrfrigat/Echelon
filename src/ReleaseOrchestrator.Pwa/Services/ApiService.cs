@@ -88,6 +88,10 @@ public class ApiService(HttpClient http)
     public Task<PollResultDto> PollVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync<PollResultDto>(() => http.PostAsync($"api/vcs-connections/{id}/poll", content: null, ct), ct);
 
+    /// <summary>The connectors, deploy strategies and action handlers this build has installed.</summary>
+    public Task<List<PluginDto>> GetPluginsAsync(CancellationToken ct = default) =>
+        GetAsync<List<PluginDto>>("api/plugins", ct);
+
     // ---- tracker connections --------------------------------------------------
 
     public Task<PagedResult<TrackerConnectionDto>> GetTrackerConnectionsAsync(int page = 1, CancellationToken ct = default) =>
