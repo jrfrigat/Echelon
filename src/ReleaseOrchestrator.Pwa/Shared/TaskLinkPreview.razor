@@ -24,7 +24,7 @@
             </FlareText>
 
             <FlareTextField Label="@SampleLabel" Placeholder="@SamplePlaceholder"
-                            Value="_sample" ValueChanged="OnSampleChanged" />
+                            Value="@_sample" ValueChanged="OnSampleChanged" />
 
             @{ var key = Extract(); }
             @if (!string.IsNullOrWhiteSpace(_sample))
