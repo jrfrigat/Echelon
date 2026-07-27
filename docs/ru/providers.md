@@ -1,571 +1,297 @@
-# Архитектура поставщиков данных
+# Архитектура поставщиков (провайдеров)
+
+> [English version ->](../en/providers.md) - [← К оглавлению](../README.md)
 
 ## Обзор
 
-**Поставщик** (provider) — это адаптер, нормализующий детали диалекта конкретного провайдера (API endpoints, аутентификация, отображение состояний) в единый интерфейс. ReleaseOrchestrator использует **регистрацию зависимостей с ключами на этапе компиляции**, а не динамическое обнаружение или плагины.
+**Провайдер** — это адаптер, приводящий один диалект (эндпоинты API, аутентификацию, строки статусов)
+к общему порту. ReleaseOrchestrator регистрирует провайдеров через **keyed DI на этапе компиляции**, а
+не через динамическое обнаружение или плагины.
 
-### Почему регистрация на этапе компиляции?
+### Почему compile-time DI?
 
-- **Быстрая ошибка:** Неизвестные типы поставщиков обнаруживаются при инициализации composition root, а не во время клика пользователя
-- **Без отражения:** Нет сканирования с атрибутами, нет динамической загрузки
-- **Явные зависимости:** Сразу видно, какие поставщики доступны
-- **Предсказуемая версионизация:** Версии поставщиков зафиксированы в `.csproj`, не загружаются с nuget.org в runtime
+- **Fail-fast** — неизвестный тип провайдера отлавливается при валидации ввода в API, а не в рантайме.
+- **Без рефлексии** — никакого сканирования атрибутов и загрузки сборок.
+- **Явные зависимости** — корень композиции перечисляет всех зарегистрированных провайдеров.
+- **Фиксированные версии** — версии пакетов провайдеров живут в `Directory.Packages.props`.
 
-### Как это работает
+### Шов
 
-1. Создаёте новый проект поставщика (например, `ReleaseOrchestrator.Providers.GitHub`)
-2. Реализуете интерфейс порта (`IVcsProviderAdapter` или `ITrackerProviderAdapter`)
-3. Объявляете параметры поставщика через `SettingsSchema` (см. [Параметры поставщика](#параметры-поставщика) ниже)
-4. Вызываете `.AddYourProvider()` в `InfrastructureExtensions` — одна строка
-5. Фабрика находит поставщика через keyed DI и резолвит его в runtime
-6. Если ключ не совпадает, `UnknownProviderException` выводит список доступных
+Провайдер разбит на два порта, чтобы привязка к соединению могла делать I/O (определить версию
+self-hosted сервера) и всё же отдавать вызывающему готовый к работе объект:
 
-## Параметры поставщика
+- **`IVcsProviderAdapter` / `ITrackerProviderAdapter`** — keyed по типу провайдера, хранящемуся на
+  соединении. `ConnectAsync(context, ct)` привязывается к одному соединению и возвращает провайдера.
+- **`IVcsProvider` / `ITrackerProvider`** — уже привязаны к соединению; ни один метод не принимает
+  API URL или токен — экземпляр их уже знает.
 
-Поставщики могут объявлять параметры, специфичные для подключения (например, Yandex.Tracker требует org ID, GitLab — нет). Параметры открываются и валидируются через API поставщика:
+Keyed DI умеет резолвить по ключу, но не умеет *перечислять* ключи, поэтому каждый провайдер также
+регистрирует **маркер-запись** (`VcsProviderRegistration` / `TrackerProviderRegistration`). Именно она
+позволяет фабрике ответить «должно быть одним из: gitlab-webhook, gitlab-poll» и позволяет API
+проверить тип провайдера до записи в БД.
 
-**`GET /api/providers/vcs`** — Список зарегистрированных VCS-поставщиков и их схемы параметров:
-```json
-[
-  {
-    "ProviderType": "github",
-    "Settings": []
-  },
-  {
-    "ProviderType": "gitlab",
-    "Settings": []
-  }
-]
+## Настройки провайдера
+
+Соединение несёт настройки провайдера как непрозрачный «мешок» (`ProviderSettingsJson` на сущности).
+Адаптер объявляет, что это за настройки, через `SettingsSchema`, а форма админки строится по этой
+схеме — ничто в UI не называет провайдера или конкретное поле.
+
+```csharp
+public enum ProviderSettingKind { Text = 0, Int = 1, Enum = 2, Regex = 3 }
+
+public sealed record ProviderSettingSchema(
+    string Key,                              // например "orgId"
+    string Label,                            // "Organization ID" (для пользователя)
+    string? Description = null,
+    bool Required = false,                   // без него соединение не сохранить
+    bool Secret = false,                     // write-only: API не возвращает значение
+    ProviderSettingKind Kind = ProviderSettingKind.Text,
+    IReadOnlyList<string>? Options = null,   // для Kind = Enum
+    string? Default = null,                  // предзаполняет форму
+    int? Min = null,                         // для Kind = Int
+    int? Max = null);
 ```
 
-**`GET /api/providers/trackers`** — Список зарегистрированных tracker-поставщиков и их схемы параметров:
+`GET /api/providers/vcs` и `GET /api/providers/trackers` возвращают тип каждого зарегистрированного
+провайдера и его схему. Например, список трекеров:
+
 ```json
 [
   {
-    "ProviderType": "yandex-tracker",
+    "ProviderType": "yandextracker",
     "Settings": [
-      {
-        "Key": "orgId",
-        "Label": "Organization ID",
-        "Description": "Org UUID из URL трекера",
-        "Required": true,
-        "Secret": false
-      }
+      { "Key": "orgId", "Label": "Organization ID", "Required": true, "Kind": "Text" },
+      { "Key": "closedStatuses", "Label": "Closed statuses", "Kind": "Text",
+        "Default": "closed, cancelled, rejected, resolved" }
     ]
   }
 ]
 ```
 
-### Объявление параметров
+Секретные настройки шифруются тем же key ring, что и токен доступа; API не возвращает их значения, а
+пустой секрет при сохранении означает «оставить сохранённый».
 
-Каждый поставщик объявляет свои параметры, реализуя `IVcsProviderFactory.GetSettingsSchema(providerType)` или `ITrackerProviderFactory.GetSettingsSchema(providerType)`. Схема возвращает список записей `ProviderSettingSchema`:
+## Связь merge request'а с задачей
 
-```csharp
-public record ProviderSettingSchema(
-    string Key,                           // e.g. "orgId"
-    string Label,                         // "Organization ID" (для пользователей)
-    string? Description = null,           // "Org UUID из URL трекера..."
-    bool Required = false,                // True если подключение не может быть сохранено без него
-    bool Secret = false                   // True для write-only полей (не возвращаются API)
-);
-```
-
-**Зачем?** Раньше параметры каждого поставщика были hard-coded в форме UI и API контракте. Добавление нового поставщика требовало правок в трёх местах. Теперь UI запрашивает API, чтобы узнать, какие параметры нужны каждому поставщику, и динамически строит форму.
-
-### Хранение параметров
-
-Параметры поставщика хранятся в виде непрозрачного JSON в сущности подключения:
-- `VcsConnection.ProviderSettingsJson` (для VCS-поставщиков)
-- `TrackerConnection.ProviderSettingsJson` (для tracker-поставщиков)
-
-Адаптер поставщика владеет схемой и логикой разбора:
+Метода провайдера, разбирающего ключ задачи из ветки, **нет**. То, как merge request называет свою
+задачу, — соглашение конкретного соединения, а не диалект провайдера, поэтому это пара настроек
+соединения, которую VCS-провайдер объявляет, а применяет **приём (ingestion)**:
 
 ```csharp
-public class YandexTrackerOptions
-{
-    public required string OrgId { get; init; }
-
-    public static YandexTrackerOptions From(TrackerProviderContext context)
-    {
-        var settings = context.ProviderSettings;  // Dict<string, string?>
-        if (!settings.TryGetValue("orgId", out var orgId) 
-            || string.IsNullOrWhiteSpace(orgId))
-        {
-            throw new InvalidOperationException(
-                $"Трекер '{context.ConnectionName}' имеет отсутствующий параметр 'orgId'.");
-        }
-
-        return new YandexTrackerOptions { OrgId = orgId.Trim() };
-    }
-}
+// В Providers.Abstractions.Vcs.TaskLinkSettings
+public const string SourceKey  = "taskKeySource";   // Enum: branch | title | label
+public const string PatternKey = "taskKeyPattern";  // Regex; ключ — группа 1 (или всё совпадение)
+public const string DefaultPattern = @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])";
 ```
 
-API-слой никогда не разбирает параметры поставщика напрямую — он передаёт dict адаптеру, который интерпретирует его.
+VCS-адаптер добавляет `TaskLinkSettings.Schema` в свой `SettingsSchema`, а приём строит правило через
+`TaskLinkSettings.RuleFrom(settings)` и применяет его через
+`Core.Parsing.TaskKeyExtractor.Extract(source, pattern, branch, title, labels)` — одна чистая,
+покрытая тестами, единственная копия правила. Форма подключения показывает извлечённый ключ вживую.
 
-## Добавление VCS-поставщика (например, GitHub)
+## Добавление VCS-провайдера
 
-### Шаг 1: Создание проекта
+Ориентир — существующий провайдер GitLab (`src/ReleaseOrchestrator.Providers.GitLab/`).
 
-```bash
-mkdir src/ReleaseOrchestrator.Providers.GitHub
-cat > src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj <<EOF
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
-  </ItemGroup>
-</Project>
-EOF
-```
-
-Добавьте проект в решение:
-
-```bash
-dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
-```
-
-### Шаг 2: Реализация `IVcsProviderAdapter`
+### 1. Реализуйте порты
 
 ```csharp
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
-namespace ReleaseOrchestrator.Providers.GitHub;
-
-/// <summary>
-/// Подключается к репозиторию GitHub и создаёт экземпляр <see cref="IVcsProvider"/>.
-/// </summary>
-internal class GitHubProviderAdapter : IVcsProviderAdapter
+internal sealed class MyVcsAdapter(HttpClient http) : IVcsProviderAdapter
 {
-    private readonly HttpClient _client;
+    // Поля, которые форма предложит для этой VCS. Правило связи общее;
+    // добавьте рядом всё вендор-специфичное.
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } = TaskLinkSettings.Schema;
 
-    public GitHubProviderAdapter(HttpClient client)
+    public async Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct)
     {
-        _client = client;
-    }
-
-    public async Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct = default)
-    {
-        // Опционально: определить версию сервера и собрать возможности
-        var capabilities = new VcsCapabilities(
-            ServerVersion: null,
-            SupportsMergeRequestLabels: true // GitHub всегда поддерживает labels
-        );
-
-        return new GitHubProvider(_client, context, capabilities);
+        // context = (ConnectionName, ApiUrl, AccessToken). Настроек провайдера здесь НЕТ:
+        // правило связи и интервал опроса читает приём, а не вызовы API.
+        var capabilities = new VcsCapabilities { SupportsMergeRequestLabels = true };
+        return new MyVcsProvider(http, context, capabilities);
     }
 }
 
-internal class GitHubProvider : IVcsProvider
+internal sealed class MyVcsProvider(HttpClient http, VcsProviderContext context, VcsCapabilities caps)
+    : IVcsProvider
 {
-    private readonly HttpClient _client;
-    private readonly VcsProviderContext _context;
+    public VcsCapabilities Capabilities { get; } = caps;
 
-    public GitHubProvider(HttpClient client, VcsProviderContext context, VcsCapabilities capabilities)
-    {
-        _client = client;
-        _context = context;
-        Capabilities = capabilities;
-    }
+    public Task<VcsMergeRequest?> GetMergeRequestAsync(
+        string projectPath, string mergeRequestId, CancellationToken ct) => /* GET одного MR */;
 
-    public VcsCapabilities Capabilities { get; }
-
-    public async Task<VcsMergeRequest?> GetMergeRequestAsync(
-        string repositoryExternalId,
-        string mergeRequestExternalId,
-        CancellationToken ct = default)
-    {
-        // GitHub API: GET /repos/{owner}/{repo}/pulls/{number}
-        var url = $"{_context.ApiUrl}/repos/{repositoryExternalId}/pulls/{mergeRequestExternalId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"token {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return ParsePullRequest(json);
-    }
-
-    public async Task<IEnumerable<VcsMergeRequest>> GetOpenMergeRequestsAsync(
-        string repositoryExternalId,
-        CancellationToken ct = default)
-    {
-        var url = $"{_context.ApiUrl}/repos/{repositoryExternalId}/pulls?state=open&per_page=100";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"token {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return [];
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return ParsePullRequests(json);
-    }
-
-    public string? ParseTaskKeyFromBranch(string branchName)
-    {
-        var match = System.Text.RegularExpressions.Regex.Match(
-            branchName,
-            @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])");
-        return match.Success ? match.Groups[1].Value : null;
-    }
-
-    private static VcsMergeRequest? ParsePullRequest(string json) => null;
-    private static IEnumerable<VcsMergeRequest> ParsePullRequests(string json) => [];
+    public Task<IReadOnlyList<VcsMergeRequest>> GetOpenMergeRequestsAsync(
+        string projectPath, CancellationToken ct) => /* GET открытых MR */;
 }
 ```
 
-### Шаг 3: Расширение для регистрации
+Порт намеренно маленький — это вызовы, которые планировщик делает сегодня. Нормализуйте строки
+статусов вендора в `MergeRequestStatus` и заполняйте `VcsMergeRequest.Labels` /
+`VcsMergeRequest.PipelineStatus`, чтобы гейт готовности мог их прочитать.
+
+### 2. Регистрация — push и/или poll это разные типы
+
+Push или poll — свойство *типа* провайдера, а не переключатель на соединении. VCS, которая и шлёт
+пуши, и опрашивается, регистрирует два типа, каждый со своим `IngestionMode`:
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Providers.Abstractions;
-using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+public const string WebhookProviderType = "myvcs-webhook";
+public const string PollProviderType    = "myvcs-poll";
 
-namespace ReleaseOrchestrator.Providers.GitHub;
-
-public static class GitHubProviderExtensions
+public static IServiceCollection AddMyVcsProvider(this IServiceCollection services)
 {
-    public const string ProviderType = "github";
+    services.AddHttpClient<MyVcsAdapter>(c => c.Timeout = TimeSpan.FromSeconds(30));
 
-    public static IServiceCollection AddGitHubProvider(this IServiceCollection services)
-    {
-        services
-            .AddHttpClient<GitHubProviderAdapter>()
-            .ConfigureHttpClient(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
+    services.AddKeyedScoped<IVcsProviderAdapter>(WebhookProviderType,
+        (sp, _) => new MyVcsWebhookAdapter(sp.GetRequiredService<MyVcsAdapter>()));
+    services.AddKeyedScoped<IVcsProviderAdapter>(PollProviderType,
+        (sp, _) => new MyVcsPollAdapter(sp.GetRequiredService<MyVcsAdapter>()));
 
-        services.AddKeyedScoped<IVcsProviderAdapter, GitHubProviderAdapter>(ProviderType);
-        services.AddSingleton(new VcsProviderRegistration(ProviderType));
-
-        return services;
-    }
-}
-```
-
-### Шаг 4: Регистрация в корне композиции
-
-Откройте `src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs`:
-
-```csharp
-public static IServiceCollection AddInfrastructure(
-    this IServiceCollection services,
-    IConfiguration configuration)
-{
-    // ... существующий код ...
-
-    services.AddGitLabProvider();
-    services.AddGitHubProvider();         // ← Добавьте эту строку
-    services.AddYandexTrackerProvider();
-
+    // Маркер-записи делают типы обнаружимыми и говорят поллеру, какие опрашивать.
+    services.AddSingleton(new VcsProviderRegistration(WebhookProviderType, IngestionMode.Push));
+    services.AddSingleton(new VcsProviderRegistration(PollProviderType, IngestionMode.Poll));
     return services;
 }
 ```
 
-Добавьте ссылку на проект в `Infrastructure.csproj`:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />
-  <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitHub\ReleaseOrchestrator.Providers.GitHub.csproj" />
-</ItemGroup>
-```
-
-## Добавление поставщика трекера (например, Jira)
-
-### Шаг 1: Создание проекта
-
-```bash
-mkdir src/ReleaseOrchestrator.Providers.Jira
-dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
-```
-
-### Шаг 2: Реализация `ITrackerProviderAdapter`
+`SettingsSchema` типа **poll** также объявляет интервал, а поллер читает его обратно:
 
 ```csharp
-using ReleaseOrchestrator.Providers.Abstractions.Tracker;
+// схема poll-адаптера = TaskLinkSettings.Schema + поле интервала
+new ProviderSettingSchema(VcsPollSettings.IntervalKey, "Poll interval (s)",
+    Kind: ProviderSettingKind.Int, Default: "300",
+    Min: VcsPollSettings.MinIntervalSeconds, Max: VcsPollSettings.MaxIntervalSeconds)
+// поллер вызывает VcsPollSettings.IntervalFrom(connection.Settings)
+```
 
-namespace ReleaseOrchestrator.Providers.Jira;
+### 3. Владейте вебхуком (только push-типы)
 
-internal class JiraOptions
+Push-провайдер владеет всем вендор-специфичным в доставке — формой payload, тем, какой заголовок несёт
+секрет, как строка статуса маппится в статус — за портом `IWebhookParser`. Хост держит только маршрут,
+разрешение секрета и отправку получившихся событий на шину.
+
+```csharp
+internal sealed class MyVcsWebhookParser : IWebhookParser
 {
-    public required string ProjectKey { get; init; }
+    public WebhookEndpointDescriptor Descriptor => /* имя эндпоинта + какой заголовок несёт секрет */;
 
-    public static JiraOptions From(TrackerProviderContext context)
+    // Должен fail closed и работать за константное время — см. WebhookSignatures.
+    public bool Authenticate(WebhookRequest request, string? secret) => /* проверка */;
+
+    // Пусто — нормальный ответ (событие, которое провайдер не моделирует); бросайте
+    // WebhookPayloadException только для некорректного тела.
+    public IReadOnlyList<IngestionEvent> Parse(WebhookRequest request) => /* нормализация */;
+}
+
+// Регистрируется отдельно, чтобы ingress-хост получил парсер без HTTP read-адаптера:
+services.AddKeyedSingleton<IWebhookParser, MyVcsWebhookParser>(WebhookProviderType);
+services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
+```
+
+### 4. Стратегии выкатки
+
+Как катится репозиторий — это `IDeployStrategy`, keyed и в паре с `DeployStrategyRegistration` (GitLab
+поставляет `gitlab-merge` и `gitlab-pipeline`). Выбирается на пару `(репозиторий, окружение)` через
+deploy target и объявляет свой `SettingsSchema`.
+
+### 5. Подключение в корне композиции
+
+```csharp
+// src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs (API-хост)
+services.AddGitLabProvider();
+services.AddMyVcsProvider();          // ← read-адаптеры + регистрации
+services.AddMyVcsDeployStrategies();
+
+// ingress-хост вместо этого подключает парсеры
+services.AddGitLabWebhookParser();
+services.AddMyVcsWebhookParser();
+```
+
+Добавьте ссылку на проект в нужный `.csproj` хоста, а версию пакета — в `Directory.Packages.props`
+(никогда `Version` на `PackageReference`).
+
+## Добавление провайдера трекера
+
+Ориентир — `src/ReleaseOrchestrator.Providers.YandexTracker/`. Контекст трекер-адаптера **несёт** мешок
+настроек (`TrackerProviderContext(ConnectionName, ApiUrl, AccessToken, ProviderSettings)`), потому что
+они нужны самому адаптеру (заголовок с org id, какие статусы «завершены»).
+
+```csharp
+public sealed record MyTrackerOptions(string ProjectKey, IReadOnlySet<string> ClosedStatuses)
+{
+    public const string ProjectKeyKey     = "projectKey";
+    public const string ClosedStatusesKey = "closedStatuses";
+
+    public static MyTrackerOptions From(TrackerProviderContext context)
     {
-        var settings = context.ProviderSettings;
-        if (!settings.TryGetValue("projectKey", out var projectKey)
-            || string.IsNullOrWhiteSpace(projectKey))
-        {
+        context.ProviderSettings.TryGetValue(ProjectKeyKey, out var key);
+        if (string.IsNullOrWhiteSpace(key))
             throw new InvalidOperationException(
-                $"Трекер '{context.ConnectionName}' требует параметра 'projectKey'.");
-        }
+                $"Tracker '{context.ConnectionName}' requires '{ProjectKeyKey}'.");
 
-        return new JiraOptions { ProjectKey = projectKey.Trim() };
+        context.ProviderSettings.TryGetValue(ClosedStatusesKey, out var closed);
+        var closedStatuses = string.IsNullOrWhiteSpace(closed)
+            ? new HashSet<string>(["done", "closed"], StringComparer.OrdinalIgnoreCase)
+            : closed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return new MyTrackerOptions(key.Trim(), closedStatuses);
     }
 }
 
-internal class JiraProviderAdapter : ITrackerProviderAdapter
+internal sealed class MyTrackerAdapter(HttpClient http) : ITrackerProviderAdapter
 {
-    private readonly HttpClient _client;
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } =
+    [
+        new(MyTrackerOptions.ProjectKeyKey, "Project key", Required: true),
+        new(MyTrackerOptions.ClosedStatusesKey, "Closed statuses",
+            Description: "Статусы через запятую, означающие, что задача завершена.",
+            Default: "done, closed"),
+    ];
 
-    public JiraProviderAdapter(HttpClient client) => _client = client;
-
-    public async Task<ITrackerProvider> ConnectAsync(
-        TrackerProviderContext context,
-        CancellationToken ct = default)
-    {
-        var options = JiraOptions.From(context);
-        var capabilities = new TrackerCapabilities(ServerVersion: null);
-        return new JiraProvider(_client, context, options, capabilities);
-    }
-}
-
-internal class JiraProvider : ITrackerProvider, ITrackerDependencySource
-{
-    private readonly HttpClient _client;
-    private readonly TrackerProviderContext _context;
-    private readonly JiraOptions _options;
-
-    public JiraProvider(HttpClient client, TrackerProviderContext context, JiraOptions options, TrackerCapabilities capabilities)
-    {
-        _client = client;
-        _context = context;
-        _options = options;
-        Capabilities = capabilities;
-    }
-
-    public TrackerCapabilities Capabilities { get; }
-
-    public async Task<TrackerIssue?> GetIssueAsync(string externalTaskId, CancellationToken ct = default)
-    {
-        var url = $"{_context.ApiUrl}/rest/api/3/issue/{externalTaskId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"Bearer {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        return !response.IsSuccessStatusCode ? null : ParseIssue(await response.Content.ReadAsStringAsync(ct));
-    }
-
-    public bool IsClosedStatus(string? statusKey) =>
-        statusKey?.Equals("Done", StringComparison.OrdinalIgnoreCase) ?? false;
-
-    public async Task<IEnumerable<TrackerIssueDependency>> GetIssueDependenciesAsync(
-        string externalTaskId,
-        CancellationToken ct = default)
-    {
-        var url = $"{_context.ApiUrl}/rest/api/3/issue/{externalTaskId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"Bearer {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        return !response.IsSuccessStatusCode ? [] : ParseIssueDependencies(await response.Content.ReadAsStringAsync(ct));
-    }
-
-    private static TrackerIssue? ParseIssue(string json) => null;
-    private static IEnumerable<TrackerIssueDependency> ParseIssueDependencies(string json) => [];
+    public Task<ITrackerProvider> ConnectAsync(TrackerProviderContext context, CancellationToken ct)
+        => Task.FromResult<ITrackerProvider>(new MyTrackerProvider(http, context, MyTrackerOptions.From(context)));
 }
 ```
 
-### Шаг 3: Расширение для регистрации
+Провайдер реализует `ITrackerProvider` (прочитать задачу, решить, закрыт ли статус) и, **опционально**,
+`ITrackerDependencySource` (связи задач) и `ITrackerMutator` (обратная запись). Опциональные
+возможности вызывающий проверяет через `is`, а не по пустым спискам, которые не отличить от
+«действительно ничего нет»:
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Providers.Abstractions;
-using ReleaseOrchestrator.Providers.Abstractions.Tracker;
-
-namespace ReleaseOrchestrator.Providers.Jira;
-
-public static class JiraProviderExtensions
-{
-    public const string ProviderType = "jira";
-
-    public static IServiceCollection AddJiraProvider(this IServiceCollection services)
-    {
-        services
-            .AddHttpClient<JiraProviderAdapter>()
-            .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
-
-        services.AddKeyedScoped<ITrackerProviderAdapter, JiraProviderAdapter>(ProviderType);
-        services.AddSingleton(new TrackerProviderRegistration(ProviderType));
-
-        return services;
-    }
-}
+public bool IsClosedStatus(string? statusKey) =>
+    statusKey is not null && _options.ClosedStatuses.Contains(statusKey.Trim());
 ```
 
-## Механизм возможностей
-
-Поставщики выражают способности тремя способами:
-
-### 1. Опциональные интерфейсы
-
-Не все трекеры умеют извлекать зависимости. Вместо метода, возвращающего пустой список:
+Именно то, что набор «закрытых» — настройка, а не зашитый список, позволяет одному проекту звать
+терминальное состояние `done`, а другому — `deployed`. Регистрация — keyed адаптер плюс маркер-запись:
 
 ```csharp
-public interface ITrackerDependencySource
-{
-    Task<IEnumerable<TrackerIssueDependency>> GetIssueDependenciesAsync(
-        string externalTaskId,
-        CancellationToken ct = default);
-}
+public const string ProviderType = "mytracker";
+services.AddHttpClient<MyTrackerAdapter>(c => c.Timeout = TimeSpan.FromSeconds(30));
+services.AddKeyedScoped<ITrackerProviderAdapter, MyTrackerAdapter>(ProviderType);
+services.AddSingleton(new TrackerProviderRegistration(ProviderType));
 ```
 
-Потребитель проверяет перед вызовом:
+## Возможности (capabilities)
 
-```csharp
-if (provider is ITrackerDependencySource source)
-{
-    var deps = await source.GetIssueDependenciesAsync(issueKey, ct);
-}
-```
+`VcsCapabilities` / `TrackerCapabilities` отвечают на вопрос «что умеет *это соединение*», строятся один
+раз в `ConnectAsync` и далее только читаются. `VcsCapabilities.SupportsMergeRequestLabels` отличает
+пустой набор меток, означающий «меток нет», от означающего «этот инстанс не умеет сообщать метки» —
+гейт готовности не должен читать «не могу сказать» как «метку сняли». `ServerVersion` определяется один
+раз и кэшируется; `null` — это «неизвестно», а не «старая», и сравнивается численно, а не как текст
+(«16.11» новее «16.9»).
 
-### 2. Возможности по соединению
+## Поток
 
-Связаны с конкретным соединением:
+1. Оператор создаёт соединение в UI и выбирает `ProviderType` (например, `gitlab-webhook`).
+2. API проверяет его по зарегистрированным типам фабрики.
+3. Соединение сохраняется с этим типом и мешком настроек.
+4. Когда оркестратору нужен провайдер, фабрика делает `GetRequiredKeyedService` по типу, вызывает
+   `ConnectAsync` и возвращает привязанный `IVcsProvider` / `ITrackerProvider`.
+5. Доменный код вызывает методы провайдера без URL, токена и знаний о провайдере.
+6. Неизвестный тип даёт `UnknownProviderException` с перечнем зарегистрированных.
 
-```csharp
-public record VcsCapabilities(
-    string? ServerVersion,
-    bool SupportsMergeRequestLabels
-);
-```
-
-Строятся в `ConnectAsync`, только для чтения после этого.
-
-### 3. Кэширование определения версии
-
-Для дорогих API-вызовов кэшируйте по URL:
-
-```csharp
-internal class GitLabVersionDetector
-{
-    private readonly Dictionary<Uri, GitLabServerVersion?> _cache = new();
-
-    public async Task<GitLabServerVersion?> DetectAsync(Uri apiUrl, string token, CancellationToken ct)
-    {
-        if (_cache.TryGetValue(apiUrl, out var cached))
-            return cached;
-
-        try
-        {
-            var response = await _client.GetAsync($"{apiUrl}/api/v4/version", ct);
-            var version = ParseVersion(response);
-            _cache[apiUrl] = version;
-            return version;
-        }
-        catch
-        {
-            _cache[apiUrl] = null; // Консервативно: null = неизвестно
-            return null;
-        }
-    }
-}
-```
-
-## Сравнение версий
-
-Используйте числовое сравнение, не текстовое:
-
-```csharp
-public record GitLabServerVersion(int Major, int Minor, int Patch)
-{
-    public bool IsAtLeast(int major, int minor) =>
-        Major > major || (Major == major && Minor >= minor);
-}
-```
-
-Текстовое сравнение "16.11" < "16.9" даёт неправильный результат.
-
-## Паттерны из существующих поставщиков
-
-### GitLab
-
-**Отображение состояний:**
-
-```csharp
-public static MergeRequestStatus? FromState(string? state) => state?.ToLowerInvariant() switch
-{
-    "opened" => MergeRequestStatus.Opened,
-    "merged" => MergeRequestStatus.Merged,
-    "closed" => MergeRequestStatus.Closed,
-    _ => null,
-};
-```
-
-Неизвестные состояния возвращают `null` — домен их обрабатывает.
-
-**Парсинг веток:** Скомпилированный regex с таймаутом. Паттерн: `PROJ-123`, не `proj123`.
-
-**Переиспользование в вебхуках:** И endpoint, и сервис вызывают `GitLabMergeRequestState.FromState`, гарантируя согласованное интерпретирование.
-
-### Yandex.Tracker
-
-**Правила закрытого статуса:**
-
-```csharp
-private static readonly HashSet<string> ClosedStatuses =
-    new(new[] { "closed", "cancelled", "rejected", "resolved" }, StringComparer.OrdinalIgnoreCase);
-
-public static bool IsClosed(string? statusKey) =>
-    !string.IsNullOrWhiteSpace(statusKey) && ClosedStatuses.Contains(statusKey);
-```
-
-Единый источник истины. До этого две копии списка расходились — одна включала "resolved", другая нет, оставляя задачи в тупике.
-
-**Типизированные опции:**
-
-```csharp
-public static YandexTrackerOptions From(TrackerProviderContext context)
-{
-    var settings = context.ProviderSettings;
-    if (!settings.TryGetValue("orgId", out var orgId) || string.IsNullOrWhiteSpace(orgId))
-        throw new InvalidOperationException($"Трекер '{context.ConnectionName}' требует orgId");
-    return new YandexTrackerOptions { OrgId = orgId.Trim() };
-}
-```
-
-Конфигурация, специфичная для поставщика, живёт в JSON базы; адаптер владеет схемой.
-
-## Тестирование
-
-```csharp
-public class GitLabProviderTests
-{
-    [Theory]
-    [InlineData("PROJ-123", "feature/PROJ-123-add-foo", true)]
-    [InlineData("PROJ-123", "PROJ-123-add-foo", true)]
-    [InlineData("PROJ-123", "myPROJ-123-branch", false)]
-    public void ParsesTaskKeyFromBranch(string expected, string branch, bool shouldMatch)
-    {
-        var provider = new GitLabProvider(new HttpClient(), 
-            new VcsProviderContext("...", new Uri("..."), "token", "ready"),
-            new VcsCapabilities());
-        
-        var result = provider.ParseTaskKeyFromBranch(branch);
-        if (shouldMatch)
-            Assert.Equal(expected, result);
-        else
-            Assert.Null(result);
-    }
-}
-```
-
-## Итоговый поток
-
-1. **Пользователь создаёт соединение** в UI, устанавливает `ProviderType = "github"`
-2. **API проверяет** против `IVcsProviderFactory.AvailableProviders`
-3. **Сущность сохраняется** в БД с `ProviderType = "github"`
-4. **Синхронизация запускается:** вызывает `factory.CreateAsync(connection)` → keyed DI резолвит адаптер → `ConnectAsync` → возвращает `IVcsProvider`
-5. **Домен вызывает** методы поставщика без знания о `apiUrl`, `token`, типе провайдера
-6. **Неизвестный тип:** `UnknownProviderException` называет зарегистрированные поставщики
-
-Ключевое: **Порты не знают о провайдерах; адаптеры знают диалект.** Учётные данные привязаны в фабрике, не передаются в сигнатурах методов.
+**Порты не зависят от провайдера; адаптеры специфичны для диалекта.** Учётные данные и конфигурация
+привязываются в момент connect, а не протаскиваются через каждый метод.

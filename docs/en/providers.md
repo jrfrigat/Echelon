@@ -1,778 +1,298 @@
 # Provider Architecture Guide
 
+> [Русская версия ->](../ru/providers.md) - [← Back to docs](../README.md)
+
 ## Overview
 
-A **provider** is an adapter that normalizes dialect-specific details (API endpoints, authentication, state mappings) into a common interface. ReleaseOrchestrator uses **compile-time keyed dependency injection** to register providers, not dynamic discovery or plugins.
+A **provider** is an adapter that normalizes one dialect (API endpoints, authentication, state
+strings) into a common port. ReleaseOrchestrator registers providers with **compile-time keyed
+dependency injection**, not dynamic discovery or plugins.
 
-### Why Compile-Time DI?
+### Why compile-time DI?
 
-- **Fail-fast:** Unknown provider types are caught at composition root setup, not at runtime when a user clicks a button
-- **No reflection:** No scanning for attribute-marked classes or dynamic loading
-- **Clear dependencies:** See at a glance which providers are available
-- **Predictable versioning:** Provider versions are pinned in `.csproj`, not loaded from nuget.org at runtime
+- **Fail-fast** — an unknown provider type is caught when the API validates the operator's input, not at runtime.
+- **No reflection** — no scanning for attributes, no assembly loading.
+- **Clear dependencies** — the composition root lists every provider it registers.
+- **Pinned versions** — provider package versions live in `Directory.Packages.props`, not resolved at runtime.
 
-### How It Works
+### The seam
 
-1. You create a new provider project (e.g., `ReleaseOrchestrator.Providers.GitHub`)
-2. You implement the port interface (`IVcsProviderAdapter` or `ITrackerProviderAdapter`)
-3. You declare provider-specific settings via `SettingsSchema` (see [Provider Settings](#provider-settings) below)
-4. You call `.AddYourProvider()` in `InfrastructureExtensions` — one line
-5. The factory discovers your provider via keyed DI and resolves it at runtime
-6. If the key doesn't match any registered provider, `UnknownProviderException` lists the available ones
+A provider is split into two ports so that binding to a connection can do I/O (detecting a
+self-hosted server's version) and still hand callers a ready-to-use object:
 
-## Provider Settings
+- **`IVcsProviderAdapter` / `ITrackerProviderAdapter`** — keyed by the provider type stored on the
+  connection. `ConnectAsync(context, ct)` binds to one connection and returns a provider.
+- **`IVcsProvider` / `ITrackerProvider`** — already bound to a connection; no method takes an API URL
+  or token, because the instance already knows them.
 
-Providers can declare connection-specific settings (e.g., Yandex.Tracker requires an org ID, GitLab does not). Settings are discovered and validated via the provider APIs:
+Keyed DI can resolve by key but cannot *enumerate* keys, so each provider also registers a **marker
+record** (`VcsProviderRegistration` / `TrackerProviderRegistration`). That is what lets the factory
+answer "must be one of: gitlab-webhook, gitlab-poll" and lets the API validate a provider type before
+writing it to the database.
 
-**`GET /api/providers/vcs`** — Lists registered VCS providers and their settings schema:
-```json
-[
-  {
-    "ProviderType": "github",
-    "Settings": []
-  },
-  {
-    "ProviderType": "gitlab",
-    "Settings": []
-  }
-]
+## Provider settings
+
+A connection carries provider-specific settings as an opaque bag (`ProviderSettingsJson` on the
+entity). The adapter declares what those settings are through `SettingsSchema`, and the admin form is
+rendered from that schema — nothing in the UI names a provider or a field.
+
+```csharp
+public enum ProviderSettingKind { Text = 0, Int = 1, Enum = 2, Regex = 3 }
+
+public sealed record ProviderSettingSchema(
+    string Key,                              // e.g. "orgId"
+    string Label,                            // "Organization ID" (user-facing)
+    string? Description = null,
+    bool Required = false,                   // connection cannot be saved without it
+    bool Secret = false,                     // write-only: never returned by the API
+    ProviderSettingKind Kind = ProviderSettingKind.Text,
+    IReadOnlyList<string>? Options = null,   // for Kind = Enum
+    string? Default = null,                  // pre-fills the form
+    int? Min = null,                         // for Kind = Int
+    int? Max = null);
 ```
 
-**`GET /api/providers/trackers`** — Lists registered tracker providers and their settings schema:
+`GET /api/providers/vcs` and `GET /api/providers/trackers` return each registered provider's type and
+schema. For example the tracker list:
+
 ```json
 [
   {
-    "ProviderType": "yandex-tracker",
+    "ProviderType": "yandextracker",
     "Settings": [
-      {
-        "Key": "orgId",
-        "Label": "Organization ID",
-        "Description": "The Yandex org UUID (from tracker URL)",
-        "Required": true,
-        "Secret": false
-      }
+      { "Key": "orgId", "Label": "Organization ID", "Required": true, "Kind": "Text" },
+      { "Key": "closedStatuses", "Label": "Closed statuses", "Kind": "Text",
+        "Default": "closed, cancelled, rejected, resolved" }
     ]
   }
 ]
 ```
 
-### Declaring Settings
+Secret settings are encrypted with the same key ring as the access token; the API never returns their
+values, and a blank secret on save means "keep the stored one".
 
-Each provider declares its settings by implementing `IVcsProviderFactory.GetSettingsSchema(providerType)` or `ITrackerProviderFactory.GetSettingsSchema(providerType)`. The schema returns a list of `ProviderSettingSchema` records:
+## Linking a merge request to its task
 
-```csharp
-public record ProviderSettingSchema(
-    string Key,                           // e.g. "orgId"
-    string Label,                         // "Organization ID" (user-facing)
-    string? Description = null,           // "The Yandex org UUID..."
-    bool Required = false,                // True if connection cannot be saved without it
-    bool Secret = false                   // True for write-only fields (not returned by API)
-);
-```
-
-**Why?** Before this, each provider's settings were hard-coded into the UI form and the API contract. Adding a new provider meant editing three places. Now the UI queries the API to discover what settings each provider needs and renders the form dynamically.
-
-### Storing Settings
-
-Provider settings are stored as opaque JSON in the connection entity:
-- `VcsConnection.ProviderSettingsJson` (for VCS providers)
-- `TrackerConnection.ProviderSettingsJson` (for tracker providers)
-
-The provider adapter owns the schema and parsing logic:
+There is **no** provider method that parses a task key from a branch. How a merge request names its
+task is a per-connection convention, not a provider dialect, so it is a pair of connection settings a
+VCS provider declares and the **ingestion** applies:
 
 ```csharp
-public class YandexTrackerOptions
-{
-    public required string OrgId { get; init; }
-
-    public static YandexTrackerOptions From(TrackerProviderContext context)
-    {
-        var settings = context.ProviderSettings;  // Dict<string, string?>
-        if (!settings.TryGetValue("orgId", out var orgId) 
-            || string.IsNullOrWhiteSpace(orgId))
-        {
-            throw new InvalidOperationException(
-                $"Tracker '{context.ConnectionName}' missing 'orgId' setting.");
-        }
-
-        return new YandexTrackerOptions { OrgId = orgId.Trim() };
-    }
-}
+// In Providers.Abstractions.Vcs.TaskLinkSettings
+public const string SourceKey  = "taskKeySource";   // Enum: branch | title | label
+public const string PatternKey = "taskKeyPattern";  // Regex; group 1 (or the whole match) is the key
+public const string DefaultPattern = @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])";
 ```
 
-The Web API layer never parses provider settings directly — it passes the bag to the adapter, which interprets it.
+A VCS adapter adds `TaskLinkSettings.Schema` to its `SettingsSchema`, and the ingestion builds the
+rule with `TaskLinkSettings.RuleFrom(settings)` and applies it through
+`Core.Parsing.TaskKeyExtractor.Extract(source, pattern, branch, title, labels)` — one pure, tested,
+single copy of the rule. The connection form previews the extracted key live.
 
-## Adding a VCS Provider (e.g., GitHub)
+## Adding a VCS provider
 
-### Step 1: Create the Project
+Use the existing GitLab provider (`src/ReleaseOrchestrator.Providers.GitLab/`) as the reference.
 
-```bash
-mkdir src/ReleaseOrchestrator.Providers.GitHub
-cat > src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj <<EOF
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-  </ItemGroup>
-</Project>
-EOF
-```
-
-Add the project to `ReleaseOrchestrator.slnx`:
-
-```bash
-dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.GitHub/ReleaseOrchestrator.Providers.GitHub.csproj
-```
-
-### Step 2: Implement `IVcsProviderAdapter`
+### 1. Implement the ports
 
 ```csharp
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 
-namespace ReleaseOrchestrator.Providers.GitHub;
-
-/// <summary>
-/// Connects to a GitHub repository and creates an <see cref="IVcsProvider"/> instance.
-/// </summary>
-internal class GitHubProviderAdapter : IVcsProviderAdapter
+internal sealed class MyVcsAdapter(HttpClient http) : IVcsProviderAdapter
 {
-    private readonly HttpClient _client;
+    // The fields the form should offer for this VCS. The linking rule is shared;
+    // add anything vendor-specific alongside it.
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } = TaskLinkSettings.Schema;
 
-    public GitHubProviderAdapter(HttpClient client)
+    public async Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct)
     {
-        _client = client;
-    }
-
-    public async Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct = default)
-    {
-        // Optionally: Detect server version and build capabilities
-        var version = await DetectVersionAsync(context.ApiUrl, context.AccessToken, ct);
-        var capabilities = new VcsCapabilities(
-            ServerVersion: version?.ToString(),
-            SupportsMergeRequestLabels: version?.IsAtLeast(3, 15) ?? true
-        );
-
-        return new GitHubProvider(_client, context, capabilities);
-    }
-
-    private static async Task<GitHubServerVersion?> DetectVersionAsync(
-        Uri apiUrl,
-        string accessToken,
-        CancellationToken ct)
-    {
-        try
-        {
-            // GitHub API doesn't expose version like GitLab does, so version detection may be empty
-            // Return null if not supported
-            return null;
-        }
-        catch
-        {
-            return null; // Failure is conservative: unknown version keeps defaults on
-        }
+        // context = (ConnectionName, ApiUrl, AccessToken). Provider-specific settings are NOT here:
+        // the linking rule and poll interval are read by the ingestion, not by API calls.
+        var capabilities = new VcsCapabilities { SupportsMergeRequestLabels = true };
+        return new MyVcsProvider(http, context, capabilities);
     }
 }
 
-/// <summary>
-/// The normalized VCS provider for GitHub.
-/// </summary>
-internal class GitHubProvider : IVcsProvider
+internal sealed class MyVcsProvider(HttpClient http, VcsProviderContext context, VcsCapabilities caps)
+    : IVcsProvider
 {
-    private readonly HttpClient _client;
-    private readonly VcsProviderContext _context;
+    public VcsCapabilities Capabilities { get; } = caps;
 
-    public GitHubProvider(HttpClient client, VcsProviderContext context, VcsCapabilities capabilities)
-    {
-        _client = client;
-        _context = context;
-        Capabilities = capabilities;
-    }
+    public Task<VcsMergeRequest?> GetMergeRequestAsync(
+        string projectPath, string mergeRequestId, CancellationToken ct) => /* GET one MR */;
 
-    public VcsCapabilities Capabilities { get; }
-
-    public async Task<VcsMergeRequest?> GetMergeRequestAsync(
-        string repositoryExternalId,
-        string mergeRequestExternalId,
-        CancellationToken ct = default)
-    {
-        // GitHub API: GET /repos/{owner}/{repo}/pulls/{number}
-        var url = $"{_context.ApiUrl}/repos/{repositoryExternalId}/pulls/{mergeRequestExternalId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"token {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        // Parse JSON, normalize to VcsMergeRequest
-        return ParsePullRequest(json);
-    }
-
-    public async Task<IEnumerable<VcsMergeRequest>> GetOpenMergeRequestsAsync(
-        string repositoryExternalId,
-        CancellationToken ct = default)
-    {
-        // GitHub API: GET /repos/{owner}/{repo}/pulls?state=open
-        var url = $"{_context.ApiUrl}/repos/{repositoryExternalId}/pulls?state=open&per_page=100";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"token {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return [];
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        // Parse JSON array, normalize to VcsMergeRequest[]
-        return ParsePullRequests(json);
-    }
-
-    public string? ParseTaskKeyFromBranch(string branchName)
-    {
-        // Use the same regex as GitLab: (?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])
-        var match = System.Text.RegularExpressions.Regex.Match(
-            branchName,
-            @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])");
-        return match.Success ? match.Groups[1].Value : null;
-    }
-
-    private static VcsMergeRequest? ParsePullRequest(string json)
-    {
-        // Use System.Text.Json or a JSON library to parse and map to VcsMergeRequest
-        // This is a stub—see GitLab provider for a real example
-        return null;
-    }
-
-    private static IEnumerable<VcsMergeRequest> ParsePullRequests(string json)
-    {
-        // Similar parsing for array
-        return [];
-    }
+    public Task<IReadOnlyList<VcsMergeRequest>> GetOpenMergeRequestsAsync(
+        string projectPath, CancellationToken ct) => /* GET open MRs */;
 }
 ```
 
-### Step 3: Create the Registration Extension
+The port is deliberately small — these are the calls the planner makes today. Normalize the vendor's
+state strings to `MergeRequestStatus`, and populate `VcsMergeRequest.Labels` /
+`VcsMergeRequest.PipelineStatus` so the readiness gate can read them.
+
+### 2. Register — push and/or poll are distinct types
+
+Push versus poll is a property of the provider *type*, not a per-connection toggle. A VCS that both
+pushes and can be polled registers two types, each with its `IngestionMode`:
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Providers.Abstractions;
-using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+public const string WebhookProviderType = "myvcs-webhook";
+public const string PollProviderType    = "myvcs-poll";
 
-namespace ReleaseOrchestrator.Providers.GitHub;
-
-public static class GitHubProviderExtensions
+public static IServiceCollection AddMyVcsProvider(this IServiceCollection services)
 {
-    /// <summary>
-    /// The normalized key used in <see cref="VcsConnection.ProviderType"/>.
-    /// </summary>
-    public const string ProviderType = "github";
+    services.AddHttpClient<MyVcsAdapter>(c => c.Timeout = TimeSpan.FromSeconds(30));
 
-    /// <summary>
-    /// Registers the GitHub VCS provider adapter.
-    /// </summary>
-    public static IServiceCollection AddGitHubProvider(this IServiceCollection services)
-    {
-        services
-            .AddHttpClient<GitHubProviderAdapter>()
-            .ConfigureHttpClient(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
+    services.AddKeyedScoped<IVcsProviderAdapter>(WebhookProviderType,
+        (sp, _) => new MyVcsWebhookAdapter(sp.GetRequiredService<MyVcsAdapter>()));
+    services.AddKeyedScoped<IVcsProviderAdapter>(PollProviderType,
+        (sp, _) => new MyVcsPollAdapter(sp.GetRequiredService<MyVcsAdapter>()));
 
-        services.AddKeyedScoped<IVcsProviderAdapter, GitHubProviderAdapter>(ProviderType);
-
-        services.AddSingleton(new VcsProviderRegistration(ProviderType));
-
-        return services;
-    }
-}
-```
-
-### Step 4: Register in Composition Root
-
-Open `src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs` and add:
-
-```csharp
-public static IServiceCollection AddInfrastructure(
-    this IServiceCollection services,
-    IConfiguration configuration)
-{
-    // ... existing code ...
-
-    services.AddGitLabProvider();
-    services.AddGitHubProvider();        // ← Add this line
-    services.AddYandexTrackerProvider();
-
+    // The marker records make the types discoverable and tell the poller which to sweep.
+    services.AddSingleton(new VcsProviderRegistration(WebhookProviderType, IngestionMode.Push));
+    services.AddSingleton(new VcsProviderRegistration(PollProviderType, IngestionMode.Poll));
     return services;
 }
 ```
 
-Add the project reference to `Infrastructure.csproj`:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="..\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
-  <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitLab\ReleaseOrchestrator.Providers.GitLab.csproj" />
-  <ProjectReference Include="..\ReleaseOrchestrator.Providers.GitHub\ReleaseOrchestrator.Providers.GitHub.csproj" />
-  <!-- ... etc -->
-</ItemGroup>
-```
-
-### Step 5: Write Tests
+The **poll** type's `SettingsSchema` also declares the interval, and the poller reads it back:
 
 ```csharp
-using ReleaseOrchestrator.Providers.Abstractions.Vcs;
-using ReleaseOrchestrator.Providers.GitHub;
-using Xunit;
-
-namespace ReleaseOrchestrator.UnitTests.Providers.GitHub;
-
-public class GitHubProviderTests
-{
-    [Fact]
-    public void ParsesTaskKeyFromBranch()
-    {
-        var provider = new GitHubProvider(new HttpClient(), new VcsProviderContext(
-            ConnectionName: "github",
-            ApiUrl: new Uri("https://api.github.com"),
-            AccessToken: "token",
-            ReadyForDeployLabel: "ready-for-deploy"
-        ), new VcsCapabilities());
-
-        Assert.Equal("PROJ-123", provider.ParseTaskKeyFromBranch("feature/PROJ-123-add-feature"));
-        Assert.Null(provider.ParseTaskKeyFromBranch("main"));
-    }
-}
+// poll adapter's schema = TaskLinkSettings.Schema + the interval field
+new ProviderSettingSchema(VcsPollSettings.IntervalKey, "Poll interval (s)",
+    Kind: ProviderSettingKind.Int, Default: "300",
+    Min: VcsPollSettings.MinIntervalSeconds, Max: VcsPollSettings.MaxIntervalSeconds)
+// the poller calls VcsPollSettings.IntervalFrom(connection.Settings)
 ```
 
-## Adding a Tracker Provider (e.g., Jira)
+### 3. Own the webhook (push types only)
 
-### Step 1: Create the Project
-
-```bash
-mkdir src/ReleaseOrchestrator.Providers.Jira
-dotnet sln ReleaseOrchestrator.slnx add src/ReleaseOrchestrator.Providers.Jira/ReleaseOrchestrator.Providers.Jira.csproj
-```
-
-### Step 2: Implement `ITrackerProviderAdapter`
+A push provider owns everything vendor-specific about a delivery — payload shape, which header carries
+the secret, how a state string maps to a status — behind `IWebhookParser`. The host keeps only the
+route, secret resolution, and putting the resulting events on the bus.
 
 ```csharp
-using ReleaseOrchestrator.Providers.Abstractions.Tracker;
-
-namespace ReleaseOrchestrator.Providers.Jira;
-
-/// <summary>
-/// Jira-specific options read from TrackerConnection.ProviderSettingsJson.
-/// </summary>
-internal class JiraOptions
+internal sealed class MyVcsWebhookParser : IWebhookParser
 {
-    public required string ProjectKey { get; init; }
+    public WebhookEndpointDescriptor Descriptor => /* endpoint name + which header carries the secret */;
 
-    public static JiraOptions From(TrackerProviderContext context)
-    {
-        var settings = context.ProviderSettings;
-        if (!settings.TryGetValue("projectKey", out var projectKey)
-            || string.IsNullOrWhiteSpace(projectKey))
-        {
-            throw new InvalidOperationException(
-                $"Tracker connection '{context.ConnectionName}' is missing 'projectKey' setting.");
-        }
+    // Must fail closed and run in constant time — see WebhookSignatures.
+    public bool Authenticate(WebhookRequest request, string? secret) => /* verify */;
 
-        return new JiraOptions { ProjectKey = projectKey.Trim() };
-    }
+    // Empty is a normal answer (an event this provider does not model); throw
+    // WebhookPayloadException only for a malformed body.
+    public IReadOnlyList<IngestionEvent> Parse(WebhookRequest request) => /* normalize */;
 }
 
-internal class JiraProviderAdapter : ITrackerProviderAdapter
-{
-    private readonly HttpClient _client;
-
-    public JiraProviderAdapter(HttpClient client)
-    {
-        _client = client;
-    }
-
-    public async Task<ITrackerProvider> ConnectAsync(
-        TrackerProviderContext context,
-        CancellationToken ct = default)
-    {
-        var options = JiraOptions.From(context);
-        var capabilities = new TrackerCapabilities(ServerVersion: null);
-
-        return new JiraProvider(_client, context, options, capabilities);
-    }
-}
-
-internal class JiraProvider : ITrackerProvider, ITrackerDependencySource
-{
-    private readonly HttpClient _client;
-    private readonly TrackerProviderContext _context;
-    private readonly JiraOptions _options;
-
-    public JiraProvider(
-        HttpClient client,
-        TrackerProviderContext context,
-        JiraOptions options,
-        TrackerCapabilities capabilities)
-    {
-        _client = client;
-        _context = context;
-        _options = options;
-        Capabilities = capabilities;
-    }
-
-    public TrackerCapabilities Capabilities { get; }
-
-    public async Task<TrackerIssue?> GetIssueAsync(
-        string externalTaskId,
-        CancellationToken ct = default)
-    {
-        // Jira API: GET /rest/api/3/issue/{issueIdOrKey}
-        var url = $"{_context.ApiUrl}/rest/api/3/issue/{externalTaskId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"Bearer {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return ParseIssue(json);
-    }
-
-    public bool IsClosedStatus(string? statusKey)
-    {
-        // Jira status keys vary per project; "Done" is common
-        return statusKey?.Equals("Done", StringComparison.OrdinalIgnoreCase) ?? false;
-    }
-
-    public async Task<IEnumerable<TrackerIssueDependency>> GetIssueDependenciesAsync(
-        string externalTaskId,
-        CancellationToken ct = default)
-    {
-        // Jira API: GET /rest/api/3/issue/{issueIdOrKey}?expand=changelog
-        // Parse issue links and filter by link type "depends on"
-        var url = $"{_context.ApiUrl}/rest/api/3/issue/{externalTaskId}?expand=changelog";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"Bearer {_context.AccessToken}");
-
-        var response = await _client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
-            return [];
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return ParseIssueDependencies(json);
-    }
-
-    private static TrackerIssue? ParseIssue(string json)
-    {
-        // Use System.Text.Json to parse and map
-        return null;
-    }
-
-    private static IEnumerable<TrackerIssueDependency> ParseIssueDependencies(string json)
-    {
-        return [];
-    }
-}
+// Registered separately, so the ingress host gets the parser without the HTTP read-adapter:
+services.AddKeyedSingleton<IWebhookParser, MyVcsWebhookParser>(WebhookProviderType);
+services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
 ```
 
-### Step 3: Registration Extension
+### 4. Deploy strategies
+
+How a repository is deployed is an `IDeployStrategy`, keyed and paired with a
+`DeployStrategyRegistration` (GitLab ships `gitlab-merge` and `gitlab-pipeline`). It is chosen per
+`(repository, environment)` deploy target and declares its own `SettingsSchema`.
+
+### 5. Wire into the composition root
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using ReleaseOrchestrator.Providers.Abstractions;
-using ReleaseOrchestrator.Providers.Abstractions.Tracker;
-
-namespace ReleaseOrchestrator.Providers.Jira;
-
-public static class JiraProviderExtensions
-{
-    public const string ProviderType = "jira";
-
-    public static IServiceCollection AddJiraProvider(this IServiceCollection services)
-    {
-        services
-            .AddHttpClient<JiraProviderAdapter>()
-            .ConfigureHttpClient(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
-
-        services.AddKeyedScoped<ITrackerProviderAdapter, JiraProviderAdapter>(ProviderType);
-        services.AddSingleton(new TrackerProviderRegistration(ProviderType));
-
-        return services;
-    }
-}
-```
-
-### Step 4: Register in Composition Root
-
-In `InfrastructureExtensions.cs`:
-
-```csharp
+// src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs (API host)
 services.AddGitLabProvider();
-services.AddYandexTrackerProvider();
-services.AddJiraProvider();  // ← Add this line
+services.AddMyVcsProvider();          // ← the read-adapters + registrations
+services.AddMyVcsDeployStrategies();
+
+// ingress host wires the parsers instead
+services.AddGitLabWebhookParser();
+services.AddMyVcsWebhookParser();
 ```
 
-## Capabilities Mechanism
+Add the project reference to the relevant host `.csproj`, and the package version to
+`Directory.Packages.props` (never a `Version` on the `PackageReference`).
 
-Providers expose capabilities in three ways:
+## Adding a tracker provider
 
-### 1. Optional Interfaces (is-check pattern)
-
-Some trackers have issue links, others don't. Instead of a method that returns an empty list, implement the optional interface:
-
-```csharp
-public interface ITrackerDependencySource
-{
-    Task<IEnumerable<TrackerIssueDependency>> GetIssueDependenciesAsync(
-        string externalTaskId,
-        CancellationToken ct = default);
-}
-```
-
-Consumer checks before calling:
+Use `src/ReleaseOrchestrator.Providers.YandexTracker/` as the reference. A tracker adapter's context
+**does** carry the settings bag (`TrackerProviderContext(ConnectionName, ApiUrl, AccessToken,
+ProviderSettings)`), because the tracker adapter itself needs them (an org id header, which statuses
+are "done").
 
 ```csharp
-if (provider is ITrackerDependencySource source)
+public sealed record MyTrackerOptions(string ProjectKey, IReadOnlySet<string> ClosedStatuses)
 {
-    var deps = await source.GetIssueDependenciesAsync(issueKey, ct);
-    // Use deps
-}
-else
-{
-    // No dependency support
-}
-```
+    public const string ProjectKeyKey     = "projectKey";
+    public const string ClosedStatusesKey = "closedStatuses";
 
-### 2. Per-Connection Capabilities Record
-
-Capabilities tied to a specific connection instance:
-
-```csharp
-public record VcsCapabilities(
-    string? ServerVersion,
-    bool SupportsMergeRequestLabels
-);
-```
-
-Built at `ConnectAsync` time, read-only thereafter. Example: GitLab 9.0+ supports labels; earlier versions don't.
-
-### 3. Version Detection with Caching
-
-For expensive API calls, cache per URL (singleton):
-
-```csharp
-internal class GitLabVersionDetector
-{
-    private readonly Dictionary<Uri, GitLabServerVersion?> _cache = new();
-
-    public async Task<GitLabServerVersion?> DetectAsync(Uri apiUrl, string token, CancellationToken ct)
+    public static MyTrackerOptions From(TrackerProviderContext context)
     {
-        if (_cache.TryGetValue(apiUrl, out var cached))
-            return cached;
+        context.ProviderSettings.TryGetValue(ProjectKeyKey, out var key);
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException(
+                $"Tracker '{context.ConnectionName}' requires '{ProjectKeyKey}'.");
 
-        try
-        {
-            var response = await _client.GetAsync($"{apiUrl}/api/v4/version", ct);
-            var version = ParseVersion(response);
-            _cache[apiUrl] = version;
-            return version;
-        }
-        catch
-        {
-            _cache[apiUrl] = null; // Conservative: null = unknown, keep defaults on
-            return null;
-        }
+        context.ProviderSettings.TryGetValue(ClosedStatusesKey, out var closed);
+        var closedStatuses = string.IsNullOrWhiteSpace(closed)
+            ? new HashSet<string>(["done", "closed"], StringComparer.OrdinalIgnoreCase)
+            : closed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return new MyTrackerOptions(key.Trim(), closedStatuses);
     }
 }
-```
 
-Register as singleton; adapter calls it once per connect.
-
-## Version Ordering
-
-If your API reports a version, use numeric comparison, not text comparison:
-
-```csharp
-public record GitLabServerVersion(int Major, int Minor, int Patch)
+internal sealed class MyTrackerAdapter(HttpClient http) : ITrackerProviderAdapter
 {
-    public bool IsAtLeast(int major, int minor) =>
-        Major > major || (Major == major && Minor >= minor);
+    public IReadOnlyList<ProviderSettingSchema> SettingsSchema { get; } =
+    [
+        new(MyTrackerOptions.ProjectKeyKey, "Project key", Required: true),
+        new(MyTrackerOptions.ClosedStatusesKey, "Closed statuses",
+            Description: "Comma-separated status keys that mean a task is done.",
+            Default: "done, closed"),
+    ];
 
-    public static bool operator <(GitLabServerVersion a, GitLabServerVersion b) =>
-        a.Major < b.Major || (a.Major == b.Major && a.Minor < b.Minor)
-        || (a.Major == b.Major && a.Minor == b.Minor && a.Patch < b.Patch);
+    public Task<ITrackerProvider> ConnectAsync(TrackerProviderContext context, CancellationToken ct)
+        => Task.FromResult<ITrackerProvider>(new MyTrackerProvider(http, context, MyTrackerOptions.From(context)));
 }
 ```
 
-Text comparison of "16.11" < "16.9" gives the wrong answer.
-
-## Patterns from Existing Providers
-
-### GitLab (`src/ReleaseOrchestrator.Providers.GitLab/`)
-
-**State Mapping:**
+The provider implements `ITrackerProvider` (read an issue, decide whether a status is closed) and,
+**optionally**, `ITrackerDependencySource` (issue links) and `ITrackerMutator` (write back). Optional
+capabilities are `is`-checked by callers rather than returning empty lists that cannot be
+distinguished from "genuinely none":
 
 ```csharp
-public static MergeRequestStatus? FromState(string? state) => state?.ToLowerInvariant() switch
-{
-    "opened" => MergeRequestStatus.Opened,
-    "merged" => MergeRequestStatus.Merged,
-    "closed" => MergeRequestStatus.Closed,
-    _ => null,
-};
+public bool IsClosedStatus(string? statusKey) =>
+    statusKey is not null && _options.ClosedStatuses.Contains(statusKey.Trim());
 ```
 
-GitLab returns strings; normalize to domain enum. Unknown states return `null` (handled by domain, not adapter).
-
-**Branch Parsing:**
+Making the closed set a setting (not a hardcoded list) is what lets one project call the terminal
+state `done` and another `deployed`. Register with a keyed adapter plus the marker record:
 
 ```csharp
-private static readonly System.Text.RegularExpressions.Regex BranchTaskRegex =
-    new(@"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])", RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
-
-public static string? ParseTaskId(string branchName)
-{
-    var match = BranchTaskRegex.Match(branchName);
-    return match.Success ? match.Groups[1].Value : null;
-}
+public const string ProviderType = "mytracker";
+services.AddHttpClient<MyTrackerAdapter>(c => c.Timeout = TimeSpan.FromSeconds(30));
+services.AddKeyedScoped<ITrackerProviderAdapter, MyTrackerAdapter>(ProviderType);
+services.AddSingleton(new TrackerProviderRegistration(ProviderType));
 ```
 
-Compiled regex with timeout. Pattern: `PROJ-123`, not `proj123` (case-sensitive key).
+## Capabilities
 
-**Reusable by Webhook:** Both `GitLabWebhookEndpoints` and `VcsService.SyncMergeRequestAsync` call `GitLabMergeRequestState.FromState`, ensuring they never disagree on state interpretation.
+`VcsCapabilities` / `TrackerCapabilities` answer "what can *this connection* do", built once at
+`ConnectAsync` and read-only after. `VcsCapabilities.SupportsMergeRequestLabels` distinguishes an
+empty label set that means "no labels" from one that means "this install cannot report labels" — the
+readiness gate must never read "cannot say" as "the label was removed". `ServerVersion` is detected
+once and cached; `null` means "unknown", never "old", and compares numerically, never as text
+("16.11" is newer than "16.9").
 
-### Yandex.Tracker (`src/ReleaseOrchestrator.Providers.YandexTracker/`)
+## The flow
 
-**Closed Status Rules:**
+1. An operator creates a connection in the UI and picks a `ProviderType` (e.g. `gitlab-webhook`).
+2. The API validates it against the factory's registered types.
+3. The connection is saved with that type and its settings bag.
+4. When the orchestrator needs the provider, the factory does `GetRequiredKeyedService` by type,
+   calls `ConnectAsync`, and returns a bound `IVcsProvider` / `ITrackerProvider`.
+5. Domain code calls provider methods with no URL, token, or provider knowledge.
+6. An unknown type yields `UnknownProviderException`, naming the registered ones.
 
-```csharp
-private static readonly HashSet<string> ClosedStatuses =
-    new(new[] { "closed", "cancelled", "rejected", "resolved" }, StringComparer.OrdinalIgnoreCase);
-
-public static bool IsClosed(string? statusKey) =>
-    !string.IsNullOrWhiteSpace(statusKey) && ClosedStatuses.Contains(statusKey);
-```
-
-Single source of truth for what "closed" means. Before, two copies of this list disagreed on "resolved" — one included it, one didn't, leaving tasks stuck.
-
-**Typed Options:**
-
-```csharp
-public class YandexTrackerOptions
-{
-    public required string OrgId { get; init; }
-
-    public static YandexTrackerOptions From(TrackerProviderContext context)
-    {
-        var settings = context.ProviderSettings; // Dict<string, string?>
-        if (!settings.TryGetValue("orgId", out var orgId) || string.IsNullOrWhiteSpace(orgId))
-            throw new InvalidOperationException($"Tracker '{context.ConnectionName}' missing orgId");
-        return new YandexTrackerOptions { OrgId = orgId.Trim() };
-    }
-}
-```
-
-Provider-specific config lives in opaque JSON in the database; adapter owns the schema. Web controller reads/writes `OrgId` via helpers, doesn't parse JSON itself.
-
-**Dependency Link Type:**
-
-```csharp
-public async Task<IEnumerable<TrackerIssueDependency>> GetIssueDependenciesAsync(
-    string externalTaskId,
-    CancellationToken ct = default)
-{
-    // Fetch issue, extract links where type.id == "depends" (i.e., this issue depends on others)
-    var issue = await GetIssueAsync(externalTaskId, ct);
-    if (issue?.Links == null)
-        return [];
-
-    return issue.Links
-        .Where(link => link.Type.Id == "depends")
-        .Select(link => new TrackerIssueDependency(
-            IssueKey: externalTaskId,
-            DependsOnKey: link.Object.Key))
-        .ToList();
-}
-```
-
-Direction matters: `"depends"` means the issue **depends on** the linked issue.
-
-## Testing Providers
-
-### Unit Test Example
-
-```csharp
-public class GitLabProviderTests
-{
-    private readonly GitLabProvider _provider;
-
-    public GitLabProviderTests()
-    {
-        var client = new HttpClient();
-        var context = new VcsProviderContext(
-            ConnectionName: "test-gitlab",
-            ApiUrl: new Uri("https://gitlab.example.com"),
-            AccessToken: "test-token",
-            ReadyForDeployLabel: "ready-for-deploy");
-        var capabilities = new VcsCapabilities(ServerVersion: "16.11.0", SupportsMergeRequestLabels: true);
-
-        _provider = new GitLabProvider(client, context, capabilities);
-    }
-
-    [Theory]
-    [InlineData("PROJ-123", "feature/PROJ-123-add-foo", true)]
-    [InlineData("PROJ-123", "PROJ-123-add-foo", true)]
-    [InlineData("PROJ-123", "myPROJ-123-branch", false)] // No word boundary before PROJ
-    public void ParsesTaskKeyFromBranch(string expected, string branch, bool shouldMatch)
-    {
-        var result = _provider.ParseTaskKeyFromBranch(branch);
-        if (shouldMatch)
-            Assert.Equal(expected, result);
-        else
-            Assert.Null(result);
-    }
-}
-```
-
-Mock HTTP responses if testing API integration:
-
-```csharp
-var mockHandler = new Mock<HttpMessageHandler>();
-mockHandler
-    .Protected()
-    .Setup<Task<HttpResponseMessage>>(
-        "SendAsync",
-        ItExpr.IsAny<HttpRequestMessage>(),
-        ItExpr.IsAny<CancellationToken>())
-    .ReturnsAsync(new HttpResponseMessage
-    {
-        StatusCode = System.Net.HttpStatusCode.OK,
-        Content = new StringContent(@"{ ... }")
-    });
-
-var client = new HttpClient(mockHandler.Object);
-```
-
-## Summary: The Flow
-
-1. **User creates a connection** in the UI, sets `ProviderType = "github"`
-2. **API validates** against `IVcsProviderFactory.AvailableProviders` (filled from registrations)
-3. **Entity saved** to database with `ProviderType = "github"`
-4. **Sync runs:** calls `factory.CreateAsync(connection)` → keyed DI resolves `GitHubProviderAdapter` → calls `ConnectAsync` → returns `IVcsProvider`
-5. **Domain logic calls** provider methods: `GetMergeRequestAsync(repo.ExternalId, mr.Id)` — no `apiUrl`, no token, no provider knowledge
-6. **If unknown type:** `UnknownProviderException` names registered providers and suggests fixing the typo
-
-The key insight: **Ports are provider-agnostic; adapters are dialect-specific.** Credentials and config are bound at factory time, not threaded through method signatures.
+**Ports are provider-agnostic; adapters are dialect-specific.** Credentials and config are bound at
+connect time, not threaded through every method.
