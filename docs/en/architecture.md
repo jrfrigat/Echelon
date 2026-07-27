@@ -6,394 +6,201 @@
 
 ## Overview
 
-Release Orchestrator transforms a set of merge requests into an ordered, staged deployment plan. The plan is built from two independent sources:
+Release Orchestrator plans and executes deployments **per task**. There is no single global release
+plan and no "stacks": for each task imported from a tracker, it builds the order in which that task's
+repositories deploy, then executes that order as a **rollout** into an environment, holding each step
+at a **readiness gate** until the merge request is deployable.
 
-- **Task dependencies** from a tracker (if TASK-2 depends on TASK-1, then MR for TASK-1 deploys first)
-- **Stack dependencies** between repositories (e.g., DB → Backend → Frontend)
+Two inputs shape the order:
 
-The system combines these into a **directed acyclic graph** (DAG), resolves conflicts by dropping edges, and uses **Kahn's topological sort** to produce deployment stages. Each stage contains MRs that can deploy in parallel.
+- **Repository ordering** — global rules between repositories (`A` deploys after `B`), each **Hard**
+  (a real constraint) or **Soft** (a preference that yields first on conflict).
+- **Task hierarchy** — parent/predecessor links from the tracker.
 
-**Core insight:** The product is "input + edges + topological sort". Everything else — manual editing, YAML import/export, permissions, archival — serves these three things.
-
----
-
-## Architecture Layers
-
-The system follows a modular monolith pattern: one service with strict layering to allow future separation.
-
-```
-┌─────────────────────────────────────────┐
-│  PWA (Blazor WebAssembly)               │  Frontend
-├─────────────────────────────────────────┤
-│  Web / Ingress.Webhooks                 │  HTTP boundary
-├─────────────────────────────────────────┤
-│  Application Layer                      │  Business logic
-│  - VCS Service                          │
-│  - Tracker Service                      │
-│  - Release Planner                      │
-│  - Authorization                        │
-├─────────────────────────────────────────┤
-│  Providers Layer                        │  Abstraction boundaries
-│  - IVcsProviderAdapter                  │
-│  - ITrackerProviderAdapter              │
-├─────────────────────────────────────────┤
-│  Infrastructure Layer                   │  External integration
-│  - EF Core DbContext                    │
-│  - Provider Implementations (GitLab,    │
-│    Yandex Tracker)                      │
-│  - RabbitMQ Consumers                   │
-│  - Archive Service                      │
-│  - Redis Cache                          │
-├─────────────────────────────────────────┤
-│  Core Domain Layer                      │  Entities (no I/O)
-│  - TaskItem, MergeRequest, ReleasePlan  │
-│  - ReleasePlanGraph (pure algorithm)    │
-└─────────────────────────────────────────┘
-```
-
-### Key Principle: Dependency Direction
-
-Dependencies point **inward only**. The Core layer has no external dependencies beyond the C# standard library. Each outer layer only depends on the layers inside it:
-
-- **Web** depends on Application, Infrastructure, Core
-- **Infrastructure** depends on Application, Core  
-- **Application** depends on Core
-- **Core** depends on nothing
-
-This allows extracting the Release Planning service to a separate microservice (via message queue) without coupling.
+These become a directed acyclic graph; cycles are resolved by dropping the lowest-priority edges
+(soft first) and logged, and a topological sort produces **waves** — repositories that may deploy in
+parallel.
 
 ---
 
-## Component Architecture
+## Architecture layers
 
-### 1. Webhook Ingress (`Ingress.Webhooks`)
+Onion / ports-and-adapters. Dependencies point **inward only**.
 
-**Role:** Receive external events and publish normalized messages.
+```
+Core                enums, pure parsing (task-key extraction, readiness signals); zero dependencies
+  ← Application     ports, message contracts, the planning algorithm — no EF
+      ← Infrastructure          EF models, DbContext, adapters (Rebus, Redis, DataProtection)
+      ← Providers.Abstractions  provider ports + normalized models
+          ← Providers.GitLab / Providers.YandexTracker
+              ← Web (composition root, API) / Ingress.Webhooks
+```
 
-**Technology:** ASP.NET Core Minimal API, .NET 10
-
-**Responsibilities:**
-- Receive webhooks from GitLab, Yandex Tracker, and other VCS/tracker systems
-- Validate each webhook's signature (token-based)
-- Normalize provider-specific payloads into universal messages:
-  ```csharp
-  public record MrOpened(Guid MrId, string ExternalMrId, Guid RepositoryId, 
-                         string SourceBranch, string TaskExternalId);
-  public record TaskCreated(Guid TaskId, string ExternalId, string Title);
-  public record TaskStatusChanged(string ExternalId, string NewStatus);
-  ```
-- Publish messages to RabbitMQ
-- Return `200 OK` immediately (do not block on business processing)
-
-**Scaling:** Stateless, horizontally scalable behind a reverse proxy.
-
-**Note:** Event buffering is **not implemented**. If RabbitMQ is down, the webhook returns 503 Service Unavailable with a Retry-After header. This signals senders that the failure is temporary and the webhook should be retried, preventing permanent event loss. Recommendations in [Configuration](configuration.md).
-
-### 2. Core Service
-
-**Single service** with modular internals: no separate microservices per provider or function. Reasoning:
-
-- **Transactional consistency:** Building a plan requires simultaneously accessing task dependencies, MR states, and stack definitions. Distributed queries would complicate this.
-- **Tight coupling by design:** The graph algorithm is pure (no I/O), but reading data and writing the plan is a tight loop.
-- **Future flexibility:** The Release Planning module can be extracted to a separate service consuming messages from RabbitMQ, without changing the architecture.
-
-#### 2.1 Application Layer
-
-**VCS Service** (`Application/Vcs`): Orchestrates repository, MR, and VCS connection management. Not tied to a specific provider.
-
-**Tracker Service** (`Application/Tracker`): Loads task definitions and dependencies from tracker(s). Triggers task sync via the message queue.
-
-**Release Planner** (`Application/ReleasePlanning`): 
-- Reads current MRs, tasks, and stack definitions
-- Builds a graph using `ReleasePlanGraph` (pure algorithm, no EF)
-- Resolves cycles by edge dropping (priority: Soft → Task → Hard dependencies)
-- Runs Kahn's topological sort to produce stages
-- Saves plan and conflict log
-
-**Authorization**: Claim-based permissions (no roles). Claims stored in `PermissionClaims` table, mapped to AD/LDAP groups or individual user overrides.
-
-#### 2.2 Infrastructure Layer
-
-**Persistence** (`Infrastructure/Persistence`):
-- `AppDbContext`: Operational data (current MRs, tasks, plans, connections)
-- `ArchiveDbContext`: Historical data (closed tasks/MRs, plans older than 90 days)
-- EF Core with SQL Server, retry-on-transient-failure enabled
-- Migrations in separate assembly `ReleaseOrchestrator.Migrations.MsSql`
-
-**Providers** (`Infrastructure/Providers`):
-- `VcsProviderFactory`: Resolves connection type to adapter instance (keyed DI)
-- `TrackerProviderFactory`: Same pattern for trackers
-- Providers are registered at composition time (no plugin discovery)
-
-**Queue** (`Infrastructure/Queue`):
-- Rebus as the message bus
-- Consumers for: MR opened/status changed, task created/status changed, task sync, plan recalculation
-- Coalescing: redundant recalculation requests are deduplicated before `SaveChangesAsync`
-
-**Archive Service** (`Infrastructure/Archive`):
-- Runs as a hosted service (background worker in every pod)
-- Moves tasks/MRs closed >90 days ago to archive DB
-- Idempotent: runs in every replica (no leader election)
-- Phase order: old plans → old MRs → old tasks (foreign key safety)
-
-### 3. Release Plan Graph Algorithm
-
-**File:** `Application/ReleasePlanning/ReleasePlanGraph.cs`
-
-**Principle:** Pure algorithm, no EF Core, no I/O. 100% testable.
-
-**Inputs:**
-- Merge requests with status (Opened, ReadyForDeploy, etc.)
-- Tasks with closure status
-- Task dependencies (DependentTaskId → DependsOnTaskId)
-- Stack dependencies (FromStackId → ToStackId, Hard or Soft type)
-
-**Algorithm:**
-
-1. **Build edges:**
-   - For each MR with a ReadyForDeploy status:
-     - If MR has an associated task:
-       - Add outgoing edges to all MRs of predecessor tasks (task dependencies)
-   - For each MR:
-     - Add outgoing edges to MRs in dependent stacks (stack dependencies)
-
-2. **Detect and resolve cycles:**
-   - Compute strongly connected components (SCC)
-   - For each SCC with >1 node:
-     - Drop edges by priority: Soft dependencies first, then task edges, then hard stack edges
-     - Repeat until acyclic
-     - Log dropped edges in `ReleasePlan.ConflictsJson`
-
-3. **Topological sort (Kahn's algorithm):**
-   - For acyclic graph, compute in-degree of each MR
-   - Repeatedly extract nodes with in-degree 0 → stage N
-   - Decrement in-degree of descendants
-   - Continue until all nodes are staged
-
-4. **Output:**
-   - `ReleaseStage[]` ordered by sequence
-   - Each stage contains `StageItem[]` (MRs that can deploy in parallel)
-
-**Key fixes applied (from audit):**
-- Task dependency mapping was inverted (fixed via EF navigation reversal)
-- Multiple MRs per task were handled incorrectly (now all are ordered)
-- Soft dependencies were ignored (now applied, with lower conflict priority)
-- Cycles and all downstream nodes were silently grouped (now conflict-logged)
+- **Core knows no concrete provider.** Vendor names, status dictionaries and key formats live in the
+  adapters; the domain sees only normalized values.
+- **EF entities never leave Infrastructure.** The planner takes `PlanMergeRequest`; factories take
+  `*ConnectionDescriptor`. Application and Providers.Abstractions never see the EF models.
+- **The planning algorithm (`Application/ReleasePlanning`) has no EF dependency** — it is pure and
+  tested without a database.
+- **Providers register at compile time** (keyed DI + marker records), no dynamic assembly loading.
+- **Migrations exist for both providers** — `ReleaseOrchestrator.Migrations.MsSql` and
+  `...Migrations.Postgres`, each with two contexts (operational + archive).
+- **The PWA is a separate client.** It talks to the API over HTTP and references only the inward,
+  zero-dependency assemblies (Core, Providers.Abstractions) so the merge-request→task linking preview
+  runs the very same `TaskKeyExtractor` the ingestion does.
 
 ---
 
-## Data Model
+## Ingestion: push and poll
 
-### Operational Database (AppDbContext)
+Events reach the system two ways, and both emit the **same** normalized events so push and poll can
+never disagree on what "merged" or "resolved" means:
 
-**VCS Connections:**
-- `VcsConnection`: id, name (unique, used in YAML), type (GitLab, ...), URL, encrypted token, ReadyForDeployLabel
+- **Push** — a `gitlab-webhook` connection's GitLab pushes deliveries to `Ingress.Webhooks`. The host
+  owns the route, resolves the connection's secret, and puts events on the bus; each provider owns its
+  payload shape and authentication behind `IWebhookParser`.
+- **Poll** — the `VcsPollingCoordinator` sweeps every connection whose provider type is registered
+  `IngestionMode.Poll`, on the interval that connection configures (`VcsPollSettings`), and emits the
+  same events.
 
-**Tracker Connections:**
-- `TrackerConnection`: id, name, type (YandexTracker, ...), URL, encrypted token, org ID
+**Deduplication** — a delivery may arrive twice (a webhook retry, an overlapping poll). An
+`EventDedupStep` backed by a `ProcessedEvent` inbox drops repeats; polled events carry a deterministic
+id so the same merge-request state folds to the same event.
 
-**Repositories & Tasks:**
-- `Repository`: id, name, external ID (path in VCS), connection ID
-- `TaskItem`: id, external ID (e.g., "TASK-123"), title, status, closed at, tracker connection
-- `TaskDependency`: dependent task → predecessor task
-
-**Merge Requests:**
-- `MergeRequest`: id, external ID (iid in VCS), source/target branches, repo, status (Opened, ReadyForDeploy, Merged, Closed), created/merged/closed timestamps
-- Status can be set manually via API (marked `IsStatusManual`) — webhooks don't override manual status
-- Linked to task via external key parsed from branch name
-
-**Release Plans:**
-- `ReleasePlan`: id, name, version, is active, auto-generated flag, YAML hash, conflicts JSON
-- Unique filtered index on `(IsActive=true)` ensures only one active plan
-- Atomic swap via transaction: recalc deactivates old auto plans, new one becomes active
-
-**Stacks & Dependencies:**
-- `Stack`: id, name (unique)
-- `RepositoryStack`: many-to-many (repository in which stacks)
-- `StackDependency`: from stack → to stack, Hard (must deploy before) or Soft (preferred order)
-
-**Stages & Items:**
-- `ReleaseStage`: id, plan, sequence (order within plan), name (nullable), is manual override
-- `StageItem`: id, stage, merge request, manual inclusion flag
-
-**Archive Table:**
-- `ArchivedReleasePlan`: Snapshot of plan after stages are built (for audit trail)
-
-### Archive Database (ArchiveDbContext)
-
-Same structure as operational DB, but:
-- Holds only data closed >90 days ago
-- Written to separately (no shared transaction)
-- Idempotent insert (checked if already exists)
+Normalized contracts live in `Providers.Abstractions.Ingestion` (e.g. `MrOpened` carries the branch,
+title, labels and pipeline result; `TaskCreated`, `TaskStatusChanged`, …). The consumer, not the
+parser, applies the connection's **linking rule** to attach a merge request to its task, because the
+parser runs in the ingress with no database.
 
 ---
 
-## Event Flow: Webhook to Deployment Plan
+## Planning: per task
 
-```
-1. VCS/Tracker sends webhook
-   ↓
-2. Ingress.Webhooks receives, validates token
-   ↓
-3. Publishes normalized message to RabbitMQ
-   ↓
-4. Consumer receives message
-   ↓
-5. Updates database (MR status, task, task dependencies)
-   ↓
-6. Publishes "ReleasePlanRecalculationRequested" if needed
-   ↓
-7. ReleasePlanRecalculationConsumer:
-   - Reads current MRs, tasks, stacks
-   - Calls ReleasePlanGraph.BuildAsync()
-   - Saves new plan, deactivates old auto plan
-   - Logs conflicts if edges were dropped
-   ↓
-8. PWA fetches new plan via BFF API
-   ↓
-9. UI displays stages
-```
+For each task the planner builds a **rollout plan** (`RolloutPlan` with `PlanTaskNode` / `PlanItem`):
 
-**Coalescing:** If multiple recalculation requests arrive in quick succession, the consumer coalesces them—only one recalculation runs, saving expensive reads.
+1. Gather the task's repositories (those its merge requests touch).
+2. Apply the repository ordering rules (`RepositoryDependency`, Hard/Soft) and the task hierarchy.
+3. Resolve cycles by dropping the lowest-priority edges, log what was dropped.
+4. Topologically sort into **waves**.
+
+The plan records a **content hash over its order**, so an equivalent recomputation is recognised as
+the same plan rather than churning a new one. `PlanOverride` records deliberate manual adjustments.
 
 ---
 
-## Provider Architecture
+## Execution: rollouts
 
-Providers are registered at **compile time**, not runtime. Each provider implements two interfaces:
+Launching a task into an environment creates a `Rollout` with a `RolloutStep` per repository, in wave
+order (`RolloutStep`, `RolloutStepAttempt` for retries, `RolloutEvent` for the audit trail):
 
-### IVcsProviderAdapter
+- Each step deploys one repository through its **deploy target** — a `RepositoryDeployTarget` per
+  `(repository, environment)` carrying the deploy strategy (`gitlab-merge`, `gitlab-pipeline`, …), a
+  redeploy policy, and frozen deploy settings captured at launch (secrets unprotected only at dispatch).
+- **The readiness gate** holds a step until the merge request is deployable. Readiness is a set of
+  normalized **signals** — `label:…`, `mr-status:…`, `pipeline:…` — evaluated against a named
+  `ReadinessRule` (`AllOf` / `AnyOf`). The rule is resolved: a per-merge-request pin
+  (`MergeRequestReadinessPin`) → the deploy target's override → the environment's default
+  (`DeploymentEnvironment.ReadinessRuleId`) → no gate.
+- Deploy state is tracked per environment (`MrDeploymentState`, `MrDeployClaim`): the same merge
+  request can be live on staging and not on prod. Relaunching an identical plan is recognised as the
+  same rollout, so it does not double-deploy.
 
-```csharp
-public interface IVcsProviderAdapter
-{
-    Task<IVcsProvider> ConnectAsync(VcsProviderContext context, CancellationToken ct);
-}
+---
+
+## Messaging
+
+Rebus over RabbitMQ, type-based routing. Consumers handle MR opened / status changed, task created /
+status changed, task sync, and rollout progress. Cores are competing consumers on the same queue; the
+`ProcessedEvent` inbox makes redelivery safe.
+
+---
+
+## Data model (operational database, `AppDbContext`)
+
+- **Connections** — `VcsConnection`, `TrackerConnection`: name, type, URL, encrypted token, and an
+  opaque `ProviderSettingsJson` bag (linking rule / poll interval / org id / closed statuses). No
+  "ready-for-deploy label" column.
+- **Repositories & ordering** — `Repository` (name, external path, connection); `RepositoryDependency`
+  (from → after, Hard/Soft); `RepositoryDeployTarget` per `(repo, environment)` with strategy,
+  `DeploySettingsJson`, redeploy policy, optional `ReadinessRuleId`.
+- **Tasks** — `TaskItem` (external id, title, status, closed-at); `TaskDependency` (parent/predecessor).
+- **Merge requests** — `MergeRequest` (external id, branches, repo, `Status`, `Labels`,
+  `PipelineResult`, `IsStatusManual`); journals `MergeRequestStatusChange`, `MergeRequestLabelChange`;
+  `MergeRequestReadinessPin` for a manual per-MR gate override.
+- **Readiness & environments** — `ReadinessRule` (unique name, mode, required signals);
+  `DeploymentEnvironment` (key, order, enabled, `ReadinessRuleId`).
+- **Plans** — `RolloutPlan`, `PlanTaskNode`, `PlanItem`, `PlanOverride`.
+- **Rollouts** — `Rollout`, `RolloutStep`, `RolloutStepAttempt`, `RolloutEvent`; deploy state
+  `MrDeploymentState`, `MrDeployClaim`.
+- **Actions & permissions** — `ActionBinding`; `PermissionClaim`, `GroupPermissionMapping`,
+  `UserPermissionOverride`.
+- **Ingestion** — `ProcessedEvent` (dedup inbox).
+
+The **archive database** (`ArchiveDbContext`) holds tasks/rollouts closed long ago; it is written
+idempotently, without a shared transaction, by a hosted archiver gated on a Redis lease.
+
+Provider divergences between SQL Server and PostgreSQL are isolated to `ProviderSpecificMapping`
+(concurrency token, filtered-index dialect); dates are stored `Kind=Utc` only.
+
+---
+
+## Event flow
+
+```
+1. GitLab pushes a webhook  ─or─  the poller sweeps a poll connection
+2. A normalized event is produced (parser in ingress, or coordinator)
+3. EventDedupStep drops repeats (ProcessedEvent inbox)
+4. A consumer updates the database (MR status/labels/pipeline, task, dependencies),
+   applying the connection's linking rule to attach the MR to its task
+5. The task's rollout plan is (re)built if its inputs changed (content-hash compared)
+6. An operator launches a rollout of the task into an environment
+7. Each step deploys its repository in wave order, held at the readiness gate
+8. The PWA reads tasks, plans and rollouts via the API
 ```
 
-Returns an `IVcsProvider` after:
-- Validating endpoint + credentials
-- Detecting server version (if self-hosted)
-- Initializing any state needed for subsequent calls
+---
 
-This separation prevents "not initialized yet" state in the provider itself.
+## Security
 
-### ITrackerProviderAdapter
+Credentials are **encrypted at rest** with ASP.NET Core Data Protection. Without a certificate to
+protect the key ring (`DataProtection__CertificatePath`), a database dump contains both the encrypted
+tokens and the keys — so outside Development the app refuses to start without a certificate (or an
+explicit opt-out).
 
-```csharp
-public interface ITrackerProviderAdapter
-{
-    Task<ITrackerProvider> ConnectAsync(TrackerProviderContext context, CancellationToken ct);
-}
-```
-
-Same pattern for task trackers.
-
-**Registering a provider:**
-1. Create project: `ReleaseOrchestrator.Providers.NewVcs` or `ReleaseOrchestrator.Providers.NewTracker`
-2. Implement adapter interface
-3. Add to `InfrastructureExtensions.cs`: `services.AddNewVcsProvider();` (one line per provider)
-
-See [Providers](providers.md) for detailed walkthrough.
+- **Authentication** — OpenID Connect via an external provider (the `oid` claim is the identity), or
+  the built-in `Local` provider in development.
+- **Authorization** — claim-based, not role-based (`release.plan.approve`, `config.edit`, …), mapped
+  to groups via `GroupPermissionMapping` or per-user via `UserPermissionOverride`; computed permissions
+  are cached in Redis.
+- **HTTPS** is assumed terminated at a reverse proxy; use `ForwardedHeaders`.
+- **Request audit** records every API request (with a recorder middleware) for the admin audit screen.
 
 ---
 
 ## Observability
 
-### Health Endpoints
-
-- **`GET /health`:** Liveness (process running). Always 200 if reachable.
-- **`GET /health/ready`:** Readiness (dependencies initialized). 503 if DB, RabbitMQ, or Redis are unavailable.
-
-### Logging
-
-- Structured logging to console (JSON format in production)
-- Optional Seq integration via configuration (not included by default)
-
-### Metrics & Tracing
-
-**OpenTelemetry support:** Framework plumbing is in place; no Prometheus exporter included. Requires setting `OTEL_EXPORTER_OTLP_ENDPOINT` and a collector to receive traces.
-
-**Known limitation:** Async path (Ingress → RabbitMQ → Core) has poor visibility without OTLP. Recommendation: use `/health/ready` polling + RabbitMQ admin UI + database query audit.
+- **Health** — `GET /health` (liveness) and `GET /health/ready` (readiness: DB, RabbitMQ, Redis).
+- **Logging** — structured (Serilog), with a correlation id threaded through requests and consumers.
+  Logs are not localized — they are for operators.
+- **Metrics & tracing** — a Prometheus metrics endpoint and OpenTelemetry are wired; the async path
+  (ingress → RabbitMQ → core) is traced when an OTLP collector is configured.
 
 ---
 
-## Security Architecture
+## Deployment topology
 
-All credentials are **encrypted at rest** using **ASP.NET Core Data Protection**. Keys are stored in the database with application-specific isolation.
-
-**Important:** Without a certificate to encrypt the keys themselves (`DataProtection__CertificatePath`), this provides **no real security**. A database dump, backup, or restore contains both the encrypted tokens *and* the unencrypted keys—attackers can decrypt tokens trivially. This is enforced at startup in non-Development environments: the app refuses to run without a certificate or an explicit opt-out. Development is exempt for convenience; production deployments must configure a certificate.
-
-### Authentication
-
-- OpenID Connect via external provider (AD, OIDC-compatible system)
-- User ID (`oid` claim) is the unique identifier
-- Email and other claims are optional
-
-### Authorization
-
-- Claim-based, not role-based
-- Claims like `release.plan.approve`, `release.plan.view`, `config.edit` stored in `PermissionClaims`
-- Mapped to AD groups via `GroupPermissionMapping` or individual overrides via `UserPermissionOverride`
-
-**Bootstrap:** Fresh installation needs at least one admin. See [Getting Started](getting-started.md).
-
-### HTTPS
-
-- Assumed to be terminated at reverse proxy (Nginx, Traefik, etc.)
-- Use `ForwardedHeaders` middleware; configure via `ASPNETCORE_FORWARDEDHEADERS_ENABLED`
-
----
-
-## Deployment Topology
-
-**Single Pod / Process:**
-```
-PWA browser → BFF API (Web) ←→ Core Logic (Application) ←→ AppDbContext ←→ SQL Server
-                                                              ↓
-                                                          ArchiveDbContext ↔ SQL Server (Archive)
-          
-          Ingress (separate pod) → RabbitMQ ↔ Core (Rebus handler)
-```
-
-**Multiple Replicas (Kubernetes, Docker Swarm, etc.):**
-```
-             PWA browser
-                  ↓
-         ┌─────┬─────┬─────┐
-         ↓     ↓     ↓     ↓
-      Web1  Web2  Web3  Web4  (behind load balancer)
-         └─────┬─────┬─────┘
-               ↓
-         AppDbContext (shared)
-               ↓
-         SQL Server (Leader-aware BFF, all Webs)
-               
-   Ingress1 ───┐
-   Ingress2 ───┼─→ RabbitMQ ←── Core1, Core2, Core3 (all Cores consume same queue)
-   Ingress3 ───┘   (Competing consumers, Rebus handles)
-               
-         Archive service in every Core pod (gated on Redis lease)
-```
-
-**Distributed lease (not consensus):** Archive service runs in every pod but is gated on a Redis-backed distributed lease. The lease uses `SET key owner NX PX ttl` with owner validation and renewal. In any given cycle, only one pod holds the lease and runs archiving. This is **not a consensus algorithm**: a single Redis is a single point of failure, and under a network partition two replicas could briefly believe they hold the same lease. However, that is acceptable here because archiving is idempotent — double-running it once is the same cost as the normal case (which used to run on every replica before the lease). For tasks where double-running is a correctness bug, a fencing token is required. If Redis is unavailable, the lease cannot be acquired, so the pass is skipped (fail-closed), preventing thundering herd on the next cycle.
-
----
-
-## Known Limitations
-
-**Not tested in live environment:**
-- App has never run against live GitLab or Yandex Tracker
-- Docker images have not been built (registry is blocked in development environment)
-- Database migrations have not been applied to a real database
-- Behavior under production load is unknown
-
-See [Current State Audit](../issues/001-current-state.md) §4 for full details on what has not been validated.
+A modular monolith: the API host (`Web`, serving the PWA and API) and the ingress host
+(`Ingress.Webhooks`) can run as separate processes over a shared database and RabbitMQ. Multiple
+replicas are competing consumers on the same queue. The background archiver runs in every core pod but
+is gated on a Redis-backed distributed lease (`SET NX PX` with owner validation) — not a consensus
+algorithm, but acceptable because archiving is idempotent; if Redis is unavailable the pass is skipped
+(fail-closed).
 
 ---
 
 ## See Also
 
+- [User guide](user-guide.md) - Why each screen exists and how to use it
+- [Getting started](getting-started.md) - Setup walkthrough
 - [Configuration](configuration.md) - Environment variables and setup
 - [Providers](providers.md) - How to add a new VCS or tracker
-- [Operations](operations.md) - Deploying and monitoring
