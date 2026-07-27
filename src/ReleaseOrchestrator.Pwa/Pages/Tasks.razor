@@ -4,56 +4,56 @@
 
 <PageTitle>@UiStrings.Tasks_Title</PageTitle>
 
-<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Tasks_Heading</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Tasks_Heading" />
+
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_tasks is null || _tasks.Items.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Tasks_Empty_Title" Description="@UiStrings.Tasks_Empty_Description" />
+    }
+    else
+    {
+        @* Server-paged: the grid holds one page, so its own pager is off and the columns are not
+           sortable. Sorting 50 of N rows client-side reorders the slice while looking like it ordered
+           the whole list -- the wrong answer wearing the right one's clothes. *@
+        <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
+                             Field="@(t => (object?)t.ExternalId)" />
+                <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
+                             Field="@(t => (object?)t.Title)" />
+                <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
+                             Field="@(t => (object?)t.Status)" />
+                <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
+                             Field="@(t => (object?)t.MergeRequestCount)" Align="ColumnAlign.End" />
+                <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
+                    <Template>
+                        @if (context.HasActivePlan)
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
+                        }
+                        else
+                        {
+                            <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
+                        }
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="TaskListItemDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Tasks_Open</FlareButton>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
 </FlareStack>
-
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
-
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_tasks is null || _tasks.Items.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.Tasks_Empty_Title" Description="@UiStrings.Tasks_Empty_Description" />
-}
-else
-{
-    @* Server-paged: the grid holds one page, so its own pager is off and the columns are not
-       sortable. Sorting 50 of N rows client-side reorders the slice while looking like it ordered
-       the whole list -- the wrong answer wearing the right one's clothes. *@
-    <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
-                         Field="@(t => (object?)t.ExternalId)" />
-            <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
-                         Field="@(t => (object?)t.Title)" />
-            <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
-                         Field="@(t => (object?)t.Status)" />
-            <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
-                         Field="@(t => (object?)t.MergeRequestCount)" Align="ColumnAlign.End" />
-            <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
-                <Template>
-                    @if (context.HasActivePlan)
-                    {
-                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
-                    }
-                    else
-                    {
-                        <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
-                    }
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="TaskListItemDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Tasks_Open</FlareButton>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
 
 @code {
     [Inject] NavigationManager Nav { get; set; } = default!;

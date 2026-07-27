@@ -4,48 +4,50 @@
 
 <PageTitle>@UiStrings.Rollouts_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Rollouts_Heading</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Rollouts_Heading" />
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_rollouts is null || _rollouts.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.Rollouts_Empty_Title" Description="@UiStrings.Rollouts_Empty_Description" />
-}
-else
-{
-    <FlareDataGrid TItem="RolloutSummaryDto" Items="_rollouts" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="RolloutSummaryDto" Id="task" Title="@UiStrings.Rollouts_Col_Task"
-                         Field="@(r => (object?)r.TargetTaskKey)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="RolloutSummaryDto" Id="env" Title="@UiStrings.Rollouts_Col_Env"
-                         Field="@(r => (object?)r.EnvironmentKey)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="RolloutSummaryDto" Id="status" Title="@UiStrings.Rollouts_Col_Status" Sortable="true"
-                         Field="@(r => (object?)r.Status)">
-                <Template>
-                    <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)">@context.Status</FlareChip>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="RolloutSummaryDto" Id="progress" Title="@UiStrings.Rollouts_Col_Progress"
-                         Field="@(r => (object?)$"{r.SucceededCount} / {r.StepCount}")" Align="ColumnAlign.End" />
-            @* The raw DateTime, not a formatted string: the grid renders it identically but sorts on
-               the value. Sorting the formatted text ordered "01.03" before "02.01" and called it
-               ascending -- a wrong answer that looks like a right one. *@
-            <FlareColumn TItem="RolloutSummaryDto" Id="started" Title="@UiStrings.Rollouts_Col_Started"
-                         Field="@(r => (object?)r.StartedAt)" Sortable="true" />
-            <FlareColumn TItem="RolloutSummaryDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Rollouts_Open</FlareButton>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_rollouts is null || _rollouts.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Rollouts_Empty_Title" Description="@UiStrings.Rollouts_Empty_Description" />
+    }
+    else
+    {
+        <FlareDataGrid TItem="RolloutSummaryDto" Items="_rollouts" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="RolloutSummaryDto" Id="task" Title="@UiStrings.Rollouts_Col_Task"
+                             Field="@(r => (object?)r.TargetTaskKey)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="RolloutSummaryDto" Id="env" Title="@UiStrings.Rollouts_Col_Env"
+                             Field="@(r => (object?)r.EnvironmentKey)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="RolloutSummaryDto" Id="status" Title="@UiStrings.Rollouts_Col_Status" Sortable="true"
+                             Field="@(r => (object?)r.Status)">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)">@context.Status</FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="RolloutSummaryDto" Id="progress" Title="@UiStrings.Rollouts_Col_Progress"
+                             Field="@(r => (object?)$"{r.SucceededCount} / {r.StepCount}")" Align="ColumnAlign.End" />
+                @* The raw DateTime, not a formatted string: the grid renders it identically but sorts on
+                   the value. Sorting the formatted text ordered "01.03" before "02.01" and called it
+                   ascending -- a wrong answer that looks like a right one. *@
+                <FlareColumn TItem="RolloutSummaryDto" Id="started" Title="@UiStrings.Rollouts_Col_Started"
+                             Field="@(r => (object?)r.StartedAt)" Sortable="true" />
+                <FlareColumn TItem="RolloutSummaryDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Rollouts_Open</FlareButton>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
+</FlareStack>
 
 @code {
     [Inject] NavigationManager Nav { get; set; } = default!;
