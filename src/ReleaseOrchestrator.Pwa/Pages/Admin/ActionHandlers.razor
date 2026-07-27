@@ -4,78 +4,80 @@
 
 <PageTitle>@UiStrings.Actions_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Actions_Heading</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Actions_Heading" />
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-<FlareCard>
-    <FlareCardContent>
-        <FlareStack Gap="FlareSpacing.Small">
-            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-                <FlareTextField Label="@UiStrings.Actions_Event" @bind-Value="_eventType" HelperText="@UiStrings.Actions_EventHint" />
-                <FlareSelect TValue="string" Label="@UiStrings.Actions_Action"
-                             Value="_actionType" ValueChanged="OnActionTypeChanged"
-                             Items="ActionTypeOptions" ItemLabel="@(t => string.IsNullOrEmpty(t) ? "-" : t)"
-                             Style="min-width:14rem;" />
-                <FlareTextField Label="@UiStrings.Actions_Scope" @bind-Value="_scope" />
-            </FlareStack>
-
-            @if (SelectedType is { Settings.Count: > 0 } selected)
-            {
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Gap="FlareSpacing.Small">
                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-                    @* The same renderer the connection forms use — one place that turns a declared
-                       schema into inputs, so the secret-handling rules cannot diverge between them. *@
-                    <ProviderSettingsFields Schema="selected.Settings" Values="_settings" OnChanged="StateHasChanged" />
+                    <FlareTextField Label="@UiStrings.Actions_Event" @bind-Value="_eventType" HelperText="@UiStrings.Actions_EventHint" />
+                    <FlareSelect TValue="string" Label="@UiStrings.Actions_Action"
+                                 Value="_actionType" ValueChanged="OnActionTypeChanged"
+                                 Items="ActionTypeOptions" ItemLabel="@(t => string.IsNullOrEmpty(t) ? "-" : t)"
+                                 Style="min-width:14rem;" />
+                    <FlareTextField Label="@UiStrings.Actions_Scope" @bind-Value="_scope" />
                 </FlareStack>
-            }
 
-            <FlareStack Row>
-                <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
-                    @UiStrings.Actions_Add
-                </FlareButton>
+                @if (SelectedType is { Settings.Count: > 0 } selected)
+                {
+                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+                        @* The same renderer the connection forms use — one place that turns a declared
+                           schema into inputs, so the secret-handling rules cannot diverge between them. *@
+                        <ProviderSettingsFields Schema="selected.Settings" Values="_settings" OnChanged="StateHasChanged" />
+                    </FlareStack>
+                }
+
+                <FlareStack Row>
+                    <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
+                        @UiStrings.Actions_Add
+                    </FlareButton>
+                </FlareStack>
             </FlareStack>
-        </FlareStack>
-    </FlareCardContent>
-</FlareCard>
+        </FlareCardContent>
+    </FlareCard>
 
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_bindings is null || _bindings.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.Actions_Empty_Title" Description="@UiStrings.Actions_Empty_Description" />
-}
-else
-{
-    <FlareDataGrid TItem="ActionBindingDto" Items="_bindings" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="ActionBindingDto" Id="event" Title="@UiStrings.Actions_Col_Event"
-                         Field="@(b => (object?)b.EventType)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="ActionBindingDto" Id="action" Title="@UiStrings.Actions_Col_Action"
-                         Field="@(b => (object?)b.ActionType)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="ActionBindingDto" Id="scope" Title="@UiStrings.Actions_Col_Scope"
-                         Field="@(b => (object?)(string.IsNullOrEmpty(b.Scope) ? "-" : b.Scope))" Sortable="true" />
-            <FlareColumn TItem="ActionBindingDto" Id="enabled" Title="@UiStrings.Actions_Col_Enabled">
-                <Template>
-                    <FlareChip Size="ChipSize.Sm" Color="@(context.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                        @(context.Enabled ? UiStrings.Common_Yes : UiStrings.Common_No)
-                    </FlareChip>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="ActionBindingDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.ActionType)"
-                                     OnClick="@(() => Delete(context))">
-                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                    </FlareIconButton>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_bindings is null || _bindings.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Actions_Empty_Title" Description="@UiStrings.Actions_Empty_Description" />
+    }
+    else
+    {
+        <FlareDataGrid TItem="ActionBindingDto" Items="_bindings" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="ActionBindingDto" Id="event" Title="@UiStrings.Actions_Col_Event"
+                             Field="@(b => (object?)b.EventType)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="ActionBindingDto" Id="action" Title="@UiStrings.Actions_Col_Action"
+                             Field="@(b => (object?)b.ActionType)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="ActionBindingDto" Id="scope" Title="@UiStrings.Actions_Col_Scope"
+                             Field="@(b => (object?)(string.IsNullOrEmpty(b.Scope) ? "-" : b.Scope))" Sortable="true" />
+                <FlareColumn TItem="ActionBindingDto" Id="enabled" Title="@UiStrings.Actions_Col_Enabled">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@(context.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
+                            @(context.Enabled ? UiStrings.Common_Yes : UiStrings.Common_No)
+                        </FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="ActionBindingDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.ActionType)"
+                                         OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
+</FlareStack>
 
 @code {
     List<ActionBindingDto>? _bindings;

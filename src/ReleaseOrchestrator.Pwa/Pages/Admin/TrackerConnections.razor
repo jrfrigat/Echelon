@@ -4,73 +4,75 @@
 
 <PageTitle>@UiStrings.Tracker_Title</PageTitle>
 
-<FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
-    <FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Tracker_Title</FlareText>
-    <FlareSpacer />
-    <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
-        <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
-        <ChildContent>@UiStrings.Tracker_New</ChildContent>
-    </FlareButton>
-</FlareStack>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Tracker_Title">
+        <Actions>
+            <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
+                <ChildContent>@UiStrings.Tracker_New</ChildContent>
+            </FlareButton>
+        </Actions>
+    </PageHeader>
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (Loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (Result is not null)
-{
-    <FlareDataGrid TItem="TrackerConnectionDto" Items="Result.Items" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
-            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Type">
-                <Template>
-                    <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
-            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Provider_Col_Settings">
-                <Template>
-                    @* Whatever the provider declared, rather than one provider's field. Secrets are
-                       never in this data, so nothing here can leak one. *@
-                    @if (context.Settings is not { Count: > 0 })
-                    {
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">—</FlareText>
-                    }
-                    else
-                    {
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
-                            @foreach (var (key, value) in context.Settings.OrderBy(s => s.Key, StringComparer.Ordinal))
-                            {
-                                <FlareChip Size="ChipSize.Sm" Label="@($"{key}: {value}")" />
-                            }
-                        </FlareStack>
-                    }
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
-                        </FlareIconButton>
-                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                        </FlareIconButton>
-                    </FlareStack>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-
-    @if (Result.Total > Result.PageSize)
+    @if (Loading)
     {
-        <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
-                         TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+        <FlareProgress Variant="ProgressVariant.Circular" />
     }
-}
+    else if (Result is not null)
+    {
+        <FlareDataGrid TItem="TrackerConnectionDto" Items="Result.Items" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
+                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Type">
+                    <Template>
+                        <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
+                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Provider_Col_Settings">
+                    <Template>
+                        @* Whatever the provider declared, rather than one provider's field. Secrets are
+                           never in this data, so nothing here can leak one. *@
+                        @if (context.Settings is not { Count: > 0 })
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">—</FlareText>
+                        }
+                        else
+                        {
+                            <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                                @foreach (var (key, value) in context.Settings.OrderBy(s => s.Key, StringComparer.Ordinal))
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Label="@($"{key}: {value}")" />
+                                }
+                            </FlareStack>
+                        }
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                            </FlareIconButton>
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                            </FlareIconButton>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+
+        @if (Result.Total > Result.PageSize)
+        {
+            <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                             TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+        }
+    }
+</FlareStack>
 
 <FlareDialog Visible="ShowModal"
              Title="@(_editId.HasValue ? UiStrings.Tracker_Dialog_Edit : UiStrings.Tracker_Dialog_New)"

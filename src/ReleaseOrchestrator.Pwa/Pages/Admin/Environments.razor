@@ -4,86 +4,88 @@
 
 <PageTitle>@UiStrings.Env_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Env_Heading</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Env_Heading" />
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-<FlareCard>
-    <FlareCardContent>
-        <FlareStack Gap="FlareSpacing.Small">
-            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
-                <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
-                <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
-                @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
-                   0 when somebody typed a word, and the order decides the progression gate. *@
-                <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
-                                   Style="max-width:8rem;" />
-                <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
-                             @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
-                             Style="min-width:14rem;" />
-                <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Gap="FlareSpacing.Small">
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+                    <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
+                    <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
+                    @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
+                       0 when somebody typed a word, and the order decides the progression gate. *@
+                    <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
+                                       Style="max-width:8rem;" />
+                    <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
+                                 @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
+                                 Style="min-width:14rem;" />
+                    <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+                </FlareStack>
             </FlareStack>
-        </FlareStack>
-    </FlareCardContent>
-</FlareCard>
+        </FlareCardContent>
+    </FlareCard>
 
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_envs is null || _envs.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.Env_Empty_Title" Description="@UiStrings.Env_Empty_Description" />
-}
-else
-{
-    <FlareDataGrid TItem="EnvironmentDto" Items="_envs" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="EnvironmentDto" Id="key" Title="@UiStrings.Env_Col_Key"
-                         Field="@(e => (object?)e.Key)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="EnvironmentDto" Id="name" Title="@UiStrings.Env_Col_Name"
-                         Field="@(e => (object?)e.Name)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="EnvironmentDto" Id="order" Title="@UiStrings.Env_Col_Order"
-                         Field="@(e => (object?)e.Order)" Sortable="true" Align="ColumnAlign.End" />
-            <FlareColumn TItem="EnvironmentDto" Id="gate" Title="@UiStrings.Env_Col_Gate">
-                <Template>
-                    @if (context.ReadinessRuleId is null)
-                    {
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Env_Ungated</FlareText>
-                    }
-                    else
-                    {
-                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
-                    }
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="EnvironmentDto" Id="enabled" Title="@UiStrings.Env_Col_Enabled">
-                <Template>
-                    <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                        @(context.IsEnabled ? UiStrings.Common_Yes : UiStrings.Common_No)
-                    </FlareChip>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="EnvironmentDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton Size="ButtonSize.Sm"
-                                         AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Key)"
-                                         OnClick="@(() => OpenEdit(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
-                        </FlareIconButton>
-                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Key)"
-                                         OnClick="@(() => Delete(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                        </FlareIconButton>
-                    </FlareStack>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_envs is null || _envs.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Env_Empty_Title" Description="@UiStrings.Env_Empty_Description" />
+    }
+    else
+    {
+        <FlareDataGrid TItem="EnvironmentDto" Items="_envs" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="EnvironmentDto" Id="key" Title="@UiStrings.Env_Col_Key"
+                             Field="@(e => (object?)e.Key)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="EnvironmentDto" Id="name" Title="@UiStrings.Env_Col_Name"
+                             Field="@(e => (object?)e.Name)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="EnvironmentDto" Id="order" Title="@UiStrings.Env_Col_Order"
+                             Field="@(e => (object?)e.Order)" Sortable="true" Align="ColumnAlign.End" />
+                <FlareColumn TItem="EnvironmentDto" Id="gate" Title="@UiStrings.Env_Col_Gate">
+                    <Template>
+                        @if (context.ReadinessRuleId is null)
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Env_Ungated</FlareText>
+                        }
+                        else
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
+                        }
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="EnvironmentDto" Id="enabled" Title="@UiStrings.Env_Col_Enabled">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
+                            @(context.IsEnabled ? UiStrings.Common_Yes : UiStrings.Common_No)
+                        </FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="EnvironmentDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            <FlareIconButton Size="ButtonSize.Sm"
+                                             AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Key)"
+                                             OnClick="@(() => OpenEdit(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                            </FlareIconButton>
+                            <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                             AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Key)"
+                                             OnClick="@(() => Delete(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                            </FlareIconButton>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
+</FlareStack>
 
 <FlareDialog Visible="_showEdit" Title="@UiStrings.Env_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
     <ChildContent>

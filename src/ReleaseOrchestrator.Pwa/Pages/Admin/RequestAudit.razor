@@ -7,177 +7,179 @@
 
 <PageTitle>@UiStrings.Audit_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Audit_Title</FlareText>
-<FlareText Typo="TypographyScale.BodyMedium" Color="FlareColor.OnSurfaceVariant">@UiStrings.Audit_Description</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Audit_Title" />
+    <FlareText Typo="TypographyScale.BodyMedium" Color="FlareColor.OnSurfaceVariant">@UiStrings.Audit_Description</FlareText>
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@* Everything this page cannot vouch for, said before the numbers rather than after. *@
-@if (_summary is not null && (_summary.DroppedRecords > 0 || _summary.AnonymousCapBound
-                              || _summary.PercentilesApproximate || !_summary.IngressCovered))
-{
-    <FlareAlert Severity="AlertSeverity.Warning" Title="@UiStrings.Audit_Health_Title">
-        <FlareStack Gap="FlareSpacing.None">
-            @if (_summary.DroppedRecords > 0)
-            {
-                <FlareText Typo="TypographyScale.BodySmall">
-                    @string.Format(UiStrings.Audit_Health_Dropped, _summary.DroppedRecords)
-                </FlareText>
-            }
-            @if (_summary.AnonymousCapBound)
-            {
-                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_AnonCap</FlareText>
-            }
-            @if (_summary.PercentilesApproximate)
-            {
-                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_Approx</FlareText>
-            }
-            @if (!_summary.IngressCovered)
-            {
-                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_NoIngress</FlareText>
-            }
-        </FlareStack>
-    </FlareAlert>
-}
-
-<FlareCard>
-    <FlareCardContent>
-        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-            <FlareSelect TValue="int" Label="@UiStrings.Audit_Window" @bind-Value="_minutes"
-                         Items="@(new[] { 15, 60, 360, 1440, 10080 })"
-                         ItemLabel="@(m => WindowLabel(m))" />
-            <FlareSelect TValue="string" Label="@UiStrings.Audit_Status" @bind-Value="_status"
-                         Items="@(new[] { "", "error", "client", "server" })"
-                         ItemLabel="@(s => StatusLabel(s))" />
-            <FlareTextField Label="@UiStrings.Audit_Search" @bind-Value="_search" />
-            <FlareButton OnClick="Reload" Loading="_busy">@UiStrings.Audit_Apply</FlareButton>
-        </FlareStack>
-        <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
-            <FlareSwitch @bind-Value="_notableOnly" Label="@UiStrings.Audit_NotableOnly" />
-            <FlareSwitch @bind-Value="_includeAuditTraffic" Label="@UiStrings.Audit_IncludeOwn" />
-        </FlareStack>
-    </FlareCardContent>
-</FlareCard>
-
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else
-{
-    @if (_summary is not null)
+    @* Everything this page cannot vouch for, said before the numbers rather than after. *@
+    @if (_summary is not null && (_summary.DroppedRecords > 0 || _summary.AnonymousCapBound
+                                  || _summary.PercentilesApproximate || !_summary.IngressCovered))
     {
-        <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
-            <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Audit_Total, _summary.Total)</FlareChip>
-            <FlareChip Size="ChipSize.Sm" Color="@(_summary.Errors > 0 ? FlareColor.Error : FlareColor.Success)">
-                @string.Format(UiStrings.Audit_Errors, _summary.Errors)
-            </FlareChip>
-        </FlareStack>
+        <FlareAlert Severity="AlertSeverity.Warning" Title="@UiStrings.Audit_Health_Title">
+            <FlareStack Gap="FlareSpacing.None">
+                @if (_summary.DroppedRecords > 0)
+                {
+                    <FlareText Typo="TypographyScale.BodySmall">
+                        @string.Format(UiStrings.Audit_Health_Dropped, _summary.DroppedRecords)
+                    </FlareText>
+                }
+                @if (_summary.AnonymousCapBound)
+                {
+                    <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_AnonCap</FlareText>
+                }
+                @if (_summary.PercentilesApproximate)
+                {
+                    <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_Approx</FlareText>
+                }
+                @if (!_summary.IngressCovered)
+                {
+                    <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Audit_Health_NoIngress</FlareText>
+                }
+            </FlareStack>
+        </FlareAlert>
+    }
 
-        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_ByEndpoint</FlareText>
-        @if (_summary.Routes.Count == 0)
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+                <FlareSelect TValue="int" Label="@UiStrings.Audit_Window" @bind-Value="_minutes"
+                             Items="@(new[] { 15, 60, 360, 1440, 10080 })"
+                             ItemLabel="@(m => WindowLabel(m))" />
+                <FlareSelect TValue="string" Label="@UiStrings.Audit_Status" @bind-Value="_status"
+                             Items="@(new[] { "", "error", "client", "server" })"
+                             ItemLabel="@(s => StatusLabel(s))" />
+                <FlareTextField Label="@UiStrings.Audit_Search" @bind-Value="_search" />
+                <FlareButton OnClick="Reload" Loading="_busy">@UiStrings.Audit_Apply</FlareButton>
+            </FlareStack>
+            <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
+                <FlareSwitch @bind-Value="_notableOnly" Label="@UiStrings.Audit_NotableOnly" />
+                <FlareSwitch @bind-Value="_includeAuditTraffic" Label="@UiStrings.Audit_IncludeOwn" />
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
+
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else
+    {
+        @if (_summary is not null)
+        {
+            <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
+                <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Audit_Total, _summary.Total)</FlareChip>
+                <FlareChip Size="ChipSize.Sm" Color="@(_summary.Errors > 0 ? FlareColor.Error : FlareColor.Success)">
+                    @string.Format(UiStrings.Audit_Errors, _summary.Errors)
+                </FlareChip>
+            </FlareStack>
+
+            <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_ByEndpoint</FlareText>
+            @if (_summary.Routes.Count == 0)
+            {
+                <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
+            }
+            else
+            {
+                <FlareDataGrid TItem="RequestAuditRouteStatDto" Items="_summary.Routes" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+                    <Columns>
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="method" Title="@UiStrings.Audit_Col_Method"
+                                     Field="@(r => (object?)r.Method)" Sortable="true" Filterable="true" />
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="endpoint" Title="@UiStrings.Audit_Col_Endpoint"
+                                     Field="@(r => (object?)r.RoutePattern)" Sortable="true" Filterable="true" />
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="count" Title="@UiStrings.Audit_Col_Count"
+                                     Field="@(r => (object?)r.Count)" Sortable="true" Align="ColumnAlign.End" />
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="c4xx" Title="4xx" Sortable="true"
+                                     Field="@(r => (object?)r.ClientErrors)" Align="ColumnAlign.End">
+                            <Template>
+                                @if (context.ClientErrors > 0)
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning">@context.ClientErrors</FlareChip>
+                                }
+                            </Template>
+                        </FlareColumn>
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="c5xx" Title="5xx" Sortable="true"
+                                     Field="@(r => (object?)r.ServerErrors)" Align="ColumnAlign.End">
+                            <Template>
+                                @if (context.ServerErrors > 0)
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error">@context.ServerErrors</FlareChip>
+                                }
+                            </Template>
+                        </FlareColumn>
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="p50" Title="p50"
+                                     Field="@(r => (object?)r.P50Ms)" Sortable="true" Align="ColumnAlign.End" />
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="p95" Title="p95"
+                                     Field="@(r => (object?)r.P95Ms)" Sortable="true" Align="ColumnAlign.End" />
+                        <FlareColumn TItem="RequestAuditRouteStatDto" Id="max" Title="max"
+                                     Field="@(r => (object?)r.MaxMs)" Sortable="true" Align="ColumnAlign.End" />
+                    </Columns>
+                </FlareDataGrid>
+            }
+        }
+
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_Requests</FlareText>
+        @if (_result is null || _result.Items.Count == 0)
         {
             <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
         }
         else
         {
-            <FlareDataGrid TItem="RequestAuditRouteStatDto" Items="_summary.Routes" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            @* Server-paged, with its own FlarePagination below: the grid must not page as well, and its
+               columns are not sortable because a client sort would reorder only the current page while
+               appearing to order the whole window. *@
+            <FlareDataGrid TItem="RequestAuditEntryDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
                 <Columns>
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="method" Title="@UiStrings.Audit_Col_Method"
-                                 Field="@(r => (object?)r.Method)" Sortable="true" Filterable="true" />
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="endpoint" Title="@UiStrings.Audit_Col_Endpoint"
-                                 Field="@(r => (object?)r.RoutePattern)" Sortable="true" Filterable="true" />
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="count" Title="@UiStrings.Audit_Col_Count"
-                                 Field="@(r => (object?)r.Count)" Sortable="true" Align="ColumnAlign.End" />
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="c4xx" Title="4xx" Sortable="true"
-                                 Field="@(r => (object?)r.ClientErrors)" Align="ColumnAlign.End">
+                    @* Raw DateTime so the sort is chronological rather than lexicographic on the rendered text. *@
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="time" Title="@UiStrings.Audit_Col_Time"
+                                 Field="@(e => (object?)e.StartedAt)" />
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="method" Title="@UiStrings.Audit_Col_Method"
+                                 Field="@(e => (object?)e.Method)" />
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="path" Title="@UiStrings.Audit_Col_Path"
+                                 Field="@(e => (object?)e.Path)">
                         <Template>
-                            @if (context.ClientErrors > 0)
-                            {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning">@context.ClientErrors</FlareChip>
-                            }
+                            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                                <FlareText Element="span">@context.Path</FlareText>
+                                @if (context.Kind == "RoutingMiss")
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
+                                               Title="@UiStrings.Audit_RoutingMiss_Tooltip">@UiStrings.Audit_RoutingMiss</FlareChip>
+                                }
+                                @if (context.ExceptionType is { Length: > 0 })
+                                {
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
+                                               Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)">
+                                        @context.ExceptionType
+                                    </FlareChip>
+                                }
+                            </FlareStack>
                         </Template>
                     </FlareColumn>
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="c5xx" Title="5xx" Sortable="true"
-                                 Field="@(r => (object?)r.ServerErrors)" Align="ColumnAlign.End">
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
+                                 Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
                         <Template>
-                            @if (context.ServerErrors > 0)
-                            {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error">@context.ServerErrors</FlareChip>
-                            }
+                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)">@context.StatusCode</FlareChip>
                         </Template>
                     </FlareColumn>
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="p50" Title="p50"
-                                 Field="@(r => (object?)r.P50Ms)" Sortable="true" Align="ColumnAlign.End" />
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="p95" Title="p95"
-                                 Field="@(r => (object?)r.P95Ms)" Sortable="true" Align="ColumnAlign.End" />
-                    <FlareColumn TItem="RequestAuditRouteStatDto" Id="max" Title="max"
-                                 Field="@(r => (object?)r.MaxMs)" Sortable="true" Align="ColumnAlign.End" />
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"
+                                 Field="@(e => (object?)e.DurationMs)" Align="ColumnAlign.End">
+                        <Template>@context.DurationMs ms</Template>
+                    </FlareColumn>
+                    <FlareColumn TItem="RequestAuditEntryDto" Id="user" Title="@UiStrings.Audit_Col_User"
+                                 Field="@(e => (object?)UserLabel(e))" />
                 </Columns>
             </FlareDataGrid>
+
+            @if (_result.Total > _result.PageSize)
+            {
+                <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
+                                 TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
+            }
         }
     }
-
-    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_Requests</FlareText>
-    @if (_result is null || _result.Items.Count == 0)
-    {
-        <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
-    }
-    else
-    {
-        @* Server-paged, with its own FlarePagination below: the grid must not page as well, and its
-           columns are not sortable because a client sort would reorder only the current page while
-           appearing to order the whole window. *@
-        <FlareDataGrid TItem="RequestAuditEntryDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-            <Columns>
-                @* Raw DateTime so the sort is chronological rather than lexicographic on the rendered text. *@
-                <FlareColumn TItem="RequestAuditEntryDto" Id="time" Title="@UiStrings.Audit_Col_Time"
-                             Field="@(e => (object?)e.StartedAt)" />
-                <FlareColumn TItem="RequestAuditEntryDto" Id="method" Title="@UiStrings.Audit_Col_Method"
-                             Field="@(e => (object?)e.Method)" />
-                <FlareColumn TItem="RequestAuditEntryDto" Id="path" Title="@UiStrings.Audit_Col_Path"
-                             Field="@(e => (object?)e.Path)">
-                    <Template>
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
-                            <FlareText Element="span">@context.Path</FlareText>
-                            @if (context.Kind == "RoutingMiss")
-                            {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
-                                           Title="@UiStrings.Audit_RoutingMiss_Tooltip">@UiStrings.Audit_RoutingMiss</FlareChip>
-                            }
-                            @if (context.ExceptionType is { Length: > 0 })
-                            {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
-                                           Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)">
-                                    @context.ExceptionType
-                                </FlareChip>
-                            }
-                        </FlareStack>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
-                             Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
-                    <Template>
-                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)">@context.StatusCode</FlareChip>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"
-                             Field="@(e => (object?)e.DurationMs)" Align="ColumnAlign.End">
-                    <Template>@context.DurationMs ms</Template>
-                </FlareColumn>
-                <FlareColumn TItem="RequestAuditEntryDto" Id="user" Title="@UiStrings.Audit_Col_User"
-                             Field="@(e => (object?)UserLabel(e))" />
-            </Columns>
-        </FlareDataGrid>
-
-        @if (_result.Total > _result.PageSize)
-        {
-            <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
-                             TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
-        }
-    }
-}
+</FlareStack>
 
 @code {
     PagedResult<RequestAuditEntryDto>? _result;

@@ -4,97 +4,99 @@
 
 <PageTitle>@UiStrings.Perms_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Perms_Title</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Perms_Title" />
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else
-{
-    <FlareGrid>
-        <FlareCol Xs="12" Md="5">
-            <FlareCard Variant="CardVariant.Outlined">
-                <FlareCardHeader Title="@UiStrings.Perms_Claims_Title" />
-                <FlareCardContent>
-                    @if (_claims is null || _claims.Count == 0)
-                    {
-                        <FlareEmptyState Title="@UiStrings.Perms_Claims_Empty" Compact />
-                    }
-                    else
-                    {
-                        <FlareList TItem="PermissionClaimDto" Dense>
-                            @foreach (var claim in _claims)
-                            {
-                                <FlareListItem Primary="@claim.Name" />
-                            }
-                        </FlareList>
-                    }
-                </FlareCardContent>
-            </FlareCard>
-        </FlareCol>
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else
+    {
+        <FlareGrid>
+            <FlareCol Xs="12" Md="5">
+                <FlareCard Variant="CardVariant.Outlined">
+                    <FlareCardHeader Title="@UiStrings.Perms_Claims_Title" />
+                    <FlareCardContent>
+                        @if (_claims is null || _claims.Count == 0)
+                        {
+                            <FlareEmptyState Title="@UiStrings.Perms_Claims_Empty" Compact />
+                        }
+                        else
+                        {
+                            <FlareList TItem="PermissionClaimDto" Dense>
+                                @foreach (var claim in _claims)
+                                {
+                                    <FlareListItem Primary="@claim.Name" />
+                                }
+                            </FlareList>
+                        }
+                    </FlareCardContent>
+                </FlareCard>
+            </FlareCol>
 
-        <FlareCol Xs="12" Md="7">
-            <FlareCard Variant="CardVariant.Outlined">
-                <FlareCardHeader Title="@UiStrings.Perms_Mappings_Title">
-                    <Action>
-                        <FlareButton Size="ButtonSize.Sm" OnClick="@(() => _showAddMapping = !_showAddMapping)">
-                            <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
-                            <ChildContent>@UiStrings.Perms_AddMapping</ChildContent>
-                        </FlareButton>
-                    </Action>
-                </FlareCardHeader>
-                <FlareCardContent>
-                    @if (_showAddMapping)
-                    {
-                        <FlareStack Gap="FlareSpacing.Small">
-                            <FlareTextField Label="@UiStrings.Perms_Sid" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
-                            <FlareSelect TValue="Guid?" Label="@UiStrings.Perms_Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
-                                         Items="@(_claims?.Select(c => (Guid?)c.Id) ?? [])"
-                                         ItemLabel="@(id => ClaimName(id))" />
-                            <FlareStack Row Gap="FlareSpacing.Small">
-                                <FlareButton Size="ButtonSize.Sm" OnClick="AddMapping" Loading="_savingMapping"
-                                             Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">@UiStrings.Common_Add</FlareButton>
-                                <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text"
-                                             OnClick="@(() => _showAddMapping = false)">@UiStrings.Common_Cancel</FlareButton>
+            <FlareCol Xs="12" Md="7">
+                <FlareCard Variant="CardVariant.Outlined">
+                    <FlareCardHeader Title="@UiStrings.Perms_Mappings_Title">
+                        <Action>
+                            <FlareButton Size="ButtonSize.Sm" OnClick="@(() => _showAddMapping = !_showAddMapping)">
+                                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
+                                <ChildContent>@UiStrings.Perms_AddMapping</ChildContent>
+                            </FlareButton>
+                        </Action>
+                    </FlareCardHeader>
+                    <FlareCardContent>
+                        @if (_showAddMapping)
+                        {
+                            <FlareStack Gap="FlareSpacing.Small">
+                                <FlareTextField Label="@UiStrings.Perms_Sid" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
+                                <FlareSelect TValue="Guid?" Label="@UiStrings.Perms_Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
+                                             Items="@(_claims?.Select(c => (Guid?)c.Id) ?? [])"
+                                             ItemLabel="@(id => ClaimName(id))" />
+                                <FlareStack Row Gap="FlareSpacing.Small">
+                                    <FlareButton Size="ButtonSize.Sm" OnClick="AddMapping" Loading="_savingMapping"
+                                                 Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">@UiStrings.Common_Add</FlareButton>
+                                    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text"
+                                                 OnClick="@(() => _showAddMapping = false)">@UiStrings.Common_Cancel</FlareButton>
+                                </FlareStack>
+                                <FlareDivider />
                             </FlareStack>
-                            <FlareDivider />
-                        </FlareStack>
-                    }
+                        }
 
-                    @if (_mappings is null || _mappings.Count == 0)
-                    {
-                        <FlareEmptyState Title="@UiStrings.Perms_Mappings_Empty" Compact />
-                    }
-                    else
-                    {
-                        <FlareDataGrid TItem="GroupMappingDto" Items="_mappings" ShowPager="false">
-                            <Columns>
-                                <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Sid">
-                                    <Template>
-                                        <FlareText Typo="TypographyScale.BodySmall" Mono>@context.AdGroupSid</FlareText>
-                                    </Template>
-                                </FlareColumn>
-                                <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Col_Claim" Field="@(m => m.ClaimName)" />
-                                <FlareColumn TItem="GroupMappingDto" Title="" Align="ColumnAlign.End">
-                                    <Template>
-                                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Perms_Remove_Aria, context.ClaimName)" Color="FlareColor.Error"
-                                                         OnClick="@(() => RemoveMapping(context))">
-                                            <FlareIconView Value="MaterialDesign3Icons.Regular.Close" />
-                                        </FlareIconButton>
-                                    </Template>
-                                </FlareColumn>
-                            </Columns>
-                        </FlareDataGrid>
-                    }
-                </FlareCardContent>
-            </FlareCard>
-        </FlareCol>
-    </FlareGrid>
-}
+                        @if (_mappings is null || _mappings.Count == 0)
+                        {
+                            <FlareEmptyState Title="@UiStrings.Perms_Mappings_Empty" Compact />
+                        }
+                        else
+                        {
+                            <FlareDataGrid TItem="GroupMappingDto" Items="_mappings" ShowPager="false">
+                                <Columns>
+                                    <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Sid">
+                                        <Template>
+                                            <FlareText Typo="TypographyScale.BodySmall" Mono>@context.AdGroupSid</FlareText>
+                                        </Template>
+                                    </FlareColumn>
+                                    <FlareColumn TItem="GroupMappingDto" Title="@UiStrings.Perms_Col_Claim" Field="@(m => m.ClaimName)" />
+                                    <FlareColumn TItem="GroupMappingDto" Title="" Align="ColumnAlign.End">
+                                        <Template>
+                                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Perms_Remove_Aria, context.ClaimName)" Color="FlareColor.Error"
+                                                             OnClick="@(() => RemoveMapping(context))">
+                                                <FlareIconView Value="MaterialDesign3Icons.Regular.Close" />
+                                            </FlareIconButton>
+                                        </Template>
+                                    </FlareColumn>
+                                </Columns>
+                            </FlareDataGrid>
+                        }
+                    </FlareCardContent>
+                </FlareCard>
+            </FlareCol>
+        </FlareGrid>
+    }
+</FlareStack>
 
 @code {
     List<PermissionClaimDto>? _claims;

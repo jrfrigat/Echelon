@@ -4,104 +4,106 @@
 
 <PageTitle>@UiStrings.Deploy_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.Deploy_Heading</FlareText>
-<FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Deploy_Intro</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Deploy_Heading" />
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Deploy_Intro</FlareText>
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-@if (_repos is { Count: 0 } || _envs is { Count: 0 } || _strategies is { Count: 0 })
-{
-    <FlareEmptyState Title="@UiStrings.Deploy_Prereq_Title" Description="@UiStrings.Deploy_Prereq_Description" />
-}
-else
-{
-    <FlareCard>
-        <FlareCardContent>
-            <FlareStack Gap="FlareSpacing.Small">
-                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
-                    <FlareSelect TValue="Guid?" Label="@UiStrings.Deploy_Col_Repository"
-                                 @bind-Value="_repoId" Items="RepoOptions"
-                                 ItemLabel="@(id => _repos!.FirstOrDefault(r => r.Id == id)?.Name ?? "-")"
-                                 Style="min-width:12rem;" />
-                    <FlareSelect TValue="Guid?" Label="@UiStrings.Deploy_Col_Environment"
-                                 @bind-Value="_envId" Items="EnvOptions"
-                                 ItemLabel="@(id => _envs!.FirstOrDefault(e => e.Id == id)?.Key ?? "-")"
-                                 Style="min-width:10rem;" />
-                    <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Strategy"
-                                 Value="_strategyKey" ValueChanged="OnStrategyChanged"
-                                 Items="StrategyOptions" Style="min-width:12rem;" />
-                    <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Redeploy"
-                                 @bind-Value="_redeployPolicy" Items="RedeployPolicies"
-                                 ItemLabel="@(p => RedeployLabel(p))" Style="min-width:10rem;" />
-                    @* Optional per-repository readiness override; empty falls back to the environment's rule. *@
-                    <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Readiness"
-                                 @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
-                                 Style="min-width:12rem;" />
+    @if (_repos is { Count: 0 } || _envs is { Count: 0 } || _strategies is { Count: 0 })
+    {
+        <FlareEmptyState Title="@UiStrings.Deploy_Prereq_Title" Description="@UiStrings.Deploy_Prereq_Description" />
+    }
+    else
+    {
+        <FlareCard Variant="CardVariant.Outlined">
+            <FlareCardContent>
+                <FlareStack Gap="FlareSpacing.Small">
+                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+                        <FlareSelect TValue="Guid?" Label="@UiStrings.Deploy_Col_Repository"
+                                     @bind-Value="_repoId" Items="RepoOptions"
+                                     ItemLabel="@(id => _repos!.FirstOrDefault(r => r.Id == id)?.Name ?? "-")"
+                                     Style="min-width:12rem;" />
+                        <FlareSelect TValue="Guid?" Label="@UiStrings.Deploy_Col_Environment"
+                                     @bind-Value="_envId" Items="EnvOptions"
+                                     ItemLabel="@(id => _envs!.FirstOrDefault(e => e.Id == id)?.Key ?? "-")"
+                                     Style="min-width:10rem;" />
+                        <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Strategy"
+                                     Value="_strategyKey" ValueChanged="OnStrategyChanged"
+                                     Items="StrategyOptions" Style="min-width:12rem;" />
+                        <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Redeploy"
+                                     @bind-Value="_redeployPolicy" Items="RedeployPolicies"
+                                     ItemLabel="@(p => RedeployLabel(p))" Style="min-width:10rem;" />
+                        @* Optional per-repository readiness override; empty falls back to the environment's rule. *@
+                        <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Readiness"
+                                     @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
+                                     Style="min-width:12rem;" />
+                    </FlareStack>
+
+                    @* Whatever the selected strategy declared, rendered from its schema. *@
+                    <ProviderSettingsFields Schema="SelectedSchema" Values="_settings" OnChanged="StateHasChanged" />
+
+                    <FlareStack Row>
+                        <FlareButton OnClick="Add" Loading="_busy" Disabled="IsIncomplete">@UiStrings.Deploy_Add</FlareButton>
+                    </FlareStack>
                 </FlareStack>
+            </FlareCardContent>
+        </FlareCard>
+    }
 
-                @* Whatever the selected strategy declared, rendered from its schema. *@
-                <ProviderSettingsFields Schema="SelectedSchema" Values="_settings" OnChanged="StateHasChanged" />
-
-                <FlareStack Row>
-                    <FlareButton OnClick="Add" Loading="_busy" Disabled="IsIncomplete">@UiStrings.Deploy_Add</FlareButton>
-                </FlareStack>
-            </FlareStack>
-        </FlareCardContent>
-    </FlareCard>
-}
-
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_targets is null || _targets.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.Deploy_Empty_Title" Description="@UiStrings.Deploy_Empty_Description" />
-}
-else
-{
-    <FlareDataGrid TItem="DeployTargetDto" Items="_targets" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="DeployTargetDto" Id="repo" Title="@UiStrings.Deploy_Col_Repository"
-                         Field="@(t => (object?)t.RepositoryName)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="DeployTargetDto" Id="env" Title="@UiStrings.Deploy_Col_Environment"
-                         Field="@(t => (object?)t.EnvironmentKey)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="DeployTargetDto" Id="strategy" Title="@UiStrings.Deploy_Col_Strategy">
-                <Template><FlareCode>@context.DeployStrategyKey</FlareCode></Template>
-            </FlareColumn>
-            <FlareColumn TItem="DeployTargetDto" Id="redeploy" Title="@UiStrings.Deploy_Col_Redeploy">
-                <Template>
-                    <FlareChip Size="ChipSize.Sm"
-                               Color="@(context.RedeployPolicy == "Always" ? FlareColor.Warning : FlareColor.Default)">
-                        @RedeployLabel(context.RedeployPolicy)
-                    </FlareChip>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="DeployTargetDto" Id="readiness" Title="@UiStrings.Deploy_Col_Readiness">
-                <Template>
-                    @if (context.ReadinessRuleId is null)
-                    {
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Deploy_Readiness_Default</FlareText>
-                    }
-                    else
-                    {
-                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
-                    }
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="DeployTargetDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                     AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.RepositoryName)"
-                                     OnClick="@(() => Delete(context))">
-                        <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                    </FlareIconButton>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_targets is null || _targets.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Deploy_Empty_Title" Description="@UiStrings.Deploy_Empty_Description" />
+    }
+    else
+    {
+        <FlareDataGrid TItem="DeployTargetDto" Items="_targets" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="DeployTargetDto" Id="repo" Title="@UiStrings.Deploy_Col_Repository"
+                             Field="@(t => (object?)t.RepositoryName)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="DeployTargetDto" Id="env" Title="@UiStrings.Deploy_Col_Environment"
+                             Field="@(t => (object?)t.EnvironmentKey)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="DeployTargetDto" Id="strategy" Title="@UiStrings.Deploy_Col_Strategy">
+                    <Template><FlareCode>@context.DeployStrategyKey</FlareCode></Template>
+                </FlareColumn>
+                <FlareColumn TItem="DeployTargetDto" Id="redeploy" Title="@UiStrings.Deploy_Col_Redeploy">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm"
+                                   Color="@(context.RedeployPolicy == "Always" ? FlareColor.Warning : FlareColor.Default)">
+                            @RedeployLabel(context.RedeployPolicy)
+                        </FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="DeployTargetDto" Id="readiness" Title="@UiStrings.Deploy_Col_Readiness">
+                    <Template>
+                        @if (context.ReadinessRuleId is null)
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">@UiStrings.Deploy_Readiness_Default</FlareText>
+                        }
+                        else
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
+                        }
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="DeployTargetDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.RepositoryName)"
+                                         OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
+</FlareStack>
 
 @code {
     // Mirrors Core.Enums.RedeployPolicy; the PWA does not reference Core.

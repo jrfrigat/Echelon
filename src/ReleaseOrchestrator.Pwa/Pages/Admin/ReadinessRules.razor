@@ -4,73 +4,75 @@
 
 <PageTitle>@UiStrings.RR_Title</PageTitle>
 
-<FlareText Element="h1" Typo="TypographyScale.HeadlineSmall">@UiStrings.RR_Heading</FlareText>
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.RR_Heading" />
 
-<PageAlerts Error="@Error" Success="@Success"
-            OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-<FlareCard>
-    <FlareCardContent>
-        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
-            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" />
-            <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
-                         @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
-            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
-                            HelperText="@UiStrings.RR_Signals_Hint" Style="min-width:22rem;" />
-            <FlareButton OnClick="Create" Loading="_busy"
-                         Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
-        </FlareStack>
-    </FlareCardContent>
-</FlareCard>
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+                <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" />
+                <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                             @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
+                <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
+                                HelperText="@UiStrings.RR_Signals_Hint" Style="min-width:22rem;" />
+                <FlareButton OnClick="Create" Loading="_busy"
+                             Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
 
-@if (_loading)
-{
-    <FlareProgress Variant="ProgressVariant.Circular" />
-}
-else if (_rules is null || _rules.Count == 0)
-{
-    <FlareEmptyState Title="@UiStrings.RR_Empty_Title" Description="@UiStrings.RR_Empty_Description" />
-}
-else
-{
-    <FlareDataGrid TItem="ReadinessRuleDto" Items="_rules" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-        <Columns>
-            <FlareColumn TItem="ReadinessRuleDto" Id="name" Title="@UiStrings.Common_Name"
-                         Field="@(r => (object?)r.Name)" Sortable="true" Filterable="true" />
-            <FlareColumn TItem="ReadinessRuleDto" Id="mode" Title="@UiStrings.RR_Col_Mode">
-                <Template>
-                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@ModeLabel(context.Mode)</FlareChip>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="ReadinessRuleDto" Id="signals" Title="@UiStrings.RR_Col_Signals">
-                <Template>
-                    <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
-                        @foreach (var s in context.RequiredSignals)
-                        {
-                            <FlareCode>@s</FlareCode>
-                        }
-                    </FlareStack>
-                </Template>
-            </FlareColumn>
-            <FlareColumn TItem="ReadinessRuleDto" Id="actions" Title="" Align="ColumnAlign.End">
-                <Template>
-                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                        <FlareIconButton Size="ButtonSize.Sm"
-                                         AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)"
-                                         OnClick="@(() => OpenEdit(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
-                        </FlareIconButton>
-                        <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
-                                         AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)"
-                                         OnClick="@(() => Delete(context))">
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                        </FlareIconButton>
-                    </FlareStack>
-                </Template>
-            </FlareColumn>
-        </Columns>
-    </FlareDataGrid>
-}
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_rules is null || _rules.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.RR_Empty_Title" Description="@UiStrings.RR_Empty_Description" />
+    }
+    else
+    {
+        <FlareDataGrid TItem="ReadinessRuleDto" Items="_rules" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="ReadinessRuleDto" Id="name" Title="@UiStrings.Common_Name"
+                             Field="@(r => (object?)r.Name)" Sortable="true" Filterable="true" />
+                <FlareColumn TItem="ReadinessRuleDto" Id="mode" Title="@UiStrings.RR_Col_Mode">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@ModeLabel(context.Mode)</FlareChip>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="ReadinessRuleDto" Id="signals" Title="@UiStrings.RR_Col_Signals">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                            @foreach (var s in context.RequiredSignals)
+                            {
+                                <FlareCode>@s</FlareCode>
+                            }
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="ReadinessRuleDto" Id="actions" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            <FlareIconButton Size="ButtonSize.Sm"
+                                             AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)"
+                                             OnClick="@(() => OpenEdit(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                            </FlareIconButton>
+                            <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                             AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)"
+                                             OnClick="@(() => Delete(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                            </FlareIconButton>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+    }
+</FlareStack>
 
 <FlareDialog Visible="_showEdit" Title="@UiStrings.RR_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
     <ChildContent>
