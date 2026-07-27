@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Rebus.Bus;
 using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Enums;
@@ -104,8 +103,7 @@ public class VcsPollingCoordinator(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
-        var bus = scope.ServiceProvider.GetRequiredService<IBus>();
+        var poller = scope.ServiceProvider.GetRequiredService<VcsConnectionPoller>();
 
         // Filtered in memory by normalized provider type: the poll-type set is small and the provider
         // type is compared canonically, which a SQL string match would not do.
@@ -135,38 +133,9 @@ public class VcsPollingCoordinator(
 
             try
             {
-                var provider = await factory.CreateAsync(connection.ToDescriptor(), ct);
-                var source = $"{ProviderKey.Normalize(connection.ProviderType)}/{connection.Name}";
-                var emitted = 0;
-
-                foreach (var repository in connection.Repositories)
-                {
-                    var mrs = await provider.GetOpenMergeRequestsAsync(repository.ExternalId, ct);
-                    foreach (var mr in mrs)
-                    {
-                        await bus.Send(new MrOpened(
-                            ConnectionName: connection.Name,
-                            RepositoryExternalId: repository.ExternalId,
-                            ExternalMrId: mr.Id,
-                            SourceBranch: mr.SourceBranch,
-                            TargetBranch: mr.TargetBranch,
-                            // The task key is resolved by the consumer from the connection's rule; the
-                            // poll carries the raw candidates, like the webhook path.
-                            Title: mr.Title,
-                            Labels: mr.Labels,
-                            // Read from the API here, unlike the webhook path, so a poll-mode connection
-                            // can gate on pipeline:* even though a merge-request webhook omits it.
-                            PipelineResult: mr.PipelineStatus,
-                            Source: source,
-                            EventId: PollingEventId.For(
-                                source, repository.ExternalId, mr.Id, mr.Status?.ToString() ?? string.Empty,
-                                mr.Labels, mr.PipelineStatus)));
-                        emitted++;
-                    }
-                }
-
-                if (emitted > 0)
-                    logger.LogDebug("Polled {Count} open merge request(s) from {Connection}", emitted, connection.Name);
+                // The same per-connection poll the manual "poll now" endpoint runs, so scheduled and
+                // manual sweeps cannot diverge on how an open merge request becomes an event.
+                await poller.PollAsync(connection, ct);
             }
             catch (Exception ex)
             {

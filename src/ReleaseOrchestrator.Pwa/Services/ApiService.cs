@@ -84,6 +84,10 @@ public class ApiService(HttpClient http)
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/vcs-connections/{id}", ct), ct);
 
+    /// <summary>Polls a poll-mode connection's open merge requests now, returning how many were emitted.</summary>
+    public Task<PollResultDto> PollVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync<PollResultDto>(() => http.PostAsync($"api/vcs-connections/{id}/poll", content: null, ct), ct);
+
     // ---- tracker connections --------------------------------------------------
 
     public Task<PagedResult<TrackerConnectionDto>> GetTrackerConnectionsAsync(int page = 1, CancellationToken ct = default) =>

@@ -26,8 +26,12 @@ public record ProviderSettingDto(
     string Kind = "Text", List<string>? Options = null, string? Default = null,
     int? Min = null, int? Max = null);
 
-/// <summary>A provider that can back a connection, and the settings it declares.</summary>
-public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings);
+/// <summary>A provider that can back a connection, the settings it declares, and (for VCS) push vs poll.</summary>
+/// <param name="Ingestion">"Push" or "Poll" for a VCS provider; null for trackers and deploy strategies.</param>
+public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings, string? Ingestion = null);
+
+/// <summary>How many merge-request observations a manual poll emitted.</summary>
+public record PollResultDto(int Emitted);
 
 /// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> — this is what carries push vs poll.</param>
 /// <param name="Settings">

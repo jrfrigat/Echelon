@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 using ReleaseOrchestrator.Infrastructure.Auth;
+using ReleaseOrchestrator.Infrastructure.Ingestion;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
@@ -177,6 +178,37 @@ public class VcsConnectionsController(
 
         await db.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Polls this connection's open merge requests now, emitting the same events the scheduled poller
+    /// does — a manual refresh for a poll-mode connection between its timer ticks.
+    /// </summary>
+    /// <remarks>
+    /// Works for any registered connection (a webhook-mode connection can be refreshed this way too),
+    /// but the UI offers the button only for poll-mode types, whose events would otherwise wait for the
+    /// next tick. The deterministic event id means re-polling an unchanged merge request is a no-op.
+    /// </remarks>
+    [HttpPost("{id:guid}/poll")]
+    [Authorize(Policy = Permissions.ConfigEdit)]
+    public async Task<IActionResult> Poll(
+        Guid id, [FromServices] VcsConnectionPoller poller, CancellationToken ct)
+    {
+        var entity = await db.VcsConnections
+            .Include(c => c.Repositories)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (entity is null) return NotFound();
+
+        if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+            return BadRequest(new
+            {
+                error = localizer[
+                    "Vcs_UnknownType", entity.ProviderType,
+                    string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
+
+        var emitted = await poller.PollAsync(entity, ct);
+        return Ok(new { emitted });
     }
 
     [HttpDelete("{id:guid}")]

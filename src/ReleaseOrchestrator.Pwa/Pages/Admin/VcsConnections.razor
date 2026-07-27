@@ -36,6 +36,14 @@
                 <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
                     <Template>
                         <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            @* Poll-mode connections are refreshed on a timer; offer a manual poll so an
+                               operator does not have to wait for the next tick. *@
+                            @if (IsPollType(context.VcsType))
+                            {
+                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)" OnClick="@(() => Poll(context))">
+                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
+                                </FlareIconButton>
+                            }
                             <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
                                 <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
                             </FlareIconButton>
@@ -109,6 +117,18 @@
     // Every GitLab type carries the linking rule; a future provider that links some other way would
     // not declare these keys and simply gets no preview.
     bool DeclaresLinkRule => SelectedSchema.Any(s => s.Key == TaskLinkSettings.SourceKey);
+
+    // A poll-mode type's events would otherwise wait for its timer, so the manual poll is offered only
+    // for those; a webhook connection gets its events pushed and needs no button.
+    bool IsPollType(string vcsType) =>
+        string.Equals(_providers?.FirstOrDefault(p => p.ProviderType == vcsType)?.Ingestion, "Poll", StringComparison.Ordinal);
+
+    async Task Poll(VcsConnectionDto c)
+    {
+        PollResultDto? result = null;
+        if (await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id)))
+            Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted);
+    }
 
     // The type is fixed at creation: an existing connection's stored repositories and token are
     // meaningless against a different provider, so Update takes no vcsType.

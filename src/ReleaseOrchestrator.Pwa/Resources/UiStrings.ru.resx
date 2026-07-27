@@ -1125,4 +1125,10 @@
   <data name="LinkPreview_NoMatch" xml:space="preserve">
     <value>Ключ не найден — этот merge request не свяжется с задачей.</value>
   </data>
+  <data name="Vcs_PollNow_Aria" xml:space="preserve">
+    <value>Опросить {0} сейчас</value>
+  </data>
+  <data name="Vcs_Polled" xml:space="preserve">
+    <value>Опрошено «{0}»: {1} открытых merge request'ов.</value>
+  </data>
 </root>

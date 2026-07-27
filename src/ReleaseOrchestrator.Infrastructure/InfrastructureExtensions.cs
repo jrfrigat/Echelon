@@ -106,6 +106,8 @@ public static class InfrastructureExtensions
         services.AddHostedService<RolloutCoordinator>();
 
         services.Configure<VcsPollingOptions>(config.GetSection("VcsPolling"));
+        // The per-connection poll, shared by the scheduled coordinator and the manual "poll now" endpoint.
+        services.AddScoped<VcsConnectionPoller>();
         services.AddHostedService<VcsPollingCoordinator>();
 
         // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model

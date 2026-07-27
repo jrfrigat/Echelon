@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReleaseOrchestrator.Infrastructure.Auth;
+using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
 using ReleaseOrchestrator.Providers.Abstractions.Vcs;
@@ -25,15 +26,23 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class ProvidersController(
     IVcsProviderFactory vcsFactory,
     ITrackerProviderFactory trackerFactory,
-    IDeployStrategyFactory deployFactory) : ControllerBase
+    IDeployStrategyFactory deployFactory,
+    IEnumerable<VcsProviderRegistration> vcsRegistrations) : ControllerBase
 {
-    /// <summary>Lists the registered VCS providers and their settings.</summary>
+    /// <summary>Lists the registered VCS providers, their settings, and whether each is push or poll.</summary>
     /// <returns>One entry per provider.</returns>
     [HttpGet("vcs")]
     public IActionResult ListVcsProviders() =>
         Ok(vcsFactory.AvailableProviders
             .OrderBy(p => p, StringComparer.Ordinal)
-            .Select(p => Describe(p, vcsFactory.GetSettingsSchema(p))));
+            .Select(p => Describe(p, vcsFactory.GetSettingsSchema(p), IngestionOf(p))));
+
+    // Push or Poll for a VCS type, from its registration — this is what tells the UI which connections
+    // can be polled by hand (a poll type would otherwise wait for its next timer tick).
+    private string? IngestionOf(string providerType) =>
+        vcsRegistrations
+            .FirstOrDefault(r => ProviderKey.Normalize(r.ProviderType) == providerType)
+            ?.Ingestion.ToString();
 
     /// <summary>Lists the registered tracker providers and their settings.</summary>
     /// <returns>One entry per provider.</returns>
@@ -55,10 +64,13 @@ public class ProvidersController(
             .Select(k => Describe(k, deployFactory.GetSettingsSchema(k))));
 
     private static object Describe(
-        string providerType, IEnumerable<Providers.Abstractions.ProviderSettingSchema> schema) =>
+        string providerType, IEnumerable<Providers.Abstractions.ProviderSettingSchema> schema,
+        string? ingestion = null) =>
         new
         {
             ProviderType = providerType,
+            // Push/Poll for VCS providers; null for trackers and deploy strategies, which have no such axis.
+            Ingestion = ingestion,
             // Secret settings are declared but their values are never read back — the schema tells
             // the UI to render a write-only field, and nothing here can leak one. Kind/Options/etc.
             // let the UI render a number, a dropdown or a pattern rather than a text box for all.

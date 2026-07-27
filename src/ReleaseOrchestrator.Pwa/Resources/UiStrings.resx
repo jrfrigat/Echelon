@@ -1125,4 +1125,10 @@
   <data name="LinkPreview_NoMatch" xml:space="preserve">
     <value>No key matched — this merge request would not link to a task.</value>
   </data>
+  <data name="Vcs_PollNow_Aria" xml:space="preserve">
+    <value>Poll {0} now</value>
+  </data>
+  <data name="Vcs_Polled" xml:space="preserve">
+    <value>Polled '{0}': {1} open merge request(s).</value>
+  </data>
 </root>

@@ -3030,5 +3030,19 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("LinkPreview_NoMatch", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Poll {0} now.</summary>
+        public static string Vcs_PollNow_Aria {
+            get {
+                return ResourceManager.GetString("Vcs_PollNow_Aria", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Polled '{0}': {1} open merge request(s).</summary>
+        public static string Vcs_Polled {
+            get {
+                return ResourceManager.GetString("Vcs_Polled", resourceCulture);
+            }
+        }
     }
 }
