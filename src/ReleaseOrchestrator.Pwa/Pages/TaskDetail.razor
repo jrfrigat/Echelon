@@ -36,7 +36,7 @@
                 {
                     <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
                         <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_Parent</FlareText>
-                        <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(_task.Parent.Id))">@_task.Parent.ExternalId</FlareChip>
+                        <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(_task.Parent.Id))" Label="@_task.Parent.ExternalId" />
                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@_task.Parent.Title</FlareText>
                     </FlareStack>
                 }
@@ -47,7 +47,7 @@
                         @foreach (var child in _task.Children)
                         {
                             var childId = child.Id;
-                            <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(childId))">@child.ExternalId</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" OnClick="@(() => Open(childId))" Label="@child.ExternalId" />
                         }
                     </FlareStack>
                     <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
@@ -107,7 +107,7 @@ else
                 @foreach (var c in _plan.Conflicts)
                 {
                     <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
-                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning">@c.Kind</FlareChip>
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@c.Kind" />
                         <FlareText Typo="TypographyScale.BodySmall">@c.Reason</FlareText>
                     </FlareStack>
                 }
@@ -127,7 +127,7 @@ else
                                 <FlareText Typo="TypographyScale.TitleSmall">@node.TaskKey</FlareText>
                                 @if (node.IsTarget)
                                 {
-                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@UiStrings.TaskDetail_Target</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@UiStrings.TaskDetail_Target" />
                                 }
                                 <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@node.TaskTitle</FlareText>
                             </FlareStack>
@@ -137,7 +137,7 @@ else
                                     <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.TaskDetail_DependsOn</FlareText>
                                     @foreach (var dep in node.DependsOnTaskIds)
                                     {
-                                        <FlareChip Size="ChipSize.Sm">@KeyOf(dep)</FlareChip>
+                                        <FlareChip Size="ChipSize.Sm" Label="@KeyOf(dep)" />
                                     }
                                 </FlareStack>
                             }
@@ -156,8 +156,8 @@ else
                             @foreach (var item in node.Items)
                             {
                                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
-                                    <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Plan_Wave, item.Wave)</FlareChip>
-                                    <FlareChip Size="ChipSize.Sm" Color="@StatusColor(item.MrStatus)">@item.MrStatus</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Label="@string.Format(UiStrings.Plan_Wave, item.Wave)" />
+                                    <FlareChip Size="ChipSize.Sm" Color="@StatusColor(item.MrStatus)" Label="@item.MrStatus" />
                                     <FlareStack Gap="FlareSpacing.None">
                                         <FlareText Typo="TypographyScale.BodyMedium">@item.RepositoryName !@item.MrExternalId</FlareText>
                                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
@@ -200,13 +200,11 @@ else
                         <FlareText Typo="TypographyScale.BodyMedium" Style="min-width:8rem;">@env.Key</FlareText>
                         @if (pin is null)
                         {
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant">@UiStrings.Pin_State_Labels</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant" Label="@UiStrings.Pin_State_Labels" />
                         }
                         else
                         {
-                            <FlareChip Size="ChipSize.Sm" Color="@(pin.IsReady ? FlareColor.Success : FlareColor.Error)">
-                                @(pin.IsReady ? UiStrings.Pin_State_Ready : UiStrings.Pin_State_Held)
-                            </FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="@(pin.IsReady ? FlareColor.Success : FlareColor.Error)" Label="@(pin.IsReady ? UiStrings.Pin_State_Ready : UiStrings.Pin_State_Held)" />
                         }
                         <FlareSpacer />
                         <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" Color="FlareColor.Success"

@@ -55,12 +55,10 @@
                     <FlareCard Variant="CardVariant.Outlined">
                         <FlareCardContent>
                             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">
-                                    @string.Format(UiStrings.Plan_Wave, wave.Sequence)
-                                </FlareChip>
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@string.Format(UiStrings.Plan_Wave, wave.Sequence)" />
                                 @foreach (var repo in wave.Repositories)
                                 {
-                                    <FlareChip Size="ChipSize.Sm">@repo.Name</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Label="@repo.Name" />
                                 }
                             </FlareStack>
                         </FlareCardContent>
@@ -122,9 +120,7 @@
                     <FlareColumn TItem="RepositoryOrderingDto" Id="type" Title="@UiStrings.DefaultPlan_Col_Type"
                                  Field="@(r => (object?)r.Type)" Sortable="true">
                         <Template>
-                            <FlareChip Size="ChipSize.Sm" Color="@(context.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)">
-                                @(context.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)
-                            </FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="@(context.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)" Label="@(context.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)" />
                         </Template>
                     </FlareColumn>
                     <FlareColumn TItem="RepositoryOrderingDto" Id="actions" Title="" Align="ColumnAlign.End">

@@ -40,7 +40,7 @@
                              Field="@(r => (object?)r.Name)" Sortable="true" Filterable="true" />
                 <FlareColumn TItem="ReadinessRuleDto" Id="mode" Title="@UiStrings.RR_Col_Mode">
                     <Template>
-                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@ModeLabel(context.Mode)</FlareChip>
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@ModeLabel(context.Mode)" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="ReadinessRuleDto" Id="signals" Title="@UiStrings.RR_Col_Signals">

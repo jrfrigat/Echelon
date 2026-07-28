@@ -55,15 +55,13 @@
                         }
                         else
                         {
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@context.ReadinessRuleName" />
                         }
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="EnvironmentDto" Id="enabled" Title="@UiStrings.Env_Col_Enabled">
                     <Template>
-                        <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                            @(context.IsEnabled ? UiStrings.Common_Yes : UiStrings.Common_No)
-                        </FlareChip>
+                        <FlareChip Size="ChipSize.Sm" Color="@(context.IsEnabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)" Label="@(context.IsEnabled ? UiStrings.Common_Yes : UiStrings.Common_No)" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="EnvironmentDto" Id="actions" Title="" Align="ColumnAlign.End">

@@ -37,11 +37,11 @@
                     <Template>
                         @if (context.HasActivePlan)
                         {
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success">@UiStrings.Tasks_PlanBuilt</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success" Label="@UiStrings.Tasks_PlanBuilt" />
                         }
                         else
                         {
-                            <FlareChip Size="ChipSize.Sm">@UiStrings.Tasks_PlanNone</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Label="@UiStrings.Tasks_PlanNone" />
                         }
                     </Template>
                 </FlareColumn>

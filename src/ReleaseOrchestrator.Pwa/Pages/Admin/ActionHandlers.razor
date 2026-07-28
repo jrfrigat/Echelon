@@ -60,9 +60,7 @@
                              Field="@(b => (object?)(string.IsNullOrEmpty(b.Scope) ? "-" : b.Scope))" Sortable="true" />
                 <FlareColumn TItem="ActionBindingDto" Id="enabled" Title="@UiStrings.Actions_Col_Enabled">
                     <Template>
-                        <FlareChip Size="ChipSize.Sm" Color="@(context.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)">
-                            @(context.Enabled ? UiStrings.Common_Yes : UiStrings.Common_No)
-                        </FlareChip>
+                        <FlareChip Size="ChipSize.Sm" Color="@(context.Enabled ? FlareColor.Success : FlareColor.OnSurfaceVariant)" Label="@(context.Enabled ? UiStrings.Common_Yes : UiStrings.Common_No)" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="ActionBindingDto" Id="actions" Title="" Align="ColumnAlign.End">

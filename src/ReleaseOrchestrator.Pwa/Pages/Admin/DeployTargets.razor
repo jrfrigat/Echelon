@@ -74,9 +74,7 @@
                 <FlareColumn TItem="DeployTargetDto" Id="redeploy" Title="@UiStrings.Deploy_Col_Redeploy">
                     <Template>
                         <FlareChip Size="ChipSize.Sm"
-                                   Color="@(context.RedeployPolicy == "Always" ? FlareColor.Warning : FlareColor.Default)">
-                            @RedeployLabel(context.RedeployPolicy)
-                        </FlareChip>
+                                   Color="@(context.RedeployPolicy == "Always" ? FlareColor.Warning : FlareColor.Default)" Label="@RedeployLabel(context.RedeployPolicy)" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="DeployTargetDto" Id="readiness" Title="@UiStrings.Deploy_Col_Readiness">
@@ -87,7 +85,7 @@
                         }
                         else
                         {
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary">@context.ReadinessRuleName</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@context.ReadinessRuleName" />
                         }
                     </Template>
                 </FlareColumn>

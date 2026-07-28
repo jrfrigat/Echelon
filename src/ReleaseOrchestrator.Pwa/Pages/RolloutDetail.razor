@@ -11,7 +11,7 @@
     </FlareButton>
     @if (_rollout is not null)
     {
-        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(_rollout.Status)">@_rollout.Status</FlareChip>
+        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(_rollout.Status)" Label="@_rollout.Status" />
     }
     <FlareSpacer />
     @if (_rollout is not null && !IsTerminal)
@@ -45,8 +45,8 @@ else
         {
             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center" StretchFirst>
                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
-                    <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Plan_Wave, step.Wave)</FlareChip>
-                    <FlareChip Size="ChipSize.Sm" Color="@StepColor(step.State)">@step.State</FlareChip>
+                    <FlareChip Size="ChipSize.Sm" Label="@string.Format(UiStrings.Plan_Wave, step.Wave)" />
+                    <FlareChip Size="ChipSize.Sm" Color="@StepColor(step.State)" Label="@step.State" />
                     <FlareStack Gap="FlareSpacing.None">
                         <FlareText Typo="TypographyScale.BodyMedium">@step.RepositoryName !@step.MrExternalId</FlareText>
                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">

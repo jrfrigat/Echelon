@@ -70,10 +70,8 @@
         @if (_summary is not null)
         {
             <FlareStack Row Gap="FlareSpacing.Medium" Align="FlareAlignItems.Center">
-                <FlareChip Size="ChipSize.Sm">@string.Format(UiStrings.Audit_Total, _summary.Total)</FlareChip>
-                <FlareChip Size="ChipSize.Sm" Color="@(_summary.Errors > 0 ? FlareColor.Error : FlareColor.Success)">
-                    @string.Format(UiStrings.Audit_Errors, _summary.Errors)
-                </FlareChip>
+                <FlareChip Size="ChipSize.Sm" Label="@string.Format(UiStrings.Audit_Total, _summary.Total)" />
+                <FlareChip Size="ChipSize.Sm" Color="@(_summary.Errors > 0 ? FlareColor.Error : FlareColor.Success)" Label="@string.Format(UiStrings.Audit_Errors, _summary.Errors)" />
             </FlareStack>
 
             <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_ByEndpoint</FlareText>
@@ -96,7 +94,7 @@
                             <Template>
                                 @if (context.ClientErrors > 0)
                                 {
-                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning">@context.ClientErrors</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@context.ClientErrors.ToString()" />
                                 }
                             </Template>
                         </FlareColumn>
@@ -105,7 +103,7 @@
                             <Template>
                                 @if (context.ServerErrors > 0)
                                 {
-                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error">@context.ServerErrors</FlareChip>
+                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error" Label="@context.ServerErrors.ToString()" />
                                 }
                             </Template>
                         </FlareColumn>
@@ -145,14 +143,14 @@
                                 @if (context.Kind == "RoutingMiss")
                                 {
                                     <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
-                                               Title="@UiStrings.Audit_RoutingMiss_Tooltip">@UiStrings.Audit_RoutingMiss</FlareChip>
+                                               Title="@UiStrings.Audit_RoutingMiss_Tooltip"
+                                               Label="@UiStrings.Audit_RoutingMiss" />
                                 }
                                 @if (context.ExceptionType is { Length: > 0 })
                                 {
                                     <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
-                                               Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)">
-                                        @context.ExceptionType
-                                    </FlareChip>
+                                               Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)"
+                                               Label="@context.ExceptionType" />
                                 }
                             </FlareStack>
                         </Template>
@@ -160,7 +158,7 @@
                     <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
                                  Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
                         <Template>
-                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)">@context.StatusCode</FlareChip>
+                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)" Label="@context.StatusCode.ToString()" />
                         </Template>
                     </FlareColumn>
                     <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"

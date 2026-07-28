@@ -71,11 +71,11 @@ else
     <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
         <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Timeline_Filter</FlareText>
         <FlareChip Size="ChipSize.Sm" Color="@(_filter is null ? FlareColor.Primary : FlareColor.Default)"
-                   OnClick="@(() => _filter = null)">@UiStrings.Timeline_Filter_All</FlareChip>
+                   OnClick="@(() => _filter = null)" Label="@UiStrings.Timeline_Filter_All" />
         <FlareChip Size="ChipSize.Sm" Color="@(_filter == "people" ? FlareColor.Primary : FlareColor.Default)"
-                   OnClick="@(() => _filter = "people")">@UiStrings.Timeline_Filter_People</FlareChip>
+                   OnClick="@(() => _filter = "people")" Label="@UiStrings.Timeline_Filter_People" />
         <FlareChip Size="ChipSize.Sm" Color="@(_filter == "rollout" ? FlareColor.Primary : FlareColor.Default)"
-                   OnClick="@(() => _filter = "rollout")">@UiStrings.Timeline_Filter_Deploys</FlareChip>
+                   OnClick="@(() => _filter = "rollout")" Label="@UiStrings.Timeline_Filter_Deploys" />
     </FlareStack>
 
     @if (Visible.Count == 0)
@@ -100,32 +100,31 @@ else
                                 @* The timestamp came from the VCS or tracker, so it is not strictly
                                    comparable with ours. Marked rather than smoothed over. *@
                                 <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant"
-                                           Title="@UiStrings.Timeline_ExternalClock_Tooltip">~</FlareChip>
+                                           Title="@UiStrings.Timeline_ExternalClock_Tooltip" Label="~" />
                             }
 
                             <FlareText Typo="TypographyScale.BodyMedium">@Describe(entry)</FlareText>
 
                             @if (entry.SubjectKey is { Length: > 0 })
                             {
-                                <FlareChip Size="ChipSize.Sm">@entry.SubjectKey</FlareChip>
+                                <FlareChip Size="ChipSize.Sm" Label="@entry.SubjectKey" />
                             }
                             @if (entry.Repetitions > 1)
                             {
                                 <FlareChip Size="ChipSize.Sm" Color="FlareColor.OnSurfaceVariant"
-                                           Title="@string.Format(UiStrings.Timeline_Collapsed_Tooltip, entry.RepeatedUntil?.ToString("g"))">
-                                    @($"x{entry.Repetitions}")
-                                </FlareChip>
+                                           Title="@string.Format(UiStrings.Timeline_Collapsed_Tooltip, entry.RepeatedUntil?.ToString("g"))"
+                                           Label="@($"x{entry.Repetitions}")" />
                             }
                             @if (entry.IsReassigned)
                             {
                                 <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
-                                           Title="@UiStrings.Timeline_Reassigned_Tooltip">@UiStrings.Timeline_Reassigned</FlareChip>
+                                           Title="@UiStrings.Timeline_Reassigned_Tooltip" Label="@UiStrings.Timeline_Reassigned" />
                             }
 
                             <FlareSpacer />
 
                             <FlareChip Size="ChipSize.Sm" Color="@ActorColor(entry.ActorKind)"
-                                       Title="@(entry.ActorOid ?? "")">@ActorLabel(entry)</FlareChip>
+                                       Title="@(entry.ActorOid ?? "")" Label="@ActorLabel(entry)" />
 
                             @if (entry.RolloutId is { } rolloutId)
                             {

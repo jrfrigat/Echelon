@@ -29,7 +29,7 @@
                 <FlareColumn TItem="RolloutSummaryDto" Id="status" Title="@UiStrings.Rollouts_Col_Status" Sortable="true"
                              Field="@(r => (object?)r.Status)">
                     <Template>
-                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)">@context.Status</FlareChip>
+                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)" Label="@context.Status" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="RolloutSummaryDto" Id="progress" Title="@UiStrings.Rollouts_Col_Progress"
