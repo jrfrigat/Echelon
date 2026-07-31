@@ -73,6 +73,11 @@ docker-compose logs -f sqlserver | grep "Recovery is complete"
 
 ### 1.3 Apply Database Migrations
 
+The app applies any pending migrations on startup by default (`Database:MigrateOnStartup`), so for a
+single-instance or local run you can skip this step. Apply them by hand when you turn that off — e.g.
+a multi-replica deployment, where concurrent auto-migration would race, so you run them from an init
+container or CI instead:
+
 Migrations live in a provider-specific project (`...Migrations.MsSql` for SQL Server, `...Migrations.Postgres` for PostgreSQL). Pick the one that matches your database, and apply **both** contexts:
 
 ```bash
@@ -136,7 +141,7 @@ There is no "ready-for-deploy label" field — deploy readiness is configured se
 Tasks, their statuses, dependencies and hierarchy come from the tracker.
 
 - **Name**, **API URL** (`https://api.tracker.yandex.net`), **Access Token**.
-- **Type** — `yandextracker`.
+- **Type** — `yandextracker-webhook` (receives task webhooks) or `yandextracker-poll` (no webhook; open tasks are refreshed by the reconciliation pass).
 - **Organization ID** — sent as the `X-Org-Id` header (Yandex Tracker).
 - **Closed statuses** — comma-separated status keys that mean a task is *done*; leave blank for the
   defaults (`closed, cancelled, rejected, resolved`).

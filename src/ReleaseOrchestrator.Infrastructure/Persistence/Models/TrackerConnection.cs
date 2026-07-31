@@ -23,7 +23,7 @@ public class TrackerConnection
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Which adapter serves this connection, e.g. <c>yandextracker</c>.
+    /// Which adapter serves this connection, e.g. <c>yandextracker-webhook</c>.
     /// </summary>
     /// <remarks>See <see cref="VcsConnection.ProviderType"/> for why this is a string.</remarks>
     [Required, MaxLength(100)]

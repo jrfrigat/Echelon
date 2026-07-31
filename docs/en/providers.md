@@ -58,7 +58,7 @@ schema. For example the tracker list:
 ```json
 [
   {
-    "ProviderType": "yandextracker",
+    "ProviderType": "yandextracker-webhook",
     "Settings": [
       { "Key": "orgId", "Label": "Organization ID", "Required": true, "Kind": "Text" },
       { "Key": "closedStatuses", "Label": "Closed statuses", "Kind": "Text",

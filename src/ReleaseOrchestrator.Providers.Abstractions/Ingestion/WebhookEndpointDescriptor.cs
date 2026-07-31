@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// <para>
 /// They are separate fields rather than one derived from <see cref="ProviderType"/> on purpose. The
 /// tracker provider spells itself four ways in production today: route <c>tracker</c>, config
-/// section <c>Tracker</c>, source prefix <c>yandex</c>, registered key <c>yandextracker</c>.
+/// section <c>Tracker</c>, source prefix <c>yandex</c>, registered key <c>yandextracker-webhook</c>.
 /// Deriving any of them from the key would rename a live route, or a live config key, or orphan the
 /// dedup rows keyed by the old source prefix. Keeping them independent preserves all of it;
 /// unifying them is a deliberate, separately migrated decision, not a side effect of this change.

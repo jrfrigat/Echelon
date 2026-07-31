@@ -73,6 +73,11 @@ docker-compose logs -f sqlserver | grep "Recovery is complete"
 
 ### 1.3 Примените миграции БД
 
+По умолчанию приложение накатывает незавершённые миграции при запуске (`Database:MigrateOnStartup`),
+так что для одиночного или локального запуска этот шаг можно пропустить. Применяйте вручную, если это
+отключили — например, при развёртывании на нескольких репликах, где одновременная авто-миграция гонялась
+бы, и миграции запускают из init-контейнера или CI:
+
 Миграции лежат в отдельном проекте под провайдера (`...Migrations.MsSql` для SQL Server,
 `...Migrations.Postgres` для PostgreSQL). Возьмите тот, что соответствует вашей БД, и накатите **оба**
 контекста:
@@ -141,7 +146,7 @@ dotnet run --project src/ReleaseOrchestrator.Web
 Задачи, их статусы, зависимости и иерархия приходят из трекера.
 
 - **Name**, **API URL** (`https://api.tracker.yandex.net`), **Access Token**.
-- **Type** — `yandextracker`.
+- **Type** — `yandextracker-webhook` (принимает вебхуки задач) или `yandextracker-poll` (без вебхука; открытые задачи обновляются проходом реконсиляции).
 - **Organization ID** — отправляется в заголовке `X-Org-Id` (Yandex Tracker).
 - **Closed statuses** — список статусов через запятую, означающих, что задача *завершена*; пусто —
   значения по умолчанию (`closed, cancelled, rejected, resolved`).
