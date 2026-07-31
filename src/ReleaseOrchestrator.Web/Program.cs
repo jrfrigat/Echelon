@@ -120,10 +120,12 @@ try
 
     var app = builder.Build();
 
-    // Off by default: with more than one replica, concurrent Migrate() calls race, and the
-    // app needs standing DDL rights on the production database. README §11.3 puts this in an
-    // init container or CI. Turn on for single-instance or local runs.
-    if (builder.Configuration.GetValue("Database:MigrateOnStartup", false))
+    // On by default: the app applies any pending migrations at startup, so a fresh or upgraded
+    // deployment is ready without a separate step. Set Database:MigrateOnStartup=false for a
+    // multi-replica deployment, where concurrent Migrate() calls would race and the app would need
+    // standing DDL rights on the production database -- there, run migrations from an init container
+    // or CI instead (README §11.3).
+    if (builder.Configuration.GetValue("Database:MigrateOnStartup", true))
     {
         using var scope = app.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
