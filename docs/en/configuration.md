@@ -155,6 +155,36 @@ URI (TLS, a cluster, a non-default vhost).
 - **Example:** `100`
 - **Default:** 100
 
+### Ingestion Polling
+
+For a connection whose provider type is a *poll* type (`gitlab-poll`, `yandextracker-poll`), the app
+re-reads it on a timer instead of receiving webhooks. Each connection carries its own interval in its
+settings; these globals set whether the poller runs and how often it wakes — the floor for a
+connection's interval.
+
+**`VcsPolling__Enabled`** / **`TrackerPolling__Enabled`** (sections: `VcsPolling`, `TrackerPolling`)
+- **What:** Whether the VCS / tracker poller runs
+- **Valid values:** `true`, `false`
+- **Default:** `true`
+
+**`VcsPolling__IntervalSeconds`** / **`TrackerPolling__IntervalSeconds`**
+- **What:** How often the poller wakes and sweeps poll-mode connections — the floor for a connection's own interval
+- **Example:** `60`
+- **Default:** 60
+
+**`TrackerPolling__MaxTasksPerRun`**
+- **What:** Open tasks re-read per tracker connection per pass
+- **Example:** `500`
+- **Default:** 500
+
+### Database migrations
+
+**`Database__MigrateOnStartup`** (section: `Database`)
+- **What:** Whether the app applies pending EF Core migrations at startup
+- **Valid values:** `true`, `false`
+- **Default:** `true`
+- **If false:** Apply migrations by hand (or from an init container / CI) — recommended for a multi-replica deployment, where concurrent auto-migration would race
+
 ### Authorization & Bootstrap
 
 **`Authorization__BootstrapAdminObjectIds`** (section: `Authorization`)
