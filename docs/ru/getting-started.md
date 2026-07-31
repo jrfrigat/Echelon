@@ -146,7 +146,7 @@ dotnet run --project src/ReleaseOrchestrator.Web
 Задачи, их статусы, зависимости и иерархия приходят из трекера.
 
 - **Name**, **API URL** (`https://api.tracker.yandex.net`), **Access Token**.
-- **Type** — `yandextracker-webhook` (принимает вебхуки задач) или `yandextracker-poll` (без вебхука; открытые задачи обновляются проходом реконсиляции).
+- **Type** — `yandextracker-webhook` (принимает вебхуки задач) или `yandextracker-poll` (без вебхука; открытые задачи перечитываются с **интервалом опроса**, который вы задаёте).
 - **Organization ID** — отправляется в заголовке `X-Org-Id` (Yandex Tracker).
 - **Closed statuses** — список статусов через запятую, означающих, что задача *завершена*; пусто —
   значения по умолчанию (`closed, cancelled, rejected, resolved`).

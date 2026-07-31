@@ -110,6 +110,11 @@ public static class InfrastructureExtensions
         services.AddScoped<VcsConnectionPoller>();
         services.AddHostedService<VcsPollingCoordinator>();
 
+        // The tracker counterpart: re-reads poll-mode tracker connections' open tasks on their interval,
+        // on top of the global reconciliation pass.
+        services.Configure<TrackerPollingOptions>(config.GetSection("TrackerPolling"));
+        services.AddHostedService<TrackerPollingCoordinator>();
+
         // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model
         // and the retry policy.
         services.AddMessaging(config);

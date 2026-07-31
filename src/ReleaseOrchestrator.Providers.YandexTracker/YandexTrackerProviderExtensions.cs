@@ -40,17 +40,17 @@ public static class YandexTrackerProviderExtensions
 
         services.AddHttpClient<YandexTrackerProviderAdapter>(c => c.Timeout = ApiTimeout);
 
-        // Both types share one read adapter and one settings schema; they differ only in whether a
-        // webhook is mounted for them (below) and in how their events are described.
+        // Both types share one read adapter; thin wrappers give each its own settings schema (the poll
+        // type adds an interval) and description, and only the webhook type gets a webhook (below).
         services.AddKeyedScoped<ITrackerProviderAdapter>(
-            WebhookProviderType, (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
+            WebhookProviderType, (sp, _) => new YandexTrackerWebhookAdapter(sp.GetRequiredService<YandexTrackerProviderAdapter>()));
         services.AddKeyedScoped<ITrackerProviderAdapter>(
-            PollProviderType, (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
+            PollProviderType, (sp, _) => new YandexTrackerPollAdapter(sp.GetRequiredService<YandexTrackerProviderAdapter>()));
 
         services.AddSingleton(new TrackerProviderRegistration(WebhookProviderType, IngestionMode.Push,
             "Yandex.Tracker (webhook). Reads issues and statuses; receives task webhooks at /webhooks/tracker/{connection}."));
         services.AddSingleton(new TrackerProviderRegistration(PollProviderType, IngestionMode.Poll,
-            "Yandex.Tracker (polling). No webhook; open tasks are refreshed by the reconciliation pass."));
+            "Yandex.Tracker (polling). No webhook; open tasks are re-read on the interval you set."));
 
         return services;
     }

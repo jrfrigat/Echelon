@@ -63,6 +63,26 @@ public class ProviderSettingsSchemaTests
     }
 
     /// <summary>
+    /// The poll tracker type declares its interval (a bounded integer, refused at the form rather than
+    /// failing when the poller runs) on top of the base tracker settings; the webhook type declares none.
+    /// </summary>
+    [Fact]
+    public void YandexTrackerPollDeclaresItsIntervalAndTheWebhookDoesNot()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<ITrackerProviderFactory>();
+
+        var poll = factory.GetSettingsSchema("yandextracker-poll");
+        var interval = Assert.Single(poll, s => s.Key == VcsPollSettings.IntervalKey);
+        Assert.Equal(ProviderSettingKind.Int, interval.Kind);
+        Assert.Contains(poll, s => s.Key == YandexTrackerOptions.OrgIdKey);
+
+        var webhook = factory.GetSettingsSchema("yandextracker-webhook");
+        Assert.DoesNotContain(webhook, s => s.Key == VcsPollSettings.IntervalKey);
+    }
+
+    /// <summary>
     /// The webhook GitLab type declares only the task-linking rule (source + pattern): no webhook
     /// secret field, because that is ingress configuration, and no poll interval, because it is pushed.
     /// </summary>
