@@ -25,9 +25,18 @@ public sealed record VcsProviderRegistration(
     string ProviderType, IngestionMode Ingestion = IngestionMode.Push, string? Description = null);
 
 /// <summary>
-/// Declares that a tracker provider is registered under <paramref name="ProviderType"/>.
+/// Declares that a tracker provider is registered under <paramref name="ProviderType"/>, and how its
+/// task events arrive.
 /// </summary>
+/// <remarks>
+/// Same shape and reasoning as <see cref="VcsProviderRegistration"/>: push versus poll is a property
+/// of the provider type, so a tracker that pushes webhooks and one that is only re-read on a timer are
+/// two distinct types (<c>yandextracker-webhook</c> and <c>yandextracker-poll</c>). A poll-type tracker
+/// receives no webhook; its tasks stay fresh through the reconciliation pass.
+/// </remarks>
 /// <param name="ProviderType">The canonical key, as produced by <see cref="ProviderKey.Normalize"/>.</param>
+/// <param name="Ingestion">How this type's task events arrive: pushed by webhook, or pulled by reconciliation.</param>
 /// <param name="Description">A short, human sentence for the admin "installed plugins" view; null when none.</param>
 /// <seealso cref="VcsProviderRegistration"/>
-public sealed record TrackerProviderRegistration(string ProviderType, string? Description = null);
+public sealed record TrackerProviderRegistration(
+    string ProviderType, IngestionMode Ingestion = IngestionMode.Push, string? Description = null);

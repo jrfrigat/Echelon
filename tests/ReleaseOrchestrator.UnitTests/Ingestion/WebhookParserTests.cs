@@ -26,7 +26,7 @@ public class WebhookParserTests
 
     private static IWebhookParser Yandex() =>
         new ServiceCollection().AddYandexTrackerWebhookParser().BuildServiceProvider()
-            .GetRequiredKeyedService<IWebhookParser>(YandexTrackerProviderExtensions.ProviderType);
+            .GetRequiredKeyedService<IWebhookParser>(YandexTrackerProviderExtensions.WebhookProviderType);
 
     private static WebhookRequest Request(string json, params (string Key, string Value)[] headers) =>
         new(
@@ -262,7 +262,7 @@ public class WebhookParserTests
         var d = Yandex().Descriptor;
         // The registered key and the three declared strings deliberately differ — preserved so the
         // refactor renames no route, no config key, and orphans no dedup rows.
-        Assert.Equal("yandextracker", d.ProviderType);
+        Assert.Equal("yandextracker-webhook", d.ProviderType);
         Assert.Equal("tracker", d.RouteSegment);
         Assert.Equal("Tracker", d.SecretConfigSection);
         Assert.Equal("yandex", d.SourcePrefix);

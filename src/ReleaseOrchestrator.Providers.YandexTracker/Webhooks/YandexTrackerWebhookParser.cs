@@ -22,9 +22,10 @@ internal sealed class YandexTrackerWebhookParser : IWebhookParser
 
     /// <inheritdoc/>
     public WebhookEndpointDescriptor Descriptor { get; } = new(
-        ProviderType: YandexTrackerProviderExtensions.ProviderType,  // "yandextracker"
+        ProviderType: YandexTrackerProviderExtensions.WebhookProviderType,  // "yandextracker-webhook"
         // The three strings below intentionally differ from the key and from each other: this is the
-        // spelling that has been in production, preserved so the refactor breaks no live webhook.
+        // spelling that has been in production, preserved so the split breaks no live webhook — the
+        // route and dedup source prefix stay exactly as they were even as the key gains the -webhook suffix.
         RouteSegment: "tracker",
         SecretConfigSection: "Tracker",
         SourcePrefix: "yandex");

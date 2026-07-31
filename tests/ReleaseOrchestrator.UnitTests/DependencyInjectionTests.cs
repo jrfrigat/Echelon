@@ -164,7 +164,8 @@ public class DependencyInjectionTests
     }
 
     [Theory]
-    [InlineData("yandextracker")]
+    [InlineData("yandextracker-webhook")]
+    [InlineData("yandextracker-poll")]
     public void TrackerProviderIsRegisteredAndDiscoverable(string providerType)
     {
         using var provider = BuildProvider(Configuration());

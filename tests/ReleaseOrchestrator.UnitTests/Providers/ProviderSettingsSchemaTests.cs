@@ -46,7 +46,7 @@ public class ProviderSettingsSchemaTests
 
         var schema = scope.ServiceProvider
             .GetRequiredService<ITrackerProviderFactory>()
-            .GetSettingsSchema("yandextracker");
+            .GetSettingsSchema("yandextracker-webhook");
 
         // The key is the contract between the form and YandexTrackerOptions.From. A rename on one
         // side alone leaves the adapter throwing "requires an organization id" at a connection the
@@ -104,8 +104,8 @@ public class ProviderSettingsSchemaTests
     }
 
     [Theory]
-    [InlineData("YandexTracker")]
-    [InlineData("  yandextracker  ")]
+    [InlineData("YandexTracker-Webhook")]
+    [InlineData("  yandextracker-webhook  ")]
     public void SchemaLookupMatchesTheProviderTypeCanonically(string providerType)
     {
         using var provider = BuildProvider();

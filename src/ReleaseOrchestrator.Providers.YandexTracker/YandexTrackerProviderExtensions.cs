@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Providers.Abstractions;
 using ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 using ReleaseOrchestrator.Providers.Abstractions.Tracker;
@@ -9,10 +10,23 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// <summary>Registers the Yandex.Tracker adapter.</summary>
 public static class YandexTrackerProviderExtensions
 {
-    /// <summary>
-    /// The provider type this adapter serves. Stored on <c>TrackerConnection.ProviderType</c>.
-    /// </summary>
+    /// <summary>The base name this adapter serves; the two concrete types below are what a connection stores.</summary>
     public const string ProviderType = "yandextracker";
+
+    /// <summary>
+    /// The provider type for a Yandex.Tracker connection reached by webhooks. Stored on
+    /// <c>TrackerConnection.ProviderType</c>.
+    /// </summary>
+    /// <remarks>
+    /// Yandex.Tracker is two provider types, not one with a push/poll toggle: <see cref="WebhookProviderType"/>
+    /// receives task webhooks (and is reconciled), while <see cref="PollProviderType"/> receives no webhook
+    /// and is only re-read by the reconciliation pass. Both share one API read adapter and one settings
+    /// schema — only ingestion differs.
+    /// </remarks>
+    public const string WebhookProviderType = "yandextracker-webhook";
+
+    /// <summary>The provider type for a Yandex.Tracker connection with no webhook. See <see cref="WebhookProviderType"/>.</summary>
+    public const string PollProviderType = "yandextracker-poll";
 
     private static readonly TimeSpan ApiTimeout = TimeSpan.FromSeconds(30);
 
@@ -26,12 +40,17 @@ public static class YandexTrackerProviderExtensions
 
         services.AddHttpClient<YandexTrackerProviderAdapter>(c => c.Timeout = ApiTimeout);
 
+        // Both types share one read adapter and one settings schema; they differ only in whether a
+        // webhook is mounted for them (below) and in how their events are described.
         services.AddKeyedScoped<ITrackerProviderAdapter>(
-            ProviderType,
-            (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
+            WebhookProviderType, (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
+        services.AddKeyedScoped<ITrackerProviderAdapter>(
+            PollProviderType, (sp, _) => sp.GetRequiredService<YandexTrackerProviderAdapter>());
 
-        services.AddSingleton(new TrackerProviderRegistration(ProviderType,
-            "Yandex.Tracker. Reads issues and statuses; receives task webhooks at /webhooks/tracker/{connection}."));
+        services.AddSingleton(new TrackerProviderRegistration(WebhookProviderType, IngestionMode.Push,
+            "Yandex.Tracker (webhook). Reads issues and statuses; receives task webhooks at /webhooks/tracker/{connection}."));
+        services.AddSingleton(new TrackerProviderRegistration(PollProviderType, IngestionMode.Poll,
+            "Yandex.Tracker (polling). No webhook; open tasks are refreshed by the reconciliation pass."));
 
         return services;
     }
@@ -47,8 +66,10 @@ public static class YandexTrackerProviderExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddKeyedSingleton<IWebhookParser, YandexTrackerWebhookParser>(ProviderType);
-        services.AddSingleton(new WebhookParserRegistration(ProviderType));
+        // Only the webhook type has a webhook. The route (/webhooks/tracker/{connection}) and dedup
+        // source prefix are unchanged (see the parser's descriptor), so this re-key breaks no live webhook.
+        services.AddKeyedSingleton<IWebhookParser, YandexTrackerWebhookParser>(WebhookProviderType);
+        services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
 
         return services;
     }
