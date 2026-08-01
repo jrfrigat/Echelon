@@ -33,8 +33,15 @@ namespace ReleaseOrchestrator.Web.Controllers;
 public class RequestAuditController(
     ArchiveDbContext db,
     RequestAuditBuffer buffer,
+    TimeProvider clock,
     IOptions<RequestAuditOptions> options) : ControllerBase
 {
+    /// <summary>
+    /// The window's end. Read from the injected clock like the rest of the codebase, so a test can
+    /// place rows either side of a boundary instead of racing the wall clock.
+    /// </summary>
+    private DateTime Now => clock.GetUtcNow().UtcDateTime;
+
     /// <summary>Recorded requests, newest first.</summary>
     /// <param name="minutes">How far back to look.</param>
     /// <param name="status">Optional status class: <c>error</c>, <c>client</c>, <c>server</c>.</param>
@@ -92,8 +99,9 @@ public class RequestAuditController(
     public async Task<IActionResult> Summary([FromQuery] int minutes = 60, CancellationToken ct = default)
     {
         var window = Math.Clamp(minutes, 1, 10_080);
-        var from = DateTime.UtcNow.AddMinutes(-window);
-        var to = DateTime.UtcNow;
+        // One reading of the clock for both ends, so the reported window is exactly the one queried.
+        var to = Now;
+        var from = to.AddMinutes(-window);
 
         var sampleCap = Math.Max(1_000, options.Value.SummarySampleCap);
 
@@ -143,7 +151,7 @@ public class RequestAuditController(
     private IQueryable<ReleaseOrchestrator.Infrastructure.Archive.Entities.RequestAuditEntry> Filtered(
         int minutes, string? status, bool notableOnly, bool includeAuditTraffic, string? search)
     {
-        var from = DateTime.UtcNow.AddMinutes(-Math.Clamp(minutes, 1, 10_080));
+        var from = Now.AddMinutes(-Math.Clamp(minutes, 1, 10_080));
         var query = db.RequestAuditEntries.Where(e => e.StartedAt >= from);
 
         if (notableOnly) query = query.Where(e => e.IsNotable);

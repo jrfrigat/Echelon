@@ -90,7 +90,13 @@ public static class RequestAuditMiddleware
             // until end-to-end testing caught it.
             var originalPath = context.Request.Path;
 
-            var startedAt = DateTime.UtcNow;
+            // The injected clock where one is registered — both hosts register it — falling back to
+            // the system clock rather than failing: this middleware must never be the reason a
+            // request does not serve. Only the recorded StartedAt uses it; the duration below is a
+            // Stopwatch, which is monotonic and must not be replaced by clock arithmetic.
+            var clock = context.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
+
+            var startedAt = clock.GetUtcNow().UtcDateTime;
             var startTimestamp = Stopwatch.GetTimestamp();
 
             try

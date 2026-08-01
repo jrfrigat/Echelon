@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Web.Auth;
 /// boundary. The token carries the two claims the rest of the app reads: <c>oid</c> (a GUID, which
 /// permissions key on) and the display name.
 /// </remarks>
-public sealed class LocalTokenService(IOptions<LocalAuthenticationOptions> options)
+public sealed class LocalTokenService(IOptions<LocalAuthenticationOptions> options, TimeProvider clock)
 {
     private readonly LocalAuthenticationOptions _options = options.Value;
 
@@ -26,7 +26,9 @@ public sealed class LocalTokenService(IOptions<LocalAuthenticationOptions> optio
     /// <returns>The serialized JWT and the instant it expires.</returns>
     public (string Token, DateTime ExpiresAtUtc) Issue(string objectId, string displayName)
     {
-        var now = DateTime.UtcNow;
+        // The injected clock, like everything else that stamps a time here: a token's lifetime is
+        // worth being able to test at a boundary rather than by waiting for one.
+        var now = clock.GetUtcNow().UtcDateTime;
         var expires = now.AddMinutes(_options.TokenLifetimeMinutes);
 
         var descriptor = new SecurityTokenDescriptor
