@@ -1,3 +1,12 @@
+/* The browser's default body margin (8px) has to go: Flare ships no CSS reset, and the shell sizes
+   itself to the viewport (.flare-layout is height:100dvh), so those 8px push the layout off-screen and
+   raise a scrollbar on every page. Both Flare reference apps zero it in their own app.css for the same
+   reason. */
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
 /* Material Symbols is self-hosted rather than linked from fonts.googleapis.com as the Flare README
    suggests: the API serves default-src 'self', so a CDN stylesheet (and the gstatic font it points
    at) is blocked outright and the icons would silently render as their ligature names. Self-hosting
