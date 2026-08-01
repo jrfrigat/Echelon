@@ -40,7 +40,10 @@ internal sealed class GitLabProviderAdapter(
             // every supported GitLab reports labels. Turning it off on an undetectable version
             // would make an unreachable /version endpoint look like "the deploy label was
             // removed" and drop merge requests from the plan.
-            SupportsMergeRequestLabels = version is null || version.Value.IsAtLeast(LabelsMinimumMajor, LabelsMinimumMinor)
+            SupportsMergeRequestLabels = version is null || version.Value.IsAtLeast(LabelsMinimumMajor, LabelsMinimumMinor),
+            // The branches endpoint predates every GitLab this adapter supports, so it is always on —
+            // and, as with labels, an unknown version must not read as "this repository has no work".
+            SupportsBranches = true
         };
 
         return new GitLabProvider(http, context, capabilities);

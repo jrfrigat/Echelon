@@ -805,6 +805,46 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.ToTable("Repositories");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryBranch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMerged")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("RepositoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TaskExternalId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "RepositoryId", "Name" }, "IX_RepositoryBranch_RepositoryId_Name")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "TaskExternalId" }, "IX_RepositoryBranch_TaskExternalId");
+
+                    b.ToTable("RepositoryBranches");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDependency", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1536,6 +1576,17 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Connection");
 
                     b.Navigation("TrackerConnection");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryBranch", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.Repository", "Repository")
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Repository");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RepositoryDependency", b =>

@@ -107,6 +107,10 @@ public class RolloutService(
             throw new DomainValidationException(
                 $"Task is not ready in '{env.Key}': waiting on {string.Join(", ", blocking)}.");
 
+        // Work that has started and not landed: a branch naming a task in this plan, with no merge
+        // request to carry it.
+        await GuardUnlandedBranchesAsync(closure, ct);
+
         // Environment-progression gate: the whole closure must already be deployed to every enabled
         // environment ordered before this one.
         if (options.Value.EnvironmentProgressionGate)
@@ -512,6 +516,68 @@ public class RolloutService(
 
         return mrs.Where(m => !deployed.Contains(m.Id))
             .Select(m => m.TaskKey).Distinct().OrderBy(k => k, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Refuses the launch when a task in the plan still has an unlanded branch that no merge request
+    /// carries.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A plan is built from merge requests, so a task whose only artefact is a branch used to look
+    /// finished — nothing to deploy, nothing to wait for. That is backwards: a branch is work that
+    /// started, and rolling out a parent while a child's branch is unlanded ships an incomplete change.
+    /// </para>
+    /// <para>
+    /// The rule is deliberately "no merge request carries it", not "any unmerged branch". Every merge
+    /// request in a plan has an unmerged source branch at launch — that is what the rollout is about to
+    /// merge — so blocking on those would block every launch. What blocks is a branch nobody has raised
+    /// for review: the work exists, and the plan does not know about it.
+    /// </para>
+    /// </remarks>
+    private async Task GuardUnlandedBranchesAsync(IReadOnlyCollection<Guid> closure, CancellationToken ct)
+    {
+        if (closure.Count == 0) return;
+
+        // The keys the branches are linked by. A branch stores the task's external id, not its row id:
+        // it is often pushed before the task is imported.
+        var taskKeys = await db.Tasks
+            .Where(t => closure.Contains(t.Id))
+            .Select(t => t.ExternalId)
+            .ToListAsync(ct);
+        if (taskKeys.Count == 0) return;
+
+        var unlanded = await db.RepositoryBranches
+            .Where(b => !b.IsMerged
+                        && !b.IsDefault
+                        && b.TaskExternalId != null
+                        && taskKeys.Contains(b.TaskExternalId))
+            .Select(b => new { b.Name, b.RepositoryId, b.TaskExternalId, RepositoryName = b.Repository.Name })
+            .ToListAsync(ct);
+        if (unlanded.Count == 0) return;
+
+        // A branch that a merge request already carries is represented in the plan by that merge
+        // request, so it is not unplanned work.
+        var repoIds = unlanded.Select(b => b.RepositoryId).Distinct().ToList();
+        var carried = (await db.MergeRequests
+                .Where(m => repoIds.Contains(m.RepositoryId))
+                .Select(m => new { m.RepositoryId, m.SourceBranch })
+                .ToListAsync(ct))
+            .Select(m => (m.RepositoryId, m.SourceBranch))
+            .ToHashSet();
+
+        var offenders = unlanded
+            .Where(b => !carried.Contains((b.RepositoryId, b.Name)))
+            .Select(b => $"{b.TaskExternalId} ({b.RepositoryName}: {b.Name})")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+        if (offenders.Count == 0) return;
+
+        throw new DomainValidationException(
+            "Unfinished work blocks this rollout — these branches have no merge request and are not merged: "
+            + string.Join(", ", offenders)
+            + ". Raise a merge request for each, or merge or delete the branch.");
     }
 
     /// <summary>

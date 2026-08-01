@@ -34,6 +34,19 @@ public interface IVcsProvider
     /// <returns>The open merge requests; empty when there are none.</returns>
     Task<IReadOnlyList<VcsMergeRequest>> GetOpenMergeRequestsAsync(string projectPath, CancellationToken ct);
 
+    /// <summary>Lists the branches of a repository.</summary>
+    /// <param name="projectPath">The repository, as this provider identifies it.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The branches; empty when there are none, or when this provider does not report them.</returns>
+    /// <remarks>
+    /// Default-empty so a provider that cannot list branches does not have to implement it; check
+    /// <see cref="VcsCapabilities.SupportsBranches"/> to tell "no branches" from "cannot say", exactly
+    /// as with labels. A branch with no merge request is work that started and has not landed, which is
+    /// what lets a parent task be held back while a child is still in progress.
+    /// </remarks>
+    Task<IReadOnlyList<VcsBranch>> GetBranchesAsync(string projectPath, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<VcsBranch>>([]);
+
     // Task-key extraction used to live here, as a provider dialect. It is now a per-connection rule
     // (source + pattern) applied by the ingestion through Core.Parsing.TaskKeyExtractor, so a provider
     // no longer owns the link format -- an operator configures it. See TaskLinkSettings.

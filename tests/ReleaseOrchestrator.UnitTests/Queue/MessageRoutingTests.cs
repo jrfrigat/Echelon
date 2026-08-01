@@ -58,6 +58,11 @@ public sealed class MessageRoutingTests
             .GetTypes()
             .Where(type => type.Namespace == contractsNamespace)
             .Where(type => type is { IsAbstract: false, IsInterface: false })
+            // Only top-level records: a NESTED record is a payload of the message that contains it
+            // (BranchesObserved.Branch), never sent on its own, so it needs no routing marker. Nested
+            // types report their containing type's namespace, which is why they must be excluded here
+            // rather than by the namespace filter above.
+            .Where(type => !type.IsNested)
             // Records carry a compiler-generated clone method; this distinguishes them from the
             // static MessageRouting helper that also lives here.
             .Where(type => type.GetMethod("<Clone>$", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is not null)

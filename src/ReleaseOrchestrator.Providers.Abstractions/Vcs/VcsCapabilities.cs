@@ -41,6 +41,16 @@ public sealed record VcsCapabilities
     /// </remarks>
     public bool SupportsMergeRequestLabels { get; init; }
 
+    /// <summary>
+    /// Whether this install reports the repository's branches.
+    /// </summary>
+    /// <remarks>
+    /// Same distinction as <see cref="SupportsMergeRequestLabels"/>: an empty branch list from a
+    /// provider that cannot list them must not be read as "the task has no unlanded work", which would
+    /// silently drop the blocker the branch was supposed to raise.
+    /// </remarks>
+    public bool SupportsBranches { get; init; }
+
     /// <summary>Capabilities of a provider that has told us nothing: assume the minimum.</summary>
     public static VcsCapabilities None { get; } = new();
 }

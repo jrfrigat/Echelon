@@ -40,6 +40,7 @@ public sealed class VcsConnectionPoller(
         var provider = await factory.CreateAsync(connection.ToDescriptor(), ct);
         var source = $"{ProviderKey.Normalize(connection.ProviderType)}/{connection.Name}";
         var emitted = 0;
+        var branchesSeen = 0;
         var failures = new List<VcsPollFailure>();
 
         foreach (var repository in connection.Repositories)
@@ -68,6 +69,28 @@ public sealed class VcsConnectionPoller(
                             mr.Labels, mr.PipelineStatus)));
                     emitted++;
                 }
+
+                // Branches too, not only merge requests: a branch with no merge request is work that
+                // started and has not landed, which is what holds a parent task back. Skipped when the
+                // provider cannot report branches, so "cannot say" never reads as "no work".
+                if (provider.Capabilities.SupportsBranches)
+                {
+                    var branches = (await provider.GetBranchesAsync(repository.ExternalId, ct))
+                        .Select(b => new BranchesObserved.Branch(b.Name, b.IsMerged, b.IsDefault))
+                        .ToList();
+
+                    await bus.Send(new BranchesObserved(
+                        ConnectionName: connection.Name,
+                        RepositoryExternalId: repository.ExternalId,
+                        Branches: branches,
+                        Source: source,
+                        // Folds the whole set in, so an unchanged repository is dropped by the inbox and
+                        // only a real change (a branch added, landed or deleted) costs any work.
+                        EventId: PollingEventId.For(
+                            source, repository.ExternalId, "branches", string.Empty,
+                            branches.Select(b => $"{b.Name}:{(b.IsMerged ? 1 : 0)}").ToList(), null)));
+                    branchesSeen += branches.Count;
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -77,9 +100,11 @@ public sealed class VcsConnectionPoller(
             }
         }
 
-        if (emitted > 0)
-            logger.LogDebug("Polled {Count} open merge request(s) from {Connection}", emitted, connection.Name);
-        return new VcsPollResult(emitted, failures);
+        if (emitted > 0 || branchesSeen > 0)
+            logger.LogDebug(
+                "Polled {Count} open merge request(s) and {Branches} branch(es) from {Connection}",
+                emitted, branchesSeen, connection.Name);
+        return new VcsPollResult(emitted, failures, branchesSeen);
     }
 
     // A 404 from the provider is the common misconfiguration, and "Not Found" alone does not say what to
@@ -93,7 +118,8 @@ public sealed class VcsConnectionPoller(
 /// <summary>What one connection's poll produced.</summary>
 /// <param name="Emitted">How many merge-request observations were sent.</param>
 /// <param name="Failures">Repositories that could not be read; empty when every one succeeded.</param>
-public sealed record VcsPollResult(int Emitted, IReadOnlyList<VcsPollFailure> Failures);
+/// <param name="Branches">How many branches were observed across the connection's repositories.</param>
+public sealed record VcsPollResult(int Emitted, IReadOnlyList<VcsPollFailure> Failures, int Branches = 0);
 
 /// <summary>A repository the poll could not read, and why.</summary>
 /// <param name="RepositoryExternalId">The repository, as configured.</param>

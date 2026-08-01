@@ -121,6 +121,72 @@ public class RolloutServiceTests : PlannerTestBase
         Assert.Contains("deploy strategy", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// A branch naming a task in the plan, unmerged and with no merge request to carry it, is work in
+    /// progress the plan knows nothing about — launching would ship an incomplete change.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Fails_WhenATaskHasAnUnlandedBranchWithNoMergeRequest()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        AddMergeRequest(repo, task);
+        var env = AddEnvironment();
+        AddDeployTarget(repo, env, "gitlab-merge");
+
+        // Someone pushed a second branch for the same task and has not raised a merge request for it.
+        Db.RepositoryBranches.Add(new RepositoryBranch
+        {
+            Id = Guid.NewGuid(),
+            RepositoryId = repo.Id,
+            Name = "feature/PROJ-1-part-two",
+            TaskExternalId = "PROJ-1",
+            IsMerged = false,
+            FirstSeenAt = Now,
+            LastSeenAt = Now
+        });
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
+            () => Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct));
+        Assert.Contains("feature/PROJ-1-part-two", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The branch a merge request is *about* must not block: at launch every merge request in the plan
+    /// has an unmerged source branch — that is what the rollout is going to merge. Blocking on those
+    /// would block every launch there has ever been.
+    /// </summary>
+    [Fact]
+    public async Task Launch_Succeeds_WhenTheOnlyUnmergedBranchIsCarriedByAMergeRequest()
+    {
+        var repo = AddRepository("svc");
+        repo.DeployStrategyKey = "gitlab-merge";
+        var task = AddTask("PROJ-1");
+        var mr = AddMergeRequest(repo, task);
+        var env = AddEnvironment();
+        AddDeployTarget(repo, env, "gitlab-merge");
+
+        Db.RepositoryBranches.Add(new RepositoryBranch
+        {
+            Id = Guid.NewGuid(),
+            RepositoryId = repo.Id,
+            Name = mr.SourceBranch,
+            TaskExternalId = "PROJ-1",
+            IsMerged = false,
+            FirstSeenAt = Now,
+            LastSeenAt = Now
+        });
+        await Db.SaveChangesAsync(Ct);
+        await Planner_().RecalculateAsync(task.Id, actor: null, Ct);
+
+        var rollout = await Service().LaunchAsync(task.Id, env.Id, ActorRef.System, ct: Ct);
+
+        Assert.NotNull(rollout);
+    }
+
     [Fact]
     public async Task Launch_Fails_WhenPrerequisiteNotDeployed()
     {

@@ -59,8 +59,39 @@ internal sealed class GitLabProvider(
         return all;
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<VcsBranch>> GetBranchesAsync(string projectPath, CancellationToken ct)
+    {
+        // Paged like the merge requests, and for the same reason: a repository with more than 100
+        // branches would otherwise report only the first page and look like it had less unlanded work.
+        var all = new List<VcsBranch>();
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            using var request = Authorized(HttpMethod.Get, GitLabUrls.Branches(context.ApiUrl, projectPath, page));
+            var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            var dtos = await response.Content
+                .ReadFromJsonAsync<List<GitLabBranchDto>>(cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (dtos is { Count: > 0 })
+                all.AddRange(dtos.Select(d => new VcsBranch(d.Name ?? string.Empty, d.Merged, d.Default)));
+
+            var next = response.Headers.TryGetValues("X-Next-Page", out var values) ? values.FirstOrDefault() : null;
+            if (string.IsNullOrEmpty(next)) break;
+        }
+
+        return all;
+    }
+
     /// <summary>A safety bound so a misbehaving pagination header cannot loop forever (100 pages = 10k MRs).</summary>
     private const int MaxPages = 100;
+
+    /// <summary>GitLab's branch shape: the name, whether it has landed, and whether it is the default.</summary>
+    private sealed record GitLabBranchDto(
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("merged")] bool Merged,
+        [property: JsonPropertyName("default")] bool Default);
 
     private HttpRequestMessage Authorized(HttpMethod method, Uri url)
     {

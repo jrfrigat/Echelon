@@ -46,6 +46,7 @@ public static class MessagingSetup
         var prefetch = config.GetValue("Queue:PrefetchCount", 16);
 
         services.AddRebusHandler<MrOpenedConsumer>();
+        services.AddRebusHandler<BranchesObservedConsumer>();
         services.AddRebusHandler<MrStatusChangedConsumer>();
         services.AddRebusHandler<TaskCreatedConsumer>();
         services.AddRebusHandler<TaskStatusChangedConsumer>();

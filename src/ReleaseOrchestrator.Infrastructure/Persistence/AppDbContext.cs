@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<TaskDependency> TaskDependencies => Set<TaskDependency>();
     public DbSet<MergeRequest> MergeRequests => Set<MergeRequest>();
+    public DbSet<RepositoryBranch> RepositoryBranches => Set<RepositoryBranch>();
     public DbSet<MergeRequestStatusChange> MergeRequestStatusChanges => Set<MergeRequestStatusChange>();
     public DbSet<MergeRequestLabelChange> MergeRequestLabelChanges => Set<MergeRequestLabelChange>();
     public DbSet<RolloutPlan> RolloutPlans => Set<RolloutPlan>();
