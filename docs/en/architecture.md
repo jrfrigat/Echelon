@@ -8,8 +8,9 @@
 
 Release Orchestrator plans and executes deployments **per task**. There is no single global release
 plan and no "stacks": for each task imported from a tracker, it builds the order in which that task's
-repositories deploy, then executes that order as a **rollout** into an environment, holding each step
-at a **readiness gate** until the merge request is deployable.
+merge requests deploy, then executes that order as a **rollout** into an environment. A
+**readiness gate** is checked once, at launch, and refuses the launch outright unless every merge
+request that would deploy is ready.
 
 Two inputs shape the order:
 
@@ -18,8 +19,8 @@ Two inputs shape the order:
 - **Task hierarchy** — parent/predecessor links from the tracker.
 
 These become a directed acyclic graph; cycles are resolved by dropping the lowest-priority edges
-(soft first) and logged, and a topological sort produces **waves** — repositories that may deploy in
-parallel.
+(soft first) and logged, and a topological sort produces **waves** — merge requests that may deploy
+in parallel.
 
 ---
 
@@ -67,10 +68,12 @@ never disagree on what "merged" or "resolved" means:
 `EventDedupStep` backed by a `ProcessedEvent` inbox drops repeats; polled events carry a deterministic
 id so the same merge-request state folds to the same event.
 
-Normalized contracts live in `Providers.Abstractions.Ingestion` (e.g. `MrOpened` carries the branch,
-title, labels and pipeline result; `TaskCreated`, `TaskStatusChanged`, …). The consumer, not the
-parser, applies the connection's **linking rule** to attach a merge request to its task, because the
-parser runs in the ingress with no database.
+The normalized message contracts live in `Application.Contracts.Messages` (`MrOpened` carries the
+branch, title, labels and pipeline result; `TaskCreated`, `TaskStatusChanged`, `BranchesObserved`, …);
+`Providers.Abstractions.Ingestion` holds the parser side of the seam (`IWebhookParser`,
+`WebhookRequest`, signature helpers). The consumer, not the parser, applies the connection's
+**linking rule** to attach a merge request to its task, because the parser runs in the ingress with
+no database.
 
 ---
 
@@ -78,7 +81,7 @@ parser runs in the ingress with no database.
 
 For each task the planner builds a **rollout plan** (`RolloutPlan` with `PlanTaskNode` / `PlanItem`):
 
-1. Gather the task's repositories (those its merge requests touch).
+1. Gather the merge requests of the task and of every task it transitively depends on (its closure).
 2. Apply the repository ordering rules (`RepositoryDependency`, Hard/Soft) and the task hierarchy.
 3. Resolve cycles by dropping the lowest-priority edges, log what was dropped.
 4. Topologically sort into **waves**.
@@ -90,17 +93,23 @@ the same plan rather than churning a new one. `PlanOverride` records deliberate 
 
 ## Execution: rollouts
 
-Launching a task into an environment creates a `Rollout` with a `RolloutStep` per repository, in wave
-order (`RolloutStep`, `RolloutStepAttempt` for retries, `RolloutEvent` for the audit trail):
+Launching a task into an environment creates a `Rollout` with a `RolloutStep` per merge request, in
+wave order (`RolloutStep`, `RolloutStepAttempt` for retries, `RolloutEvent` for the audit trail):
 
-- Each step deploys one repository through its **deploy target** — a `RepositoryDeployTarget` per
-  `(repository, environment)` carrying the deploy strategy (`gitlab-merge`, `gitlab-pipeline`, …), a
-  redeploy policy, and frozen deploy settings captured at launch (secrets unprotected only at dispatch).
-- **The readiness gate** holds a step until the merge request is deployable. Readiness is a set of
-  normalized **signals** — `label:…`, `mr-status:…`, `pipeline:…` — evaluated against a named
-  `ReadinessRule` (`AllOf` / `AnyOf`). The rule is resolved: a per-merge-request pin
-  (`MergeRequestReadinessPin`) → the deploy target's override → the environment's default
-  (`DeploymentEnvironment.ReadinessRuleId`) → no gate.
+- Each step deploys one merge request through its repository's **deploy target** — a
+  `RepositoryDeployTarget` per `(repository, environment)` carrying the deploy strategy
+  (`gitlab-merge`, `gitlab-pipeline`, …), a redeploy policy, and frozen deploy settings captured at
+  launch (secrets unprotected only at dispatch).
+- **The readiness gate** runs once, at launch, and refuses the whole launch if any merge request that
+  would deploy is not ready — rather than filtering the unready ones out, which would be a partial
+  rollout that reads as complete. There is no dispatch-time re-check: to hold a rollout already
+  running, cancel it. Readiness is a set of normalized **signals** — `label:…`, `mr-status:…`,
+  `pipeline:…` — evaluated against a named `ReadinessRule` (`AllOf` / `AnyOf`). The rule is resolved:
+  a per-merge-request pin (`MergeRequestReadinessPin`) → the deploy target's override → the
+  environment's default (`DeploymentEnvironment.ReadinessRuleId`) → no gate.
+- **Unlanded work blocks a launch.** A branch naming a task in the plan that no merge request carries
+  is work that started and has not landed, so the launch is refused until it is raised, merged or
+  deleted (`RepositoryBranch`).
 - Deploy state is tracked per environment (`MrDeploymentState`, `MrDeployClaim`): the same merge
   request can be live on staging and not on prod. Relaunching an identical plan is recognised as the
   same rollout, so it does not double-deploy.
@@ -120,6 +129,8 @@ status changed, task sync, and rollout progress. Cores are competing consumers o
 - **Connections** — `VcsConnection`, `TrackerConnection`: name, type, URL, encrypted token, and an
   opaque `ProviderSettingsJson` bag (linking rule / poll interval / org id / closed statuses). No
   "ready-for-deploy label" column.
+- **Branches** — `RepositoryBranch` (name, `TaskExternalId`, merged/default flags), the evidence that
+  a task's work has started even when no merge request carries it.
 - **Repositories & ordering** — `Repository` (name, external path, connection); `RepositoryDependency`
   (from → after, Hard/Soft); `RepositoryDeployTarget` per `(repo, environment)` with strategy,
   `DeploySettingsJson`, redeploy policy, optional `ReadinessRuleId`.
@@ -179,7 +190,10 @@ explicit opt-out).
 
 ## Observability
 
-- **Health** — `GET /health` (liveness) and `GET /health/ready` (readiness: DB, RabbitMQ, Redis).
+- **Health** — `GET /health` (liveness) and `GET /health/ready`, which checks the operational
+  database, the archive database (Degraded, not Unhealthy — archiving is a background concern) and
+  the coordination cache. The broker is deliberately not probed: the ingress answers 503 when it is
+  down, which senders retry, so a broker outage is not a reason to drop the API out of rotation.
 - **Logging** — structured (Serilog), with a correlation id threaded through requests and consumers.
   Logs are not localized — they are for operators.
 - **Metrics & tracing** — a Prometheus metrics endpoint and OpenTelemetry are wired; the async path

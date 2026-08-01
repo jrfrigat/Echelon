@@ -192,7 +192,7 @@ If the app returns an error in Spanish API responses, localization is working.
 - **Page titles and headings:** "Release Plans", "Repositories", "Permissions"
 - **Form placeholders and help text**
 - **Validation messages:** "This field is required", "Invalid email"
-- **Status badges:** "Merged", "Opened", "ReadyForDeploy"
+- **Status badges:** "Merged", "Opened", "Closed"
 - **Navigation menu items**
 - **Dialog titles and body text**
 - **Error messages shown to users**

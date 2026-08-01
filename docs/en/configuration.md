@@ -115,26 +115,38 @@ URI (TLS, a cluster, a non-default vhost).
 **`Archiving__Enabled`** (section: `Archiving`)
 - **What:** Whether to run the archive service
 - **Valid values:** `true`, `false`
-- **Default:** `true` (runs in every pod)
+- **Default:** `true`
 - **If false:** No archival happens; operational DB grows unbounded
-- **Note:** No leader election — archival runs in all replicas (idempotent)
+- **Note:** Registered in every replica but gated on a lease, so one cycle runs per night across the deployment
 
-**`Archiving__CutoffDays`**
-- **What:** Age threshold for archival (days)
+**`Archiving__RunAtUtcHour`**
+- **What:** Hour of day, UTC, at which the nightly cycle starts
+- **Example:** `2`
+- **Default:** 2
+- **Note:** An hour, not an interval — the cycle runs once a night. There is no cron expression: none could be honoured without a parser in this assembly, and a setting that is read but ignored is worse than no setting
+
+**`Archiving__ArchiveAfterDays`**
+- **What:** How long a merge request or task must have been terminal before it is eligible to move
 - **Example:** `90`
 - **Default:** 90
-- **Behavior:** Tasks/MRs/plans closed >90 days ago are moved to archive DB
+- **Behavior:** Measured from the merge, close or task-closed timestamp, never from first sight. A row still referenced by a plan, a rollout or a deployment state waits regardless of age
 
-**`Archiving__BatchSize`**
-- **What:** Number of records to archive in one batch
+**`Archiving__MrBatchSize`**
+- **What:** Merge requests moved per batch
+- **Example:** `500`
+- **Default:** 500
+
+**`Archiving__TaskBatchSize`**
+- **What:** Tasks moved per batch
 - **Example:** `1000`
 - **Default:** 1000
 - **Note:** Larger batches = fewer DB round-trips, but more lock contention
 
-**`Archiving__RunIntervalMinutes`**
-- **What:** How often the archive service runs
-- **Example:** `60`
-- **Default:** 60 (hourly)
+**`Archiving__StatusJournalRetentionDays`**
+- **What:** How long merge-request status and label transitions are kept, in days
+- **Example:** `730`
+- **Default:** 730 (two years)
+- **Behavior:** Pruned outright, not archived — these rows back the task timeline and nothing else reads them. A long-lived task can lose its earliest transitions while still open; raise this if that history matters more than the rows
 
 ### Task Reconciliation Service
 
@@ -143,17 +155,19 @@ URI (TLS, a cluster, a non-default vhost).
 - **Valid values:** `true`, `false`
 - **Default:** `true`
 - **If false:** Task dependencies are only loaded when tasks are explicitly created or status-changed
+- **Why it exists:** Trackers raise no event when a dependency link is added or removed, so without this sweep an edge added in the tracker never arrives until something unrelated touches that task
 
-**`TaskReconciliation__RunIntervalMinutes`**
+**`TaskReconciliation__IntervalMinutes`**
 - **What:** How often to sync open tasks
 - **Example:** `30`
 - **Default:** 30
-- **Behavior:** Every N minutes, fetch open task dependencies from all trackers
+- **Note:** Leased, so one pass runs per interval across the deployment rather than one per replica
 
-**`TaskReconciliation__BatchSize`**
-- **What:** Tasks fetched per tracker per run
-- **Example:** `100`
-- **Default:** 100
+**`TaskReconciliation__MaxTasksPerRun`**
+- **What:** Open tasks re-read per pass, so a backlog cannot flood the tracker's API
+- **Example:** `500`
+- **Default:** 500
+- **Behavior:** Passes resume where the last one stopped and wrap around, so more open tasks than the cap means slower coverage, not tasks that are never swept
 
 ### Ingestion Polling
 
@@ -414,12 +428,12 @@ ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
 # Archival
 Archiving__Enabled=true
-Archiving__CutoffDays=90
-Archiving__RunIntervalMinutes=60
+Archiving__ArchiveAfterDays=90
+Archiving__RunAtUtcHour=2
 
 # Task Sync
 TaskReconciliation__Enabled=true
-TaskReconciliation__RunIntervalMinutes=30
+TaskReconciliation__IntervalMinutes=30
 
 # Authorization
 Authorization__BootstrapAdminObjectIds=

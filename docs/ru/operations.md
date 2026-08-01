@@ -437,7 +437,9 @@ WITH RECOVERY;
 - **Fix:** Restart RabbitMQ, check firewall rules, масштабируйте если queue depth high
 
 **Issue:** План не обновляется после создания MR
-- **Cause:** Task не linked, MR status не ReadyForDeploy, или sync не run
+- **Cause:** Task не linked, либо не отработал пересчёт. Обратите внимание: «готового» статуса для
+  попадания в план MR *не* требуется — готовность проверяется по окружению на запуске, а не при
+  планировании, поэтому неготовый MR всё равно виден в своём плане
 - **Check:** `/health/ready` (должно быть 200), check logs для sync errors
 - **Fix:** Manually check branch name (должно include task key), verify label config
 

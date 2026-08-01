@@ -437,7 +437,9 @@ WITH RECOVERY;
 - **Fix:** Restart RabbitMQ, check firewall rules, scale if queue depth high
 
 **Issue:** Plan doesn't update after creating MR
-- **Cause:** Task not linked, MR status not ReadyForDeploy, or sync not run
+- **Cause:** Task not linked, or the recalculation did not run. Note that a merge request does *not*
+  need a "ready" status to appear in a plan — readiness is checked per environment at launch, not at
+  planning time, so an unready merge request still shows up in the plan it belongs to
 - **Check:** `/health/ready` (should be 200), check logs for sync errors
 - **Fix:** Manually check branch name (must include task key), verify label config
 

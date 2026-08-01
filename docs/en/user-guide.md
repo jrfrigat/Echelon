@@ -250,9 +250,28 @@ A plan with conflicts cannot be launched. Fix the configuration, recalculate, an
    merge request shows the wave it deploys in and its current status.
 5. **Resolve conflicts, if any.** The warning banner names each dropped constraint. Launch is
    blocked until there are none.
-6. **Pick an environment and launch.**
+6. **Pick an environment and launch.** Three things can refuse the launch at this point, each naming
+   exactly what to fix: a prerequisite task not yet deployed in that environment, a merge request that
+   does not meet the environment's readiness rule, and **unfinished work** — see below.
 7. **Watch the rollout.** Steps run wave by wave. Everything in a wave runs in parallel; the next
    wave starts only when the current one has fully succeeded.
+
+### "Unfinished work blocks this rollout"
+
+The orchestrator watches branches, not only merge requests. A branch whose name points at a task in
+the plan, which is not merged and which **no merge request carries**, is work that somebody started
+and has not put up for review. Rolling out the parent while that branch is outstanding ships an
+incomplete change, so the launch is refused and each offending branch is named.
+
+Three ways out, and the right one depends on what the branch actually is:
+
+- raise a merge request for it — then it is in the plan and gets deployed in order;
+- merge it, if it has already landed by another route;
+- delete it, if it was abandoned.
+
+Note that the ordinary source branch of a merge request in the plan never blocks anything — every one
+of those is unmerged at launch, which is precisely what the rollout is about to change. Only a branch
+that nobody has raised counts.
 
 ### The task's history
 

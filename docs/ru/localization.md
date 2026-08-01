@@ -192,7 +192,7 @@ curl -H "Accept-Language: es" https://localhost:5173/api/health/ready
 - **Заголовки страниц и heading'и:** "Release Plans", "Repositories", "Permissions"
 - **Placeholder'ы форм и справочный текст**
 - **Сообщения валидации:** "This field is required", "Invalid email"
-- **Badges статуса:** "Merged", "Opened", "ReadyForDeploy"
+- **Badges статуса:** "Merged", "Opened", "Closed"
 - **Пункты навигационного меню**
 - **Заголовки диалогов и текст тела**
 - **Сообщения об ошибках, показываемые пользователю**
