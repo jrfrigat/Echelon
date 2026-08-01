@@ -107,6 +107,13 @@ public class MergeRequestsController(
         if (MergeRequestStatusResolver.IsTerminal(status))
             return BadRequest(new { error = localizer["Mr_StatusVcsOwned", status].Value });
 
+        // A retired status is still parseable — the members stay declared so old rows materialise —
+        // but storing one now leaves the merge request somewhere nothing can act on: the value means
+        // nothing to any reader, and the manual-status flag this sets stops observation from ever
+        // correcting it. Refused with the thing to do instead.
+        if (MergeRequestStatusResolver.IsRetired(status))
+            return BadRequest(new { error = localizer["Mr_StatusRetired", status].Value });
+
         var mr = await db.MergeRequests.FirstOrDefaultAsync(m => m.Id == id, ct)
             ?? throw new NotFoundException(localizer["Mr_NotFound", id]);
 

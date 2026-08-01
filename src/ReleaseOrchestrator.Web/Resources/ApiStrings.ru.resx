@@ -138,6 +138,9 @@
   <data name="Mr_StatusFinal" xml:space="preserve">
     <value>Merge-запрос уже в статусе «{0}» — этот статус окончательный.</value>
   </data>
+  <data name="Mr_StatusRetired" xml:space="preserve">
+    <value>Статус «{0}» выведен из употребления и больше ничего не значит. Пригодность merge-запроса к выкатке решает правило готовности целевого окружения — вместо этого закрепите готовность для нужного окружения.</value>
+  </data>
   <data name="Mr_NotFound" xml:space="preserve">
     <value>Merge-запрос {0} не найден.</value>
   </data>

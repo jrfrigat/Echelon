@@ -32,6 +32,11 @@ public class MergeRequestStatusResolverTests
             MergeRequestStatusResolver.ResolveOpenStatus(isStatusManual: false, MergeRequestStatus.Opened));
 
     /// <summary>An operator's manually pinned status survives a later observation.</summary>
+    /// <remarks>
+    /// <see cref="MergeRequestStatus.ReadyForDeploy"/> is a case here on purpose even though writers
+    /// now refuse it: rows carrying it exist from before it was retired, and resolution must leave
+    /// them alone rather than rewrite history the next time the merge request is observed.
+    /// </remarks>
     [Theory]
     [InlineData(MergeRequestStatus.ReadyForDeploy)]
     [InlineData(MergeRequestStatus.Opened)]
@@ -39,4 +44,26 @@ public class MergeRequestStatusResolverTests
         => Assert.Equal(
             pinned,
             MergeRequestStatusResolver.ResolveOpenStatus(isStatusManual: true, pinned));
+
+    [Theory]
+    [InlineData(MergeRequestStatus.Reviewed, true)]
+    [InlineData(MergeRequestStatus.ReadyForDeploy, true)]
+    [InlineData(MergeRequestStatus.Opened, false)]
+    [InlineData(MergeRequestStatus.Merged, false)]
+    [InlineData(MergeRequestStatus.Closed, false)]
+    public void RetiredStatusesAreTheOnesNothingWritesAnyMore(MergeRequestStatus status, bool expected)
+        => Assert.Equal(expected, MergeRequestStatusResolver.IsRetired(status));
+
+    /// <summary>
+    /// Every declared status is covered by exactly one of the three rules, so a member added later
+    /// cannot slip through as neither terminal, nor retired, nor a normal open status.
+    /// </summary>
+    [Fact]
+    public void EveryStatusIsAccountedFor()
+    {
+        foreach (var status in Enum.GetValues<MergeRequestStatus>())
+            Assert.False(
+                MergeRequestStatusResolver.IsTerminal(status) && MergeRequestStatusResolver.IsRetired(status),
+                $"{status} is classified as both terminal and retired.");
+    }
 }

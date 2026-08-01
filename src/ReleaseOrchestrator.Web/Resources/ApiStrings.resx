@@ -138,6 +138,9 @@
   <data name="Mr_StatusFinal" xml:space="preserve">
     <value>MR is already {0}; its status is final.</value>
   </data>
+  <data name="Mr_StatusRetired" xml:space="preserve">
+    <value>'{0}' is a retired status and no longer means anything. Whether a merge request may deploy is decided by the target environment's readiness rule — pin it ready for that environment instead.</value>
+  </data>
   <data name="Mr_NotFound" xml:space="preserve">
     <value>Merge request {0} not found.</value>
   </data>

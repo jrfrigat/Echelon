@@ -23,6 +23,23 @@ public static class MergeRequestStatusResolver
         status is MergeRequestStatus.Merged or MergeRequestStatus.Closed;
 
     /// <summary>
+    /// Statuses nothing writes any more, kept declared only so rows written before they were
+    /// retired still materialise.
+    /// </summary>
+    /// <param name="status">The status to test.</param>
+    /// <returns><c>true</c> when the status is history rather than something to set.</returns>
+    /// <remarks>
+    /// <see cref="MergeRequestStatus.Reviewed"/> and <see cref="MergeRequestStatus.ReadyForDeploy"/>
+    /// existed for the label promotion that decided deployability; that became a per-environment
+    /// readiness rule evaluated at launch, and nothing has assigned either since. Storing one now
+    /// would be worse than useless: the value means nothing to any reader, while the manual-status
+    /// flag it sets stops observation from ever correcting it, so the merge request sits in a status
+    /// that neither the operator nor the system can act on. Writers check this and refuse.
+    /// </remarks>
+    public static bool IsRetired(MergeRequestStatus status) =>
+        status is MergeRequestStatus.Reviewed or MergeRequestStatus.ReadyForDeploy;
+
+    /// <summary>
     /// Resolves the status to store for an open merge request: simply <see cref="MergeRequestStatus.Opened"/>,
     /// unless an operator pinned the status, in which case the pinned status is kept.
     /// </summary>

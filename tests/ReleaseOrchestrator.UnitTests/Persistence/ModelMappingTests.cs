@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
@@ -24,6 +25,27 @@ public class ModelMappingTests
 
     private static IModel BuildModel(string provider)
     {
+        using var context = new AppDbContext(OptionsFor(provider));
+        return context.Model;
+    }
+
+    /// <summary>
+    /// The design-time model, which keeps the configuration the runtime model drops.
+    /// </summary>
+    /// <remarks>
+    /// <c>context.Model</c> is read-optimized: anything only a migration needs — a collation, for
+    /// instance — is stripped from it, and asking for it throws rather than answering null. That
+    /// distinction matters here because a collation asserted against the wrong model would look like
+    /// a mapping bug when it is only the wrong accessor.
+    /// </remarks>
+    private static IModel BuildDesignTimeModel(string provider)
+    {
+        using var context = new AppDbContext(OptionsFor(provider));
+        return context.GetService<IDesignTimeModel>().Model;
+    }
+
+    private static DbContextOptions<AppDbContext> OptionsFor(string provider)
+    {
         var builder = new DbContextOptionsBuilder<AppDbContext>();
 
         _ = provider switch
@@ -33,8 +55,7 @@ public class ModelMappingTests
             _ => throw new ArgumentOutOfRangeException(nameof(provider))
         };
 
-        using var context = new AppDbContext(builder.Options);
-        return context.Model;
+        return builder.Options;
     }
 
     /// <summary>
@@ -157,6 +178,50 @@ public class ModelMappingTests
 
         // The bytea that PostgreSQL would never fill must not survive alongside it.
         Assert.Null(postgres.FindProperty("RowVersion"));
+    }
+
+    /// <summary>
+    /// The columns holding identifiers that a case-sensitive system owns must compare
+    /// case-sensitively on SQL Server too.
+    /// </summary>
+    /// <remarks>
+    /// A SQL Server instance's default collation is normally case-insensitive and every column
+    /// inherits it, which is right for most text here and wrong for these two — both sit under a
+    /// unique index, so a CI collation turns two legitimately different values into a duplicate key.
+    /// Confirmed on SQL Server 2022 before it was fixed: inserting <c>feature/Login</c> then
+    /// <c>feature/login</c> gave <c>Msg 2601</c>, and inside a consumer that is a message which
+    /// redelivers and fails forever.
+    ///
+    /// Asserted on the model rather than trusted because nothing else can see it: SQLite (what the
+    /// other tests run on) compares with BINARY and so behaves correctly by accident, and
+    /// <c>has-pending-model-changes</c> stays green either way once the migration exists.
+    /// </remarks>
+    [Theory]
+    [InlineData(nameof(RepositoryBranch), nameof(RepositoryBranch.Name))]
+    [InlineData(nameof(Repository), nameof(Repository.ExternalId))]
+    public void CaseSensitiveIdentifiersGetABinaryCollationOnSqlServer(string entityName, string propertyName)
+    {
+        var property = BuildDesignTimeModel(DatabaseProviders.SqlServer)
+            .GetEntityTypes().Single(e => e.ClrType.Name == entityName)
+            .GetProperties().Single(p => p.Name == propertyName);
+
+        Assert.Equal("Latin1_General_100_BIN2", property.GetCollation());
+    }
+
+    /// <summary>
+    /// PostgreSQL must NOT carry the SQL Server collation name — it already compares text
+    /// case-sensitively, and the name would not resolve there.
+    /// </summary>
+    [Theory]
+    [InlineData(nameof(RepositoryBranch), nameof(RepositoryBranch.Name))]
+    [InlineData(nameof(Repository), nameof(Repository.ExternalId))]
+    public void PostgreSqlIsLeftOnItsOwnCollation(string entityName, string propertyName)
+    {
+        var property = BuildDesignTimeModel(DatabaseProviders.PostgreSql)
+            .GetEntityTypes().Single(e => e.ClrType.Name == entityName)
+            .GetProperties().Single(p => p.Name == propertyName);
+
+        Assert.Null(property.GetCollation());
     }
 
     /// <summary>

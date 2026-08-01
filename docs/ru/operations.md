@@ -149,12 +149,18 @@ curl http://localhost:5000/health
 
 ### Readiness (`/health/ready`)
 
-Указывает, доступны ли все зависимости (БД, RabbitMQ, Redis).
+Проверяет три вещи: рабочую БД, архивную БД и координационный кэш.
+
+Брокер намеренно **не** проверяется. При недоступности RabbitMQ ingress отвечает 503, который
+отправители ретраят, поэтому простой брокера — не повод выводить API из ротации.
+
+Архивная БД сообщает **Degraded**, а не Unhealthy: архивация фоновая, и вывести из ротации из-за
+неё было бы хуже самого сбоя.
 
 ```bash
 curl http://localhost:5000/health/ready
 # Если здорово: 200 OK
-# Если любая зависимость недоступна: 503 Service Unavailable
+# Если обязательная зависимость недоступна: 503 Service Unavailable
 ```
 
 **Пример body ответа (недоступная БД):**
@@ -162,14 +168,14 @@ curl http://localhost:5000/health/ready
 {
   "status": "Unhealthy",
   "checks": {
-    "Database": {
+    "database": {
       "status": "Unhealthy",
-      "description": "Could not connect to SQL Server"
+      "description": "Cannot connect to the operational database."
     },
-    "RabbitMQ": {
+    "archive-database": {
       "status": "Healthy"
     },
-    "Redis": {
+    "coordination": {
       "status": "Healthy"
     }
   }
@@ -265,7 +271,7 @@ Traces захватывают:
 - **Redis:** Shared cache (Redis Cluster если масштабирование beyond single instance)
 - **Archive service:** Запускается в каждом поде (идемпотентно, no coordination needed)
 
-**Concurrency note:** Archive service не имеет leader election. Несколько pods работают simultaneously. Корректность поддерживается через idempotent insert + retry; performance может страдать due to lock contention.
+**Concurrency note:** Archive service регистрируется в каждом поде, но гейтится распределённой арендой — за ночь цикл проходит один раз на весь деплой, а не по разу на под. Это взаимное исключение, а не консенсус: корректность по-прежнему держится на идемпотентной вставке и ретрае, а при недоступности хранилища аренды цикл пропускается (fail-closed), а не выполняется всеми. То же верно для координатора выкаток, поллеров и реконсиляции задач.
 
 ### Database Connection Pooling
 
@@ -348,6 +354,23 @@ Archive service запускается в каждом поде, но гейти
 - Мониторьте excessive locking на archive tables (признак длительных циклов архивации)
 - Если performance деградирует из-за lock contention, рассмотрите более длительный Lease Duration в коде
 
+### SQL Server требует регистрозависимой коллации на двух колонках
+
+`RepositoryBranches.Name` и `Repositories.ExternalId` принудительно переводятся миграцией в
+`Latin1_General_100_BIN2`: обе колонки лежат под уникальным индексом и хранят идентификаторы,
+регистр которых значим у источника — имена веток Git и пути проектов GitLab. При обычном
+регистронезависимом умолчании инстанса `feature/Login` и `feature/login` — один дублирующийся ключ,
+и вставка падает внутри консьюмера, который затем переотправляется и падает бесконечно.
+
+Миграция это закрывает. Следить нужно за базой, созданной или восстановленной **в обход** миграций:
+собранная руками схема или восстановление, вернувшее умолчание инстанса. Проверка:
+
+```sql
+SELECT name, collation_name FROM sys.columns WHERE object_id = OBJECT_ID('RepositoryBranches') AND name = 'Name';
+```
+
+PostgreSQL ничего не требует: его коллация по умолчанию уже сравнивает регистрозависимо.
+
 ### Limited Observability без OTEL
 
 Async paths имеют poor visibility. Рекомендация:
@@ -356,11 +379,18 @@ Async paths имеют poor visibility. Рекомендация:
 - Или: Monitor через RabbitMQ admin + database query logs
 - Установите alerts для `/health/ready` returning 503
 
-### Нет PostgreSQL Support
+### PostgreSQL поддержан, но ни разу не запускался
 
-Только SQL Server supported (Npgsql code removed for clarity). Porting потребовал бы:
-- EF Core migration assembly для PostgreSQL
-- Testing против PostgreSQL-specific SQL (filtered unique index, rowversion handling)
+Обе БД поддержаны на равных: одна модель, один набор тестов и по сборке миграций на каждую
+(`ReleaseOrchestrator.Migrations.MsSql`, `...Migrations.Postgres`). Три места, где они действительно
+расходятся, изолированы в `ProviderSpecificMapping` — токен конкурентности (`rowversion` против
+системной колонки `xmin`), диалект фильтрованного индекса и регистрозависимая коллация выше, — и
+каждое закреплено тестом, который строит обе модели офлайн.
+
+Честная оговорка не про поддержку, а про обкатку: **сервер PostgreSQL для этого приложения не
+запускался ни разу**, то есть его миграции не накатывались ни на что. Миграции SQL Server —
+накатывались, начисто, на живой инстанс 2022. Сборка модели и генерация SQL — сильнейшая проверка,
+возможная без сервера, но не замена ему.
 
 ---
 

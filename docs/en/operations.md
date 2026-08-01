@@ -149,12 +149,18 @@ curl http://localhost:5000/health
 
 ### Readiness (`/health/ready`)
 
-Indicates whether all dependencies (DB, RabbitMQ, Redis) are available.
+Checks three things: the operational database, the archive database and the coordination cache.
+
+The broker is deliberately **not** probed. When RabbitMQ is down the ingress answers 503 and senders
+retry, so a broker outage is not a reason to drop the API out of rotation.
+
+The archive database reports **Degraded**, not Unhealthy: archiving is a background concern, and
+taking the instance out of rotation over it would be worse than the outage.
 
 ```bash
 curl http://localhost:5000/health/ready
 # If healthy: 200 OK
-# If any dependency unavailable: 503 Service Unavailable
+# If a required dependency is unavailable: 503 Service Unavailable
 ```
 
 **Response body example (unavailable DB):**
@@ -162,14 +168,14 @@ curl http://localhost:5000/health/ready
 {
   "status": "Unhealthy",
   "checks": {
-    "Database": {
+    "database": {
       "status": "Unhealthy",
-      "description": "Could not connect to SQL Server"
+      "description": "Cannot connect to the operational database."
     },
-    "RabbitMQ": {
+    "archive-database": {
       "status": "Healthy"
     },
-    "Redis": {
+    "coordination": {
       "status": "Healthy"
     }
   }
@@ -266,7 +272,7 @@ All components are stateless:
 - **Redis:** Shared cache (Redis Cluster if scaling beyond single instance)
 - **Archive service:** Runs in every pod (idempotent, no coordination needed)
 
-**Concurrency note:** Archive service has no leader election. Multiple pods run simultaneously. Correctness is maintained via idempotent insert + retry; performance may suffer due to lock contention.
+**Concurrency note:** The archive service is registered in every pod but gated on a distributed lease, so one cycle runs per night across the deployment rather than one per pod. This is mutual exclusion, not consensus — correctness still rests on the idempotent insert and the retry, and if the lease store is unavailable the cycle is skipped (fail-closed) rather than run by everyone. The same applies to the rollout coordinator, the pollers and task reconciliation.
 
 ### Database Connection Pooling
 
@@ -340,13 +346,34 @@ If RabbitMQ is down, webhooks return 503 Service Unavailable with a Retry-After 
 - Implement buffering in reverse proxy or API gateway
 - Or: Accept event loss and monitor RabbitMQ health closely
 
-### No Leader Election for Archive
+### A distributed lease for the archive, not leader election
 
-Archive service runs in every pod (duplicate work). Recommendation:
+The archive service is registered in every pod but gated on a distributed lease, so only one pod
+holds it and runs the cycle at a time. This is **not** a consensus algorithm — it is mutual
+exclusion, and the lease store is a single point of failure. That is acceptable because archiving
+is idempotent. Recommendations:
 
-- Monitor for excessive locking on archive tables
-- If performance degrades, manually scale to single archive pod (requires deployment config)
-- Consider implementing leader election using Redis (not in codebase)
+- Keep the lease store reachable and healthy (it is part of `/health/ready`)
+- If it is unavailable the cycle is skipped (fail-closed) — nothing is archived until it recovers
+- Watch for excessive locking on archive tables (a sign of long cycles)
+- If lock contention degrades performance, consider a longer lease duration in code
+
+### SQL Server needs a case-sensitive collation on two columns
+
+`RepositoryBranches.Name` and `Repositories.ExternalId` are forced to
+`Latin1_General_100_BIN2` by a migration, because both sit under a unique index and hold identifiers
+a case-sensitive system owns — Git branch names and GitLab project paths. Under the usual
+case-insensitive instance default, `feature/Login` and `feature/login` are one duplicate key, and
+the insert fails inside a message consumer, which then redelivers and fails indefinitely.
+
+The migration handles this. What to watch for is a database created or restored **outside** the
+migrations — a hand-built schema, or a restore that re-applied the instance default. Check with:
+
+```sql
+SELECT name, collation_name FROM sys.columns WHERE object_id = OBJECT_ID('RepositoryBranches') AND name = 'Name';
+```
+
+PostgreSQL needs nothing: its default collation already compares case-sensitively.
 
 ### Limited Observability Without OTEL
 
@@ -356,11 +383,18 @@ Async paths have poor visibility. Recommendation:
 - Or: Monitor via RabbitMQ admin + database query logs
 - Set up alerts for `/health/ready` returning 503
 
-### No PostgreSQL Support
+### PostgreSQL is supported, but has never been run
 
-Only SQL Server is supported (Npgsql code removed for clarity). Porting would require:
-- EF Core migration assembly for PostgreSQL
-- Testing against PostgreSQL-specific SQL (filtered unique index, rowversion handling)
+Both databases are supported on the same terms: one model, one test suite, and a migration assembly
+each (`ReleaseOrchestrator.Migrations.MsSql`, `...Migrations.Postgres`). The three places where they
+genuinely differ are isolated in `ProviderSpecificMapping` — the concurrency token (`rowversion` vs
+the system `xmin` column), the filtered-index dialect, and the case-sensitive collation above — and
+each is asserted by a test that builds both models offline.
+
+The honest caveat is not support, it is exercise: **no PostgreSQL server has ever been started for
+this application**, so its migrations have never been applied to anything. SQL Server's have, from
+empty, against a real 2022 instance. Building the model and generating the SQL is the strongest
+check available without a server; it is not a substitute for one.
 
 ---
 

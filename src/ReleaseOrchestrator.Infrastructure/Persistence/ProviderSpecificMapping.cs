@@ -4,13 +4,14 @@ using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 namespace ReleaseOrchestrator.Infrastructure.Persistence;
 
 /// <summary>
-/// The two places where SQL Server and PostgreSQL do not describe the same thing the same way.
+/// The three places where SQL Server and PostgreSQL do not describe the same thing the same way.
 /// </summary>
 /// <remarks>
-/// Everything else in this model is provider-neutral and stays on the entities. These two are here
-/// because they cannot be: one is a string of SQL, the other is a column only one database has.
-/// Both were found by asking EF to build the PostgreSQL model rather than by reading about it, and
-/// both are worth reading before touching.
+/// Everything else in this model is provider-neutral and stays on the entities. These three are here
+/// because they cannot be: a string of SQL, a column only one database has, and a collation whose
+/// name is dialect-specific. The first two were found by asking EF to build the PostgreSQL model
+/// rather than by reading about it; the third by inserting two rows into a real SQL Server. All
+/// three are worth reading before touching.
 /// </remarks>
 public static class ProviderSpecificMapping
 {
@@ -24,6 +25,20 @@ public static class ProviderSpecificMapping
     public static bool IsPostgreSql(string? providerName) =>
         string.Equals(providerName, NpgsqlProvider, StringComparison.Ordinal);
 
+    /// <summary>True when the model is being built for SQL Server.</summary>
+    public static bool IsSqlServer(string? providerName) =>
+        string.Equals(providerName, SqlServerProvider, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The collation for a column whose values are case-sensitive identifiers somewhere else.
+    /// </summary>
+    /// <remarks>
+    /// <c>BIN2</c> rather than a <c>_CS_AS</c> collation: these are opaque identifiers compared for
+    /// equality, never sorted for a human, so code-point ordering is exactly right and is also the
+    /// cheapest comparison SQL Server has.
+    /// </remarks>
+    public const string SqlServerCaseSensitiveCollation = "Latin1_General_100_BIN2";
+
     /// <summary>
     /// Applies the mappings that differ per database, after the shared configuration.
     /// </summary>
@@ -31,15 +46,63 @@ public static class ProviderSpecificMapping
     /// <param name="providerName">
     /// <c>Database.ProviderName</c>. Null for a provider that is neither — a SQLite test, say —
     /// which keeps the SQL Server shape, because that is what those tests were written against.
+    /// The collations below are the exception: their names are SQL Server's, so SQLite must not be
+    /// given them. It compares text with BINARY by default, which is the behaviour they restore
+    /// anyway, so a SQLite test already sees the intended semantics.
     /// </param>
     public static void ApplyProviderSpecifics(this ModelBuilder builder, string? providerName)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        if (IsSqlServer(providerName))
+        {
+            ApplySqlServerCaseSensitiveColumns(builder);
+            return;
+        }
+
         if (!IsPostgreSql(providerName)) return;
 
         ApplyPostgreSqlConcurrencyTokens(builder);
         ApplyPostgreSqlIndexFilters(builder);
+    }
+
+    /// <summary>
+    /// Forces a case-sensitive collation on the columns that hold identifiers owned by a
+    /// case-sensitive system.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A SQL Server instance's default collation is usually case-INsensitive, and every column
+    /// inherits it. That is right for most text here — an operator searching for a connection by name
+    /// should not have to match its casing — but wrong for two columns, and wrong in a way that a
+    /// unique index turns into an outage rather than a curiosity.
+    /// </para>
+    /// <para>
+    /// Git branch names are case-sensitive: <c>feature/Login</c> and <c>feature/login</c> are two
+    /// different branches, and a repository can hold both. Under a CI collation
+    /// <c>IX_RepositoryBranch_RepositoryId_Name</c> sees one duplicate key and rejects the second —
+    /// inside a message consumer, which then redelivers and fails forever, taking every later branch
+    /// update for that repository with it. Confirmed against SQL Server 2022, not inferred: two
+    /// inserts differing only in case, <c>Msg 2601</c> on the second.
+    /// </para>
+    /// <para>
+    /// The same holds for a repository's <c>ExternalId</c> — GitLab's <c>group/project</c> path is
+    /// case-sensitive, and <c>IX_Repository_ConnectionId_ExternalId</c> is unique over it.
+    /// </para>
+    /// <para>
+    /// PostgreSQL needs nothing here: its default collation already compares text case-sensitively,
+    /// which is why this is a divergence rather than a shared mapping.
+    /// </para>
+    /// </remarks>
+    private static void ApplySqlServerCaseSensitiveColumns(ModelBuilder builder)
+    {
+        builder.Entity<RepositoryBranch>()
+            .Property(e => e.Name)
+            .UseCollation(SqlServerCaseSensitiveCollation);
+
+        builder.Entity<Repository>()
+            .Property(e => e.ExternalId)
+            .UseCollation(SqlServerCaseSensitiveCollation);
     }
 
     /// <summary>
