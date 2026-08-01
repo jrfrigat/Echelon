@@ -160,6 +160,7 @@ public class VcsService(
         return candidates.Count == 1 ? candidates[0] : null;
     }
 
+    /// <inheritdoc/>
     public async Task<MergeRequestDto?> GetMergeRequestAsync(string connectionName, string projectPath, string iid, CancellationToken ct)
     {
         var conn = await db.VcsConnections.FirstOrDefaultAsync(c => c.Name == connectionName, ct);

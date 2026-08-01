@@ -10,11 +10,19 @@ using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
+/// <summary>
+/// The repositories this service watches: which VCS connection reaches them, and which tracker
+/// their branch issue keys belong to.
+/// </summary>
 [ApiController]
 [Route("api/repositories")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
 public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
+    /// <summary>Registered repositories, by name.</summary>
+    /// <param name="page">1-based page.</param>
+    /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken ct = default)
@@ -33,6 +41,9 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
 
+    /// <summary>One repository.</summary>
+    /// <param name="id">The repository id.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
@@ -44,6 +55,13 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
         return repository is null ? NotFound() : Ok(repository);
     }
 
+    /// <summary>Registers a repository.</summary>
+    /// <param name="req">The repository to register.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 201, or 409 when the connection already has a repository with that external id — webhook
+    /// routing takes the first match, so a duplicate pair silently diverts merge requests.
+    /// </returns>
     [HttpPost]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] CreateRepositoryRequest req, CancellationToken ct)
@@ -73,6 +91,10 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
         return CreatedAtAction(nameof(Get), new { id = entity.Id }, new { entity.Id, entity.Name });
     }
 
+    /// <summary>Replaces a repository's registration.</summary>
+    /// <param name="id">The repository to update.</param>
+    /// <param name="req">The new values. Every field is replaced.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpPut("{id:guid}")]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Update(Guid id, [FromBody] CreateRepositoryRequest req, CancellationToken ct)
@@ -108,6 +130,9 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
             : localizer["Repo_TrackerConnectionNotFound", trackerConnectionId].Value;
     }
 
+    /// <summary>Removes a repository. Refused while it still holds merge requests.</summary>
+    /// <param name="id">The repository to remove.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -124,6 +149,13 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
     }
 }
 
+/// <summary>A repository registration. Used for both create and update.</summary>
+/// <param name="Name">Display name, this service's own.</param>
+/// <param name="ExternalId">
+/// How the provider identifies it — GitLab wants the full <c>group/project</c> path, and a bare name
+/// is the misconfiguration that makes every poll of it 404.
+/// </param>
+/// <param name="ConnectionId">The VCS connection that reaches it.</param>
 /// <param name="TrackerConnectionId">
 /// Which tracker this repository's branch issue keys belong to. Null falls back to matching the
 /// key across every tracker, which is fine with one tracker and ambiguous with several.

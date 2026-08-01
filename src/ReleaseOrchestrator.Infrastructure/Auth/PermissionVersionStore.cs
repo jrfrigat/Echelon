@@ -20,6 +20,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 /// </remarks>
 public static class PermissionVersionStore
 {
+    /// <summary>Where the stamp itself is cached. Losing this key costs three reads, never correctness.</summary>
     public const string VersionCacheKey = "perm:version";
 
     // Deliberately short. The stamp is shared by every user, so recomputing it is cheap, whereas a
@@ -32,6 +33,11 @@ public static class PermissionVersionStore
         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
     };
 
+    /// <summary>The current stamp, from the cache when it is warm and from the rules when it is not.</summary>
+    /// <param name="db">Source of truth for the grants.</param>
+    /// <param name="cache">Where the stamp is held between reads.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A stamp that changes if and only if the stored rules changed.</returns>
     public static async Task<string> GetAsync(AppDbContext db, IDistributedCache cache, CancellationToken ct = default)
     {
         var cached = await cache.GetStringAsync(VersionCacheKey, ct);
@@ -43,6 +49,8 @@ public static class PermissionVersionStore
     }
 
     /// <summary>Drops the stamp so the next reader derives it from the rules as they now stand.</summary>
+    /// <param name="cache">The cache holding the stamp.</param>
+    /// <param name="ct">Cancellation token.</param>
     public static Task InvalidateAsync(IDistributedCache cache, CancellationToken ct = default) =>
         cache.RemoveAsync(VersionCacheKey, ct);
 
@@ -72,6 +80,8 @@ public static class PermissionVersionStore
 /// </summary>
 public static class StableHash
 {
+    /// <summary>Hashes a set of strings to a 32-character hex digest, independent of their order.</summary>
+    /// <param name="values">The set. Duplicates are collapsed, so a repeated entry cannot change the result.</param>
     public static string Of(IEnumerable<string> values)
     {
         var canonical = string.Join('\n', values.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));

@@ -15,10 +15,13 @@ public sealed record TelemetryOptions
         Protocol = protocol;
     }
 
+    /// <summary>The name this host reports itself under. Distinguishes the API from the webhook host.</summary>
     public string ServiceName { get; }
 
+    /// <summary>Where the collector listens.</summary>
     public Uri Endpoint { get; }
 
+    /// <summary>Which OTLP transport to use. gRPC unless the configuration names <c>http/protobuf</c>.</summary>
     public OtlpExportProtocol Protocol { get; }
 
     /// <summary>

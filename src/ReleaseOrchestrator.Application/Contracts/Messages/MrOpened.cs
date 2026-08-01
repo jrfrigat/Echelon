@@ -3,8 +3,23 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 /// <summary>
 /// An open merge request's current state. Published for every "opened" webhook, not only
 /// the first: GitLab re-sends on label changes, pushes and reopens, and the consumer
-/// upserts. <see cref="Labels"/> is what promotes an MR to ReadyForDeploy (README §5).
+/// upserts.
 /// </summary>
+/// <remarks>
+/// <see cref="Labels"/> carries the full current set, not a promotion. A label no longer moves a
+/// merge request to a "ready" status — that was retired with the ready-for-deploy label; the set is
+/// stored so a per-environment readiness rule can be evaluated against it at launch.
+/// </remarks>
+/// <param name="ConnectionName">The VCS connection the observation came through.</param>
+/// <param name="RepositoryExternalId">The repository, as the provider identifies it.</param>
+/// <param name="ExternalMrId">The provider's own id for the merge request.</param>
+/// <param name="SourceBranch">Branch being merged from.</param>
+/// <param name="TargetBranch">Branch being merged into.</param>
+/// <param name="Title">The merge request title.</param>
+/// <param name="Labels">Every label currently on the merge request.</param>
+/// <param name="PipelineResult">The latest pipeline result, or null when the source cannot report one.</param>
+/// <param name="Source">Which ingestion path produced this, used to scope the event id.</param>
+/// <param name="EventId">Deduplication identity; empty means "not deduplicated".</param>
 public record MrOpened(
     string ConnectionName,
     string RepositoryExternalId,

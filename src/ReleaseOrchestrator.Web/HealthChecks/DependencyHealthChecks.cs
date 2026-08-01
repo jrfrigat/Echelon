@@ -13,6 +13,7 @@ namespace ReleaseOrchestrator.Web.HealthChecks;
 /// </summary>
 public class DatabaseHealthCheck(AppDbContext db) : IHealthCheck
 {
+    /// <inheritdoc/>
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         try
@@ -28,8 +29,13 @@ public class DatabaseHealthCheck(AppDbContext db) : IHealthCheck
     }
 }
 
+/// <summary>
+/// Probes the archive database. Reports Degraded rather than Unhealthy: archiving is a background
+/// concern, and dropping the instance from rotation over it would be worse than the outage.
+/// </summary>
 public class ArchiveDatabaseHealthCheck(ArchiveDbContext db) : IHealthCheck
 {
+    /// <inheritdoc/>
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         try

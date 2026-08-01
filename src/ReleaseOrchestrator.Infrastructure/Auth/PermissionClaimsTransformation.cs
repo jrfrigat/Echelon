@@ -9,13 +9,26 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Auth;
 
+/// <summary>
+/// Turns the stored grants — the caller's group mappings plus their personal overrides — into the
+/// <c>permission</c> claims <see cref="PermissionAuthorizationHandler"/> checks.
+/// </summary>
+/// <remarks>
+/// Fails closed everywhere it can fail: an unresolvable subject, an unreachable cache or a failed
+/// query all yield no permissions rather than a partial set. The result is cached per (rules stamp,
+/// user, groups), so a revoked grant takes effect as soon as the stamp changes rather than when the
+/// entry ages out.
+/// </remarks>
 public class PermissionClaimsTransformation(
     AppDbContext db,
     IDistributedCache cache,
     IOptions<PermissionBootstrapOptions> bootstrap,
     ILogger<PermissionClaimsTransformation> logger) : IClaimsTransformation
 {
+    /// <summary>The claim type each resolved permission is added under.</summary>
     public const string PermissionClaimType = "permission";
+
+    /// <summary>The claim the identity provider delivers group membership in.</summary>
     public const string GroupClaimType = "groups";
 
     /// <summary>Marks the identity this transformation attaches, so a second run can recognise its own work.</summary>
@@ -26,6 +39,7 @@ public class PermissionClaimsTransformation(
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
     };
 
+    /// <inheritdoc/>
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated != true) return principal;

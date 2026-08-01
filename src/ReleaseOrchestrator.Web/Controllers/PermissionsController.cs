@@ -36,6 +36,8 @@ public class PermissionsController(
 
     private string ActorName => this.ResolveActor().DisplayName ?? "unknown";
 
+    /// <summary>Every permission claim the service defines. The vocabulary a grant names.</summary>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet("claims")]
     public async Task<IActionResult> ListClaims(CancellationToken ct)
         => Ok(await db.PermissionClaims
@@ -43,6 +45,8 @@ public class PermissionsController(
             .Select(c => new { c.Id, c.Name })
             .ToListAsync(ct));
 
+    /// <summary>Which directory group holds which permission.</summary>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet("group-mappings")]
     public async Task<IActionResult> ListGroupMappings(CancellationToken ct)
         => Ok(await db.GroupPermissionMappings
@@ -50,6 +54,10 @@ public class PermissionsController(
             .Select(m => new { m.Id, m.AdGroupSid, ClaimName = m.PermissionClaim.Name })
             .ToListAsync(ct));
 
+    /// <summary>Grants a permission to a directory group.</summary>
+    /// <param name="req">The group and the claim to grant it.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>204, or 409 when the group already holds the claim, or 400 when the claim is unknown.</returns>
     [HttpPost("group-mappings")]
     public async Task<IActionResult> AddGroupMapping([FromBody] AddGroupMappingRequest req, CancellationToken ct)
     {
@@ -94,6 +102,9 @@ public class PermissionsController(
         return NoContent();
     }
 
+    /// <summary>Revokes a group's permission.</summary>
+    /// <param name="id">The mapping to remove.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpDelete("group-mappings/{id:guid}")]
     public async Task<IActionResult> RemoveGroupMapping(Guid id, CancellationToken ct)
     {
@@ -113,6 +124,8 @@ public class PermissionsController(
         return NoContent();
     }
 
+    /// <summary>Permissions granted to an individual, on top of whatever their groups carry.</summary>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet("user-overrides")]
     public async Task<IActionResult> ListUserOverrides(CancellationToken ct)
         => Ok(await db.UserPermissionOverrides
@@ -120,6 +133,13 @@ public class PermissionsController(
             .Select(o => new { o.Id, o.UserId, ClaimName = o.PermissionClaim.Name })
             .ToListAsync(ct));
 
+    /// <summary>Grants a permission to one user directly.</summary>
+    /// <param name="req">The user's object id and the claim to grant.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 204, or 409 when the user already holds the claim, or 400 when the claim is unknown or the
+    /// user id is not an object id.
+    /// </returns>
     [HttpPost("user-overrides")]
     public async Task<IActionResult> AddUserOverride([FromBody] AddUserOverrideRequest req, CancellationToken ct)
     {
@@ -168,6 +188,9 @@ public class PermissionsController(
         return NoContent();
     }
 
+    /// <summary>Revokes a user's direct permission. Their groups' grants are untouched.</summary>
+    /// <param name="id">The override to remove.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpDelete("user-overrides/{id:guid}")]
     public async Task<IActionResult> RemoveUserOverride(Guid id, CancellationToken ct)
     {
@@ -194,11 +217,16 @@ public class PermissionsController(
             .FirstOrDefaultAsync(ct);
 }
 
+/// <summary>Grants a permission claim to a directory group.</summary>
+/// <param name="AdGroupSid">The group's security identifier, as the token carries it.</param>
+/// <param name="PermissionClaimId">The claim to grant.</param>
 public record AddGroupMappingRequest(
     [Required, MaxLength(200)] string AdGroupSid,
     Guid PermissionClaimId);
 
+/// <summary>Grants a permission claim to one user directly.</summary>
 /// <param name="UserId">Entra ID object id (oid), as a GUID. A UPN or an email is rejected.</param>
+/// <param name="PermissionClaimId">The claim to grant.</param>
 public record AddUserOverrideRequest(
     [Required, MaxLength(450)] string UserId,
     Guid PermissionClaimId);

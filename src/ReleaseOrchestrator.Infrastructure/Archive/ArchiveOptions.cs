@@ -1,7 +1,12 @@
 namespace ReleaseOrchestrator.Infrastructure.Archive;
 
+/// <summary>
+/// Tunables for the nightly archive cycle: what counts as cold, how much moves at a time, and how
+/// long the journals are kept.
+/// </summary>
 public class ArchiveOptions
 {
+    /// <summary>Whether the nightly cycle runs at all. Off leaves every row in the operational database.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
@@ -12,8 +17,16 @@ public class ArchiveOptions
     /// </summary>
     public int RunAtUtcHour { get; set; } = 2;
 
+    /// <summary>
+    /// How long a merge request or task must have been terminal before it is eligible to move.
+    /// Measured from the merge, close or task-closed timestamp, never from first sight.
+    /// </summary>
     public int ArchiveAfterDays { get; set; } = 90;
+
+    /// <summary>Tasks moved per batch. One batch is one unit of work, retried and skipped as a whole.</summary>
     public int TaskBatchSize { get; set; } = 1000;
+
+    /// <summary>Merge requests moved per batch. Smaller than the task batch: each row copies more columns.</summary>
     public int MrBatchSize { get; set; } = 500;
 
     /// <summary>

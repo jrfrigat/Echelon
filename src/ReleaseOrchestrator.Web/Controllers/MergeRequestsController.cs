@@ -14,6 +14,12 @@ using ReleaseOrchestrator.Web.Resources;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
+/// <summary>
+/// Merge requests as this service holds them, and the one status change an operator can make by hand.
+/// </summary>
+/// <remarks>
+/// Read-only apart from the status pin: merge requests are ingested from a VCS, never authored here.
+/// </remarks>
 [ApiController]
 [Route("api/merge-requests")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
@@ -23,6 +29,11 @@ public class MergeRequestsController(
     TimeProvider clock,
     IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
+    /// <summary>Stored merge requests, newest first.</summary>
+    /// <param name="status">Optional <see cref="MergeRequestStatus"/> name to filter by, case-insensitive.</param>
+    /// <param name="page">1-based page.</param>
+    /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] string? status,
@@ -72,11 +83,16 @@ public class MergeRequestsController(
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
 
-    /// <summary>
-    /// Pins a merge request's status by hand — the second of the two routes to marking a merge
-    /// request deployable, alongside the connection's ready-for-deploy label (README §5). The pin
-    /// survives later label-driven updates; a terminal state reported by the VCS clears it.
-    /// </summary>
+    /// <summary>Pins a merge request's status by hand.</summary>
+    /// <param name="id">The merge request.</param>
+    /// <param name="req">The status to pin. Merged and closed are rejected — the VCS owns those.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// The pin sets <c>IsStatusManual</c>, so a later observation does not re-derive the status over
+    /// the top of it; a terminal state reported by the VCS still wins and clears the flag. This is no
+    /// longer a route to making a merge request deployable — that became a per-environment readiness
+    /// rule evaluated at launch, and a pin against it is <c>POST /api/readiness-pins</c>.
+    /// </remarks>
     [HttpPatch("{id:guid}/status")]
     [Authorize(Policy = Permissions.ReleasePlanApprove)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -115,4 +131,6 @@ public class MergeRequestsController(
     }
 }
 
+/// <summary>The status an operator is pinning.</summary>
+/// <param name="Status">A <see cref="MergeRequestStatus"/> name, case-insensitive. Non-terminal only.</param>
 public record SetMrStatusRequest(string Status);

@@ -11,6 +11,15 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
+/// <summary>
+/// Applies a merge request's status transition, and the terminal timestamps archiving depends on.
+/// </summary>
+/// <remarks>
+/// Deliveries are unordered, which shapes both of the unusual decisions here: an unknown merge
+/// request throws so retry can let its opened event land first, and a non-terminal status for an
+/// already-terminal merge request is dropped rather than applied, since honouring it would
+/// resurrect a merged request back into the plan.
+/// </remarks>
 public class MrStatusChangedConsumer(
     AppDbContext db,
     IBus bus,

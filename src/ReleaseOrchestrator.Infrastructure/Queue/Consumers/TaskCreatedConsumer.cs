@@ -8,6 +8,14 @@ using ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
+/// <summary>
+/// Upserts a task observed in a tracker, then asks for its links to be pulled.
+/// </summary>
+/// <remarks>
+/// The observation carries the title and status but not the issue's links, and the links are the
+/// only thing that orders a plan — so this always follows up with a <see cref="TaskSyncRequested"/>
+/// rather than treating the event as complete on its own.
+/// </remarks>
 public class TaskCreatedConsumer(
     AppDbContext db,
     IBus bus,
