@@ -32,6 +32,8 @@
 | [007-execution-engine.md](007-execution-engine.md) | Сага выкатки: заявка на MR, снапшот плана, стратегии, повтор/отмена. | Редизайн |
 | [008-ingestion-and-messaging.md](008-ingestion-and-messaging.md) | Симметрия push/pull, inbox дедупликации, словарь сообщений. | Редизайн |
 | [009-admin-and-migration.md](009-admin-and-migration.md) | Админка вокруг задач, локализация, фазовая миграция P0-P5. | Редизайн |
+| [010-provider-owned-webhooks.md](010-provider-owned-webhooks.md) | Провайдер владеет разбором и проверкой вебхука, хост — транспортом и hop'ом в Rebus. | Редизайн |
+| [011-release-audit.md](011-release-audit.md) | Аудит перед релизом: что исправлено (даты GitLab, реконсиляция, дедуп веток, ключи конфигурации) и что осталось решать. | Аудит |
 
 ## С чего начать чтение
 
