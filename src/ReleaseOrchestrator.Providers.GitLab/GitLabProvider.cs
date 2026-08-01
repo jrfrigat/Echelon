@@ -106,8 +106,13 @@ internal sealed class GitLabProvider(
         [property: JsonPropertyName("target_branch")] string? TargetBranch,
         [property: JsonPropertyName("state")] string? State,
         [property: JsonPropertyName("title")] string? Title,
-        [property: JsonPropertyName("created_at")] DateTime CreatedAt,
-        [property: JsonPropertyName("merged_at")] DateTime? MergedAt,
+        // DateTimeOffset, not DateTime: GitLab stamps an offset ("...+03:00"), and deserialising that
+        // into a DateTime yields Kind=Local — which SQL Server stores without complaint, at the wrong
+        // instant whenever the host is not on UTC, and which PostgreSQL refuses outright, since it maps
+        // DateTime to timestamptz and Npgsql writes only Kind=Utc. So the bug is invisible until the
+        // second database runs. Parse the offset, hand back UtcDateTime; the tracker adapter does the same.
+        [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+        [property: JsonPropertyName("merged_at")] DateTimeOffset? MergedAt,
         [property: JsonPropertyName("labels")] IReadOnlyList<string>? Labels,
         // head_pipeline is part of the merge-request representation; null when the head has no pipeline.
         [property: JsonPropertyName("head_pipeline")] GitLabPipelineDto? HeadPipeline)
@@ -119,8 +124,8 @@ internal sealed class GitLabProvider(
             // Resolved here, at the edge: the raw state never travels further in.
             Status: GitLabMergeRequestState.FromState(State),
             Title: Title ?? string.Empty,
-            CreatedAt: CreatedAt,
-            MergedAt: MergedAt,
+            CreatedAt: CreatedAt.UtcDateTime,
+            MergedAt: MergedAt?.UtcDateTime,
             Labels: Labels ?? [],
             PipelineStatus: HeadPipeline?.Status);
     }

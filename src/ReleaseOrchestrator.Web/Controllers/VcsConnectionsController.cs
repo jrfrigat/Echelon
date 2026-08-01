@@ -15,6 +15,15 @@ using ReleaseOrchestrator.Web.Validation;
 
 namespace ReleaseOrchestrator.Web.Controllers;
 
+/// <summary>
+/// The VCS connections this service reads through: endpoint, credentials and the provider-specific
+/// settings the chosen adapter declares.
+/// </summary>
+/// <remarks>
+/// The wire keeps saying <c>vcsType</c> while the column is <c>ProviderType</c>. The name was never
+/// the problem — an enum in the domain was — and renaming the field would break every client for no
+/// gain. Tokens are write-only: they go in encrypted and are never returned.
+/// </remarks>
 [ApiController]
 [Route("api/vcs-connections")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
@@ -27,6 +36,10 @@ public class VcsConnectionsController(
 {
     private string[] AllowedApiHosts => config.GetSection("Security:AllowedApiHosts").Get<string[]>() ?? [];
 
+    /// <summary>Configured connections, by name. Never includes the access token.</summary>
+    /// <param name="page">1-based page.</param>
+    /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken ct = default)
@@ -62,6 +75,9 @@ public class VcsConnectionsController(
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
 
+    /// <summary>One connection. Never includes the access token.</summary>
+    /// <param name="id">The connection id.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
     {
@@ -95,6 +111,10 @@ public class VcsConnectionsController(
             ? ProviderSettingsBinder.ReadForDisplay(settingsJson, providerFactory.GetSettingsSchema(providerType))
             : new Dictionary<string, string>(StringComparer.Ordinal);
 
+    /// <summary>Creates a connection.</summary>
+    /// <param name="req">The connection to create, including its access token.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>201, 409 when the name is taken, or 400 for an unknown provider, a disallowed host, or a bad settings bag.</returns>
     [HttpPost]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] CreateVcsConnectionRequest req, CancellationToken ct)
@@ -136,6 +156,10 @@ public class VcsConnectionsController(
         return CreatedAtAction(nameof(Get), new { id = entity.Id }, new { entity.Id, entity.Name });
     }
 
+    /// <summary>Updates a connection. The provider type is fixed at creation and cannot change here.</summary>
+    /// <param name="id">The connection to update.</param>
+    /// <param name="req">The new values; a blank access token keeps the stored one.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpPut("{id:guid}")]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVcsConnectionRequest req, CancellationToken ct)
@@ -189,6 +213,9 @@ public class VcsConnectionsController(
     /// but the UI offers the button only for poll-mode types, whose events would otherwise wait for the
     /// next tick. The deterministic event id means re-polling an unchanged merge request is a no-op.
     /// </remarks>
+    /// <param name="id">The connection to poll.</param>
+    /// <param name="poller">The shared per-connection poller, so manual and scheduled sweeps cannot diverge.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpPost("{id:guid}/poll")]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Poll(
@@ -213,10 +240,18 @@ public class VcsConnectionsController(
         return Ok(new
         {
             emitted = result.Emitted,
+            // Reported alongside the merge requests because a sweep can be entirely branches: a
+            // repository whose work has not reached review yet emits nothing here but still holds a
+            // parent task back, and an operator seeing only "emitted: 0" would read that as "nothing
+            // happened" rather than "the unlanded work was refreshed".
+            branches = result.Branches,
             failures = result.Failures.Select(f => new { repository = f.RepositoryExternalId, reason = f.Reason })
         });
     }
 
+    /// <summary>Removes a connection. Refused while repositories still point at it.</summary>
+    /// <param name="id">The connection to remove.</param>
+    /// <param name="ct">Cancellation token.</param>
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -233,6 +268,10 @@ public class VcsConnectionsController(
     }
 }
 
+/// <summary>A new VCS connection.</summary>
+/// <param name="Name">Unique display name; repositories and webhook routing refer to it.</param>
+/// <param name="ApiUrl">The provider's API root. Must resolve to an allowed host.</param>
+/// <param name="AccessToken">The credential, stored encrypted and never returned.</param>
 /// <param name="VcsType">
 /// The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c>. Push versus poll is the type,
 /// not a separate field: a polled connection is a poll type and carries its interval in its settings.
@@ -248,6 +287,9 @@ public record CreateVcsConnectionRequest(
     [Required, MaxLength(500)] string AccessToken,
     Dictionary<string, string?>? Settings = null);
 
+/// <summary>Changes to an existing VCS connection. The provider type is not changeable.</summary>
+/// <param name="Name">Unique display name.</param>
+/// <param name="ApiUrl">The provider's API root. Must resolve to an allowed host.</param>
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 /// <param name="Settings">
 /// Provider-specific settings. A blank value clears the setting, except for one the schema marks

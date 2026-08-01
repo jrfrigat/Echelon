@@ -56,7 +56,14 @@
       It is deliberately NOT suppressed. It used to be, back when the feed was unreachable here
       and the warning was constant noise; now it is the signal that the audit below did not
       actually run, and an audit that silently checked nothing is worse than no audit.
+
+      Kept a warning takes an explicit line, because TreatWarningsAsErrors above is unconditional
+      and was promoting it to a fatal error — the exact outcome the paragraph above rules out. An
+      offline feed failed the build with nine NU1900 errors and no way to proceed, which is how the
+      contradiction was found. WarningsNotAsErrors, not NoWarn: the warning has to stay visible,
+      since it is what says the vulnerability audit did not run.
     -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
 
     <!--
       Audit the whole graph, not just direct references. Kept explicit rather than relying on the

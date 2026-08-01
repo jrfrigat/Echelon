@@ -243,6 +243,16 @@ public class RolloutService(
                     $"Repository '{mr.RepoName}' has no deploy strategy for environment '{env.Key}'; "
                     + "configure a deploy target for it, or a repository default, before launching.");
 
+            // Every merge request in a plan had a task when the plan was built -- the planner selects on
+            // exactly that -- but MergeRequest.TaskId is SetNull, so archiving the task blanks the link
+            // and a plan built beforehand still names this row. Both step columns are non-nullable, so
+            // without this the launch is a NullReferenceException and a 500 that says nothing. Refuse
+            // with the one instruction that fixes it.
+            if (mr.TaskId is not { } stepTaskId)
+                throw new DomainValidationException(
+                    $"Merge request '{mr.ExternalId}' ({mr.RepoName}) is no longer linked to a task, so the "
+                    + "plan is stale. Recalculate the plan before launching.");
+
             var wave = waveOf.GetValueOrDefault(mr.Id, 1);
             // Already-deployed skips, unless it is being redeployed.
             var skipped = alreadyDeployed.Contains(mr.Id) && !redeploying.Contains(mr.Id);
@@ -250,7 +260,7 @@ public class RolloutService(
             {
                 Id = Guid.NewGuid(),
                 MergeRequestId = mr.Id,
-                TaskId = mr.TaskId!.Value,
+                TaskId = stepTaskId,
                 Wave = wave,
                 DeployStrategyKey = deployKey,
                 DeploySettingsJson = deploySettings,
@@ -259,7 +269,7 @@ public class RolloutService(
                 StartedAt = skipped ? now : null,
                 FinishedAt = skipped ? now : null
             });
-            snapshot.Add(new StepSnapshot(mr.Id, mr.TaskId!.Value, wave, deployKey));
+            snapshot.Add(new StepSnapshot(mr.Id, stepTaskId, wave, deployKey));
         }
 
         // Clear the deployment state of the merge requests being redeployed, in the same unit of work

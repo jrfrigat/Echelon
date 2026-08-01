@@ -11,8 +11,10 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 
 namespace ReleaseOrchestrator.Infrastructure.Queue;
 
+/// <summary>Tunables for the periodic task reconciliation sweep.</summary>
 public class TaskReconciliationOptions
 {
+    /// <summary>Whether the sweep runs. Off leaves dependency links to arrive by event only.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>How often open tasks are re-read from their tracker.</summary>
@@ -44,6 +46,16 @@ public class TaskReconciliationService(
 {
     /// <summary>Lease name; shared by every replica of this service.</summary>
     private const string LeaseName = "task-reconciliation";
+
+    // Where the last pass stopped, so the next one continues past it instead of re-reading the same
+    // page. Ordering alone is not enough: with more open tasks than MaxTasksPerRun, "take the first
+    // N by id" returns the identical N every pass, and every task after them is never reconciled at
+    // all -- while the cap warning claims the remainder waits for the next pass. In memory and per
+    // replica, which is sufficient: it only decides where a sweep starts, and starting over after a
+    // restart or a lease hand-off costs a repeated page, not correctness.
+    private Guid _cursor = Guid.Empty;
+
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Value.Enabled)
@@ -114,15 +126,20 @@ public class TaskReconciliationService(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 
+        var cap = Math.Max(options.Value.MaxTasksPerRun, 1);
+
         // Only open tasks: a closed task's links can no longer change the plan, and re-reading
         // every task ever imported would grow without bound.
-        var stale = await db.Tasks
-            .Where(t => t.ClosedAt == null)
-            .OrderBy(t => t.Id)
-            .Take(options.Value.MaxTasksPerRun)
-            .Select(t => new { t.ExternalId, TrackerName = t.TrackerConnection.Name })
-            .AsNoTracking()
-            .ToListAsync(ct);
+        var stale = await NextPageAsync(db, cap, ct);
+
+        // Past the last id: wrap and start the rotation again. Distinguishing this from "no open
+        // tasks at all" is the whole point -- an empty page after the cursor is the normal end of a
+        // lap, not an idle system.
+        if (stale.Count == 0 && _cursor != Guid.Empty)
+        {
+            _cursor = Guid.Empty;
+            stale = await NextPageAsync(db, cap, ct);
+        }
 
         if (stale.Count == 0) return;
 
@@ -130,12 +147,27 @@ public class TaskReconciliationService(
             await bus.Send(
                 new TaskSyncRequested(task.TrackerName, task.ExternalId, "Periodic reconciliation"));
 
+        _cursor = stale[^1].Id;
+
         logger.LogInformation("Requested reconciliation of {Count} open task(s)", stale.Count);
 
-        if (stale.Count == options.Value.MaxTasksPerRun)
-            logger.LogWarning(
-                "Reconciliation hit its cap of {Cap} tasks; the remainder waits for the next pass. "
-                + "Raise TaskReconciliation__MaxTasksPerRun if open tasks consistently exceed it.",
-                options.Value.MaxTasksPerRun);
+        if (stale.Count == cap)
+            logger.LogInformation(
+                "Reconciliation hit its cap of {Cap} tasks; the next pass resumes after {Cursor}. "
+                + "Raise TaskReconciliation__MaxTasksPerRun to cover more open tasks per pass.",
+                cap, _cursor);
     }
+
+    /// <summary>The next page of open tasks after <see cref="_cursor"/>, in id order.</summary>
+    private Task<List<TaskPage>> NextPageAsync(AppDbContext db, int cap, CancellationToken ct) =>
+        db.Tasks
+            .Where(t => t.ClosedAt == null && t.Id.CompareTo(_cursor) > 0)
+            .OrderBy(t => t.Id)
+            .Take(cap)
+            .Select(t => new TaskPage(t.Id, t.ExternalId, t.TrackerConnection.Name))
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+    /// <summary>One task in a reconciliation page: the id the cursor advances on, and what to sync.</summary>
+    private sealed record TaskPage(Guid Id, string ExternalId, string TrackerName);
 }
