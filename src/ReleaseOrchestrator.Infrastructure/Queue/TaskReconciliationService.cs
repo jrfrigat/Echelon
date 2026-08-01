@@ -123,9 +123,25 @@ public class TaskReconciliationService(
     private async Task ReconcileAsync(CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var bus = scope.ServiceProvider.GetRequiredService<IBus>();
+        await ReconcileAsync(
+            scope.ServiceProvider.GetRequiredService<AppDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IBus>(),
+            ct);
+    }
 
+    /// <summary>
+    /// One pass: request a sync for the next page of open tasks, then advance the cursor.
+    /// </summary>
+    /// <param name="db">The operational database.</param>
+    /// <param name="bus">Where sync requests go.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Internal rather than private so the rotation is reachable from a test without a host, a lease
+    /// and a timer. The rotation is the part worth pinning down: the cap used to mean the tasks past
+    /// it were never swept at all, and nothing could have caught that from the outside.
+    /// </remarks>
+    internal async Task ReconcileAsync(AppDbContext db, IBus bus, CancellationToken ct)
+    {
         var cap = Math.Max(options.Value.MaxTasksPerRun, 1);
 
         // Only open tasks: a closed task's links can no longer change the plan, and re-reading
