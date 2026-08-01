@@ -107,7 +107,7 @@ public class ReadinessPinsController(AppDbContext db, TimeProvider clock) : Cont
 /// <param name="IsReady">True admits the merge request into the environment; false holds it out.</param>
 /// <param name="Reason">Why, in the operator's words. Optional; shown in the readiness history.</param>
 public record SetReadinessPinRequest(
-    [property: Required] Guid MergeRequestId,
-    [property: Required] Guid EnvironmentId,
+    [Required] Guid MergeRequestId,
+    [Required] Guid EnvironmentId,
     bool IsReady,
-    [property: MaxLength(500)] string? Reason = null);
+    [MaxLength(500)] string? Reason = null);

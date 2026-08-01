@@ -1131,6 +1131,9 @@
   <data name="Vcs_Polled" xml:space="preserve">
     <value>Опрошено «{0}»: {1} открытых merge request'ов.</value>
   </data>
+  <data name="Vcs_Poll_Failures" xml:space="preserve">
+    <value>Некоторые репозитории не удалось прочитать — {0}</value>
+  </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Плагины</value>
   </data>

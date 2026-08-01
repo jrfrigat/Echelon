@@ -218,9 +218,9 @@ public class DeployTargetsController(
 /// null falls back to that default.
 /// </param>
 public record SaveDeployTargetRequest(
-    [property: Required] Guid RepositoryId,
-    [property: Required] Guid EnvironmentId,
-    [property: Required, MaxLength(100)] string DeployStrategyKey,
+    [Required] Guid RepositoryId,
+    [Required] Guid EnvironmentId,
+    [Required, MaxLength(100)] string DeployStrategyKey,
     Dictionary<string, string?>? Settings,
-    [property: MaxLength(20)] string? RedeployPolicy = null,
+    [MaxLength(20)] string? RedeployPolicy = null,
     Guid? ReadinessRuleId = null);

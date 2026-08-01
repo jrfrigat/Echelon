@@ -30,8 +30,11 @@ public record ProviderSettingDto(
 /// <param name="Ingestion">"Push" or "Poll" for a VCS provider; null for trackers and deploy strategies.</param>
 public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings, string? Ingestion = null);
 
-/// <summary>How many merge-request observations a manual poll emitted.</summary>
-public record PollResultDto(int Emitted);
+/// <summary>What a manual poll produced: observations emitted, and repositories that could not be read.</summary>
+public record PollResultDto(int Emitted, List<PollFailureDto>? Failures = null);
+
+/// <summary>A repository the poll could not read, and why (usually a wrong external id or token access).</summary>
+public record PollFailureDto(string Repository, string Reason);
 
 /// <summary>An installed plugin (a connector, deploy strategy or action handler) for the admin overview.</summary>
 /// <param name="Category">Which kind: <c>vcs</c>, <c>tracker</c>, <c>deploy</c> or <c>action</c>.</param>

@@ -126,8 +126,16 @@
     async Task Poll(VcsConnectionDto c)
     {
         PollResultDto? result = null;
-        if (await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id)))
-            Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted);
+        if (!await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id))) return;
+
+        Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted);
+
+        // A repository that could not be read is the operator's to fix (usually a wrong external id),
+        // so name it rather than letting a silent zero look like "nothing to do".
+        if (result.Failures is { Count: > 0 } failures)
+            Error = string.Format(
+                UiStrings.Vcs_Poll_Failures,
+                string.Join("; ", failures.Select(f => $"{f.Repository}: {f.Reason}")));
     }
 
     // The type is fixed at creation: an existing connection's stored repositories and token are

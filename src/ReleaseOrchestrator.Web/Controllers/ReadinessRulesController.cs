@@ -157,6 +157,6 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
 /// <c>mr-status:merged</c>, <c>pipeline:success</c>). Canonicalized on save; at least one is required.
 /// </param>
 public record SaveReadinessRuleRequest(
-    [property: Required] string Name,
-    [property: Required] string Mode,
+    [Required] string Name,
+    [Required] string Mode,
     IReadOnlyList<string>? RequiredSignals = null);

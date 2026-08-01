@@ -171,4 +171,4 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
 public record CreateRepositoryDependencyRequest(
     Guid FromRepositoryId,
     Guid ToRepositoryId,
-    [property: Required] string Type);
+    [Required] string Type);

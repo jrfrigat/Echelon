@@ -129,7 +129,7 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
 /// key across every tracker, which is fine with one tracker and ambiguous with several.
 /// </param>
 public record CreateRepositoryRequest(
-    [property: Required, MaxLength(300)] string Name,
-    [property: Required, MaxLength(500)] string ExternalId,
-    [property: Required] Guid ConnectionId,
+    [Required, MaxLength(300)] string Name,
+    [Required, MaxLength(500)] string ExternalId,
+    [Required] Guid ConnectionId,
     Guid? TrackerConnectionId = null);

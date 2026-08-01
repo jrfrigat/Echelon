@@ -123,8 +123,8 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
 /// <param name="Order">Order among bindings for the same event.</param>
 /// <param name="Enabled">Whether the binding is active.</param>
 public record SaveActionBindingRequest(
-    [property: Required] string EventType,
-    [property: Required] string ActionType,
+    [Required] string EventType,
+    [Required] string ActionType,
     string? Scope,
     Dictionary<string, string>? Settings,
     int Order,

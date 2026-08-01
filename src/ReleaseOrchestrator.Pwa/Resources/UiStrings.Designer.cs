@@ -3045,6 +3045,13 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Some repositories could not be read — {0}.</summary>
+        public static string Vcs_Poll_Failures {
+            get {
+                return ResourceManager.GetString("Vcs_Poll_Failures", resourceCulture);
+            }
+        }
+
         /// <summary>Looks up a localized string similar to Plugins.</summary>
         public static string Nav_Plugins {
             get {

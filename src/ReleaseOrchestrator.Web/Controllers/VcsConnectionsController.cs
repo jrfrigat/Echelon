@@ -207,8 +207,14 @@ public class VcsConnectionsController(
                     string.Join(", ", providerFactory.AvailableProviders)].Value
             });
 
-        var emitted = await poller.PollAsync(entity, ct);
-        return Ok(new { emitted });
+        // A repository that cannot be read is reported, not thrown: the operator needs to see which one
+        // is misconfigured (and what the others found), which a 500 hid.
+        var result = await poller.PollAsync(entity, ct);
+        return Ok(new
+        {
+            emitted = result.Emitted,
+            failures = result.Failures.Select(f => new { repository = f.RepositoryExternalId, reason = f.Reason })
+        });
     }
 
     [HttpDelete("{id:guid}")]
@@ -236,10 +242,10 @@ public class VcsConnectionsController(
 /// against that schema — an undeclared key is refused rather than stored and ignored.
 /// </param>
 public record CreateVcsConnectionRequest(
-    [property: Required, MaxLength(200)] string Name,
-    [property: Required] string VcsType,
-    [property: Required, MaxLength(500)] string ApiUrl,
-    [property: Required, MaxLength(500)] string AccessToken,
+    [Required, MaxLength(200)] string Name,
+    [Required] string VcsType,
+    [Required, MaxLength(500)] string ApiUrl,
+    [Required, MaxLength(500)] string AccessToken,
     Dictionary<string, string?>? Settings = null);
 
 /// <param name="AccessToken">Blank keeps the stored token.</param>
@@ -249,7 +255,7 @@ public record CreateVcsConnectionRequest(
 /// there means "untouched", the same convention <paramref name="AccessToken"/> uses.
 /// </param>
 public record UpdateVcsConnectionRequest(
-    [property: Required, MaxLength(200)] string Name,
-    [property: Required, MaxLength(500)] string ApiUrl,
-    [property: MaxLength(500)] string? AccessToken = null,
+    [Required, MaxLength(200)] string Name,
+    [Required, MaxLength(500)] string ApiUrl,
+    [MaxLength(500)] string? AccessToken = null,
     Dictionary<string, string?>? Settings = null);

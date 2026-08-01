@@ -190,11 +190,11 @@ public class TrackerConnectionsController(
 /// against that schema — an undeclared key is refused rather than stored and ignored.
 /// </param>
 public record CreateTrackerConnectionRequest(
-    [property: Required, MaxLength(200)] string Name,
-    [property: Required] string TrackerType,
-    [property: Required, MaxLength(500)] string ApiUrl,
+    [Required, MaxLength(200)] string Name,
+    [Required] string TrackerType,
+    [Required, MaxLength(500)] string ApiUrl,
     Dictionary<string, string?>? Settings,
-    [property: Required, MaxLength(500)] string AccessToken);
+    [Required, MaxLength(500)] string AccessToken);
 
 /// <param name="Settings">
 /// Provider-specific settings. A blank value clears the setting, except for one the schema marks
@@ -203,7 +203,7 @@ public record CreateTrackerConnectionRequest(
 /// </param>
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 public record UpdateTrackerConnectionRequest(
-    [property: Required, MaxLength(200)] string Name,
-    [property: Required, MaxLength(500)] string ApiUrl,
+    [Required, MaxLength(200)] string Name,
+    [Required, MaxLength(500)] string ApiUrl,
     Dictionary<string, string?>? Settings,
-    [property: MaxLength(500)] string? AccessToken = null);
+    [MaxLength(500)] string? AccessToken = null);

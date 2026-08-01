@@ -101,4 +101,4 @@ public class TasksController(
 /// When true, redeploy merge requests already deployed to this environment — honoured only where the
 /// repository's deploy target for the environment sets <c>RedeployPolicy.Always</c>.
 /// </param>
-public record LaunchRolloutRequest([property: Required] Guid EnvironmentId, bool Redeploy = false);
+public record LaunchRolloutRequest([Required] Guid EnvironmentId, bool Redeploy = false);

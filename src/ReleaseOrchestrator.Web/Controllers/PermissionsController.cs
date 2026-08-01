@@ -195,10 +195,10 @@ public class PermissionsController(
 }
 
 public record AddGroupMappingRequest(
-    [property: Required, MaxLength(200)] string AdGroupSid,
+    [Required, MaxLength(200)] string AdGroupSid,
     Guid PermissionClaimId);
 
 /// <param name="UserId">Entra ID object id (oid), as a GUID. A UPN or an email is rejected.</param>
 public record AddUserOverrideRequest(
-    [property: Required, MaxLength(450)] string UserId,
+    [Required, MaxLength(450)] string UserId,
     Guid PermissionClaimId);

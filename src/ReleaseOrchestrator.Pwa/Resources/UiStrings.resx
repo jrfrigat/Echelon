@@ -1131,6 +1131,9 @@
   <data name="Vcs_Polled" xml:space="preserve">
     <value>Polled '{0}': {1} open merge request(s).</value>
   </data>
+  <data name="Vcs_Poll_Failures" xml:space="preserve">
+    <value>Some repositories could not be read — {0}</value>
+  </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Plugins</value>
   </data>

@@ -157,8 +157,8 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
 /// creating without one) needs approval permission, because it removes the gate.
 /// </param>
 public record SaveEnvironmentRequest(
-    [property: Required] string Key,
-    [property: Required] string Name,
+    [Required] string Key,
+    [Required] string Name,
     int Order,
     bool IsEnabled,
     Guid? ReadinessRuleId = null);
