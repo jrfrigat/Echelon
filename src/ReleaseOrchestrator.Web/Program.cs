@@ -124,7 +124,7 @@ try
     // deployment is ready without a separate step. Set Database:MigrateOnStartup=false for a
     // multi-replica deployment, where concurrent Migrate() calls would race and the app would need
     // standing DDL rights on the production database -- there, run migrations from an init container
-    // or CI instead (README §11.3).
+    // or CI instead (docs/en/configuration.md, "Database").
     if (builder.Configuration.GetValue("Database:MigrateOnStartup", true))
     {
         using var scope = app.Services.CreateScope();

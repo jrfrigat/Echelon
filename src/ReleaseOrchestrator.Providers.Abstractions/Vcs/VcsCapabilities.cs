@@ -35,9 +35,10 @@ public sealed record VcsCapabilities
     /// </summary>
     /// <remarks>
     /// Distinguishes an empty <see cref="VcsMergeRequest.Labels"/> meaning "no labels" from one
-    /// meaning "this provider cannot tell you". The difference matters because label-driven
-    /// promotion (README §5) decides whether a merge request is deployable, and "cannot say" must
-    /// never be read as "the label was removed".
+    /// meaning "this provider cannot tell you". The difference matters because a per-environment
+    /// readiness rule is evaluated against the stored label set, so reading "cannot say" as "the
+    /// labels were removed" would overwrite that set and hold a merge request out of an environment
+    /// it qualifies for — or, on a rule that gates on absence, let one through.
     /// </remarks>
     public bool SupportsMergeRequestLabels { get; init; }
 

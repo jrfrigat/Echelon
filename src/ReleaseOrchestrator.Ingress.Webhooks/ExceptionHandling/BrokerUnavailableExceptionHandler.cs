@@ -18,8 +18,9 @@ namespace ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 /// re-sending from the hook log.
 /// </para>
 /// <para>
-/// README §3.1 promises an in-memory buffer ahead of the 503. It is deliberately not implemented:
-/// buffering acknowledges the webhook with 200 while the event exists only in RAM, so the sender
+/// An in-memory buffer ahead of the 503 was considered and rejected, and the README's Known
+/// Limitations now records that rather than promising one. Buffering acknowledges the webhook with
+/// 200 while the event exists only in RAM, so the sender
 /// marks it delivered and a pod restart loses it with nobody the wiser. That trades a loud,
 /// recoverable failure for a silent, permanent one — the exact defect this handler fixes. Not
 /// losing events across a broker outage needs a persistent outbox, which is its own task.

@@ -16,9 +16,9 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <see cref="TaskDependency"/>: the row names who waits, then who is waited on. Reversing it
 /// reverses the deploy order of everything between the two repositories.
 ///
-/// Introduced alongside the stack model, which the planner still reads; stacks are removed in the
-/// cleanup phase (docs/issues/009-admin-and-migration.md). The Hard/Soft criticality is shared with
-/// the stack model via <see cref="StackDependencyType"/> for now; it is renamed when stacks go.
+/// This is now the only repository-ordering model — stacks were removed with the global plan
+/// (docs/issues/009-admin-and-migration.md). <see cref="StackDependencyType"/> keeps the old name
+/// because it is persisted by name, so renaming the type is a data migration rather than a rename.
 /// </remarks>
 [Index(nameof(FromRepositoryId), nameof(ToRepositoryId), IsUnique = true, Name = "IX_RepositoryDependency_From_To")]
 public class RepositoryDependency

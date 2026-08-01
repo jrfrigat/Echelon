@@ -4,8 +4,8 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 
 /// <summary>
 /// Why one merge request must be deployed before another, and how readily the
-/// link may be dropped to break a cycle. Higher value = dropped first
-/// (README §5.3: soft repository links yield before task links; hard links never yield).
+/// link may be dropped to break a cycle. Higher value = dropped first: soft repository links yield
+/// before task links, and hard links never yield (docs/issues/006-per-task-planning.md).
 /// </summary>
 public enum PlanEdgeKind
 {
@@ -132,8 +132,9 @@ public static class ReleasePlanGraph
 
     /// <summary>
     /// Constraints an operator may not violate: hard repository links and task dependencies.
-    /// Soft repository links are advisory and excluded. Used to vet imported plans (README §6.2)
-    /// against the same edge derivation the planner itself uses, so the two cannot drift.
+    /// Soft repository links are advisory and excluded. Used to vet imported plans
+    /// (docs/issues/006-per-task-planning.md) against the same edge derivation the planner itself
+    /// uses, so the two cannot drift — one derivation for import, edit and recalculate alike.
     /// </summary>
     public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs)
     {

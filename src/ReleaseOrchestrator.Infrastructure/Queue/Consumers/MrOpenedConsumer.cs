@@ -15,9 +15,14 @@ using ReleaseOrchestrator.Providers.Abstractions.Vcs;
 namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 
 /// <summary>
-/// Upserts an open merge request and derives its deployability from the connection's
-/// ready-for-deploy label (README §5).
+/// Upserts an open merge request: its branches, its task link, its label set and its pipeline result.
 /// </summary>
+/// <remarks>
+/// It does not decide deployability. That was the ready-for-deploy label's job and is now a
+/// per-environment readiness rule evaluated at launch; what happens here is storing the signals that
+/// rule reads. An "opened" delivery for a merge request already held as Merged is ignored outright —
+/// a merge is final, so such an event is a stale, out-of-order delivery.
+/// </remarks>
 public class MrOpenedConsumer(
     AppDbContext db,
     IBus bus,

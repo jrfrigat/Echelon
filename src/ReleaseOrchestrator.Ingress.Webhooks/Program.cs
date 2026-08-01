@@ -61,7 +61,9 @@ try
                 ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions
                 {
-                    // README §9.1 budgets peaks of 5-10 events/sec across all connections.
+                    // 1200/min is ~20/sec per source address, against a budgeted peak of 5-10
+                    // events/sec across all connections -- headroom for a burst without leaving the
+                    // signature check unthrottled.
                     PermitLimit = builder.Configuration.GetValue("RateLimit:WebhooksPerMinute", 1200),
                     Window = TimeSpan.FromMinutes(1)
                 }));
