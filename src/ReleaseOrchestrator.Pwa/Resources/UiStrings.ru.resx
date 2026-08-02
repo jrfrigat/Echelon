@@ -1314,6 +1314,12 @@
   <data name="Plugins_Cat_Action" xml:space="preserve">
     <value>Обработчики действий</value>
   </data>
+  <data name="TaskDetail_Yaml" xml:space="preserve">
+    <value>YAML</value>
+  </data>
+  <data name="TaskDetail_Yaml_Title" xml:space="preserve">
+    <value>План в YAML</value>
+  </data>
   <data name="Rules_Title" xml:space="preserve">
     <value>Правила порядка (документ)</value>
   </data>

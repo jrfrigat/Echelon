@@ -27,6 +27,22 @@ public class ApiService(HttpClient http)
         GetAsync<PagedResult<MrDto>>(
             $"api/merge-requests?status={Uri.EscapeDataString(status ?? "")}&page={page}&pageSize={pageSize}", ct);
 
+    /// <summary>
+    /// The task's active plan as a YAML document.
+    /// </summary>
+    /// <remarks>
+    /// Read as text, not JSON: the endpoint answers <c>text/yaml</c> because the document's whole
+    /// point is being readable, and JSON-escaping it would defeat that.
+    /// </remarks>
+    public async Task<string> ExportTaskPlanYamlAsync(Guid taskId, CancellationToken ct = default)
+    {
+        var response = await http.GetAsync($"api/tasks/{taskId}/plan/export", ct);
+        if (!response.IsSuccessStatusCode)
+            throw new ApiException(await ReadErrorAsync(response, ct), response.StatusCode);
+
+        return await response.Content.ReadAsStringAsync(ct);
+    }
+
     // ---- ordering rules (mirrors PlanningController) ---------------------------
 
     /// <summary>The ordering-rule document as stored.</summary>

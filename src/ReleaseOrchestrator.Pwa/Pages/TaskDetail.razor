@@ -15,11 +15,31 @@
         <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Schedule" /></LeadingIcon>
         <ChildContent>@UiStrings.Timeline_Title</ChildContent>
     </FlareButton>
+    @* Only once a plan exists: there is nothing to export before that, and a button that answers
+       "no plan" is a worse way to learn it than the Build button already on the page. *@
+    @if (_plan is not null)
+    {
+        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="ShowYaml" Disabled="_busy">
+            <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Description" /></LeadingIcon>
+            <ChildContent>@UiStrings.TaskDetail_Yaml</ChildContent>
+        </FlareButton>
+    }
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="Recalculate" Disabled="_busy">
         <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" /></LeadingIcon>
         <ChildContent>@UiStrings.TaskDetail_Recalculate</ChildContent>
     </FlareButton>
 </FlareStack>
+
+@* Shown rather than downloaded: the point is reading the tree and diffing it against what was
+   expected, and a file in the downloads folder is a worse place to do that from. *@
+<FlareDialog Visible="_showYaml" Title="@UiStrings.TaskDetail_Yaml_Title" VisibleChanged="@(v => _showYaml = v)">
+    <ChildContent>
+        <FlareTextArea Value="@_yaml" Rows="22" ReadOnly="true" Style="font-family:monospace;" />
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="@(() => _showYaml = false)">@UiStrings.Common_Close</FlareButton>
+    </Actions>
+</FlareDialog>
 
 <PageAlerts Error="@Error" Success="@Success"
             OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
@@ -310,6 +330,22 @@ else
         _busy = true;
         await RunAsync(async () => _plan = await Api.RecalculateTaskPlanAsync(Id), UiStrings.TaskDetail_Recalculated);
         RebuildKeyMap();
+        _busy = false;
+    }
+
+    bool _showYaml;
+    string _yaml = "";
+
+    /// <summary>Fetches the plan as YAML and shows it.</summary>
+    /// <remarks>
+    /// Fetched rather than linked: the endpoint needs the bearer token, and a plain anchor would send
+    /// the browser there without one and land on the sign-in page.
+    /// </remarks>
+    async Task ShowYaml()
+    {
+        _busy = true;
+        if (await RunAsync(async () => _yaml = await Api.ExportTaskPlanYamlAsync(Id)))
+            _showYaml = true;
         _busy = false;
     }
 

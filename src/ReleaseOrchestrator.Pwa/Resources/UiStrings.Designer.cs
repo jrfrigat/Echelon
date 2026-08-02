@@ -1116,6 +1116,20 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         /// <summary>Looks up a localized string similar to Merge requests.</summary>
 
         /// <summary>Looks up a localized string for Work_Title.</summary>
+        /// <summary>Looks up a localized string for TaskDetail_Yaml.</summary>
+        public static string TaskDetail_Yaml {
+            get {
+                return ResourceManager.GetString("TaskDetail_Yaml", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for TaskDetail_Yaml_Title.</summary>
+        public static string TaskDetail_Yaml_Title {
+            get {
+                return ResourceManager.GetString("TaskDetail_Yaml_Title", resourceCulture);
+            }
+        }
+
         /// <summary>Looks up a localized string for Rules_Title.</summary>
         public static string Rules_Title {
             get {
