@@ -40,6 +40,14 @@ public class OrderingRuleCompilerTests
 
     static readonly Dictionary<string, WorkSelector> NoGroups = [];
 
+    /// <summary>The edges, for the cases that are about ordering rather than about the cap.</summary>
+    static IReadOnlyList<OrderingEdge> Edges(OrderingRules rules, IReadOnlyList<OrderingCandidate> candidates)
+    {
+        var result = OrderingRuleCompiler.Compile(rules, candidates);
+        Assert.False(result.LimitExceeded, $"unexpectedly hit the edge cap on group '{result.ExceededOn}'");
+        return result.Edges;
+    }
+
     static OrderingRules Rules(
         IReadOnlyDictionary<string, WorkSelector> groups,
         IReadOnlyList<GroupOrderSpec> order,
@@ -118,7 +126,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("frontend", ["backend"], StackDependencyType.Hard)]);
 
-        var edges = OrderingRuleCompiler.Compile(rules, All);
+        var edges = Edges(rules, All);
 
         // 3 backend x 2 frontend, every pair.
         Assert.Equal(6, edges.Count);
@@ -139,7 +147,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("frontend", ["backend"], StackDependencyType.Hard, OrderScope.WithinTask)]);
 
-        var edges = OrderingRuleCompiler.Compile(rules, All);
+        var edges = Edges(rules, All);
 
         // Only the same-task pairs survive.
         Assert.Equal(2, edges.Count);
@@ -162,7 +170,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("frontend", ["backend"])]);
 
-        var edges = OrderingRuleCompiler.Compile(rules, All);
+        var edges = Edges(rules, All);
 
         Assert.Contains(edges, e => e.From == SvcApi.MergeRequestId && e.To == PartnerWeb.MergeRequestId);
     }
@@ -179,7 +187,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("a", ["b"])]);
 
-        var edges = OrderingRuleCompiler.Compile(rules, All);
+        var edges = Edges(rules, All);
 
         Assert.DoesNotContain(edges, e => e.From == e.To);
     }
@@ -196,7 +204,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("frontend", ["absent"])]);
 
-        Assert.Empty(OrderingRuleCompiler.Compile(rules, All));
+        Assert.Empty(Edges(rules, All));
     }
 
     [Fact]
@@ -214,7 +222,7 @@ public class OrderingRuleCompilerTests
                 new GroupOrderSpec("web", ["db"], StackDependencyType.Soft)
             ]);
 
-        var edge = Assert.Single(OrderingRuleCompiler.Compile(rules, All));
+        var edge = Assert.Single(Edges(rules, All));
         // The first rule wins, so the firmer statement is not silently downgraded by a later duplicate.
         Assert.Equal(StackDependencyType.Hard, edge.Type);
     }
@@ -233,7 +241,7 @@ public class OrderingRuleCompilerTests
             },
             [new GroupOrderSpec("frontend-partner", ["backend-main"], StackDependencyType.Hard, OrderScope.WithinTask)]);
 
-        var edges = OrderingRuleCompiler.Compile(rules, All);
+        var edges = Edges(rules, All);
 
         Assert.Equal(2, edges.Count);
         Assert.Contains(edges, e => e.From == SvcDb.MergeRequestId && e.To == PartnerWeb.MergeRequestId);
@@ -243,6 +251,56 @@ public class OrderingRuleCompilerTests
         // task link alone — which is the point: the document adds repository ordering and does not
         // restate what the tracker already said.
         Assert.DoesNotContain(edges, e => e.From == SvcAuth.MergeRequestId);
+    }
+
+    // ---- the edge cap ---------------------------------------------------------------------
+
+    [Fact]
+    public void ADocumentThatExpandsPastTheCapIsRefusedAndNamesTheRule()
+    {
+        // 'needs' is a cross product and nothing in the syntax hints at it: two groups of 100 is
+        // 10,000 edges from one line. Refused whole rather than truncated -- a partial cross product
+        // is an ordering nobody wrote, constraining some pairs and not others, arbitrarily.
+        var many = Enumerable.Range(0, 100)
+            .SelectMany(i => new[]
+            {
+                Mr($"a{i % 10}", Task2, "gitlab-main", $"group/back-{i}", $"b{i}") with
+                    { MergeRequestId = Guid.NewGuid() },
+                Mr($"b{i % 10}", Task3, "gitlab-main", $"group/front-{i}", $"f{i}") with
+                    { MergeRequestId = Guid.NewGuid() }
+            })
+            .ToList();
+
+        var rules = Rules(
+            new Dictionary<string, WorkSelector>
+            {
+                ["backend"] = Select(repositories: ["group/back-*"]),
+                ["frontend"] = Select(repositories: ["group/front-*"])
+            },
+            [new GroupOrderSpec("frontend", ["backend"])]);
+
+        var result = OrderingRuleCompiler.Compile(rules, many);
+
+        Assert.True(result.LimitExceeded);
+        Assert.Equal("frontend", result.ExceededOn);
+        Assert.True(result.Edges.Count <= OrderingRuleCompiler.MaxEdges);
+    }
+
+    [Fact]
+    public void ADocumentThatFitsReportsNoLimit()
+    {
+        var rules = Rules(
+            new Dictionary<string, WorkSelector>
+            {
+                ["backend"] = Select(repositories: ["group/svc-*"]),
+                ["frontend"] = Select(repositories: ["partner/*"])
+            },
+            [new GroupOrderSpec("frontend", ["backend"])]);
+
+        var result = OrderingRuleCompiler.Compile(rules, All);
+
+        Assert.False(result.LimitExceeded);
+        Assert.Null(result.ExceededOn);
     }
 
     // ---- task policy ----------------------------------------------------------------------

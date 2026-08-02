@@ -21,15 +21,27 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 public static class OrderingRuleCompiler
 {
     /// <summary>
+    /// The most edges one document may produce before it is refused.
+    /// </summary>
+    /// <remarks>
+    /// <c>needs</c> is a cross product: a group of 50 waiting on a group of 50 is 2500 edges from one
+    /// line, and nothing in the syntax hints at it. A bound with a message beats the alternatives —
+    /// silently truncating would produce an order nobody wrote, and quietly building a hundred
+    /// thousand edges would turn one careless rule into a planner that stops answering.
+    /// </remarks>
+    public const int MaxEdges = 5000;
+
+    /// <summary>
     /// Expands the document's group ordering into "deploy A before B" pairs over the given work.
     /// </summary>
     /// <param name="rules">The document.</param>
     /// <param name="candidates">The work in the plan being ordered.</param>
     /// <returns>
-    /// Edges as (from, to, type): <c>from</c> deploys first. Deduplicated, and deterministic in the
-    /// order of <paramref name="candidates"/> — the planner needs the same input to give the same plan.
+    /// The edges, and whether the document blew the cap. Edges are (from, to, type) with <c>from</c>
+    /// deploying first, deduplicated, and deterministic in the order of <paramref name="candidates"/>
+    /// — the planner needs the same input to give the same plan.
     /// </returns>
-    public static IReadOnlyList<OrderingEdge> Compile(
+    public static OrderingCompileResult Compile(
         OrderingRules rules, IReadOnlyList<OrderingCandidate> candidates)
     {
         ArgumentNullException.ThrowIfNull(rules);
@@ -65,13 +77,19 @@ public static class OrderingRuleCompiler
                         if (rule.Scope == OrderScope.WithinTask
                             && (waiter.TaskId is null || waiter.TaskId != first.TaskId)) continue;
 
-                        if (seen.Add((first.MergeRequestId, waiter.MergeRequestId)))
-                            edges.Add(new OrderingEdge(first.MergeRequestId, waiter.MergeRequestId, rule.Type));
+                        if (!seen.Add((first.MergeRequestId, waiter.MergeRequestId))) continue;
+
+                        // Stops at the cap rather than past it, and reports the rule that reached it —
+                        // "too many edges" without naming one is useless in a document with twenty.
+                        if (edges.Count >= MaxEdges)
+                            return new OrderingCompileResult(edges, ExceededOn: rule.Group);
+
+                        edges.Add(new OrderingEdge(first.MergeRequestId, waiter.MergeRequestId, rule.Type));
                     }
             }
         }
 
-        return edges;
+        return new OrderingCompileResult(edges, ExceededOn: null);
     }
 
     /// <summary>
@@ -103,6 +121,19 @@ public static class OrderingRuleCompiler
             ? policy
             : policy.OverriddenBy(match.WaitForSubtasks, match.WaitForLinked, match.GroupOrder);
     }
+}
+
+/// <summary>What compiling a document produced.</summary>
+/// <param name="Edges">The ordering edges, up to <see cref="OrderingRuleCompiler.MaxEdges"/>.</param>
+/// <param name="ExceededOn">
+/// The group whose rule reached the cap, or null when the document fits. When set,
+/// <paramref name="Edges"/> is a partial expansion and must not be used as an ordering — a truncated
+/// cross product is an order nobody wrote.
+/// </param>
+public sealed record OrderingCompileResult(IReadOnlyList<OrderingEdge> Edges, string? ExceededOn)
+{
+    /// <summary>True when the document produced more edges than are allowed.</summary>
+    public bool LimitExceeded => ExceededOn is not null;
 }
 
 /// <summary>"Deploy <paramref name="From"/> before <paramref name="To"/>", and how firmly.</summary>

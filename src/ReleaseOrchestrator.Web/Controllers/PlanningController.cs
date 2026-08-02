@@ -196,6 +196,19 @@ public class PlanningController(AppDbContext db) : ControllerBase
             .OrderBy(g => g.Group, StringComparer.Ordinal)
             .ToList();
 
+        // Compiled against the real work, not just parsed: 'needs' is a cross product, and a document
+        // that is perfectly well-formed can still expand into more edges than the planner will accept.
+        // Caught here so it cannot be stored and discovered later from plans quietly losing their rules.
+        var compiled = OrderingRuleCompiler.Compile(parsed.Rules, candidates);
+        if (compiled.LimitExceeded)
+            return Ok(new OrderingRulesValidationDto(
+                false,
+                [$"These rules expand to more than {OrderingRuleCompiler.MaxEdges} ordering edges, reached on "
+                 + $"group '{compiled.ExceededOn}'. 'needs' orders every merge request of one group after every "
+                 + "merge request of another, so a large pair multiplies. Narrow the groups, or add "
+                 + "scope: within_task so the rule only orders within a single task."],
+                groups));
+
         return Ok(new OrderingRulesValidationDto(true, [], groups));
     }
 

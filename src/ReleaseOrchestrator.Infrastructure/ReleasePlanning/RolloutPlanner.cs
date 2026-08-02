@@ -367,9 +367,23 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 c.Id, c.TaskId, c.ConnectionName, c.RepositoryExternalId, c.SourceBranch, c.TaskKey,
                 c.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)))]);
 
+        // All or nothing. A partial cross product is an ordering nobody wrote -- it would constrain
+        // some pairs and not others, arbitrarily, and read as deliberate. The derived ordering stands
+        // instead, and the message names the rule to fix.
+        if (compiled.LimitExceeded)
+        {
+            logger.LogError(
+                "The ordering rules produce more than {Max} edges (reached on group '{Group}'), so they are "
+                + "being ignored and plans use the derived ordering only. 'needs' is a cross product; narrow "
+                + "the groups or scope the rule to within_task.",
+                OrderingRuleCompiler.MaxEdges, compiled.ExceededOn);
+
+            return [];
+        }
+
         // Hard and soft map onto the kinds the graph already ranks when it has to break a cycle, so a
         // rule yields exactly as the repository ordering it generalises would.
-        return [.. compiled.Select(e => new PlanEdge(
+        return [.. compiled.Edges.Select(e => new PlanEdge(
             e.From, e.To,
             e.Type == StackDependencyType.Hard ? PlanEdgeKind.RepoHard : PlanEdgeKind.RepoSoft))];
     }
