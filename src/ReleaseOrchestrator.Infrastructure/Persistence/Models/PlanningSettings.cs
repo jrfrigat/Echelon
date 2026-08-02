@@ -39,6 +39,19 @@ public class PlanningSettings
     /// <summary>Whether one whole group of prerequisites precedes the other, unless the task says otherwise.</summary>
     public PrerequisiteGroupOrder PrerequisiteGroupOrder { get; set; } = Core.Enums.PrerequisiteGroupOrder.Together;
 
+    /// <summary>
+    /// The ordering-rule document, as the operator wrote it. Null or blank means no rules.
+    /// </summary>
+    /// <remarks>
+    /// Stored as the author's own text, not as a parsed projection, so an export returns what was
+    /// written — comments, key order and all. Re-serialising from a model would hand back a document
+    /// the operator did not write and could not diff against their own copy.
+    ///
+    /// JSON today, YAML once the parser can be installed. The format is the same either way: YAML 1.2
+    /// is a superset of JSON, so a stored document stays readable when the reader changes.
+    /// </remarks>
+    public string? OrderingRulesDocument { get; set; }
+
     /// <summary>Optimistic-concurrency token. See <c>ProviderSpecificMapping</c> for the Postgres mapping.</summary>
     /// <remarks>Nullable like the other tokens: SQL Server generates it, SQLite (used in tests) cannot.</remarks>
     [Timestamp]

@@ -726,6 +726,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("OrderingRulesDocument")
+                        .HasColumnType("text");
+
                     b.Property<int>("PrerequisiteGroupOrder")
                         .HasColumnType("integer");
 

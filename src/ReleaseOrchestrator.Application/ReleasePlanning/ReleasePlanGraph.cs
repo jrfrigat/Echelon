@@ -45,16 +45,27 @@ public static class ReleasePlanGraph
     /// <param name="removeEdges">
     /// Derived edges an operator dropped (a plan override). Removal runs before additions.
     /// </param>
+    /// <param name="ruleEdges">
+    /// Orderings an ordering-rule document produced, each carrying its own criticality.
+    /// </param>
+    /// <remarks>
+    /// Rule edges are merged with the DERIVED set, not with the manual one, and that placement is the
+    /// decision: a rule is a policy like the repository ordering it generalises, so it must be
+    /// droppable by an operator's <paramref name="removeEdges"/> and must yield to a cycle according
+    /// to its own hard/soft, rather than being protected like a hand-drawn edge.
+    /// </remarks>
     public static PlanGraphResult Build(
         IReadOnlyList<PlanMergeRequest> mrs,
         IReadOnlyList<(Guid From, Guid To)>? addEdges = null,
-        IReadOnlyList<(Guid From, Guid To)>? removeEdges = null)
+        IReadOnlyList<(Guid From, Guid To)>? removeEdges = null,
+        IReadOnlyList<PlanEdge>? ruleEdges = null)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
         var rank = new Dictionary<Guid, int>(mrs.Count);
         for (int i = 0; i < mrs.Count; i++) rank[mrs[i].Id] = i;
 
         var edges = BuildEdges(mrs, ids);
+        ApplyRuleEdges(edges, ids, ruleEdges);
         ApplyOverrides(edges, ids, addEdges, removeEdges);
         var conflicts = BreakCycles(edges, ids, rank);
         var stages = TopoSort(edges, ids, rank);
@@ -96,6 +107,32 @@ public static class ReleasePlanGraph
             .ToList();
 
         return Build(inClosure, addEdges, removeEdges);
+    }
+
+    /// <summary>
+    /// Merges the ordering-rule document's edges into the derived set.
+    /// </summary>
+    /// <remarks>
+    /// Same guard and same precedence as a derived edge: endpoints outside this plan are ignored, and
+    /// when a pair is stated twice the more critical statement wins — so a soft rule can never make an
+    /// existing hard constraint droppable.
+    /// </remarks>
+    private static void ApplyRuleEdges(
+        Dictionary<(Guid From, Guid To), PlanEdgeKind> edges,
+        HashSet<Guid> ids,
+        IReadOnlyList<PlanEdge>? ruleEdges)
+    {
+        if (ruleEdges is null) return;
+
+        foreach (var edge in ruleEdges)
+        {
+            if (edge.FromMrId == edge.ToMrId
+                || !ids.Contains(edge.FromMrId) || !ids.Contains(edge.ToMrId)) continue;
+
+            var key = (edge.FromMrId, edge.ToMrId);
+            if (!edges.TryGetValue(key, out var existing) || edge.Kind < existing)
+                edges[key] = edge.Kind;
+        }
     }
 
     /// <summary>

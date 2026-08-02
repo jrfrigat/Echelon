@@ -227,7 +227,11 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         // next ingestion event instead of being silently rebuilt without the operator's edits.
         var (add, remove) = await LoadOverridesAsync(taskId, ct);
 
-        return new Computed(closure, adjacency, ordered, ReleasePlanGraph.Build(ordered, add, remove));
+        var settings = await LoadSettingsAsync(ct);
+        var ruleEdges = await LoadRuleEdgesAsync(settings.Rules, [.. ordered.Select(mr => mr.Id)], ct);
+
+        return new Computed(
+            closure, adjacency, ordered, ReleasePlanGraph.Build(ordered, add, remove, ruleEdges));
     }
 
     /// <summary>Loads the whole task graph as adjacency, with the wait policy applied.</summary>
@@ -268,8 +272,13 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
 
-        var global = await LoadGlobalPolicyAsync(ct);
+        var settings = await LoadSettingsAsync(ct);
         var overrideById = overrides.ToDictionary(o => o.Id);
+
+        // The document layers over the stored default, then the task's own answers over that. A task
+        // that disagreed explicitly outranks a blanket rule, which is the order an operator expects
+        // when they set something on one task to escape the general policy.
+        var global = OrderingRuleCompiler.ResolvePolicy(settings.Rules, settings.Policy, task: null);
 
         TaskWaitPolicy PolicyFor(Guid taskId) =>
             overrideById.TryGetValue(taskId, out var o)
@@ -290,19 +299,78 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     }
 
     /// <summary>
-    /// The installation-wide wait policy, or the built-in default when nobody has saved one.
+    /// The installation-wide wait policy and ordering-rule document, or the built-in defaults when
+    /// nobody has saved either.
     /// </summary>
     /// <remarks>
     /// Absent settings mean the defaults, not a failure: a fresh installation has no row, and it must
-    /// plan exactly as it did before the policy existed rather than refuse to plan at all.
+    /// plan exactly as it did before any of this existed rather than refuse to plan at all.
+    ///
+    /// An UNREADABLE document is treated the same way, and that is the uncomfortable call. Refusing to
+    /// plan would be defensible, but it would take out every plan in the installation over one bad
+    /// edit, including the plans of people who did not make it — so the rules are dropped, the derived
+    /// ordering stands, and the problem is reported where it can be acted on (validate, and the log).
+    /// The endpoint refuses to SAVE an invalid document, which is the gate that matters.
     /// </remarks>
-    private async Task<TaskWaitPolicy> LoadGlobalPolicyAsync(CancellationToken ct)
+    private async Task<(TaskWaitPolicy Policy, OrderingRules Rules)> LoadSettingsAsync(CancellationToken ct)
     {
         var settings = await db.PlanningSettings.AsNoTracking().FirstOrDefaultAsync(ct);
 
-        return settings is null
-            ? TaskWaitPolicy.Default
-            : new TaskWaitPolicy(settings.WaitForSubtasks, settings.WaitForLinked, settings.PrerequisiteGroupOrder);
+        if (settings is null) return (TaskWaitPolicy.Default, OrderingRules.Empty);
+
+        var policy = new TaskWaitPolicy(
+            settings.WaitForSubtasks, settings.WaitForLinked, settings.PrerequisiteGroupOrder);
+
+        var parsed = OrderingRuleDocument.Read(settings.OrderingRulesDocument);
+        if (!parsed.IsValid)
+        {
+            logger.LogError(
+                "The stored ordering-rule document is invalid and is being ignored; plans use the derived "
+                + "ordering only. Fix it via the planning rules endpoint. Problems: {Problems}",
+                string.Join("; ", parsed.Errors));
+
+            return (policy, OrderingRules.Empty);
+        }
+
+        return (policy, parsed.Rules!);
+    }
+
+    /// <summary>
+    /// The ordering edges the rule document produces for one plan's merge requests.
+    /// </summary>
+    /// <remarks>
+    /// Selectors are matched against the plan's own work, not against everything the installation
+    /// holds: a rule orders what is being deployed, and reaching outside the plan would invent edges
+    /// to merge requests the graph was never given (which it would then ignore anyway).
+    /// </remarks>
+    private async Task<List<PlanEdge>> LoadRuleEdgesAsync(
+        OrderingRules rules, IReadOnlyList<Guid> mergeRequestIds, CancellationToken ct)
+    {
+        if (rules.Order.Count == 0 || mergeRequestIds.Count == 0) return [];
+
+        var candidates = await db.MergeRequests
+            .Where(m => mergeRequestIds.Contains(m.Id))
+            .Select(m => new
+            {
+                m.Id, m.TaskId, m.SourceBranch, m.Labels,
+                ConnectionName = m.Repository.Connection.Name,
+                RepositoryExternalId = m.Repository.ExternalId,
+                TaskKey = m.TaskExternalId
+            })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var compiled = OrderingRuleCompiler.Compile(
+            rules,
+            [.. candidates.Select(c => new OrderingCandidate(
+                c.Id, c.TaskId, c.ConnectionName, c.RepositoryExternalId, c.SourceBranch, c.TaskKey,
+                c.Labels.Split(',', StringSplitOptions.RemoveEmptyEntries)))]);
+
+        // Hard and soft map onto the kinds the graph already ranks when it has to break a cycle, so a
+        // rule yields exactly as the repository ordering it generalises would.
+        return [.. compiled.Select(e => new PlanEdge(
+            e.From, e.To,
+            e.Type == StackDependencyType.Hard ? PlanEdgeKind.RepoHard : PlanEdgeKind.RepoSoft))];
     }
 
     /// <summary>
