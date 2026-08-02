@@ -1116,6 +1116,104 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         /// <summary>Looks up a localized string similar to Merge requests.</summary>
 
         /// <summary>Looks up a localized string for Work_Title.</summary>
+        /// <summary>Looks up a localized string for Rules_Title.</summary>
+        public static string Rules_Title {
+            get {
+                return ResourceManager.GetString("Rules_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Description.</summary>
+        public static string Rules_Description {
+            get {
+                return ResourceManager.GetString("Rules_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Document_Label.</summary>
+        public static string Rules_Document_Label {
+            get {
+                return ResourceManager.GetString("Rules_Document_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Validate.</summary>
+        public static string Rules_Validate {
+            get {
+                return ResourceManager.GetString("Rules_Validate", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Valid.</summary>
+        public static string Rules_Valid {
+            get {
+                return ResourceManager.GetString("Rules_Valid", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Invalid.</summary>
+        public static string Rules_Invalid {
+            get {
+                return ResourceManager.GetString("Rules_Invalid", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Saved.</summary>
+        public static string Rules_Saved {
+            get {
+                return ResourceManager.GetString("Rules_Saved", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Adopt.</summary>
+        public static string Rules_Adopt {
+            get {
+                return ResourceManager.GetString("Rules_Adopt", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Col_Group.</summary>
+        public static string Rules_Col_Group {
+            get {
+                return ResourceManager.GetString("Rules_Col_Group", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Col_Matched.</summary>
+        public static string Rules_Col_Matched {
+            get {
+                return ResourceManager.GetString("Rules_Col_Matched", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Col_Examples.</summary>
+        public static string Rules_Col_Examples {
+            get {
+                return ResourceManager.GetString("Rules_Col_Examples", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Owns_Title.</summary>
+        public static string Rules_Owns_Title {
+            get {
+                return ResourceManager.GetString("Rules_Owns_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Owns_Body.</summary>
+        public static string Rules_Owns_Body {
+            get {
+                return ResourceManager.GetString("Rules_Owns_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Rules_Owns_ReadOnly.</summary>
+        public static string Rules_Owns_ReadOnly {
+            get {
+                return ResourceManager.GetString("Rules_Owns_ReadOnly", resourceCulture);
+            }
+        }
+
         public static string Work_Title {
             get {
                 return ResourceManager.GetString("Work_Title", resourceCulture);

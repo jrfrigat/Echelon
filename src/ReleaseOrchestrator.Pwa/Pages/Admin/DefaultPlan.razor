@@ -70,12 +70,107 @@
             </FlareText>
         }
 
-        @* ---- the rules that produced it ---- *@
-        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.DefaultPlan_Rules_Title</FlareText>
+        @* ---- the document, which is the source of truth ---- *@
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Rules_Title</FlareText>
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @UiStrings.Rules_Description
+        </FlareText>
 
         <FlareCard Variant="CardVariant.Outlined">
             <FlareCardContent>
-                @if (_repositories is null || _repositories.Count < 2)
+                <FlareStack Gap="FlareSpacing.Small">
+                    @* A text area, not a visual editor. The format is still being settled, and an
+                       editor built on a moving schema would have to be rebuilt with it -- so the
+                       document is edited as text and the page's job is to show what it MEANS. *@
+                    <FlareTextArea Label="@UiStrings.Rules_Document_Label" @bind-Value="_document"
+                                   Rows="16" Style="font-family:monospace;" />
+
+                    <FlareStack Row Gap="FlareSpacing.Small" Wrap>
+                        <FlareButton Variant="ButtonVariant.Outlined" OnClick="ValidateRules" Loading="_validating">
+                            @UiStrings.Rules_Validate
+                        </FlareButton>
+                        <FlareButton OnClick="SaveRules" Loading="_savingRules">@UiStrings.Common_Save</FlareButton>
+                        @if (_rules is { Count: > 0 } && string.IsNullOrWhiteSpace(_document))
+                        {
+                            @* Only offered while there is something to adopt and nothing written yet:
+                               it overwrites the box, and doing that over an operator's draft would be
+                               its own kind of rude. *@
+                            <FlareButton Variant="ButtonVariant.Text" OnClick="AdoptFromScreen">
+                                @UiStrings.Rules_Adopt
+                            </FlareButton>
+                        }
+                    </FlareStack>
+
+                    @if (_validation is not null)
+                    {
+                        @if (_validation.Problems.Count > 0)
+                        {
+                            <FlareAlert Severity="AlertSeverity.Error" Title="@UiStrings.Rules_Invalid">
+                                <FlareStack Gap="FlareSpacing.XSmall">
+                                    @foreach (var problem in _validation.Problems)
+                                    {
+                                        <FlareText Typo="TypographyScale.BodySmall">@problem</FlareText>
+                                    }
+                                </FlareStack>
+                            </FlareAlert>
+                        }
+                        else
+                        {
+                            @* The counts are the useful half: a document can be valid and select
+                               nothing, because a glob with a typo is still a well-formed glob. *@
+                            <FlareAlert Severity="AlertSeverity.Success" Title="@UiStrings.Rules_Valid" />
+                            @if (_validation.Groups.Count > 0)
+                            {
+                                <FlareDataGrid TItem="OrderingRuleGroupMatchDto" Items="_validation.Groups"
+                                               Dense="true" Striped="true" ShowPager="false">
+                                    <Columns>
+                                        <FlareColumn TItem="OrderingRuleGroupMatchDto" Id="group" Title="@UiStrings.Rules_Col_Group"
+                                                     Field="@(g => (object?)g.Group)" />
+                                        <FlareColumn TItem="OrderingRuleGroupMatchDto" Id="matched" Title="@UiStrings.Rules_Col_Matched">
+                                            <Template>
+                                                <FlareChip Size="ChipSize.Sm"
+                                                           Color="@(context.Matched == 0 ? FlareColor.Warning : FlareColor.Primary)"
+                                                           Label="@context.Matched.ToString()" />
+                                            </Template>
+                                        </FlareColumn>
+                                        <FlareColumn TItem="OrderingRuleGroupMatchDto" Id="examples" Title="@UiStrings.Rules_Col_Examples">
+                                            <Template>
+                                                <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                                                    @foreach (var example in context.Examples)
+                                                    {
+                                                        <FlareCode>@example</FlareCode>
+                                                    }
+                                                </FlareStack>
+                                            </Template>
+                                        </FlareColumn>
+                                    </Columns>
+                                </FlareDataGrid>
+                            }
+                        }
+                    }
+                </FlareStack>
+            </FlareCardContent>
+        </FlareCard>
+
+        @* ---- the pair rules, which the document supersedes ---- *@
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.DefaultPlan_Rules_Title</FlareText>
+
+        @if (DocumentOwnsOrdering)
+        {
+            <FlareAlert Severity="AlertSeverity.Info" Title="@UiStrings.Rules_Owns_Title">
+                @UiStrings.Rules_Owns_Body
+            </FlareAlert>
+        }
+
+        <FlareCard Variant="CardVariant.Outlined">
+            <FlareCardContent>
+                @if (DocumentOwnsOrdering)
+                {
+                    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                        @UiStrings.Rules_Owns_ReadOnly
+                    </FlareText>
+                }
+                else if (_repositories is null || _repositories.Count < 2)
                 {
                     <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
                         @UiStrings.DefaultPlan_NeedTwoRepos
@@ -125,7 +220,11 @@
                     </FlareColumn>
                     <FlareColumn TItem="RepositoryOrderingDto" Id="actions" Title="" Align="ColumnAlign.End">
                         <Template>
+                            @* Disabled rather than hidden while the document owns ordering: an absent
+                               button reads as "cannot be removed", a disabled one as "not from here",
+                               and the alert above says where from. *@
                             <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                             Disabled="DocumentOwnsOrdering"
                                              AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, $"{context.FromRepositoryName} / {context.ToRepositoryName}")"
                                              OnClick="@(() => Delete(context))">
                                 <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
@@ -149,7 +248,23 @@
     Guid _fTo;
     string _fType = "Hard";
 
+    string _document = "";
+    string _savedDocument = "";
+    OrderingRulesValidationDto? _validation;
+    bool _validating;
+    bool _savingRules;
+
     bool IsFormIncomplete => _fFrom == Guid.Empty || _fTo == Guid.Empty || _fFrom == _fTo;
+
+    /// <summary>
+    /// Whether a saved document is in force, which makes the pair rules read-only.
+    /// </summary>
+    /// <remarks>
+    /// Keyed on what is SAVED, not on what is in the box: typing into the editor must not disable the
+    /// rules below before anything has been committed, and clearing the box must not re-enable them
+    /// until that clearing is saved.
+    /// </remarks>
+    bool DocumentOwnsOrdering => !string.IsNullOrWhiteSpace(_savedDocument);
 
     protected override async Task OnInitializedAsync() => await Load();
 
@@ -159,6 +274,8 @@
         {
             _rules = (await Api.GetRepositoryOrderingAsync()).Items;
             _repositories = (await Api.GetRepositoriesAsync()).Items;
+            _savedDocument = (await Api.GetOrderingRulesAsync()).Document;
+            _document = _savedDocument;
             // Read after the rules, so it reflects whatever was just added or removed.
             _plan = await Api.GetDefaultPlanAsync();
         });
@@ -167,6 +284,42 @@
 
     string RepositoryName(Guid id) =>
         _repositories?.FirstOrDefault(r => r.Id == id)?.Name ?? id.ToString();
+
+    async Task ValidateRules()
+    {
+        _validating = true;
+        await RunAsync(async () => _validation = await Api.ValidateOrderingRulesAsync(_document));
+        _validating = false;
+    }
+
+    async Task SaveRules()
+    {
+        _savingRules = true;
+
+        // Validated first so a refusal arrives as the list of problems rather than as one API error
+        // with the rest hidden behind it.
+        await RunAsync(async () => _validation = await Api.ValidateOrderingRulesAsync(_document));
+
+        if (_validation is { IsValid: true }
+            && await RunAsync(() => Api.SaveOrderingRulesAsync(_document), UiStrings.Rules_Saved))
+        {
+            await Load();
+        }
+
+        _savingRules = false;
+    }
+
+    /// <summary>Fills the editor with a document equivalent to the rules configured on screen.</summary>
+    /// <remarks>
+    /// Loaded, not saved: adopting the document turns those rules read-only, so the operator reads
+    /// what they are about to make authoritative first. It is also where a rule nobody remembers
+    /// adding tends to be noticed.
+    /// </remarks>
+    async Task AdoptFromScreen()
+    {
+        if (await RunAsync(async () => _document = (await Api.OrderingRulesFromScreenAsync()).Document))
+            await ValidateRules();
+    }
 
     async Task Create()
     {

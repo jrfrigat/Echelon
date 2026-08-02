@@ -109,6 +109,13 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] CreateRepositoryDependencyRequest req, CancellationToken ct)
     {
+        if (await RulesDocumentOwnsOrderingAsync(ct)) return DocumentOwnsOrdering();
+
+        return await CreateCoreAsync(req, ct);
+    }
+
+    private async Task<IActionResult> CreateCoreAsync(CreateRepositoryDependencyRequest req, CancellationToken ct)
+    {
         if (!Enum.TryParse<StackDependencyType>(req.Type, ignoreCase: true, out var type))
             return BadRequest(new { error = $"Unknown dependency type '{req.Type}'. Expected one of: {string.Join(", ", Enum.GetNames<StackDependencyType>())}." });
 
@@ -146,6 +153,8 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
+        if (await RulesDocumentOwnsOrderingAsync(ct)) return DocumentOwnsOrdering();
+
         var dep = await db.RepositoryDependencies.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (dep is null) return NotFound();
 
@@ -155,6 +164,27 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
         await RequestRecalculationAsync($"Repository dependency removed: {id}", ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Whether an ordering-rule document exists, which makes it the owner of deploy ordering.
+    /// </summary>
+    /// <remarks>
+    /// One writer, not two. These rows and the document both feed the same graph and neither replaces
+    /// the other, so with both writable a rule deleted here would leave the order unchanged because
+    /// the document still states it — and nothing on either screen would say why. Once a document
+    /// exists it owns ordering; these endpoints turn read-only.
+    /// </remarks>
+    private async Task<bool> RulesDocumentOwnsOrderingAsync(CancellationToken ct) =>
+        await db.PlanningSettings
+            .AsNoTracking()
+            .AnyAsync(s => s.OrderingRulesDocument != null && s.OrderingRulesDocument != "", ct);
+
+    private IActionResult DocumentOwnsOrdering() =>
+        Conflict(new
+        {
+            error = "Deploy ordering is defined by the ordering-rule document, so these rules are read-only. "
+                    + "Edit the document instead, or clear it to go back to editing rules here."
+        });
 
     /// <summary>
     /// Repository ordering decides deploy order, so changing it invalidates the plan and triggers a

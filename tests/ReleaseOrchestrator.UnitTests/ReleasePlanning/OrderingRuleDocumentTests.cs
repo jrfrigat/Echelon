@@ -296,6 +296,40 @@ public class OrderingRuleDocumentTests
     }
 
     [Fact]
+    public void TheShapeGeneratedFromTheOnScreenRulesParses()
+    {
+        // What "fill from the rules below" writes into the editor. It exists so adopting the document
+        // is a copy-paste rather than a re-typing, which only holds if what it writes is accepted --
+        // a generator emitting something the reader rejects would be worse than no button.
+        var rules = ReadValid("""
+            version: 1
+
+            # Generated from the repository-ordering rules that were configured on screen.
+            # Review it, then save to make the document the source of truth.
+
+            groups:
+              group-svc-backend:
+                repositories: ["group/svc-backend"]
+              group-svc-db:
+                repositories: ["group/svc-db"]
+              group-web:
+                repositories: ["group/web"]
+
+            order:
+              - group: group-svc-backend
+                needs: [group-svc-db]
+                type: hard
+              - group: group-web
+                needs: [group-svc-backend]
+                type: soft
+            """);
+
+        Assert.Equal(3, rules.Groups.Count);
+        Assert.Equal(2, rules.Order.Count);
+        Assert.Equal(StackDependencyType.Soft, rules.Order[1].Type);
+    }
+
+    [Fact]
     public void AFutureVersionIsRefusedRatherThanReadWithTodaysRules()
         => Assert.Contains(ReadErrors("version: 2"), e => e.Contains("Unsupported version 2"));
 

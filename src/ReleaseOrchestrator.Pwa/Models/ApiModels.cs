@@ -98,6 +98,24 @@ public record MrDto(
 
 public record PagedResult<T>(int Total, int Page, int PageSize, List<T> Items);
 
+// ---- ordering rules (mirrors PlanningController) ----
+
+/// <summary>The ordering-rule document, as text.</summary>
+public record OrderingRulesDocumentDto(string Document);
+
+/// <summary>What checking a document found.</summary>
+/// <param name="IsValid">Whether it would be accepted.</param>
+/// <param name="Problems">Everything wrong with it; empty when valid.</param>
+/// <param name="Groups">
+/// What each group selects right now. The useful half: a document can be perfectly valid and select
+/// nothing, since a glob with a typo is still a well-formed glob.
+/// </param>
+public record OrderingRulesValidationDto(
+    bool IsValid, List<string> Problems, List<OrderingRuleGroupMatchDto> Groups);
+
+/// <summary>What one group currently selects.</summary>
+public record OrderingRuleGroupMatchDto(string Group, int Matched, List<string> Examples);
+
 // ---- deployable work (mirrors WorkItemsController) ----
 
 /// <summary>

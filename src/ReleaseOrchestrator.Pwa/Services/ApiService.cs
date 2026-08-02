@@ -27,6 +27,25 @@ public class ApiService(HttpClient http)
         GetAsync<PagedResult<MrDto>>(
             $"api/merge-requests?status={Uri.EscapeDataString(status ?? "")}&page={page}&pageSize={pageSize}", ct);
 
+    // ---- ordering rules (mirrors PlanningController) ---------------------------
+
+    /// <summary>The ordering-rule document as stored.</summary>
+    public Task<OrderingRulesDocumentDto> GetOrderingRulesAsync(CancellationToken ct = default) =>
+        GetAsync<OrderingRulesDocumentDto>("api/planning/rules", ct);
+
+    /// <summary>Checks a document without saving, reporting problems and what each group selects.</summary>
+    public Task<OrderingRulesValidationDto> ValidateOrderingRulesAsync(string document, CancellationToken ct = default) =>
+        SendAsync<OrderingRulesValidationDto>(
+            () => http.PostAsJsonAsync("api/planning/rules/validate", new { Document = document }, ct), ct);
+
+    /// <summary>Saves the document. An invalid one is refused with the problems listed.</summary>
+    public Task SaveOrderingRulesAsync(string document, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync("api/planning/rules", new { Document = document }, ct), ct);
+
+    /// <summary>The rules configured on screen, written out as a document ready to adopt.</summary>
+    public Task<OrderingRulesDocumentDto> OrderingRulesFromScreenAsync(CancellationToken ct = default) =>
+        GetAsync<OrderingRulesDocumentDto>("api/planning/rules/from-repository-ordering", ct);
+
     /// <summary>
     /// Deployable work by task and repository — merge requests and the branches nothing has raised yet.
     /// </summary>

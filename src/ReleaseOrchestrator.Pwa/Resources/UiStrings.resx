@@ -1314,4 +1314,46 @@
   <data name="Plugins_Cat_Action" xml:space="preserve">
     <value>Action handlers</value>
   </data>
+  <data name="Rules_Title" xml:space="preserve">
+    <value>Ordering rules (document)</value>
+  </data>
+  <data name="Rules_Description" xml:space="preserve">
+    <value>The source of truth for deploy order. While it exists, the pair rules below are read-only and this document decides.</value>
+  </data>
+  <data name="Rules_Document_Label" xml:space="preserve">
+    <value>YAML</value>
+  </data>
+  <data name="Rules_Validate" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="Rules_Valid" xml:space="preserve">
+    <value>The document is valid</value>
+  </data>
+  <data name="Rules_Invalid" xml:space="preserve">
+    <value>The document has problems</value>
+  </data>
+  <data name="Rules_Saved" xml:space="preserve">
+    <value>Ordering rules saved.</value>
+  </data>
+  <data name="Rules_Adopt" xml:space="preserve">
+    <value>Fill from the rules below</value>
+  </data>
+  <data name="Rules_Col_Group" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="Rules_Col_Matched" xml:space="preserve">
+    <value>Selects</value>
+  </data>
+  <data name="Rules_Col_Examples" xml:space="preserve">
+    <value>For example</value>
+  </data>
+  <data name="Rules_Owns_Title" xml:space="preserve">
+    <value>These rules are read-only</value>
+  </data>
+  <data name="Rules_Owns_Body" xml:space="preserve">
+    <value>Deploy order is defined by the document above. Edit it there, or clear and save it to go back to editing rules here.</value>
+  </data>
+  <data name="Rules_Owns_ReadOnly" xml:space="preserve">
+    <value>Adding rules here is disabled while the document defines the order.</value>
+  </data>
 </root>

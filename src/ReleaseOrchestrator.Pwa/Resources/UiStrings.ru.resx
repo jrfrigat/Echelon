@@ -1314,4 +1314,46 @@
   <data name="Plugins_Cat_Action" xml:space="preserve">
     <value>Обработчики действий</value>
   </data>
+  <data name="Rules_Title" xml:space="preserve">
+    <value>Правила порядка (документ)</value>
+  </data>
+  <data name="Rules_Description" xml:space="preserve">
+    <value>Источник истины для порядка выкатки. Пока он есть, правила парами ниже доступны только для чтения, а решает этот документ.</value>
+  </data>
+  <data name="Rules_Document_Label" xml:space="preserve">
+    <value>YAML</value>
+  </data>
+  <data name="Rules_Validate" xml:space="preserve">
+    <value>Проверить</value>
+  </data>
+  <data name="Rules_Valid" xml:space="preserve">
+    <value>Документ корректен</value>
+  </data>
+  <data name="Rules_Invalid" xml:space="preserve">
+    <value>В документе есть ошибки</value>
+  </data>
+  <data name="Rules_Saved" xml:space="preserve">
+    <value>Правила порядка сохранены.</value>
+  </data>
+  <data name="Rules_Adopt" xml:space="preserve">
+    <value>Заполнить из правил ниже</value>
+  </data>
+  <data name="Rules_Col_Group" xml:space="preserve">
+    <value>Группа</value>
+  </data>
+  <data name="Rules_Col_Matched" xml:space="preserve">
+    <value>Отбирает</value>
+  </data>
+  <data name="Rules_Col_Examples" xml:space="preserve">
+    <value>Например</value>
+  </data>
+  <data name="Rules_Owns_Title" xml:space="preserve">
+    <value>Эти правила только для чтения</value>
+  </data>
+  <data name="Rules_Owns_Body" xml:space="preserve">
+    <value>Порядок выкатки задаёт документ выше. Правьте там — либо очистите и сохраните его, чтобы вернуться к правке правил здесь.</value>
+  </data>
+  <data name="Rules_Owns_ReadOnly" xml:space="preserve">
+    <value>Добавление правил здесь отключено, пока порядок задаёт документ.</value>
+  </data>
 </root>

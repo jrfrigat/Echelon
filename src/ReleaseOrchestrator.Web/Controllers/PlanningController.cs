@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,6 +84,85 @@ public class PlanningController(AppDbContext db) : ControllerBase
             .FirstOrDefaultAsync(ct);
 
         return Ok(new OrderingRulesDocumentDto(document ?? ""));
+    }
+
+    /// <summary>
+    /// The repository-ordering rules that exist today, written out as a document.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A document equivalent to the current rules, ready to review and save.</returns>
+    /// <remarks>
+    /// Adopting the document as the source of truth turns the ordering screen read-only, so this
+    /// exists to make that a copy-paste rather than a re-typing exercise. Deliberately does NOT save:
+    /// the operator should read what they are about to make authoritative, and this is also the moment
+    /// they usually notice a rule nobody remembers adding.
+    /// </remarks>
+    [HttpGet("rules/from-repository-ordering")]
+    public async Task<IActionResult> RulesFromRepositoryOrdering(CancellationToken ct)
+    {
+        var rules = await db.RepositoryDependencies
+            .Select(d => new
+            {
+                From = d.FromRepository.ExternalId,
+                To = d.ToRepository.ExternalId,
+                d.Type
+            })
+            .OrderBy(d => d.From).ThenBy(d => d.To)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return Ok(new OrderingRulesDocumentDto(RenderDocument(rules.Select(r => (r.From, r.To, r.Type)))));
+    }
+
+    /// <summary>
+    /// Writes repository pairs out as a document: one group per repository, one rule per pair.
+    /// </summary>
+    /// <remarks>
+    /// A group per repository rather than anything cleverer. The point is a faithful translation the
+    /// operator can read line by line against the screen they are replacing — inferring groups would
+    /// produce a shorter document that is harder to check, at the moment checking matters most. It is
+    /// theirs to simplify afterwards.
+    /// </remarks>
+    private static string RenderDocument(IEnumerable<(string From, string To, StackDependencyType Type)> pairs)
+    {
+        var rules = pairs.ToList();
+        if (rules.Count == 0)
+            return "version: 1\n\n# No repository-ordering rules are configured.\n";
+
+        var repositories = rules.SelectMany(r => new[] { r.From, r.To })
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(r => r, StringComparer.Ordinal)
+            .ToList();
+
+        var names = repositories.ToDictionary(r => r, GroupName, StringComparer.Ordinal);
+
+        var text = new StringBuilder()
+            .AppendLine("version: 1")
+            .AppendLine()
+            .AppendLine("# Generated from the repository-ordering rules that were configured on screen.")
+            .AppendLine("# Review it, then save to make the document the source of truth.")
+            .AppendLine()
+            .AppendLine("groups:");
+
+        foreach (var repository in repositories)
+            text.AppendLine($"  {names[repository]}:")
+                .AppendLine($"    repositories: [\"{repository}\"]");
+
+        text.AppendLine().AppendLine("order:");
+
+        foreach (var rule in rules)
+            text.AppendLine($"  - group: {names[rule.From]}")
+                .AppendLine($"    needs: [{names[rule.To]}]")
+                .AppendLine($"    type: {(rule.Type == StackDependencyType.Hard ? "hard" : "soft")}");
+
+        return text.ToString();
+    }
+
+    /// <summary>A group name from a repository path, kept readable and unique enough to hand-edit.</summary>
+    private static string GroupName(string repositoryExternalId)
+    {
+        var name = repositoryExternalId.Replace('/', '-').Replace('.', '-');
+        return string.Concat(name.Where(c => char.IsLetterOrDigit(c) || c is '-' or '_'));
     }
 
     /// <summary>
