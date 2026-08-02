@@ -35,6 +35,20 @@ public interface IRolloutPlannerService
     Task<RolloutPlanDto?> GetActivePlanAsync(Guid taskId, CancellationToken ct = default);
 
     /// <summary>
+    /// The task's active plan as a YAML document, or <c>null</c> when it has none.
+    /// </summary>
+    /// <param name="taskId">The target task.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The plan in the per-task schema of docs/issues/006-per-task-planning.md §6.</returns>
+    /// <remarks>
+    /// Export only: there is no import yet, so this is a readable, diffable artifact of what the plan
+    /// currently is — for review, for attaching to a change record, and for seeing the tree without
+    /// clicking through it. It is a projection of the atlas either way, so a round trip would have to
+    /// go through the override deltas rather than through this text.
+    /// </remarks>
+    Task<string?> ExportPlanYamlAsync(Guid taskId, CancellationToken ct = default);
+
+    /// <summary>
     /// Rebuilds the target task's plan from the atlas and makes it the active plan for that task.
     /// </summary>
     /// <param name="taskId">The target task.</param>

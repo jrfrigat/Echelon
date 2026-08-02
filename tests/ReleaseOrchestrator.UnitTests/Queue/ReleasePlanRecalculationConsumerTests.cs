@@ -85,6 +85,8 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
             throw new NotSupportedException();
         public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
             throw new NotSupportedException();
+        public Task<string?> ExportPlanYamlAsync(Guid taskId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     private async Task<Guid> AddTaskWithPlanAsync(bool active)

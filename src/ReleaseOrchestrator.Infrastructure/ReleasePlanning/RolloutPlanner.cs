@@ -10,6 +10,7 @@ using ReleaseOrchestrator.Application.Services;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Persistence;
 using ReleaseOrchestrator.Infrastructure.Persistence.Models;
+using YamlDotNet.Serialization;
 
 namespace ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 
@@ -434,6 +435,125 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// <param name="From">The merge request that deploys first.</param>
     /// <param name="To">The merge request that waits.</param>
     private sealed record PlanEdgeOverridePayload(Guid From, Guid To);
+
+    /// <inheritdoc/>
+    public async Task<string?> ExportPlanYamlAsync(Guid taskId, CancellationToken ct = default)
+    {
+        var plan = await db.RolloutPlans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.TargetTaskId == taskId && p.IsActive, ct);
+        if (plan is null) return null;
+
+        var computed = await ComputeAsync(taskId, ct);
+
+        var taskKeys = (await db.Tasks
+                .Where(t => computed.Closure.Contains(t.Id))
+                .Select(t => new { t.Id, t.ExternalId })
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .ToDictionary(t => t.Id, t => t.ExternalId);
+
+        var mrIds = computed.PlanMrs.Select(m => m.Id).ToList();
+
+        // The natural key from 006 §6: connection, repository path and the provider's own id. GitLab's
+        // vocabulary, but it is a key rather than a dialect leaking into the domain — and it is what
+        // makes an exported plan resolvable back to real merge requests by a human reading it.
+        var mrKeys = (await db.MergeRequests
+                .Where(m => mrIds.Contains(m.Id))
+                .Select(m => new
+                {
+                    m.Id,
+                    Key = m.Repository.Connection.Name + ":" + m.Repository.ExternalId + "!" + m.ExternalId
+                })
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .ToDictionary(m => m.Id, m => m.Key);
+
+        var waveOf = new Dictionary<Guid, int>();
+        for (var i = 0; i < computed.Graph.Stages.Count; i++)
+            foreach (var id in computed.Graph.Stages[i]) waveOf[id] = i + 1;
+
+        return RenderPlanYaml(plan, computed, taskKeys, mrKeys, waveOf);
+    }
+
+    /// <summary>
+    /// Writes a plan out in the per-task schema.
+    /// </summary>
+    /// <remarks>
+    /// Built as plain nested collections and handed to the YAML serializer rather than assembled by
+    /// string concatenation: task keys and branch names are operator-supplied text, and deciding when
+    /// one needs quoting is exactly the job a serializer exists to do correctly.
+    ///
+    /// <c>wave</c> is included and <c>order</c> is not. 006 §6 names an optional authored intra-task
+    /// order; what this document reports is the wave the planner COMPUTED, which is a different fact,
+    /// and labelling a derived value with the key that means "what I asked for" would invite an
+    /// operator to edit it and expect that to matter.
+    /// </remarks>
+    private static string RenderPlanYaml(
+        RolloutPlan plan,
+        Computed computed,
+        IReadOnlyDictionary<Guid, string> taskKeys,
+        IReadOnlyDictionary<Guid, string> mrKeys,
+        IReadOnlyDictionary<Guid, int> waveOf)
+    {
+        string TaskKey(Guid id) => taskKeys.GetValueOrDefault(id, id.ToString("D"));
+
+        var nodes = computed.Closure
+            .Where(taskKeys.ContainsKey)
+            .OrderByDescending(id => id == plan.TargetTaskId)
+            .ThenBy(TaskKey, StringComparer.Ordinal)
+            .Select(id =>
+            {
+                var node = new Dictionary<string, object?> { ["task"] = TaskKey(id) };
+
+                var dependsOn = computed.Adjacency.TryGetValue(id, out var d)
+                    ? d.Where(computed.Closure.Contains).Select(TaskKey).OrderBy(k => k, StringComparer.Ordinal).ToList()
+                    : [];
+                if (dependsOn.Count > 0) node["depends_on"] = dependsOn;
+
+                var items = computed.PlanMrs
+                    .Where(m => m.TaskId == id)
+                    .Select(m => new Dictionary<string, object?>
+                    {
+                        ["mr"] = mrKeys.GetValueOrDefault(m.Id, m.Id.ToString("D")),
+                        ["wave"] = waveOf.GetValueOrDefault(m.Id)
+                    })
+                    .OrderBy(m => (int)m["wave"]!)
+                    .ThenBy(m => (string)m["mr"]!, StringComparer.Ordinal)
+                    .ToList();
+                if (items.Count > 0) node["merge_requests"] = items;
+
+                return node;
+            })
+            .ToList();
+
+        var document = new Dictionary<string, object?>
+        {
+            ["version"] = 1,
+            ["target_task"] = TaskKey(plan.TargetTaskId),
+            ["plan_version"] = plan.Version,
+            ["nodes"] = nodes
+        };
+
+        // Echoed read-only, exactly as 006 says: a plan may violate a constraint, but the document
+        // that describes it must never read as clean while it does.
+        if (computed.Graph.Conflicts.Count > 0)
+            document["conflicts"] = computed.Graph.Conflicts
+                .Select(c => new Dictionary<string, object?>
+                {
+                    ["dropped"] = c.DroppedEdgeKind.ToString(),
+                    ["from"] = mrKeys.GetValueOrDefault(c.FromMrId, c.FromMrId.ToString("D")),
+                    ["to"] = mrKeys.GetValueOrDefault(c.ToMrId, c.ToMrId.ToString("D")),
+                    ["reason"] = c.Reason
+                })
+                .ToList();
+
+        var yaml = new SerializerBuilder().WithIndentedSequences().Build().Serialize(document);
+
+        return "# Exported plan. Read-only: importing a plan is not implemented, and a plan is a\n"
+             + "# projection of the atlas -- edits belong in the ordering rules or the plan overrides.\n"
+             + yaml;
+    }
 
     private async Task<RolloutPlanDto> BuildDtoAsync(RolloutPlan plan, Computed c, CancellationToken ct)
     {

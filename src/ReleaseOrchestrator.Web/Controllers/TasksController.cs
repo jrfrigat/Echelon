@@ -71,6 +71,25 @@ public class TasksController(
         return plan is null ? NotFound() : Ok(plan);
     }
 
+    /// <summary>The task's active plan as a YAML document.</summary>
+    /// <param name="id">The target task.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The plan in the per-task schema, or 404 when the task has no active plan.</returns>
+    /// <remarks>
+    /// Export only — there is no import. A plan is a projection of the atlas, so a round trip would
+    /// have to go through the ordering rules and the plan overrides rather than through this text;
+    /// what this is for is reading, diffing and attaching to a change record.
+    /// </remarks>
+    [HttpGet("{id:guid}/plan/export")]
+    public async Task<IActionResult> ExportPlan(Guid id, CancellationToken ct)
+    {
+        var yaml = await planner.ExportPlanYamlAsync(id, ct);
+
+        // text/yaml so a browser shows it and curl can pipe it, rather than JSON-escaping a document
+        // whose whole point is being readable.
+        return yaml is null ? NotFound() : Content(yaml, "text/yaml; charset=utf-8");
+    }
+
     /// <summary>Rebuilds the task's plan from the atlas and makes it active.</summary>
     /// <param name="id">The target task id.</param>
     /// <param name="ct">Cancellation token.</param>
