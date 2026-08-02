@@ -22,6 +22,24 @@ These become a directed acyclic graph; cycles are resolved by dropping the lowes
 (soft first) and logged, and a topological sort produces **waves** — merge requests that may deploy
 in parallel.
 
+### The order is the same everywhere; only the method differs
+
+A deliberate invariant, worth stating because it is easy to break by accident:
+
+| | Depends on the environment |
+|---|---|
+| **What order things deploy in** | **No.** One order, everywhere. |
+| **How each one is deployed** — merge, trigger a pipeline step, whatever a given VCS offers | Yes |
+| **Whether it may deploy at all** — the readiness rule | Yes |
+
+So a plan carries no environment: the tree and the sequence are the same for test and for production,
+and the environment is chosen when a rollout is launched. What changes per environment is the deploy
+target for each `(repository, environment)` — its strategy and that strategy's settings, which is
+where "production runs a different pipeline step" is expressed.
+
+The practical consequence: an `environment:` key in the ordering rules would be a design error rather
+than a missing feature. A request that seems to want one is usually about the method, not the order.
+
 ---
 
 ## Architecture layers
