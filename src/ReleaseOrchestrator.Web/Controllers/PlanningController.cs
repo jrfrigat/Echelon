@@ -336,8 +336,8 @@ public class PlanningController(AppDbContext db) : ControllerBase
 
 /// <summary>The ordering-rule document, as text.</summary>
 /// <param name="Document">
-/// The rules. JSON today, YAML once the parser can be installed — the same keys and nesting either
-/// way, since YAML 1.2 is a superset of JSON. Empty means no rules.
+/// The rules, as YAML. A document written as JSON is also accepted, since JSON is valid YAML — which
+/// is what keeps anything stored before the YAML reader existed readable. Empty means no rules.
 /// </param>
 public record OrderingRulesDocumentDto(string Document);
 

@@ -47,8 +47,8 @@ public class PlanningSettings
     /// written — comments, key order and all. Re-serialising from a model would hand back a document
     /// the operator did not write and could not diff against their own copy.
     ///
-    /// JSON today, YAML once the parser can be installed. The format is the same either way: YAML 1.2
-    /// is a superset of JSON, so a stored document stays readable when the reader changes.
+    /// YAML, and JSON is accepted too because JSON is valid YAML — which is what let a document
+    /// stored before the YAML reader existed keep working untouched.
     /// </remarks>
     public string? OrderingRulesDocument { get; set; }
 

@@ -10,20 +10,20 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// <remarks>
 /// The document decides deploy order, so the expensive failure is not a rejected file — it is an
 /// accepted one that means something other than what was written. Most of these are about that:
-/// unknown keys, undefined groups and unusable values are errors, never skipped.
+/// unknown keys, undefined groups and ambiguous values are errors, never skipped.
 /// </remarks>
 public class OrderingRuleDocumentTests
 {
-    static OrderingRules ReadValid(string json)
+    static OrderingRules ReadValid(string yaml)
     {
-        var result = OrderingRuleDocument.Read(json);
+        var result = OrderingRuleDocument.Read(yaml);
         Assert.True(result.IsValid, $"expected a valid document, got: {string.Join(" | ", result.Errors)}");
         return result.Rules!;
     }
 
-    static IReadOnlyList<string> ReadErrors(string json)
+    static IReadOnlyList<string> ReadErrors(string yaml)
     {
-        var result = OrderingRuleDocument.Read(json);
+        var result = OrderingRuleDocument.Read(yaml);
         Assert.False(result.IsValid);
         return result.Errors;
     }
@@ -44,18 +44,27 @@ public class OrderingRuleDocumentTests
     public void ReadsTheWorkedExample()
     {
         var rules = ReadValid("""
-        {
-          "version": 1,
-          "tasks": { "wait_for_subtasks": true, "wait_for_linked": true, "group_order": "together" },
-          "groups": {
-            "backend-main":     { "connectors": ["gitlab-main"], "repositories": ["group/svc-db", "group/svc-api"] },
-            "frontend-partner": { "connectors": ["gitlab-partner"], "repositories": ["partner/*"] }
-          },
-          "order": [
-            { "group": "frontend-partner", "needs": ["backend-main"], "type": "hard", "scope": "within_task" }
-          ]
-        }
-        """);
+            version: 1
+
+            tasks:
+              wait_for_subtasks: true
+              wait_for_linked: true
+              group_order: together
+
+            groups:
+              backend-main:
+                connectors: ["gitlab-main"]
+                repositories: ["group/svc-db", "group/svc-api"]
+              frontend-partner:
+                connectors: ["gitlab-partner"]
+                repositories: ["partner/*"]
+
+            order:
+              - group: frontend-partner
+                needs: [backend-main]
+                type: hard
+                scope: within_task
+            """);
 
         Assert.Equal(1, rules.Version);
         Assert.Equal(2, rules.Groups.Count);
@@ -72,9 +81,44 @@ public class OrderingRuleDocumentTests
     }
 
     [Fact]
+    public void ADocumentSavedAsJsonStillLoads()
+    {
+        // JSON is valid YAML, which is what lets a document stored before the YAML reader existed keep
+        // working without anyone rewriting it.
+        var rules = ReadValid("""
+            { "version": 1,
+              "groups": { "a": {}, "b": {} },
+              "order": [ { "group": "a", "needs": ["b"] } ] }
+            """);
+
+        Assert.Single(rules.Order);
+    }
+
+    [Fact]
+    public void CommentsAreAllowedSoARuleFileCanExplainItself()
+    {
+        var rules = ReadValid("""
+            version: 1
+            groups:
+              db: {}          # the migrations repository
+              api: {}
+            order:
+              # the API reads tables the migration creates
+              - group: api
+                needs: [db]
+            """);
+
+        Assert.Single(rules.Order);
+    }
+
+    [Fact]
     public void OmittedPolicyFieldsStayNullSoTheStoredDefaultIsLeftAlone()
     {
-        var rules = ReadValid("""{ "version": 1, "tasks": { "wait_for_subtasks": false } }""");
+        var rules = ReadValid("""
+            version: 1
+            tasks:
+              wait_for_subtasks: false
+            """);
 
         Assert.False(rules.Tasks.WaitForSubtasks);
         Assert.Null(rules.Tasks.WaitForLinked);
@@ -87,8 +131,12 @@ public class OrderingRuleDocumentTests
         // AcrossPlan is what repository ordering already does, so an existing rule rewritten in this
         // language keeps its meaning rather than quietly narrowing.
         var rules = ReadValid("""
-        { "version": 1, "groups": { "a": {}, "b": {} }, "order": [ { "group": "a", "needs": ["b"] } ] }
-        """);
+            version: 1
+            groups: { a: {}, b: {} }
+            order:
+              - group: a
+                needs: [b]
+            """);
 
         var rule = Assert.Single(rules.Order);
         Assert.Equal(StackDependencyType.Hard, rule.Type);
@@ -101,38 +149,52 @@ public class OrderingRuleDocumentTests
         // The whole point: a mistyped key that silently selects nothing is the failure this document
         // cannot afford, because it surfaces as the deploy order being wrong.
         var errors = ReadErrors("""
-        { "version": 1, "groups": { "a": { "repositores": ["x"] } } }
-        """);
+            version: 1
+            groups:
+              a:
+                repositores: ["x"]
+            """);
 
         Assert.Contains(errors, e => e.Contains("repositores") && e.Contains("Valid keys"));
+    }
+
+    [Fact]
+    public void ErrorsCarryTheLineToEdit()
+    {
+        var errors = ReadErrors("""
+            version: 1
+            groups:
+              a:
+                bogus: ["x"]
+            """);
+
+        Assert.Contains(errors, e => e.Contains("Line 4"));
     }
 
     [Fact]
     public void AnUndefinedGroupIsNamedAlongWithWhatWasAvailable()
     {
         var errors = ReadErrors("""
-        { "version": 1, "groups": { "backend": {} }, "order": [ { "group": "frontnd", "needs": ["backend"] } ] }
-        """);
+            version: 1
+            groups: { backend: {} }
+            order:
+              - group: frontnd
+                needs: [backend]
+            """);
 
         Assert.Contains(errors, e => e.Contains("frontnd") && e.Contains("backend"));
-    }
-
-    [Fact]
-    public void AnUndefinedNeedIsAnError()
-    {
-        var errors = ReadErrors("""
-        { "version": 1, "groups": { "a": {} }, "order": [ { "group": "a", "needs": ["ghost"] } ] }
-        """);
-
-        Assert.Contains(errors, e => e.Contains("ghost"));
     }
 
     [Fact]
     public void AGroupNeedingItselfIsAnError()
     {
         var errors = ReadErrors("""
-        { "version": 1, "groups": { "a": {} }, "order": [ { "group": "a", "needs": ["a"] } ] }
-        """);
+            version: 1
+            groups: { a: {} }
+            order:
+              - group: a
+                needs: [a]
+            """);
 
         Assert.Contains(errors, e => e.Contains("needing itself"));
     }
@@ -142,8 +204,12 @@ public class OrderingRuleDocumentTests
     {
         // It would order nothing, so writing one is a mistake rather than a no-op worth keeping.
         var errors = ReadErrors("""
-        { "version": 1, "groups": { "a": {} }, "order": [ { "group": "a", "needs": [] } ] }
-        """);
+            version: 1
+            groups: { a: {} }
+            order:
+              - group: a
+                needs: []
+            """);
 
         Assert.Contains(errors, e => e.Contains("at least one group"));
     }
@@ -152,11 +218,34 @@ public class OrderingRuleDocumentTests
     public void AnUnknownEnumValueListsTheValidOnes()
     {
         var errors = ReadErrors("""
-        { "version": 1, "groups": { "a": {}, "b": {} },
-          "order": [ { "group": "a", "needs": ["b"], "scope": "per_task" } ] }
-        """);
+            version: 1
+            groups: { a: {}, b: {} }
+            order:
+              - group: a
+                needs: [b]
+                scope: per_task
+            """);
 
         Assert.Contains(errors, e => e.Contains("across_plan") && e.Contains("within_task"));
+    }
+
+    [Theory]
+    [InlineData("no")]
+    [InlineData("yes")]
+    [InlineData("on")]
+    [InlineData("True")]
+    public void AnAmbiguousBooleanIsRefusedRatherThanGuessed(string value)
+    {
+        // The Norway problem: YAML's implicit typing reads some of these as booleans and the exact set
+        // depends on the version. On a switch that decides whether a rollout waits for its subtasks, an
+        // ambiguous spelling is better refused than resolved by a rule nobody remembers.
+        var errors = ReadErrors($"""
+            version: 1
+            tasks:
+              wait_for_subtasks: {value}
+            """);
+
+        Assert.Contains(errors, e => e.Contains("must be true or false"));
     }
 
     [Fact]
@@ -164,43 +253,42 @@ public class OrderingRuleDocumentTests
     {
         // Without a selector it would apply to every task, which is what the top-level policy is for.
         var errors = ReadErrors("""
-        { "version": 1, "tasks": { "overrides": [ { "wait_for_subtasks": false } ] } }
-        """);
+            version: 1
+            tasks:
+              overrides:
+                - wait_for_subtasks: false
+            """);
 
         Assert.Contains(errors, e => e.Contains("match") && e.Contains("every task"));
     }
 
     [Fact]
-    public void AFutureVersionIsRefusedRatherThanReadWithTodaysRules()
+    public void ReadsAPerTaskOverride()
     {
-        Assert.Contains(ReadErrors("""{ "version": 2 }"""), e => e.Contains("Unsupported version 2"));
-    }
+        var rules = ReadValid("""
+            version: 1
+            tasks:
+              overrides:
+                - match: { task_keys: ["INFRA-*"] }
+                  wait_for_subtasks: false
+            """);
 
-    [Fact]
-    public void MalformedJsonSaysSo()
-        => Assert.Contains(ReadErrors("{ nope"), e => e.Contains("not valid JSON"));
-
-    [Fact]
-    public void EveryProblemIsReportedNotJustTheFirst()
-    {
-        // A rule file is edited in bulk; one mistake per round trip turns a short edit into an afternoon.
-        var errors = ReadErrors("""
-        { "version": 1,
-          "groups": { "a": { "bogus": [] } },
-          "order": [ { "group": "missing", "needs": ["alsoMissing"] } ] }
-        """);
-
-        Assert.True(errors.Count >= 3, $"expected several errors, got: {string.Join(" | ", errors)}");
+        var over = Assert.Single(rules.Tasks.Overrides);
+        Assert.Equal(["INFRA-*"], over.Match.TaskKeys);
+        Assert.False(over.WaitForSubtasks);
     }
 
     [Fact]
     public void ReadsANestedExcludeSelector()
     {
         var rules = ReadValid("""
-        { "version": 1,
-          "groups": { "backend": { "repositories": ["group/svc-*"],
-                                   "exclude": { "repositories": ["group/svc-db"] } } } }
-        """);
+            version: 1
+            groups:
+              backend:
+                repositories: ["group/svc-*"]
+                exclude:
+                  repositories: ["group/svc-db"]
+            """);
 
         var backend = rules.Groups["backend"];
         Assert.NotNull(backend.Exclude);
@@ -208,19 +296,40 @@ public class OrderingRuleDocumentTests
     }
 
     [Fact]
-    public void CommentsAreAllowedSoARuleFileCanExplainItself()
-    {
-        // JSON has no comments, but this reader skips them -- and YAML has them natively, so allowing
-        // them here keeps a document portable to the YAML reader unchanged.
-        var rules = ReadValid("""
-        {
-          // db must land before the API that reads it
-          "version": 1,
-          "groups": { "a": {}, "b": {} },
-          "order": [ { "group": "a", "needs": ["b"] } ]
-        }
-        """);
+    public void AFutureVersionIsRefusedRatherThanReadWithTodaysRules()
+        => Assert.Contains(ReadErrors("version: 2"), e => e.Contains("Unsupported version 2"));
 
-        Assert.Single(rules.Order);
+    [Fact]
+    public void MalformedYamlSaysWhere()
+        => Assert.Contains(ReadErrors("version: 1\ngroups:\n  a: [unclosed"), e => e.Contains("not valid YAML"));
+
+    [Fact]
+    public void ASecondDocumentIsRefusedRatherThanIgnored()
+    {
+        // A stray `---` would otherwise silently drop everything after it.
+        var errors = ReadErrors("""
+            version: 1
+            ---
+            version: 1
+            """);
+
+        Assert.Contains(errors, e => e.Contains("more than one YAML document"));
+    }
+
+    [Fact]
+    public void EveryProblemIsReportedNotJustTheFirst()
+    {
+        // A rule file is edited in bulk; one mistake per round trip turns a short edit into an afternoon.
+        var errors = ReadErrors("""
+            version: 1
+            groups:
+              a:
+                bogus: []
+            order:
+              - group: missing
+                needs: [alsoMissing]
+            """);
+
+        Assert.True(errors.Count >= 3, $"expected several errors, got: {string.Join(" | ", errors)}");
     }
 }
