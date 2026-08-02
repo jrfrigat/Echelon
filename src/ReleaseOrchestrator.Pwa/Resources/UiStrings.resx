@@ -445,10 +445,100 @@
     <value>Rollouts</value>
   </data>
   <data name="Nav_MergeRequests" xml:space="preserve">
-    <value>Merge requests</value>
+    <value>What to deploy</value>
   </data>
   <data name="Common_Refresh" xml:space="preserve">
     <value>Refresh</value>
+  </data>
+  <data name="Work_Title" xml:space="preserve">
+    <value>What to deploy</value>
+  </data>
+  <data name="Work_Heading" xml:space="preserve">
+    <value>What to deploy</value>
+  </data>
+  <data name="Work_Intro" xml:space="preserve">
+    <value>Work a connector has reported, by task and repository. A branch nobody has raised yet is New; once a merge request carries it, the merge request's status takes over. Pick an environment to see where each stands against the rule that environment's launch gate applies.</value>
+  </data>
+  <data name="Work_Total" xml:space="preserve">
+    <value>{0} total</value>
+  </data>
+  <data name="Work_Truncated" xml:space="preserve">
+    <value>More work exists than this page scanned, so the list is a slice. Narrow it with a filter to see the rest.</value>
+  </data>
+  <data name="Work_Filter_Environment" xml:space="preserve">
+    <value>Readiness for</value>
+  </data>
+  <data name="Work_Filter_NoEnvironment" xml:space="preserve">
+    <value>No environment</value>
+  </data>
+  <data name="Work_Filter_State" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Work_Filter_AnyState" xml:space="preserve">
+    <value>Any state</value>
+  </data>
+  <data name="Work_Filter_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Work_Col_Task" xml:space="preserve">
+    <value>Task</value>
+  </data>
+  <data name="Work_Col_Repository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="Work_Col_Carrier" xml:space="preserve">
+    <value>Carried by</value>
+  </data>
+  <data name="Work_Col_State" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Work_Col_Readiness" xml:space="preserve">
+    <value>Readiness</value>
+  </data>
+  <data name="Work_State_New" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Work_State_Opened" xml:space="preserve">
+    <value>Opened</value>
+  </data>
+  <data name="Work_State_Merged" xml:space="preserve">
+    <value>Merged</value>
+  </data>
+  <data name="Work_State_Closed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="Work_NoTask" xml:space="preserve">
+    <value>no task matched</value>
+  </data>
+  <data name="Work_Pinned" xml:space="preserve">
+    <value>status pinned</value>
+  </data>
+  <data name="Work_Ready" xml:space="preserve">
+    <value>ready</value>
+  </data>
+  <data name="Work_NotReady" xml:space="preserve">
+    <value>not ready</value>
+  </data>
+  <data name="Work_Ready_Pinned" xml:space="preserve">
+    <value>ready (pinned)</value>
+  </data>
+  <data name="Work_Held" xml:space="preserve">
+    <value>held</value>
+  </data>
+  <data name="Work_Deployed" xml:space="preserve">
+    <value>deployed</value>
+  </data>
+  <data name="Work_Ungated" xml:space="preserve">
+    <value>no gate</value>
+  </data>
+  <data name="Work_Readiness_NoMr" xml:space="preserve">
+    <value>no merge request yet</value>
+  </data>
+  <data name="Work_Empty_Title" xml:space="preserve">
+    <value>Nothing to deploy</value>
+  </data>
+  <data name="Work_Empty_Description" xml:space="preserve">
+    <value>No connector has reported a branch or merge request matching these filters. Check that a VCS connection is configured, and poll it or wait for a webhook.</value>
   </data>
   <data name="Mrs_Title" xml:space="preserve">
     <value>Merge requests</value>

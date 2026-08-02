@@ -445,10 +445,100 @@
     <value>Выкатки</value>
   </data>
   <data name="Nav_MergeRequests" xml:space="preserve">
-    <value>Merge request'ы</value>
+    <value>Что выкатывать</value>
   </data>
   <data name="Common_Refresh" xml:space="preserve">
     <value>Обновить</value>
+  </data>
+  <data name="Work_Title" xml:space="preserve">
+    <value>Что выкатывать</value>
+  </data>
+  <data name="Work_Heading" xml:space="preserve">
+    <value>Что выкатывать</value>
+  </data>
+  <data name="Work_Intro" xml:space="preserve">
+    <value>Работа, о которой сообщил коннектор, по задачам и репозиториям. Ветка, по которой ещё не завели merge request, — это New; как только его завели, статус берёт на себя он. Выберите окружение, чтобы увидеть, как каждая строка стоит относительно правила, которое применит гейт запуска этого окружения.</value>
+  </data>
+  <data name="Work_Total" xml:space="preserve">
+    <value>всего {0}</value>
+  </data>
+  <data name="Work_Truncated" xml:space="preserve">
+    <value>Работы больше, чем просмотрено на этой странице, поэтому список неполный. Сузьте его фильтром, чтобы увидеть остальное.</value>
+  </data>
+  <data name="Work_Filter_Environment" xml:space="preserve">
+    <value>Готовность для</value>
+  </data>
+  <data name="Work_Filter_NoEnvironment" xml:space="preserve">
+    <value>Без окружения</value>
+  </data>
+  <data name="Work_Filter_State" xml:space="preserve">
+    <value>Состояние</value>
+  </data>
+  <data name="Work_Filter_AnyState" xml:space="preserve">
+    <value>Любое состояние</value>
+  </data>
+  <data name="Work_Filter_Search" xml:space="preserve">
+    <value>Поиск</value>
+  </data>
+  <data name="Work_Col_Task" xml:space="preserve">
+    <value>Задача</value>
+  </data>
+  <data name="Work_Col_Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Work_Col_Carrier" xml:space="preserve">
+    <value>Носитель</value>
+  </data>
+  <data name="Work_Col_State" xml:space="preserve">
+    <value>Состояние</value>
+  </data>
+  <data name="Work_Col_Readiness" xml:space="preserve">
+    <value>Готовность</value>
+  </data>
+  <data name="Work_State_New" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Work_State_Opened" xml:space="preserve">
+    <value>Opened</value>
+  </data>
+  <data name="Work_State_Merged" xml:space="preserve">
+    <value>Merged</value>
+  </data>
+  <data name="Work_State_Closed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="Work_NoTask" xml:space="preserve">
+    <value>задача не определена</value>
+  </data>
+  <data name="Work_Pinned" xml:space="preserve">
+    <value>статус закреплён</value>
+  </data>
+  <data name="Work_Ready" xml:space="preserve">
+    <value>готово</value>
+  </data>
+  <data name="Work_NotReady" xml:space="preserve">
+    <value>не готово</value>
+  </data>
+  <data name="Work_Ready_Pinned" xml:space="preserve">
+    <value>готово (закреплено)</value>
+  </data>
+  <data name="Work_Held" xml:space="preserve">
+    <value>придержано</value>
+  </data>
+  <data name="Work_Deployed" xml:space="preserve">
+    <value>выкачено</value>
+  </data>
+  <data name="Work_Ungated" xml:space="preserve">
+    <value>без гейта</value>
+  </data>
+  <data name="Work_Readiness_NoMr" xml:space="preserve">
+    <value>merge request'а ещё нет</value>
+  </data>
+  <data name="Work_Empty_Title" xml:space="preserve">
+    <value>Выкатывать нечего</value>
+  </data>
+  <data name="Work_Empty_Description" xml:space="preserve">
+    <value>Ни один коннектор не сообщил о ветке или merge request'е, подходящих под эти фильтры. Проверьте, что VCS-подключение настроено, и опросите его или дождитесь вебхука.</value>
   </data>
   <data name="Mrs_Title" xml:space="preserve">
     <value>Merge request'ы</value>

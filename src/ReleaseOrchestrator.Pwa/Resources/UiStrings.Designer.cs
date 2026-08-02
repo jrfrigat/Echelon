@@ -1114,6 +1114,216 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
 
         /// <summary>Looks up a localized string similar to Merge requests.</summary>
+
+        /// <summary>Looks up a localized string for Work_Title.</summary>
+        public static string Work_Title {
+            get {
+                return ResourceManager.GetString("Work_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Heading.</summary>
+        public static string Work_Heading {
+            get {
+                return ResourceManager.GetString("Work_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Intro.</summary>
+        public static string Work_Intro {
+            get {
+                return ResourceManager.GetString("Work_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Total.</summary>
+        public static string Work_Total {
+            get {
+                return ResourceManager.GetString("Work_Total", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Truncated.</summary>
+        public static string Work_Truncated {
+            get {
+                return ResourceManager.GetString("Work_Truncated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Filter_Environment.</summary>
+        public static string Work_Filter_Environment {
+            get {
+                return ResourceManager.GetString("Work_Filter_Environment", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Filter_NoEnvironment.</summary>
+        public static string Work_Filter_NoEnvironment {
+            get {
+                return ResourceManager.GetString("Work_Filter_NoEnvironment", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Filter_State.</summary>
+        public static string Work_Filter_State {
+            get {
+                return ResourceManager.GetString("Work_Filter_State", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Filter_AnyState.</summary>
+        public static string Work_Filter_AnyState {
+            get {
+                return ResourceManager.GetString("Work_Filter_AnyState", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Filter_Search.</summary>
+        public static string Work_Filter_Search {
+            get {
+                return ResourceManager.GetString("Work_Filter_Search", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Col_Task.</summary>
+        public static string Work_Col_Task {
+            get {
+                return ResourceManager.GetString("Work_Col_Task", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Col_Repository.</summary>
+        public static string Work_Col_Repository {
+            get {
+                return ResourceManager.GetString("Work_Col_Repository", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Col_Carrier.</summary>
+        public static string Work_Col_Carrier {
+            get {
+                return ResourceManager.GetString("Work_Col_Carrier", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Col_State.</summary>
+        public static string Work_Col_State {
+            get {
+                return ResourceManager.GetString("Work_Col_State", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Col_Readiness.</summary>
+        public static string Work_Col_Readiness {
+            get {
+                return ResourceManager.GetString("Work_Col_Readiness", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_State_New.</summary>
+        public static string Work_State_New {
+            get {
+                return ResourceManager.GetString("Work_State_New", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_State_Opened.</summary>
+        public static string Work_State_Opened {
+            get {
+                return ResourceManager.GetString("Work_State_Opened", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_State_Merged.</summary>
+        public static string Work_State_Merged {
+            get {
+                return ResourceManager.GetString("Work_State_Merged", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_State_Closed.</summary>
+        public static string Work_State_Closed {
+            get {
+                return ResourceManager.GetString("Work_State_Closed", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_NoTask.</summary>
+        public static string Work_NoTask {
+            get {
+                return ResourceManager.GetString("Work_NoTask", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Pinned.</summary>
+        public static string Work_Pinned {
+            get {
+                return ResourceManager.GetString("Work_Pinned", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Ready.</summary>
+        public static string Work_Ready {
+            get {
+                return ResourceManager.GetString("Work_Ready", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_NotReady.</summary>
+        public static string Work_NotReady {
+            get {
+                return ResourceManager.GetString("Work_NotReady", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Ready_Pinned.</summary>
+        public static string Work_Ready_Pinned {
+            get {
+                return ResourceManager.GetString("Work_Ready_Pinned", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Held.</summary>
+        public static string Work_Held {
+            get {
+                return ResourceManager.GetString("Work_Held", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Deployed.</summary>
+        public static string Work_Deployed {
+            get {
+                return ResourceManager.GetString("Work_Deployed", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Ungated.</summary>
+        public static string Work_Ungated {
+            get {
+                return ResourceManager.GetString("Work_Ungated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Readiness_NoMr.</summary>
+        public static string Work_Readiness_NoMr {
+            get {
+                return ResourceManager.GetString("Work_Readiness_NoMr", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Empty_Title.</summary>
+        public static string Work_Empty_Title {
+            get {
+                return ResourceManager.GetString("Work_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string for Work_Empty_Description.</summary>
+        public static string Work_Empty_Description {
+            get {
+                return ResourceManager.GetString("Work_Empty_Description", resourceCulture);
+            }
+        }
         public static string Mrs_Title {
             get {
                 return ResourceManager.GetString("Mrs_Title", resourceCulture);

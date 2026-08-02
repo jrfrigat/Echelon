@@ -28,6 +28,22 @@ public class ApiService(HttpClient http)
             $"api/merge-requests?status={Uri.EscapeDataString(status ?? "")}&page={page}&pageSize={pageSize}", ct);
 
     /// <summary>
+    /// Deployable work by task and repository — merge requests and the branches nothing has raised yet.
+    /// </summary>
+    /// <param name="environmentId">Environment to judge readiness against, or null for none.</param>
+    /// <param name="state">Optional state filter.</param>
+    /// <param name="search">Free text over task key, repository and branch.</param>
+    /// <param name="page">1-based page.</param>
+    /// <param name="pageSize">Rows per page.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task<WorkItemsResult> GetWorkItemsAsync(
+        Guid? environmentId = null, string? state = null, string? search = null,
+        int page = 1, int pageSize = 50, CancellationToken ct = default) =>
+        GetAsync<WorkItemsResult>(
+            $"api/work-items?environmentId={environmentId}&state={Uri.EscapeDataString(state ?? "")}"
+            + $"&search={Uri.EscapeDataString(search ?? "")}&page={page}&pageSize={pageSize}", ct);
+
+    /// <summary>
     /// The labels merge requests actually carry, so a readiness rule can be built from real values
     /// rather than a remembered spelling.
     /// </summary>

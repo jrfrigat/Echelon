@@ -98,6 +98,36 @@ public record MrDto(
 
 public record PagedResult<T>(int Total, int Page, int PageSize, List<T> Items);
 
+// ---- deployable work (mirrors WorkItemsController) ----
+
+/// <summary>
+/// One piece of deployable work: a task's presence in a repository, and what carries it.
+/// </summary>
+/// <remarks>
+/// The row is (task, repository), not the merge request. A connector reports that a task has work
+/// somewhere; before a merge request is raised the work is a branch, and the task is the same either
+/// way. <c>State</c> is <c>New</c> for a branch nothing has raised yet.
+/// </remarks>
+public record WorkItemDto(
+    string Kind,
+    string? TaskKey,
+    string RepositoryName,
+    string ConnectionName,
+    string Carrier,
+    string Branch,
+    string State,
+    bool IsStatusManual,
+    List<string> Labels,
+    string? PipelineResult,
+    WorkItemReadinessDto? Readiness,
+    DateTime At);
+
+/// <summary>How one piece of work stands against one environment's readiness rule.</summary>
+public record WorkItemReadinessDto(string Status, bool IsReady, List<string> MissingSignals);
+
+/// <summary>A page of work items, with a flag for when the scan cap bound.</summary>
+public record WorkItemsResult(int Total, int Page, int PageSize, List<WorkItemDto> Items, bool Truncated);
+
 public record PermissionClaimDto(Guid Id, string Name);
 public record GroupMappingDto(Guid Id, string AdGroupSid, string ClaimName);
 

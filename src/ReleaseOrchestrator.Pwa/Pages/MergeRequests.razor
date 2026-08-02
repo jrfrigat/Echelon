@@ -2,17 +2,23 @@
 @attribute [Authorize]
 @inherits PageBase
 
-@* What ingestion actually produced.
+@* What there is to deploy, by task.
 
-   A poll reports "158 open merge requests" and, until this page existed, there was nowhere to see
-   them: the rows were stored, the plan used them, and the operator had to take the number on trust.
-   Merge requests are read-only here — they come from a VCS — apart from the manual status pin the
-   detail actions offer. *@
+   A connector does not really report merge requests — it reports that a task has work in a
+   repository, and a merge request is only what that work currently rides in. Before it is raised the
+   work is a branch, and the task is the same either way. So a row here is (task, repository) and the
+   merge request or branch is the carrier; a branch nothing has raised yet is New, which is the state
+   a merge-request list could not show at all.
 
-<PageTitle>@UiStrings.Mrs_Title</PageTitle>
+   Readiness is per environment because that is where it is decided: test may want one pipeline step,
+   production another, another VCS a label. Pick the environment and the rows say where they stand
+   against exactly the rule the launch gate will apply. *@
+
+<PageTitle>@UiStrings.Work_Title</PageTitle>
 
 <FlareStack Gap="FlareSpacing.Medium">
-    <PageHeader Title="@UiStrings.Mrs_Heading" />
+    <PageHeader Title="@UiStrings.Work_Heading" />
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Work_Intro</FlareText>
 
     <PageAlerts Error="@Error" Success="@Success"
                 OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
@@ -20,9 +26,14 @@
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
-                <FlareSelect TValue="string" Label="@UiStrings.Mrs_Filter_Status"
-                             Value="_status" ValueChanged="OnStatusChanged"
-                             Items="StatusOptions" ItemLabel="@(StatusFilterLabel)" Style="min-width:12rem;" />
+                <FlareSelect TValue="Guid?" Label="@UiStrings.Work_Filter_Environment"
+                             Value="_environmentId" ValueChanged="OnEnvironmentChanged"
+                             Items="EnvironmentOptions" ItemLabel="@(EnvironmentLabel)" Style="min-width:14rem;" />
+                <FlareSelect TValue="string" Label="@UiStrings.Work_Filter_State"
+                             Value="_state" ValueChanged="OnStateChanged"
+                             Items="StateOptions" ItemLabel="@(StateFilterLabel)" Style="min-width:11rem;" />
+                <FlareTextField Label="@UiStrings.Work_Filter_Search" Value="_search"
+                                ValueChanged="OnSearchChanged" Style="min-width:14rem;" />
                 <div style="margin-top:1.5rem;">
                     <FlareButton Variant="ButtonVariant.Text" OnClick="Reload" Loading="_loading">
                         @UiStrings.Common_Refresh
@@ -33,7 +44,7 @@
                 {
                     <div style="margin-top:1.5rem;">
                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
-                            @string.Format(UiStrings.Mrs_Total, _result.Total)
+                            @string.Format(UiStrings.Work_Total, _result.Total)
                         </FlareText>
                     </div>
                 }
@@ -41,65 +52,88 @@
         </FlareCardContent>
     </FlareCard>
 
+    @if (_result is { Truncated: true })
+    {
+        @* Said, not hidden: past the scan cap this list is a slice, and a slice that looks complete
+           is the failure worth avoiding. *@
+        <FlareAlert Severity="AlertSeverity.Warning">@UiStrings.Work_Truncated</FlareAlert>
+    }
+
     @if (_loading)
     {
         <FlareProgress Variant="ProgressVariant.Linear" />
     }
     else if (_result is null || _result.Items.Count == 0)
     {
-        <FlareEmptyState Title="@UiStrings.Mrs_Empty_Title" Description="@UiStrings.Mrs_Empty_Description" />
+        <FlareEmptyState Title="@UiStrings.Work_Empty_Title" Description="@UiStrings.Work_Empty_Description" />
     }
     else
     {
-        @* Server-paged, so the grid's own pager is off and its columns are not sortable: sorting one
-           page of N looks like it ordered the whole list and does not. *@
-        <FlareDataGrid TItem="MrDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+        <FlareDataGrid TItem="WorkItemDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
             <Columns>
-                <FlareColumn TItem="MrDto" Id="mr" Title="@UiStrings.Mrs_Col_Mr">
+                <FlareColumn TItem="WorkItemDto" Id="task" Title="@UiStrings.Work_Col_Task">
                     <Template>
-                        <FlareCode>!@context.ExternalId</FlareCode>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="MrDto" Id="repo" Title="@UiStrings.Mrs_Col_Repository"
-                             Field="@(m => (object?)m.RepositoryName)" />
-                <FlareColumn TItem="MrDto" Id="branches" Title="@UiStrings.Mrs_Col_Branches">
-                    <Template>
-                        @* Source into target, in that reading order: it is the direction the merge goes. *@
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
-                            <FlareCode>@context.SourceBranch</FlareCode>
-                            <FlareIconView Value="MaterialDesign3Icons.Regular.ArrowForward" />
-                            <FlareCode>@context.TargetBranch</FlareCode>
-                        </FlareStack>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="MrDto" Id="task" Title="@UiStrings.Mrs_Col_Task">
-                    <Template>
-                        @if (string.IsNullOrEmpty(context.TaskExternalId))
+                        @if (string.IsNullOrEmpty(context.TaskKey))
                         {
-                            @* Unlinked is a real state worth showing, not a blank: such a merge request
-                               is in no plan, and that is usually a linking rule that did not match. *@
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Mrs_Unlinked" />
+                            @* The linking rule matched nothing, so this work is in no plan. That is
+                               the anomaly worth seeing, not a blank cell. *@
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Work_NoTask" />
                         }
                         else
                         {
-                            <FlareCode>@context.TaskExternalId</FlareCode>
+                            <FlareCode>@context.TaskKey</FlareCode>
                         }
                     </Template>
                 </FlareColumn>
-                <FlareColumn TItem="MrDto" Id="status" Title="@UiStrings.Mrs_Col_Status">
+                <FlareColumn TItem="WorkItemDto" Id="repo" Title="@UiStrings.Work_Col_Repository"
+                             Field="@(w => (object?)w.RepositoryName)" />
+                <FlareColumn TItem="WorkItemDto" Id="carrier" Title="@UiStrings.Work_Col_Carrier">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                            <FlareIconView Value="@(context.Kind == "Branch"
+                                                    ? MaterialDesign3Icons.Regular.AccountTree
+                                                    : MaterialDesign3Icons.Regular.CallMerge)" />
+                            <FlareCode>@(context.Kind == "Branch" ? context.Branch : $"!{context.Carrier}")</FlareCode>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="WorkItemDto" Id="state" Title="@UiStrings.Work_Col_State">
                     <Template>
                         <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
-                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)" Label="@context.Status" />
+                            <FlareChip Size="ChipSize.Sm" Color="@StateColor(context.State)" Label="@StateLabel(context.State)" />
                             @if (context.IsStatusManual)
                             {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Secondary" Label="@UiStrings.Mrs_Pinned" />
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Secondary" Label="@UiStrings.Work_Pinned" />
                             }
                         </FlareStack>
                     </Template>
                 </FlareColumn>
-                <FlareColumn TItem="MrDto" Id="created" Title="@UiStrings.Mrs_Col_Created">
+                <FlareColumn TItem="WorkItemDto" Id="readiness" Title="@UiStrings.Work_Col_Readiness">
                     <Template>
-                        <FlareText Typo="TypographyScale.BodySmall">@context.CreatedAt.ToLocalTime().ToString("g")</FlareText>
+                        @if (_environmentId is null)
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">—</FlareText>
+                        }
+                        else if (context.Readiness is not { } readiness)
+                        {
+                            @* No merge request, so there are no signals to judge. "Cannot say", which
+                               is not the same as "not ready" and must not read as it. *@
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                @UiStrings.Work_Readiness_NoMr
+                            </FlareText>
+                        }
+                        else
+                        {
+                            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                                <FlareChip Size="ChipSize.Sm" Color="@ReadinessColor(readiness.Status)"
+                                           Label="@ReadinessLabel(readiness.Status)" />
+                                @* Naming what is missing turns "no" into an instruction. *@
+                                @foreach (var missing in readiness.MissingSignals)
+                                {
+                                    <FlareCode>@missing</FlareCode>
+                                }
+                            </FlareStack>
+                        }
                     </Template>
                 </FlareColumn>
             </Columns>
@@ -116,52 +150,91 @@
 @code {
     const int PageSize = 50;
 
-    PagedResult<MrDto>? _result;
+    WorkItemsResult? _result;
+    List<EnvironmentDto>? _environments;
     bool _loading = true;
     int _page = 1;
-    string _status = "";
+    Guid? _environmentId;
+    string _state = "";
+    string _search = "";
 
-    // The empty entry is "any status"; the rest are the statuses a stored merge request can hold.
-    // The two retired ones are omitted: nothing writes them any more, so offering them as a filter
-    // would be offering a search that can only ever return old rows.
-    static readonly string[] StatusOptions = ["", "Opened", "Merged", "Closed"];
+    // New is a branch nothing has raised; the rest are merge-request statuses. The retired ones are
+    // absent: nothing writes them, so filtering by one could only ever return old rows.
+    static readonly string[] StateOptions = ["", "New", "Opened", "Merged", "Closed"];
 
     int TotalPages => _result is null ? 1 : (int)Math.Ceiling(_result.Total / (double)_result.PageSize);
 
-    protected override async Task OnInitializedAsync() => await Reload();
+    IEnumerable<Guid?> EnvironmentOptions => [null, .. (_environments ?? []).Select(e => (Guid?)e.Id)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _environments = await Api.GetEnvironmentsAsync());
+        await Reload();
+    }
 
     async Task Reload()
     {
         _loading = true;
         await RunAsync(async () =>
-            _result = await Api.GetMergeRequestsAsync(
-                string.IsNullOrEmpty(_status) ? null : _status, _page, PageSize));
+            _result = await Api.GetWorkItemsAsync(
+                _environmentId,
+                string.IsNullOrEmpty(_state) ? null : _state,
+                string.IsNullOrWhiteSpace(_search) ? null : _search,
+                _page, PageSize));
         _loading = false;
     }
 
-    async Task OnStatusChanged(string value)
-    {
-        _status = value;
-        // Back to the first page: keeping the page number across a filter change lands the operator
-        // on an empty page whenever the new filter has fewer pages than the old one.
-        _page = 1;
-        await Reload();
-    }
+    // Every filter resets to the first page: keeping the page number lands the operator on an empty
+    // page whenever the narrower filter has fewer pages than the old one.
+    async Task OnEnvironmentChanged(Guid? value) { _environmentId = value; _page = 1; await Reload(); }
 
-    async Task OnPageChanged(int page)
-    {
-        _page = page;
-        await Reload();
-    }
+    async Task OnStateChanged(string value) { _state = value; _page = 1; await Reload(); }
 
-    string StatusFilterLabel(string status) =>
-        string.IsNullOrEmpty(status) ? UiStrings.Mrs_Filter_AnyStatus : status;
+    async Task OnSearchChanged(string value) { _search = value; _page = 1; await Reload(); }
 
-    static FlareColor StatusColor(string status) => status switch
+    async Task OnPageChanged(int page) { _page = page; await Reload(); }
+
+    string EnvironmentLabel(Guid? id) =>
+        id is null
+            ? UiStrings.Work_Filter_NoEnvironment
+            : _environments?.FirstOrDefault(e => e.Id == id)?.Key ?? id.ToString()!;
+
+    string StateFilterLabel(string state) =>
+        string.IsNullOrEmpty(state) ? UiStrings.Work_Filter_AnyState : StateLabel(state);
+
+    static string StateLabel(string state) => state switch
     {
+        "New" => UiStrings.Work_State_New,
+        "Opened" => UiStrings.Work_State_Opened,
+        "Merged" => UiStrings.Work_State_Merged,
+        "Closed" => UiStrings.Work_State_Closed,
+        _ => state
+    };
+
+    static FlareColor StateColor(string state) => state switch
+    {
+        "New" => FlareColor.Tertiary,
+        "Opened" => FlareColor.Primary,
         "Merged" => FlareColor.Success,
         "Closed" => FlareColor.Error,
-        "Opened" => FlareColor.Primary,
+        _ => FlareColor.OnSurfaceVariant
+    };
+
+    static string ReadinessLabel(string status) => status switch
+    {
+        "Ready" => UiStrings.Work_Ready,
+        "NotReady" => UiStrings.Work_NotReady,
+        "Pinned" => UiStrings.Work_Ready_Pinned,
+        "Held" => UiStrings.Work_Held,
+        "Deployed" => UiStrings.Work_Deployed,
+        _ => UiStrings.Work_Ungated
+    };
+
+    static FlareColor ReadinessColor(string status) => status switch
+    {
+        "Ready" or "Pinned" => FlareColor.Success,
+        "Deployed" => FlareColor.Secondary,
+        "Held" or "NotReady" => FlareColor.Warning,
         _ => FlareColor.OnSurfaceVariant
     };
 }
