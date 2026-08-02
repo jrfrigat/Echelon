@@ -50,11 +50,26 @@ public abstract class CrudPageBase<TItem> : PageBase
         }
     }
 
+    /// <summary>
+    /// Whether the editor is missing something required. Overridden by a page whose dialog can be
+    /// submitted with Enter, so the keyboard path refuses exactly what the disabled button refuses.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to false — a page that never overrides it behaves as it always did. It exists because
+    /// Enter does not consult a button's <c>Disabled</c>: once a dialog became a real form, the
+    /// keyboard could submit a half-filled editor that the mouse could not.
+    /// </remarks>
+    protected virtual bool IsEditorIncomplete => false;
+
     /// <summary>Saves via <paramref name="save"/>, then closes the modal and reloads the page on success.</summary>
     /// <param name="success">Notice to show; the generic "Saved." when omitted. Not a default
     /// parameter value: a resource lookup is not a compile-time constant.</param>
     protected async Task SaveAsync(Func<Task> save, string? success = null)
     {
+        // Guards the keyboard path: Enter can fire this while a save is already in flight, or while
+        // the editor is in the state the disabled Save button exists to refuse.
+        if (Saving || IsEditorIncomplete) return;
+
         Saving = true;
         var saved = await RunAsync(save, success ?? UiStrings.Common_Saved);
         Saving = false;

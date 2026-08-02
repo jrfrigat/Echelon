@@ -12,25 +12,33 @@
 
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
-            @* Align Start, not End. Every field puts its label above the input, so aligning the tops
-               lines the inputs up; aligning the bottoms lined up the helper text instead and pushed
-               the one field that has any a row higher than its neighbours. The button is nudged down
-               by the label height so it still sits on the input line. *@
-            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
-                <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" Style="min-width:12rem;" />
-                <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
-                             @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
-                <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
-                                Style="min-width:22rem;" />
-                <div style="margin-top:1.5rem;">
-                    <FlareButton OnClick="Create" Loading="_busy"
-                                 Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
-                </div>
-            </FlareStack>
+            @* A real form so Enter in any field adds the rule. Every add-form in this app was a bare
+               stack of inputs, which is why Enter did nothing anywhere and the button always had to
+               be found with the mouse. *@
+            <form @onsubmit="Create" @onsubmit:preventDefault>
+                @* Align Start, not End. Every field puts its label above the input, so aligning the
+                   tops lines the inputs up; aligning the bottoms lined up the helper text instead and
+                   pushed the one field that has any a row higher than its neighbours. The button is
+                   nudged down by the label height so it still sits on the input line. *@
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
+                    <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" Style="min-width:12rem;" />
+                    <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                                 @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
+                    <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
+                                    Style="min-width:22rem;" />
+                    <div style="margin-top:1.5rem;">
+                        <FlareButton Type="ButtonType.Submit" Loading="_busy"
+                                     Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
+                    </div>
+                </FlareStack>
+            </form>
 
-            @* The hint moved out of HelperText and under the whole row: as a per-field helper it was
-               what made the row uneven, and it describes the signal vocabulary rather than that one
-               input. The chips below are the same vocabulary, clickable. *@
+            @* Outside the form on purpose: a chip renders as a button, and a button inside a form
+               with no explicit type submits it — so clicking a signal to add it would have created
+               the rule instead. It edits the field above rather than being a control of the form.
+
+               The hint moved out of HelperText and under the row too: as a per-field helper it was
+               what made the row uneven, and it describes the vocabulary, not that one input. *@
             <SignalPicker Value="_signals" ValueChanged="@(v => _signals = v)" />
         </FlareCardContent>
     </FlareCard>
@@ -87,13 +95,19 @@
 
 <FlareDialog Visible="_showEdit" Title="@UiStrings.RR_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
     <ChildContent>
-        <FlareStack Gap="FlareSpacing.Medium">
-            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_eName" />
-            <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
-                         @bind-Value="_eMode" Items="Modes" ItemLabel="@(ModeLabel)" />
-            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals" />
-            <SignalPicker Value="_eSignals" ValueChanged="@(v => _eSignals = v)" />
-        </FlareStack>
+        @* A form so Enter saves; the dialog's Save button lives in a separate fragment, so the hidden
+           submit is what Enter actually triggers. The picker stays outside it — its chips are buttons,
+           and a button in a form with no explicit type submits it, so clicking a signal would save. *@
+        <form @onsubmit="SaveEdit" @onsubmit:preventDefault>
+            <FlareStack Gap="FlareSpacing.Medium">
+                <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_eName" />
+                <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                             @bind-Value="_eMode" Items="Modes" ItemLabel="@(ModeLabel)" />
+                <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals" />
+            </FlareStack>
+            <button type="submit" hidden aria-hidden="true" tabindex="-1"></button>
+        </form>
+        <SignalPicker Value="_eSignals" ValueChanged="@(v => _eSignals = v)" />
     </ChildContent>
     <Actions>
         <FlareButton Variant="ButtonVariant.Text" OnClick="@(() => _showEdit = false)">@UiStrings.Common_Cancel</FlareButton>
@@ -130,6 +144,10 @@
 
     async Task Create()
     {
+        // Enter and the button are the same path now, and a keypress does not consult the button's
+        // disabled state — so both the guard and the emptiness check have to be here.
+        if (_busy || string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals)) return;
+
         _busy = true;
         if (await RunAsync(
                 async () => await Api.CreateReadinessRuleAsync(_name.Trim(), _mode, SplitSignals(_signals)),
@@ -152,6 +170,9 @@
 
     async Task SaveEdit()
     {
+        // Enter submits too, and does not consult the Save button's disabled state.
+        if (_busy || string.IsNullOrWhiteSpace(_eName) || string.IsNullOrWhiteSpace(_eSignals)) return;
+
         _busy = true;
         if (await RunAsync(
                 async () => await Api.UpdateReadinessRuleAsync(_eId, _eName.Trim(), _eMode, SplitSignals(_eSignals)),

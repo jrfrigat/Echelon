@@ -76,6 +76,10 @@
              Title="@(_editId.HasValue ? UiStrings.Vcs_Dialog_Edit : UiStrings.Vcs_Dialog_New)"
              VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
+        @* A form so Enter saves. The dialog renders its actions in a separate fragment, so the Save
+           button is not inside this element and cannot be the submit control — hence the hidden one
+           at the end. Without it Enter did nothing and the dialog had to be dismissed with the mouse. *@
+        <form @onsubmit="Save" @onsubmit:preventDefault>
         <FlareStack Gap="FlareSpacing.Medium">
             <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
             @if (!_editId.HasValue)
@@ -101,6 +105,8 @@
             <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
                                 @bind-Value="_fToken" />
         </FlareStack>
+        <button type="submit" hidden aria-hidden="true" tabindex="-1"></button>
+        </form>
     </ChildContent>
     <Actions>
         <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
@@ -163,6 +169,9 @@
 
     // The type is fixed at creation: an existing connection's stored repositories and token are
     // meaningless against a different provider, so Update takes no vcsType.
+    /// <summary>Enter submits the dialog too, so the keyboard refuses what the disabled button does.</summary>
+    protected override bool IsEditorIncomplete => IsFormIncomplete;
+
     bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
                              || string.IsNullOrWhiteSpace(_fUrl)
                              || string.IsNullOrWhiteSpace(_fType)

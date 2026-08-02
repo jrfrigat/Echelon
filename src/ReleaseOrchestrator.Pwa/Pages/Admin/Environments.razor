@@ -12,10 +12,13 @@
 
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
-            <FlareStack Gap="FlareSpacing.Small">
-                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
-                    <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" />
-                    <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" />
+            @* A real form: Enter in any field adds the environment, as it does on every other
+               add-form now. Aligned to the top so the inputs line up regardless of which fields
+               carry a hint. *@
+            <form @onsubmit="Create" @onsubmit:preventDefault>
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
+                    <FlareTextField Label="@UiStrings.Env_Col_Key" @bind-Value="_key" Style="min-width:10rem;" />
+                    <FlareTextField Label="@UiStrings.Env_Col_Name" @bind-Value="_name" Style="min-width:12rem;" />
                     @* Numeric, so the field is numeric: it used to be a text box that silently fell back to
                        0 when somebody typed a word, and the order decides the progression gate. *@
                     <FlareNumericField TValue="int" Label="@UiStrings.Env_Col_Order" @bind-Value="_order"
@@ -23,9 +26,11 @@
                     <FlareSelect TValue="string" Label="@UiStrings.Env_ReadyRule_Label"
                                  @bind-Value="_ruleId" Items="RuleOptions" ItemLabel="@(RuleName)"
                                  Style="min-width:14rem;" />
-                    <FlareButton OnClick="Create" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+                    <div style="margin-top:1.5rem;">
+                        <FlareButton Type="ButtonType.Submit" Loading="_busy">@UiStrings.Env_Add</FlareButton>
+                    </div>
                 </FlareStack>
-            </FlareStack>
+            </form>
         </FlareCardContent>
     </FlareCard>
 
@@ -139,6 +144,9 @@
 
     async Task Create()
     {
+        // Enter submits too, and a keypress does not consult the button's disabled state.
+        if (_busy || string.IsNullOrWhiteSpace(_key)) return;
+
         _busy = true;
         if (await RunAsync(
                 async () => await Api.CreateEnvironmentAsync(

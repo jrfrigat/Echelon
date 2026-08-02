@@ -12,6 +12,9 @@
 
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
+            @* A real form so Enter adds the binding; every add-form in the app was a bare stack of
+               inputs, so Enter did nothing and the button had to be found with the mouse. *@
+            <form @onsubmit="Create" @onsubmit:preventDefault>
             <FlareStack Gap="FlareSpacing.Small">
                 @* Align Start: the labels sit above the inputs, so aligning tops lines the inputs up.
                    Aligning the bottoms lined up the helper text instead, which only one field had, and
@@ -38,11 +41,12 @@
                 }
 
                 <FlareStack Row>
-                    <FlareButton OnClick="Create" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
+                    <FlareButton Type="ButtonType.Submit" Loading="_busy" Disabled="@(string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)">
                         @UiStrings.Actions_Add
                     </FlareButton>
                 </FlareStack>
             </FlareStack>
+            </form>
         </FlareCardContent>
     </FlareCard>
 
@@ -125,6 +129,11 @@
 
     async Task Create()
     {
+        // Enter submits too, and a keypress does not consult the button's disabled state — so the
+        // same conditions that disable it have to be re-checked here.
+        if (_busy || string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)
+            return;
+
         _busy = true;
         var settings = _settings
             .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))

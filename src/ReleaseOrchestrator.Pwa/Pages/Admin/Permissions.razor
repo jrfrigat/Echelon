@@ -51,19 +51,24 @@
                     <FlareCardContent>
                         @if (_showAddMapping)
                         {
-                            <FlareStack Gap="FlareSpacing.Small">
-                                <FlareTextField Label="@UiStrings.Perms_Sid" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
-                                <FlareSelect TValue="Guid?" Label="@UiStrings.Perms_Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
-                                             Items="@(_claims?.Select(c => (Guid?)c.Id) ?? [])"
-                                             ItemLabel="@(id => ClaimName(id))" />
-                                <FlareStack Row Gap="FlareSpacing.Small">
-                                    <FlareButton Size="ButtonSize.Sm" OnClick="AddMapping" Loading="_savingMapping"
-                                                 Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">@UiStrings.Common_Add</FlareButton>
-                                    <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text"
-                                                 OnClick="@(() => _showAddMapping = false)">@UiStrings.Common_Cancel</FlareButton>
+                            @* A form so Enter grants: a SID is pasted into this field, and reaching
+                               for the mouse afterwards is the whole friction. Cancel stays type=button
+                               so it does not submit. *@
+                            <form @onsubmit="AddMapping" @onsubmit:preventDefault>
+                                <FlareStack Gap="FlareSpacing.Small">
+                                    <FlareTextField Label="@UiStrings.Perms_Sid" @bind-Value="_fSid" Placeholder="S-1-5-..." Size="FieldSize.Sm" />
+                                    <FlareSelect TValue="Guid?" Label="@UiStrings.Perms_Claim" @bind-Value="_fClaimId" Size="FieldSize.Sm"
+                                                 Items="@(_claims?.Select(c => (Guid?)c.Id) ?? [])"
+                                                 ItemLabel="@(id => ClaimName(id))" />
+                                    <FlareStack Row Gap="FlareSpacing.Small">
+                                        <FlareButton Size="ButtonSize.Sm" Type="ButtonType.Submit" Loading="_savingMapping"
+                                                     Disabled="@(string.IsNullOrWhiteSpace(_fSid) || _fClaimId is null)">@UiStrings.Common_Add</FlareButton>
+                                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" Type="ButtonType.Button"
+                                                     OnClick="@(() => _showAddMapping = false)">@UiStrings.Common_Cancel</FlareButton>
+                                    </FlareStack>
+                                    <FlareDivider />
                                 </FlareStack>
-                                <FlareDivider />
-                            </FlareStack>
+                            </form>
                         }
 
                         @if (_mappings is null || _mappings.Count == 0)
@@ -126,6 +131,8 @@
 
     async Task AddMapping()
     {
+        // Enter submits too, and does not consult the button's disabled state.
+        if (_savingMapping || string.IsNullOrWhiteSpace(_fSid)) return;
         if (_fClaimId is not { } claimId) return;
 
         _savingMapping = true;
