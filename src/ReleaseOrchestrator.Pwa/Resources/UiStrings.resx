@@ -444,6 +444,57 @@
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Rollouts</value>
   </data>
+  <data name="Nav_MergeRequests" xml:space="preserve">
+    <value>Merge requests</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Mrs_Title" xml:space="preserve">
+    <value>Merge requests</value>
+  </data>
+  <data name="Mrs_Heading" xml:space="preserve">
+    <value>Merge requests</value>
+  </data>
+  <data name="Mrs_Total" xml:space="preserve">
+    <value>{0} total</value>
+  </data>
+  <data name="Mrs_Filter_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Mrs_Filter_AnyStatus" xml:space="preserve">
+    <value>Any status</value>
+  </data>
+  <data name="Mrs_Col_Mr" xml:space="preserve">
+    <value>MR</value>
+  </data>
+  <data name="Mrs_Col_Repository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="Mrs_Col_Branches" xml:space="preserve">
+    <value>Branches</value>
+  </data>
+  <data name="Mrs_Col_Task" xml:space="preserve">
+    <value>Task</value>
+  </data>
+  <data name="Mrs_Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Mrs_Col_Created" xml:space="preserve">
+    <value>Opened</value>
+  </data>
+  <data name="Mrs_Unlinked" xml:space="preserve">
+    <value>no task</value>
+  </data>
+  <data name="Mrs_Pinned" xml:space="preserve">
+    <value>pinned</value>
+  </data>
+  <data name="Mrs_Empty_Title" xml:space="preserve">
+    <value>No merge requests</value>
+  </data>
+  <data name="Mrs_Empty_Description" xml:space="preserve">
+    <value>Nothing has been ingested yet. Check that a VCS connection is configured, and poll it or wait for a webhook.</value>
+  </data>
   <data name="Nav_DefaultPlan" xml:space="preserve">
     <value>Default plan</value>
   </data>
@@ -1075,7 +1126,19 @@
     <value>Required signals</value>
   </data>
   <data name="RR_Signals_Hint" xml:space="preserve">
-    <value>Space- or comma-separated, e.g. label:ready-for-prod mr-status:merged pipeline:success</value>
+    <value>Space- or comma-separated. Click a signal to add or remove it, or type one the list does not offer.</value>
+  </data>
+  <data name="RR_Signals_Group_Status" xml:space="preserve">
+    <value>Merge request is</value>
+  </data>
+  <data name="RR_Signals_Group_Pipeline" xml:space="preserve">
+    <value>Pipeline result</value>
+  </data>
+  <data name="RR_Signals_Group_Label" xml:space="preserve">
+    <value>Carries label</value>
+  </data>
+  <data name="RR_Signals_NoLabels" xml:space="preserve">
+    <value>No labels have been seen on any merge request yet, so none can be suggested. You can still type one.</value>
   </data>
   <data name="RR_Add" xml:space="preserve">
     <value>Add rule</value>
@@ -1129,7 +1192,7 @@
     <value>Poll {0} now</value>
   </data>
   <data name="Vcs_Polled" xml:space="preserve">
-    <value>Polled '{0}': {1} open merge request(s).</value>
+    <value>Polled '{0}': {1} open merge request(s), {2} branch(es). They are listed under Merge requests.</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Some repositories could not be read — {0}</value>
@@ -1141,7 +1204,13 @@
     <value>Installed plugins</value>
   </data>
   <data name="Plugins_Intro" xml:space="preserve">
-    <value>The connectors and handlers this build has wired in.</value>
+    <value>The connectors and handlers this build has wired in. Each one declares its own key, how its events arrive, and what it does — this page only shows what they declared.</value>
+  </data>
+  <data name="Plugins_Ingestion_Push" xml:space="preserve">
+    <value>receives webhooks</value>
+  </data>
+  <data name="Plugins_Ingestion_Poll" xml:space="preserve">
+    <value>polled on a timer</value>
   </data>
   <data name="Plugins_Cat_Vcs" xml:space="preserve">
     <value>VCS connectors</value>

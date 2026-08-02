@@ -444,6 +444,57 @@
   <data name="Nav_Rollouts" xml:space="preserve">
     <value>Выкатки</value>
   </data>
+  <data name="Nav_MergeRequests" xml:space="preserve">
+    <value>Merge request'ы</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="Mrs_Title" xml:space="preserve">
+    <value>Merge request'ы</value>
+  </data>
+  <data name="Mrs_Heading" xml:space="preserve">
+    <value>Merge request'ы</value>
+  </data>
+  <data name="Mrs_Total" xml:space="preserve">
+    <value>всего {0}</value>
+  </data>
+  <data name="Mrs_Filter_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Mrs_Filter_AnyStatus" xml:space="preserve">
+    <value>Любой статус</value>
+  </data>
+  <data name="Mrs_Col_Mr" xml:space="preserve">
+    <value>MR</value>
+  </data>
+  <data name="Mrs_Col_Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Mrs_Col_Branches" xml:space="preserve">
+    <value>Ветки</value>
+  </data>
+  <data name="Mrs_Col_Task" xml:space="preserve">
+    <value>Задача</value>
+  </data>
+  <data name="Mrs_Col_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Mrs_Col_Created" xml:space="preserve">
+    <value>Открыт</value>
+  </data>
+  <data name="Mrs_Unlinked" xml:space="preserve">
+    <value>без задачи</value>
+  </data>
+  <data name="Mrs_Pinned" xml:space="preserve">
+    <value>закреплён</value>
+  </data>
+  <data name="Mrs_Empty_Title" xml:space="preserve">
+    <value>Нет merge request'ов</value>
+  </data>
+  <data name="Mrs_Empty_Description" xml:space="preserve">
+    <value>Пока ничего не загружено. Проверьте, что VCS-подключение настроено, и опросите его или дождитесь вебхука.</value>
+  </data>
   <data name="Nav_DefaultPlan" xml:space="preserve">
     <value>План по умолчанию</value>
   </data>
@@ -1075,7 +1126,19 @@
     <value>Требуемые сигналы</value>
   </data>
   <data name="RR_Signals_Hint" xml:space="preserve">
-    <value>Через пробел или запятую, напр. label:ready-for-prod mr-status:merged pipeline:success</value>
+    <value>Через пробел или запятую. Нажмите на сигнал, чтобы добавить или убрать его, либо впишите тот, которого нет в списке.</value>
+  </data>
+  <data name="RR_Signals_Group_Status" xml:space="preserve">
+    <value>Статус MR</value>
+  </data>
+  <data name="RR_Signals_Group_Pipeline" xml:space="preserve">
+    <value>Результат пайплайна</value>
+  </data>
+  <data name="RR_Signals_Group_Label" xml:space="preserve">
+    <value>Есть лейбл</value>
+  </data>
+  <data name="RR_Signals_NoLabels" xml:space="preserve">
+    <value>Лейблы пока не встречались ни у одного merge request'а, поэтому предложить нечего. Вписать вручную по-прежнему можно.</value>
   </data>
   <data name="RR_Add" xml:space="preserve">
     <value>Добавить правило</value>
@@ -1129,7 +1192,7 @@
     <value>Опросить {0} сейчас</value>
   </data>
   <data name="Vcs_Polled" xml:space="preserve">
-    <value>Опрошено «{0}»: {1} открытых merge request'ов.</value>
+    <value>Опрошено «{0}»: {1} открытых merge request'ов, веток — {2}. Они перечислены в разделе «Merge request'ы».</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Некоторые репозитории не удалось прочитать — {0}</value>
@@ -1141,7 +1204,13 @@
     <value>Установленные плагины</value>
   </data>
   <data name="Plugins_Intro" xml:space="preserve">
-    <value>Коннекторы и обработчики, включённые в эту сборку.</value>
+    <value>Коннекторы и обработчики, включённые в эту сборку. Каждый сам объявляет свой ключ, способ получения событий и назначение — страница лишь показывает объявленное.</value>
+  </data>
+  <data name="Plugins_Ingestion_Push" xml:space="preserve">
+    <value>принимает вебхуки</value>
+  </data>
+  <data name="Plugins_Ingestion_Poll" xml:space="preserve">
+    <value>опрашивается по таймеру</value>
   </data>
   <data name="Plugins_Cat_Vcs" xml:space="preserve">
     <value>Коннекторы VCS</value>

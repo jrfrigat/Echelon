@@ -27,6 +27,13 @@ public class ApiService(HttpClient http)
         GetAsync<PagedResult<MrDto>>(
             $"api/merge-requests?status={Uri.EscapeDataString(status ?? "")}&page={page}&pageSize={pageSize}", ct);
 
+    /// <summary>
+    /// The labels merge requests actually carry, so a readiness rule can be built from real values
+    /// rather than a remembered spelling.
+    /// </summary>
+    public Task<List<string>> GetMergeRequestLabelsAsync(CancellationToken ct = default) =>
+        GetAsync<List<string>>("api/merge-requests/labels", ct);
+
     /// <summary>Pins a status by hand — one of the two ways an MR is marked deployable.</summary>
     public Task SetMergeRequestStatusAsync(Guid id, string status, CancellationToken ct = default) =>
         SendAsync(() => http.PatchAsJsonAsync($"api/merge-requests/{id}/status", new { Status = status }, ct), ct);

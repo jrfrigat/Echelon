@@ -83,6 +83,33 @@ public class MergeRequestsController(
         return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
     }
 
+    /// <summary>Every distinct label currently carried by a stored merge request.</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Canonical label values, sorted.</returns>
+    /// <remarks>
+    /// Exists so configuring a readiness rule can offer the labels that actually exist instead of
+    /// asking an operator to recall the exact spelling of one — a rule naming a label nothing carries
+    /// is a gate nothing passes, and it fails silently at launch rather than when it was written.
+    /// The labels are stored canonically (lower-cased, comma-joined), so distinct-then-split is
+    /// enough; the split has to happen in memory because the column holds a joined set.
+    /// </remarks>
+    [HttpGet("labels")]
+    public async Task<IActionResult> Labels(CancellationToken ct)
+    {
+        var sets = await db.MergeRequests
+            .Where(mr => mr.Labels != "")
+            .Select(mr => mr.Labels)
+            .Distinct()
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return Ok(sets
+            .SelectMany(s => s.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(l => l, StringComparer.Ordinal)
+            .ToList());
+    }
+
     /// <summary>Pins a merge request's status by hand.</summary>
     /// <param name="id">The merge request.</param>
     /// <param name="req">The status to pin. Merged and closed are rejected — the VCS owns those.</param>

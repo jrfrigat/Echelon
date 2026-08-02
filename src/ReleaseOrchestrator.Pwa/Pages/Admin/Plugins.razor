@@ -30,12 +30,15 @@
                         <FlareCardContent>
                             <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center" Wrap>
                                 <FlareCode>@plugin.Key</FlareCode>
-                                @if (!string.IsNullOrEmpty(plugin.Ingestion))
+                                @* The connector's own declaration, not a classification made here:
+                                   each adapter registers itself as push or poll, and the poller
+                                   sweeps whichever declared poll. Labelled by what it means rather
+                                   than by the enum name, which said nothing to a reader. *@
+                                @if (IngestionLabel(plugin.Ingestion) is { } ingestion)
                                 {
                                     <FlareChip Size="ChipSize.Sm"
                                                Color="@(plugin.Ingestion == "Poll" ? FlareColor.Secondary : FlareColor.Primary)"
-                                               Label="@plugin.Ingestion">
-                                    </FlareChip>
+                                               Label="@ingestion" />
                                 }
                                 @if (!string.IsNullOrWhiteSpace(plugin.Description))
                                 {
@@ -66,6 +69,17 @@
     static int CategoryOrder(string category) => category switch
     {
         "vcs" => 0, "tracker" => 1, "deploy" => 2, "action" => 3, _ => 9
+    };
+
+    /// <summary>
+    /// How the connector said its events arrive. Null for a deploy strategy or action handler, which
+    /// declare no ingestion because they have none — nothing is being withheld there.
+    /// </summary>
+    static string? IngestionLabel(string? ingestion) => ingestion switch
+    {
+        "Poll" => UiStrings.Plugins_Ingestion_Poll,
+        "Push" => UiStrings.Plugins_Ingestion_Push,
+        _ => null
     };
 
     static string CategoryLabel(string category) => category switch

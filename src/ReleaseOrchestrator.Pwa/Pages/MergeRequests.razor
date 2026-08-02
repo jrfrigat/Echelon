@@ -1,0 +1,167 @@
+@page "/merge-requests"
+@attribute [Authorize]
+@inherits PageBase
+
+@* What ingestion actually produced.
+
+   A poll reports "158 open merge requests" and, until this page existed, there was nowhere to see
+   them: the rows were stored, the plan used them, and the operator had to take the number on trust.
+   Merge requests are read-only here — they come from a VCS — apart from the manual status pin the
+   detail actions offer. *@
+
+<PageTitle>@UiStrings.Mrs_Title</PageTitle>
+
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Mrs_Heading" />
+
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
+                <FlareSelect TValue="string" Label="@UiStrings.Mrs_Filter_Status"
+                             Value="_status" ValueChanged="OnStatusChanged"
+                             Items="StatusOptions" ItemLabel="@(StatusFilterLabel)" Style="min-width:12rem;" />
+                <div style="margin-top:1.5rem;">
+                    <FlareButton Variant="ButtonVariant.Text" OnClick="Reload" Loading="_loading">
+                        @UiStrings.Common_Refresh
+                    </FlareButton>
+                </div>
+                <FlareSpacer />
+                @if (_result is not null)
+                {
+                    <div style="margin-top:1.5rem;">
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                            @string.Format(UiStrings.Mrs_Total, _result.Total)
+                        </FlareText>
+                    </div>
+                }
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
+
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Linear" />
+    }
+    else if (_result is null || _result.Items.Count == 0)
+    {
+        <FlareEmptyState Title="@UiStrings.Mrs_Empty_Title" Description="@UiStrings.Mrs_Empty_Description" />
+    }
+    else
+    {
+        @* Server-paged, so the grid's own pager is off and its columns are not sortable: sorting one
+           page of N looks like it ordered the whole list and does not. *@
+        <FlareDataGrid TItem="MrDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="MrDto" Id="mr" Title="@UiStrings.Mrs_Col_Mr">
+                    <Template>
+                        <FlareCode>!@context.ExternalId</FlareCode>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="MrDto" Id="repo" Title="@UiStrings.Mrs_Col_Repository"
+                             Field="@(m => (object?)m.RepositoryName)" />
+                <FlareColumn TItem="MrDto" Id="branches" Title="@UiStrings.Mrs_Col_Branches">
+                    <Template>
+                        @* Source into target, in that reading order: it is the direction the merge goes. *@
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                            <FlareCode>@context.SourceBranch</FlareCode>
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.ArrowForward" />
+                            <FlareCode>@context.TargetBranch</FlareCode>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="MrDto" Id="task" Title="@UiStrings.Mrs_Col_Task">
+                    <Template>
+                        @if (string.IsNullOrEmpty(context.TaskExternalId))
+                        {
+                            @* Unlinked is a real state worth showing, not a blank: such a merge request
+                               is in no plan, and that is usually a linking rule that did not match. *@
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Mrs_Unlinked" />
+                        }
+                        else
+                        {
+                            <FlareCode>@context.TaskExternalId</FlareCode>
+                        }
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="MrDto" Id="status" Title="@UiStrings.Mrs_Col_Status">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.Status)" Label="@context.Status" />
+                            @if (context.IsStatusManual)
+                            {
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Secondary" Label="@UiStrings.Mrs_Pinned" />
+                            }
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="MrDto" Id="created" Title="@UiStrings.Mrs_Col_Created">
+                    <Template>
+                        <FlareText Typo="TypographyScale.BodySmall">@context.CreatedAt.ToLocalTime().ToString("g")</FlareText>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+
+        @if (_result.Total > _result.PageSize)
+        {
+            <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
+                             TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
+        }
+    }
+</FlareStack>
+
+@code {
+    const int PageSize = 50;
+
+    PagedResult<MrDto>? _result;
+    bool _loading = true;
+    int _page = 1;
+    string _status = "";
+
+    // The empty entry is "any status"; the rest are the statuses a stored merge request can hold.
+    // The two retired ones are omitted: nothing writes them any more, so offering them as a filter
+    // would be offering a search that can only ever return old rows.
+    static readonly string[] StatusOptions = ["", "Opened", "Merged", "Closed"];
+
+    int TotalPages => _result is null ? 1 : (int)Math.Ceiling(_result.Total / (double)_result.PageSize);
+
+    protected override async Task OnInitializedAsync() => await Reload();
+
+    async Task Reload()
+    {
+        _loading = true;
+        await RunAsync(async () =>
+            _result = await Api.GetMergeRequestsAsync(
+                string.IsNullOrEmpty(_status) ? null : _status, _page, PageSize));
+        _loading = false;
+    }
+
+    async Task OnStatusChanged(string value)
+    {
+        _status = value;
+        // Back to the first page: keeping the page number across a filter change lands the operator
+        // on an empty page whenever the new filter has fewer pages than the old one.
+        _page = 1;
+        await Reload();
+    }
+
+    async Task OnPageChanged(int page)
+    {
+        _page = page;
+        await Reload();
+    }
+
+    string StatusFilterLabel(string status) =>
+        string.IsNullOrEmpty(status) ? UiStrings.Mrs_Filter_AnyStatus : status;
+
+    static FlareColor StatusColor(string status) => status switch
+    {
+        "Merged" => FlareColor.Success,
+        "Closed" => FlareColor.Error,
+        "Opened" => FlareColor.Primary,
+        _ => FlareColor.OnSurfaceVariant
+    };
+}

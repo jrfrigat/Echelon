@@ -12,6 +12,12 @@
         <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.RocketLaunch" /></Icon>
         <ChildContent>@UiStrings.Nav_Rollouts</ChildContent>
     </FlareNavLink>
+    @* Beside the two it feeds: what ingestion produced, which is what a plan is built from. Without
+       it a poll reporting "158 open merge requests" pointed at nothing an operator could open. *@
+    <FlareNavLink Href="/merge-requests">
+        <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.CallMerge" /></Icon>
+        <ChildContent>@UiStrings.Nav_MergeRequests</ChildContent>
+    </FlareNavLink>
 
     <FlareNavGroup Label="@UiStrings.Nav_Administration" Expanded="true">
         <FlareNavLink Href="/admin/vcs">

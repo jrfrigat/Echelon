@@ -1099,6 +1099,125 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Merge requests.</summary>
+        public static string Nav_MergeRequests {
+            get {
+                return ResourceManager.GetString("Nav_MergeRequests", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Refresh.</summary>
+        public static string Common_Refresh {
+            get {
+                return ResourceManager.GetString("Common_Refresh", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Merge requests.</summary>
+        public static string Mrs_Title {
+            get {
+                return ResourceManager.GetString("Mrs_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Merge requests.</summary>
+        public static string Mrs_Heading {
+            get {
+                return ResourceManager.GetString("Mrs_Heading", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0} total.</summary>
+        public static string Mrs_Total {
+            get {
+                return ResourceManager.GetString("Mrs_Total", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Status.</summary>
+        public static string Mrs_Filter_Status {
+            get {
+                return ResourceManager.GetString("Mrs_Filter_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Any status.</summary>
+        public static string Mrs_Filter_AnyStatus {
+            get {
+                return ResourceManager.GetString("Mrs_Filter_AnyStatus", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to MR.</summary>
+        public static string Mrs_Col_Mr {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Mr", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Repository.</summary>
+        public static string Mrs_Col_Repository {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Repository", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Branches.</summary>
+        public static string Mrs_Col_Branches {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Branches", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Task.</summary>
+        public static string Mrs_Col_Task {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Task", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Status.</summary>
+        public static string Mrs_Col_Status {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Opened.</summary>
+        public static string Mrs_Col_Created {
+            get {
+                return ResourceManager.GetString("Mrs_Col_Created", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to no task.</summary>
+        public static string Mrs_Unlinked {
+            get {
+                return ResourceManager.GetString("Mrs_Unlinked", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to pinned.</summary>
+        public static string Mrs_Pinned {
+            get {
+                return ResourceManager.GetString("Mrs_Pinned", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to No merge requests.</summary>
+        public static string Mrs_Empty_Title {
+            get {
+                return ResourceManager.GetString("Mrs_Empty_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to nothing ingested yet.</summary>
+        public static string Mrs_Empty_Description {
+            get {
+                return ResourceManager.GetString("Mrs_Empty_Description", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Default plan.
         /// </summary>
@@ -2919,6 +3038,34 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Merge request is.</summary>
+        public static string RR_Signals_Group_Status {
+            get {
+                return ResourceManager.GetString("RR_Signals_Group_Status", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Pipeline result.</summary>
+        public static string RR_Signals_Group_Pipeline {
+            get {
+                return ResourceManager.GetString("RR_Signals_Group_Pipeline", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Carries label.</summary>
+        public static string RR_Signals_Group_Label {
+            get {
+                return ResourceManager.GetString("RR_Signals_Group_Label", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to no labels seen yet.</summary>
+        public static string RR_Signals_NoLabels {
+            get {
+                return ResourceManager.GetString("RR_Signals_NoLabels", resourceCulture);
+            }
+        }
+
         /// <summary>Looks up a localized string similar to Add rule.</summary>
         public static string RR_Add {
             get {
@@ -3070,6 +3217,20 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         public static string Plugins_Intro {
             get {
                 return ResourceManager.GetString("Plugins_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to receives webhooks.</summary>
+        public static string Plugins_Ingestion_Push {
+            get {
+                return ResourceManager.GetString("Plugins_Ingestion_Push", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to polled on a timer.</summary>
+        public static string Plugins_Ingestion_Poll {
+            get {
+                return ResourceManager.GetString("Plugins_Ingestion_Poll", resourceCulture);
             }
         }
 

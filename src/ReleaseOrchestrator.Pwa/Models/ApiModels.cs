@@ -31,7 +31,7 @@ public record ProviderSettingDto(
 public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings, string? Ingestion = null);
 
 /// <summary>What a manual poll produced: observations emitted, and repositories that could not be read.</summary>
-public record PollResultDto(int Emitted, List<PollFailureDto>? Failures = null);
+public record PollResultDto(int Emitted, List<PollFailureDto>? Failures = null, int Branches = 0);
 
 /// <summary>A repository the poll could not read, and why (usually a wrong external id or token access).</summary>
 public record PollFailureDto(string Repository, string Reason);

@@ -13,18 +13,24 @@
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
             <FlareStack Gap="FlareSpacing.Small">
-                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
-                    <FlareTextField Label="@UiStrings.Actions_Event" @bind-Value="_eventType" HelperText="@UiStrings.Actions_EventHint" />
+                @* Align Start: the labels sit above the inputs, so aligning tops lines the inputs up.
+                   Aligning the bottoms lined up the helper text instead, which only one field had, and
+                   lifted that field a row above its neighbours. The hint now sits under the row. *@
+                <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
+                    <FlareTextField Label="@UiStrings.Actions_Event" @bind-Value="_eventType" Style="min-width:16rem;" />
                     <FlareSelect TValue="string" Label="@UiStrings.Actions_Action"
                                  Value="_actionType" ValueChanged="OnActionTypeChanged"
                                  Items="ActionTypeOptions" ItemLabel="@(t => string.IsNullOrEmpty(t) ? "-" : t)"
                                  Style="min-width:14rem;" />
-                    <FlareTextField Label="@UiStrings.Actions_Scope" @bind-Value="_scope" />
+                    <FlareTextField Label="@UiStrings.Actions_Scope" @bind-Value="_scope" Style="min-width:12rem;" />
                 </FlareStack>
+                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                    @UiStrings.Actions_EventHint
+                </FlareText>
 
                 @if (SelectedType is { Settings.Count: > 0 } selected)
                 {
-                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
                         @* The same renderer the connection forms use — one place that turns a declared
                            schema into inputs, so the secret-handling rules cannot diverge between them. *@
                         <ProviderSettingsFields Schema="selected.Settings" Values="_settings" OnChanged="StateHasChanged" />

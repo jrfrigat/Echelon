@@ -1,0 +1,115 @@
+@inherits LocalizedComponent
+@using ReleaseOrchestrator.Core.Enums
+@using ReleaseOrchestrator.Core.Parsing
+@inject ApiService Api
+
+@* The readiness vocabulary, clickable.
+
+   A rule's signals were a free-text box with a one-line hint, so writing one meant recalling the
+   exact spelling of a token and of a label. A rule naming a signal nothing carries is a gate nothing
+   passes, and it fails at launch rather than where it was written — which is the expensive place to
+   find out. The tokens here come from ReadinessSignals, the same builder the gate evaluates with, and
+   the labels from what merge requests actually carry. *@
+
+<FlareStack Gap="FlareSpacing.XSmall">
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+        @UiStrings.RR_Signals_Hint
+    </FlareText>
+
+    @foreach (var group in Groups)
+    {
+        @if (group.Signals.Count > 0)
+        {
+            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                <FlareText Typo="TypographyScale.LabelSmall" Color="FlareColor.OnSurfaceVariant"
+                           Style="min-width:7rem;">@group.Label</FlareText>
+                @foreach (var signal in group.Signals)
+                {
+                    var isSelected = Selected.Contains(signal);
+                    <FlareChip Size="ChipSize.Sm"
+                               Variant="@(isSelected ? ChipVariant.Filled : ChipVariant.Outlined)"
+                               Color="@(isSelected ? FlareColor.Primary : FlareColor.OnSurfaceVariant)"
+                               Label="@signal"
+                               OnClick="@(() => Toggle(signal))" />
+                }
+            </FlareStack>
+        }
+    }
+
+    @if (_labels is { Count: 0 })
+    {
+        @* Said rather than left blank: an empty label row reads as "this rule cannot use labels",
+           when it means no merge request has been ingested with one yet. *@
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @UiStrings.RR_Signals_NoLabels
+        </FlareText>
+    }
+</FlareStack>
+
+@code {
+    /// <summary>The signals field, as the form holds it: tokens separated by spaces or commas.</summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    /// <summary>Raised with the new field text when a chip is toggled.</summary>
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    List<string>? _labels;
+
+    /// <summary>The tokens currently in the field, for deciding which chips read as selected.</summary>
+    HashSet<string> Selected =>
+        new(Value.Split([',', ' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // A failure here must not break the form: the field still accepts typed signals, and the
+        // label suggestions are an aid, not a dependency.
+        try
+        {
+            _labels = await Api.GetMergeRequestLabelsAsync();
+        }
+        catch
+        {
+            _labels = [];
+        }
+    }
+
+    /// <summary>
+    /// The vocabulary, grouped as the rule language defines it.
+    /// </summary>
+    /// <remarks>
+    /// Built from <c>ReadinessSignals</c> and <c>MergeRequestStatus</c> rather than from a copied list
+    /// of strings: this is the same source the gate reads, so a token offered here cannot drift from
+    /// one the evaluator understands. Retired statuses are filtered out — offering a signal nothing
+    /// can ever carry would be worse than offering none.
+    /// </remarks>
+    IEnumerable<(string Label, List<string> Signals)> Groups
+    {
+        get
+        {
+            yield return (UiStrings.RR_Signals_Group_Status,
+                Enum.GetValues<MergeRequestStatus>()
+                    .Where(s => !MergeRequestStatusResolver.IsRetired(s))
+                    .Select(ReadinessSignals.Status)
+                    .ToList());
+
+            yield return (UiStrings.RR_Signals_Group_Pipeline,
+                PipelineResults.Select(ReadinessSignals.Pipeline).ToList());
+
+            yield return (UiStrings.RR_Signals_Group_Label,
+                (_labels ?? []).Select(ReadinessSignals.Label).ToList());
+        }
+    }
+
+    // The results providers commonly report. Not exhaustive and not authoritative — a provider may
+    // report anything — so the field stays free text and these are only the common ones made clickable.
+    static readonly string[] PipelineResults = ["success", "failed", "running", "canceled", "skipped"];
+
+    async Task Toggle(string signal)
+    {
+        var selected = Selected;
+        if (!selected.Remove(signal)) selected.Add(signal);
+
+        // Rebuilt in a stable order so toggling does not shuffle what the operator already typed.
+        await ValueChanged.InvokeAsync(string.Join(" ", selected.OrderBy(s => s, StringComparer.Ordinal)));
+    }
+}

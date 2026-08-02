@@ -40,7 +40,15 @@
                                operator does not have to wait for the next tick. *@
                             @if (IsPollType(context.VcsType))
                             {
-                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)" OnClick="@(() => Poll(context))">
+                                @* Loading on the button itself, keyed to this row: a poll walks every
+                                   repository of the connection over the network and can take a while,
+                                   and without it the click looked like nothing happened -- so it got
+                                   clicked again, starting a second sweep. Disabled while any poll runs
+                                   so two cannot overlap. *@
+                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)"
+                                                 Loading="@(_pollingId == context.Id)"
+                                                 Disabled="@(_pollingId is not null)"
+                                                 OnClick="@(() => Poll(context))">
                                     <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
                                 </FlareIconButton>
                             }
@@ -123,12 +131,27 @@
     bool IsPollType(string vcsType) =>
         string.Equals(_providers?.FirstOrDefault(p => p.ProviderType == vcsType)?.Ingestion, "Poll", StringComparison.Ordinal);
 
+    /// <summary>Which connection is being polled right now, or null when none is. Drives the spinner.</summary>
+    Guid? _pollingId;
+
     async Task Poll(VcsConnectionDto c)
     {
         PollResultDto? result = null;
-        if (!await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id))) return;
 
-        Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted);
+        _pollingId = c.Id;
+        Success = null;
+        try
+        {
+            if (!await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id))) return;
+        }
+        finally
+        {
+            // In a finally: a failed poll must release the button, or the row is stuck spinning and
+            // every other connection stays disabled behind it.
+            _pollingId = null;
+        }
+
+        Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted, result.Branches);
 
         // A repository that could not be read is the operator's to fix (usually a wrong external id),
         // so name it rather than letting a silent zero look like "nothing to do".

@@ -12,15 +12,26 @@
 
     <FlareCard Variant="CardVariant.Outlined">
         <FlareCardContent>
-            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
-                <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" />
+            @* Align Start, not End. Every field puts its label above the input, so aligning the tops
+               lines the inputs up; aligning the bottoms lined up the helper text instead and pushed
+               the one field that has any a row higher than its neighbours. The button is nudged down
+               by the label height so it still sits on the input line. *@
+            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
+                <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" Style="min-width:12rem;" />
                 <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
                              @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
                 <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
-                                HelperText="@UiStrings.RR_Signals_Hint" Style="min-width:22rem;" />
-                <FlareButton OnClick="Create" Loading="_busy"
-                             Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
+                                Style="min-width:22rem;" />
+                <div style="margin-top:1.5rem;">
+                    <FlareButton OnClick="Create" Loading="_busy"
+                                 Disabled="@(string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals))">@UiStrings.RR_Add</FlareButton>
+                </div>
             </FlareStack>
+
+            @* The hint moved out of HelperText and under the whole row: as a per-field helper it was
+               what made the row uneven, and it describes the signal vocabulary rather than that one
+               input. The chips below are the same vocabulary, clickable. *@
+            <SignalPicker Value="_signals" ValueChanged="@(v => _signals = v)" />
         </FlareCardContent>
     </FlareCard>
 
@@ -80,8 +91,8 @@
             <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_eName" />
             <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
                          @bind-Value="_eMode" Items="Modes" ItemLabel="@(ModeLabel)" />
-            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals"
-                            HelperText="@UiStrings.RR_Signals_Hint" />
+            <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals" />
+            <SignalPicker Value="_eSignals" ValueChanged="@(v => _eSignals = v)" />
         </FlareStack>
     </ChildContent>
     <Actions>
