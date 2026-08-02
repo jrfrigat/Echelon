@@ -687,12 +687,12 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("RolloutPlanId")
+                    b.Property<Guid>("TaskId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RolloutPlanId");
+                    b.HasIndex(new[] { "TaskId", "Kind" }, "IX_PlanOverride_Task_Kind");
 
                     b.ToTable("PlanOverrides");
                 });
@@ -717,6 +717,31 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsUnique();
 
                     b.ToTable("PlanTaskNodes");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanningSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PrerequisiteGroupOrder")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<bool>("WaitForLinked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("WaitForSubtasks")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlanningSettings");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.ProcessedEvent", b =>
@@ -1236,6 +1261,9 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<Guid?>("ParentTaskId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("PrerequisiteGroupOrder")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1254,6 +1282,12 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Property<Guid>("TrackerConnectionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool?>("WaitForLinked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("WaitForSubtasks")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ParentTaskId");
@@ -1266,6 +1300,34 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                         .IsUnique();
 
                     b.ToTable("Tasks");
+                });
+
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskPrerequisiteOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PrerequisiteTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrerequisiteTaskId");
+
+                    b.HasIndex(new[] { "TaskId", "Position" }, "IX_TaskPrerequisiteOrder_Task_Position")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "TaskId", "PrerequisiteTaskId" }, "IX_TaskPrerequisiteOrder_Task_Prerequisite")
+                        .IsUnique();
+
+                    b.ToTable("TaskPrerequisiteOrders");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", b =>
@@ -1534,13 +1596,13 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanOverride", b =>
                 {
-                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", "RolloutPlan")
-                        .WithMany("Overrides")
-                        .HasForeignKey("RolloutPlanId")
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "Task")
+                        .WithMany("PlanOverrides")
+                        .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("RolloutPlan");
+                    b.Navigation("Task");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.PlanTaskNode", b =>
@@ -1760,6 +1822,25 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("TrackerConnection");
                 });
 
+            modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskPrerequisiteOrder", b =>
+                {
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "PrerequisiteTask")
+                        .WithMany()
+                        .HasForeignKey("PrerequisiteTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.TaskItem", "Task")
+                        .WithMany("PrerequisiteOrder")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PrerequisiteTask");
+
+                    b.Navigation("Task");
+                });
+
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.UserPermissionOverride", b =>
                 {
                     b.HasOne("ReleaseOrchestrator.Infrastructure.Persistence.Models.PermissionClaim", "PermissionClaim")
@@ -1816,8 +1897,6 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutPlan", b =>
                 {
                     b.Navigation("Nodes");
-
-                    b.Navigation("Overrides");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.RolloutStep", b =>
@@ -1834,6 +1913,10 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
                     b.Navigation("Dependents");
 
                     b.Navigation("MergeRequests");
+
+                    b.Navigation("PlanOverrides");
+
+                    b.Navigation("PrerequisiteOrder");
                 });
 
             modelBuilder.Entity("ReleaseOrchestrator.Infrastructure.Persistence.Models.TrackerConnection", b =>

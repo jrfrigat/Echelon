@@ -213,21 +213,29 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
 
-        return new Computed(closure, adjacency, planMrs, ReleasePlanGraph.Build(planMrs));
+        // Replayed here, on every recalculation: this is what makes a hand-ordered plan survive the
+        // next ingestion event instead of being silently rebuilt without the operator's edits.
+        var (add, remove) = await LoadOverridesAsync(taskId, ct);
+
+        return new Computed(closure, adjacency, planMrs, ReleasePlanGraph.Build(planMrs, add, remove));
     }
 
-    /// <summary>Loads the whole task-dependency graph as adjacency. A recursive walk is a later optimization.</summary>
+    /// <summary>Loads the whole task graph as adjacency, with the wait policy applied.</summary>
     /// <remarks>
     /// Two sources, one relation. Declared dependencies name who waits directly; the hierarchy says a
-    /// parent waits on its children, because a parent is the umbrella over the concrete work its
-    /// subtasks carry. Both end up as "tasks this one deploys after", and both have to be here: this
-    /// adjacency decides the closure — which tasks a rollout even includes — so a parent missing its
-    /// children here would produce a plan that silently leaves them out, no matter what
-    /// <see cref="PlanInput"/> says about the edges between their merge requests.
+    /// parent waits on its children. Whether each counts is now a decision rather than an assumption
+    /// — see <see cref="TaskWaitPolicy"/> — and the merge itself moved to the pure
+    /// <see cref="TaskWaitGraph"/>, so it is testable without a database. What is left here is the
+    /// loading.
+    ///
+    /// This adjacency decides the closure — which tasks a rollout even includes — so a source omitted
+    /// here is a plan that silently leaves those tasks out, no matter what <see cref="PlanInput"/>
+    /// says about the edges between their merge requests. That is the same reason the policy has to
+    /// be applied at this level and not later.
     /// </remarks>
     private async Task<Dictionary<Guid, IReadOnlyList<Guid>>> LoadAdjacencyAsync(CancellationToken ct)
     {
-        var edges = await db.TaskDependencies
+        var linked = await db.TaskDependencies
             .Select(d => new { d.DependentTaskId, d.DependsOnTaskId })
             .AsNoTracking()
             .ToListAsync(ct);
@@ -238,14 +246,116 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
 
-        return edges.Concat(hierarchy)
-            .GroupBy(e => e.DependentTaskId)
-            .ToDictionary(
-                g => g.Key,
-                // Distinct: a tracker may state a dependency that the hierarchy already implies, and
-                // the same prerequisite twice would be the same edge twice in the graph.
-                g => (IReadOnlyList<Guid>)g.Select(e => e.DependsOnTaskId).Distinct().ToList());
+        var manualOrder = await db.TaskPrerequisiteOrders
+            .OrderBy(o => o.TaskId).ThenBy(o => o.Position)
+            .Select(o => new { o.TaskId, o.PrerequisiteTaskId })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var overrides = await db.Tasks
+            .Where(t => t.WaitForSubtasks != null || t.WaitForLinked != null || t.PrerequisiteGroupOrder != null)
+            .Select(t => new { t.Id, t.WaitForSubtasks, t.WaitForLinked, t.PrerequisiteGroupOrder })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var global = await LoadGlobalPolicyAsync(ct);
+        var overrideById = overrides.ToDictionary(o => o.Id);
+
+        TaskWaitPolicy PolicyFor(Guid taskId) =>
+            overrideById.TryGetValue(taskId, out var o)
+                ? global.OverriddenBy(o.WaitForSubtasks, o.WaitForLinked, o.PrerequisiteGroupOrder)
+                : global;
+
+        var subtasksOf = hierarchy.ToLookup(h => h.DependentTaskId, h => h.DependsOnTaskId);
+        var linkedOf = linked.ToLookup(l => l.DependentTaskId, l => l.DependsOnTaskId);
+        var orderOf = manualOrder.ToLookup(o => o.TaskId, o => o.PrerequisiteTaskId);
+
+        var tasks = subtasksOf.Select(g => g.Key)
+            .Concat(linkedOf.Select(g => g.Key))
+            .Distinct()
+            .Select(id => new TaskPrerequisites(
+                id, [.. subtasksOf[id]], [.. linkedOf[id]], [.. orderOf[id]]));
+
+        return TaskWaitGraph.Build(tasks, PolicyFor);
     }
+
+    /// <summary>
+    /// The installation-wide wait policy, or the built-in default when nobody has saved one.
+    /// </summary>
+    /// <remarks>
+    /// Absent settings mean the defaults, not a failure: a fresh installation has no row, and it must
+    /// plan exactly as it did before the policy existed rather than refuse to plan at all.
+    /// </remarks>
+    private async Task<TaskWaitPolicy> LoadGlobalPolicyAsync(CancellationToken ct)
+    {
+        var settings = await db.PlanningSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+
+        return settings is null
+            ? TaskWaitPolicy.Default
+            : new TaskWaitPolicy(settings.WaitForSubtasks, settings.WaitForLinked, settings.PrerequisiteGroupOrder);
+    }
+
+    /// <summary>
+    /// The operator's ordering edits for a task, as the pure graph takes them.
+    /// </summary>
+    /// <remarks>
+    /// Replayed on every recalculation, which is the point of storing them as deltas against the task
+    /// rather than baking them into a plan the next ingestion event would replace. An edit naming a
+    /// merge request no longer in the plan is simply ignored by <c>ReleasePlanGraph</c>, which drops
+    /// any edge whose endpoints it was not given.
+    /// </remarks>
+    private async Task<(List<(Guid From, Guid To)> Add, List<(Guid From, Guid To)> Remove)> LoadOverridesAsync(
+        Guid taskId, CancellationToken ct)
+    {
+        var rows = await db.PlanOverrides
+            .Where(o => o.TaskId == taskId
+                        && (o.Kind == PlanOverrideKind.AddEdge || o.Kind == PlanOverrideKind.RemoveEdge))
+            .Select(o => new { o.Kind, o.Payload })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        List<(Guid, Guid)> add = [];
+        List<(Guid, Guid)> remove = [];
+
+        foreach (var row in rows)
+        {
+            var edge = DeserializeEdge(row.Payload);
+            if (edge is null) continue;
+
+            if (row.Kind == PlanOverrideKind.AddEdge) add.Add(edge.Value);
+            else remove.Add(edge.Value);
+        }
+
+        return (add, remove);
+    }
+
+    /// <summary>
+    /// Reads an edge delta's payload, answering null for one that cannot be read.
+    /// </summary>
+    /// <remarks>
+    /// Null rather than throwing: a payload written by an older shape must not make the task
+    /// unplannable. The edit is dropped and the plan is the derived one, which is the safe direction
+    /// — the alternative is an operator whose plan screen 500s with no way to clear the bad row.
+    /// </remarks>
+    private static (Guid From, Guid To)? DeserializeEdge(string payload)
+    {
+        try
+        {
+            var edge = JsonSerializer.Deserialize<PlanEdgeOverridePayload>(payload);
+            return edge is null || edge.From == Guid.Empty || edge.To == Guid.Empty
+                ? null
+                : (edge.From, edge.To);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The stored shape of an <c>AddEdge</c>/<c>RemoveEdge</c> delta.</summary>
+    /// <param name="From">The merge request that deploys first.</param>
+    /// <param name="To">The merge request that waits.</param>
+    private sealed record PlanEdgeOverridePayload(Guid From, Guid To);
 
     private async Task<RolloutPlanDto> BuildDtoAsync(RolloutPlan plan, Computed c, CancellationToken ct)
     {

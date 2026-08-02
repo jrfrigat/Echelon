@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using ReleaseOrchestrator.Core.Enums;
 
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
@@ -25,13 +26,49 @@ public class TaskItem
     /// for a top-level task.
     /// </summary>
     /// <remarks>
-    /// A subtask deploys before its parent — the parent is the umbrella, its children the concrete
-    /// work — so a parent task waits on every child exactly as a dependent waits on its
-    /// prerequisites, and the planner treats it as one more task-dependency edge (parent depends on
-    /// child). Stored as a scalar because that is how the tracker reports it: an issue names its one
-    /// parent, not the parent its children. The inverse is <see cref="Children"/>.
+    /// Whether a parent waits on its children is a policy, not a given: see
+    /// <see cref="WaitForSubtasks"/>. When it does, the planner treats the hierarchy as one more
+    /// task-dependency edge (parent depends on child). Stored as a scalar because that is how the
+    /// tracker reports it: an issue names its one parent, not the parent its children. The inverse is
+    /// <see cref="Children"/>.
     /// </remarks>
     public Guid? ParentTaskId { get; set; }
+
+    /// <summary>
+    /// This task's answer to "wait for my subtasks?", or null to inherit the installation default.
+    /// </summary>
+    /// <remarks>
+    /// Null is not false, and the distinction is the whole point of the column: it is what lets the
+    /// global default change and carry every task that never disagreed with it. See
+    /// <c>TaskWaitPolicy</c>, which resolves the two.
+    /// </remarks>
+    public bool? WaitForSubtasks { get; set; }
+
+    /// <summary>
+    /// This task's answer to "wait for the tasks I declare a dependency on?", or null to inherit.
+    /// </summary>
+    public bool? WaitForLinked { get; set; }
+
+    /// <summary>
+    /// This task's answer to whether one whole group of prerequisites precedes the other, or null to
+    /// inherit. See <see cref="PrerequisiteGroupOrder"/>.
+    /// </summary>
+    public PrerequisiteGroupOrder? PrerequisiteGroupOrder { get; set; }
+
+    /// <summary>An operator's explicit ordering over this task's prerequisites, if one was set.</summary>
+    [InverseProperty(nameof(TaskPrerequisiteOrder.Task))]
+    public ICollection<TaskPrerequisiteOrder> PrerequisiteOrder { get; set; } = [];
+
+    /// <summary>
+    /// Operator edits to this task's plan — added or dropped ordering edges between merge requests.
+    /// </summary>
+    /// <remarks>
+    /// Held on the task rather than on the plan because a plan is regenerated on every ingestion
+    /// event: an edit stored against one plan's id would be orphaned by the next recalculation, which
+    /// is exactly why hand ordering never survived. As an input it survives by construction.
+    /// </remarks>
+    [InverseProperty(nameof(PlanOverride.Task))]
+    public ICollection<PlanOverride> PlanOverrides { get; set; } = [];
 
     /// <summary>Issue summary, for operators reading the plan.</summary>
     [Required, MaxLength(500)]

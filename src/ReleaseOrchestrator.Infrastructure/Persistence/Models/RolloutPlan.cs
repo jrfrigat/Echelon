@@ -121,7 +121,7 @@ public class RolloutPlan
     [InverseProperty(nameof(PlanTaskNode.RolloutPlan))]
     public ICollection<PlanTaskNode> Nodes { get; set; } = [];
 
-    /// <summary>Operator edits, replayed on each recalculation.</summary>
-    [InverseProperty(nameof(PlanOverride.RolloutPlan))]
-    public ICollection<PlanOverride> Overrides { get; set; } = [];
+    // Operator edits used to hang off this plan, which is why they never survived: a plan is replaced
+    // on every ingestion event, so an edit keyed to one version was orphaned by the next. They live on
+    // TaskItem now (TaskItem.PlanOverrides), which is the identity a rollout is actually planned for.
 }

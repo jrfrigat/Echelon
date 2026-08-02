@@ -149,6 +149,12 @@ public static class ProviderSpecificMapping
         // rejection never happens there while it does on SQL Server.
         builder.Entity<MergeRequestReadinessPin>().Ignore(e => e.RowVersion);
         builder.Entity<MergeRequestReadinessPin>().Property<uint>("xmin").IsRowVersion();
+
+        // The planning settings are one row two administrators can open at once, and the later save
+        // must not silently discard the earlier one. ModelMappingTests caught this entry missing when
+        // the entity was added, which is what that test is for.
+        builder.Entity<PlanningSettings>().Ignore(e => e.RowVersion);
+        builder.Entity<PlanningSettings>().Property<uint>("xmin").IsRowVersion();
     }
 
     /// <summary>
