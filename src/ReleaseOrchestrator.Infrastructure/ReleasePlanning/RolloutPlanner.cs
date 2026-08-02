@@ -213,11 +213,21 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
 
+        // The SAME adjacency the closure came from decides the edges between merge requests. Read
+        // straight from the tracker's navigations instead -- as this did -- and the wait policy holds
+        // for which tasks the plan covers and not for the order they deploy in: group ordering and a
+        // hand-set prerequisite order changed nothing at all, silently.
+        var ordered = planMrs
+            .Select(mr => mr.TaskId is { } tid && adjacency.TryGetValue(tid, out var prerequisites)
+                ? mr.WithPrerequisites(prerequisites)
+                : mr.WithPrerequisites([]))
+            .ToList();
+
         // Replayed here, on every recalculation: this is what makes a hand-ordered plan survive the
         // next ingestion event instead of being silently rebuilt without the operator's edits.
         var (add, remove) = await LoadOverridesAsync(taskId, ct);
 
-        return new Computed(closure, adjacency, planMrs, ReleasePlanGraph.Build(planMrs, add, remove));
+        return new Computed(closure, adjacency, ordered, ReleasePlanGraph.Build(ordered, add, remove));
     }
 
     /// <summary>Loads the whole task graph as adjacency, with the wait policy applied.</summary>

@@ -53,6 +53,23 @@ public record PlanMergeRequest(
     /// and quietly ignore the hierarchy.
     /// </remarks>
     public IEnumerable<Guid> PrerequisiteTaskIds => DependsOnTaskIds.Concat(ChildTaskIds);
+
+    /// <summary>
+    /// Replaces the prerequisites read from the tracker with the ones the wait policy admits.
+    /// </summary>
+    /// <param name="prerequisites">The resolved set, from <see cref="TaskWaitGraph"/>.</param>
+    /// <remarks>
+    /// Both the closure and the edges between merge requests have to come from the same resolved
+    /// adjacency, or the policy holds for one and not the other. It did not, and the failure was
+    /// silent in the worst way: turning off a wait, or asking for subtasks-before-linked, changed
+    /// which tasks the plan covered and left the deploy order exactly as it was — because these two
+    /// lists were still read straight off the tracker's navigations further down.
+    ///
+    /// Collapsed into <see cref="DependsOnTaskIds"/> because the split exists only to get two
+    /// collection subqueries past EF; once resolved, the planner has one notion of "goes first".
+    /// </remarks>
+    public PlanMergeRequest WithPrerequisites(IReadOnlyList<Guid> prerequisites) =>
+        this with { DependsOnTaskIds = prerequisites, ChildTaskIds = [] };
 }
 
 /// <summary>"Deploy after every merge request in <paramref name="ToRepositoryId"/>", and how firmly.</summary>
