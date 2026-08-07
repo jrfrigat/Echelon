@@ -34,8 +34,9 @@ Release Orchestrator помогает автоматически выстраи�
 **The application has never been run in a live environment.** The following have not been tested:
 
 - Application startup against a live database (SQL Server or PostgreSQL), RabbitMQ, Redis
-- ~~Database migrations (on real instance)~~ — done for SQL Server on 2026-07-17, see Known
-  Limitations. Not for PostgreSQL
+- ~~Database migrations (on real instance)~~ — done for **both** providers: SQL Server on
+  2026-07-17, PostgreSQL on 2026-08-07 (all 32 applied from empty, provider-specific mappings
+  verified)
 - Docker image builds (registry blocked in dev environment)
 - Behavior against real GitLab or Yandex Tracker instances
 - Concurrency and load testing
