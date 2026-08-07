@@ -118,7 +118,13 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         // One active plan per task: deactivate the previous one and insert in a single transaction,
         // so a crash between the two never leaves the task with no active plan and two concurrent
         // recalculations cannot both leave one active (the filtered unique index is the backstop).
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        //
+        // Joins an ambient transaction when there is one. Import opens its own, because writing the
+        // deltas and building the plan that reflects them is one act: committing the deltas alone
+        // would apply the import at the next ingestion event, from an endpoint that had just reported
+        // failure.
+        var ownsTransaction = db.Database.CurrentTransaction is null;
+        await using var tx = ownsTransaction ? await db.Database.BeginTransactionAsync(ct) : null;
 
         // Read inside the transaction, together with the deactivation that serialises concurrent
         // rebuilds of this task. Max over the task's own history rather than a count: superseded rows
@@ -187,7 +193,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, false), ct);
         db.RolloutPlans.Add(plan);
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
 
         if (computed.Graph.Conflicts.Count > 0)
             logger.LogWarning(
@@ -196,6 +202,239 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
 
         return await BuildStoredDtoAsync(plan, ct);
     }
+
+    /// <inheritdoc/>
+    public Task<PlanImportDto> ValidatePlanAsync(Guid taskId, string document, CancellationToken ct = default) =>
+        ReconcileAsync(taskId, document, force: false, actor: null, apply: false, ct);
+
+    /// <inheritdoc/>
+    public Task<PlanImportDto> ImportPlanAsync(
+        Guid taskId, string document, bool force, ActorRef? actor, CancellationToken ct = default) =>
+        ReconcileAsync(taskId, document, force, actor, apply: true, ct);
+
+    /// <summary>
+    /// Reconciles a plan document against the derivation, and optionally stores the result.
+    /// </summary>
+    /// <param name="apply">False for validate: the same work, nothing written.</param>
+    /// <remarks>
+    /// <para>
+    /// One method for both endpoints, because a validate that checked anything different from what
+    /// import does would be worse than no validate at all: it would say yes and then the import would
+    /// say no, or — far worse — say nothing and produce a different order.
+    /// </para>
+    /// <para>
+    /// A document states one thing: which wave each merge request deploys in. Everything else it
+    /// carries is checked for AGREEMENT and never applied. Which tasks and merge requests a plan
+    /// covers comes from the atlas, so a document that disagrees is rejected rather than obeyed — a
+    /// plan is a projection, and an import that could add work to one would make it something else.
+    /// </para>
+    /// </remarks>
+    private async Task<PlanImportDto> ReconcileAsync(
+        Guid taskId, string document, bool force, ActorRef? actor, bool apply, CancellationToken ct)
+    {
+        var parsed = PlanDocumentReader.Read(document);
+        if (!parsed.IsValid) return new PlanImportDto(false, parsed.Errors, [], null);
+
+        var target = await db.Tasks
+            .Where(t => t.Id == taskId)
+            .Select(t => new { t.Id, t.ExternalId })
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException($"Task {taskId} not found");
+
+        var computed = await ComputeAsync(taskId, ct);
+        var keys = await ResolveKeysAsync(computed, ct);
+
+        var errors = new List<string>();
+        var doc = parsed.Document!;
+
+        if (!string.Equals(doc.TargetTaskKey, target.ExternalId, StringComparison.Ordinal))
+            errors.Add(
+                $"The document rolls out '{doc.TargetTaskKey}', but it was posted to '{target.ExternalId}'. "
+                + "Import a plan to the task it targets.");
+
+        var waveOf = ResolveWaves(doc, computed, keys, errors);
+        if (errors.Count > 0) return new PlanImportDto(false, errors, [], null);
+
+        // 0-based, because that is the stage numbering ViolatedBy compares in. Waves are 1-based
+        // everywhere an operator sees them.
+        var stageOf = waveOf.ToDictionary(kv => kv.Key, kv => kv.Value - 1);
+        var violations = ReleasePlanGraph.ViolatedBy(computed.PlanMrs, stageOf)
+            .Select(e => new PlanImportViolationDto(
+                e.Kind.ToString(),
+                keys.MrKeys.GetValueOrDefault(e.FromMrId, e.FromMrId.ToString("D")),
+                keys.MrKeys.GetValueOrDefault(e.ToMrId, e.ToMrId.ToString("D"))))
+            .ToList();
+
+        // force skips the REFUSAL, never the record. The plan still reports every constraint it
+        // breaks, because a plan that deploys against a hard dependency and looks clean is the one
+        // outcome this system does not allow (006 §2).
+        if (violations.Count > 0 && !force)
+            return new PlanImportDto(false, [], violations, null);
+
+        if (!apply) return new PlanImportDto(true, [], violations, null);
+
+        var deltas = PlanWavePinning.Compute(
+            computed.PlanMrs,
+            ReleasePlanGraph.DerivedEdges(computed.PlanMrs, computed.RuleEdges),
+            waveOf);
+
+        // Checked before anything is written: replay the deltas through the real derivation and
+        // confirm the waves come back as written. Import is the one path where the deltas are computed
+        // rather than authored, so "the derivation agrees" is a claim to verify, not to assume.
+        var replayed = WavesOf(ReleasePlanGraph.Build(
+            computed.PlanMrs, deltas.Add, deltas.Remove, computed.RuleEdges));
+
+        if (waveOf.Any(kv => replayed.GetValueOrDefault(kv.Key) != kv.Value))
+            return new PlanImportDto(
+                false,
+                ["The requested waves could not be reproduced by the planner, so nothing was saved. "
+                 + "This is a defect rather than a problem with the document; please report it."],
+                violations,
+                null);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Replaced wholesale. The deltas describe one intent — the document just posted — and merging
+        // them with the previous import's would leave edges nobody asked for pinning waves nobody
+        // wrote.
+        await db.PlanOverrides
+            .Where(o => o.TaskId == taskId
+                        && (o.Kind == PlanOverrideKind.AddEdge || o.Kind == PlanOverrideKind.RemoveEdge))
+            .ExecuteDeleteAsync(ct);
+
+        foreach (var (from, to) in deltas.Add) db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.AddEdge, from, to));
+        foreach (var (from, to) in deltas.Remove) db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.RemoveEdge, from, to));
+        await db.SaveChangesAsync(ct);
+
+        var plan = await StoreAsync(taskId, actor, PlanSource.Imported, HashOf(document), ct);
+        await tx.CommitAsync(ct);
+
+        return new PlanImportDto(true, [], violations, plan);
+    }
+
+    private static PlanOverride NewOverride(Guid taskId, PlanOverrideKind kind, Guid from, Guid to) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            TaskId = taskId,
+            Kind = kind,
+            Payload = JsonSerializer.Serialize(new PlanEdgeOverridePayload(from, to))
+        };
+
+    /// <summary>SHA-256 of the document as posted, so an operator can tell whether a plan is still theirs.</summary>
+    private static string HashOf(string document) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(document)));
+
+    /// <summary>The keys the document is written in, both ways round.</summary>
+    private async Task<PlanKeys> ResolveKeysAsync(Computed computed, CancellationToken ct)
+    {
+        var taskKeys = (await db.Tasks
+                .Where(t => computed.Closure.Contains(t.Id))
+                .Select(t => new { t.Id, t.ExternalId })
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .ToDictionary(t => t.Id, t => t.ExternalId);
+
+        var mrIds = computed.PlanMrs.Select(m => m.Id).ToList();
+        var mrKeys = (await db.MergeRequests
+                .Where(m => mrIds.Contains(m.Id))
+                .Select(m => new
+                {
+                    m.Id,
+                    Key = m.Repository.Connection.Name + ":" + m.Repository.ExternalId + "!" + m.ExternalId
+                })
+                .AsNoTracking()
+                .ToListAsync(ct))
+            .ToDictionary(m => m.Id, m => m.Key);
+
+        return new PlanKeys(taskKeys, mrKeys);
+    }
+
+    /// <summary>The document's keys and the ids they stand for, in both directions.</summary>
+    private sealed record PlanKeys(
+        IReadOnlyDictionary<Guid, string> TaskKeys, IReadOnlyDictionary<Guid, string> MrKeys);
+
+    /// <summary>
+    /// Resolves a document against the derived plan, answering the wave each merge request is to
+    /// deploy in — or filling <paramref name="errors"/> and answering nothing usable.
+    /// </summary>
+    /// <remarks>
+    /// Membership is compared in BOTH directions. A document missing a merge request is as wrong as
+    /// one inventing a merge request: both mean the author is describing a different plan from the one
+    /// they would be overwriting, and applying the overlap would silently import half an intention.
+    /// </remarks>
+    private static Dictionary<Guid, int> ResolveWaves(
+        PlanDocument doc, Computed computed, PlanKeys keys, List<string> errors)
+    {
+        var taskByKey = keys.TaskKeys.GroupBy(kv => kv.Value, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Key, StringComparer.Ordinal);
+        var mrByKey = keys.MrKeys.GroupBy(kv => kv.Value, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First().Key, StringComparer.Ordinal);
+
+        var taskOfMr = computed.PlanMrs.ToDictionary(m => m.Id, m => m.TaskId);
+        var waveOf = new Dictionary<Guid, int>();
+        var seenTasks = new HashSet<Guid>();
+
+        foreach (var node in doc.Nodes)
+        {
+            if (!taskByKey.TryGetValue(node.TaskKey, out var nodeTaskId))
+            {
+                errors.Add(
+                    $"Unknown task '{node.TaskKey}'. This plan covers: {Describe(keys.TaskKeys.Values)}.");
+                continue;
+            }
+
+            seenTasks.Add(nodeTaskId);
+
+            foreach (var item in node.Items)
+            {
+                if (!mrByKey.TryGetValue(item.MergeRequestKey, out var mrId))
+                {
+                    errors.Add(
+                        $"Unknown merge request '{item.MergeRequestKey}'. This plan covers: "
+                        + $"{Describe(keys.MrKeys.Values)}.");
+                    continue;
+                }
+
+                // Which task a merge request belongs to is the tracker's answer, not the document's.
+                if (taskOfMr.GetValueOrDefault(mrId) != nodeTaskId)
+                    errors.Add(
+                        $"Merge request '{item.MergeRequestKey}' is listed under '{node.TaskKey}', but it "
+                        + "belongs to another task. A document cannot move work between tasks.");
+                else
+                    waveOf[mrId] = item.Wave;
+            }
+        }
+
+        foreach (var taskId in computed.Closure.Where(id => !seenTasks.Contains(id) && keys.TaskKeys.ContainsKey(id)))
+            errors.Add($"Task '{keys.TaskKeys[taskId]}' is in this plan but missing from the document.");
+
+        foreach (var mrId in computed.PlanMrs.Select(m => m.Id).Where(id => !waveOf.ContainsKey(id)))
+            errors.Add(
+                $"Merge request '{keys.MrKeys.GetValueOrDefault(mrId, mrId.ToString("D"))}' is in this plan "
+                + "but missing from the document.");
+
+        if (errors.Count > 0) return waveOf;
+
+        // Contiguous from 1, because a wave is a position in a sequence and not a label. A document
+        // jumping 1, 2, 4 leaves an empty stage: nothing deploys in wave 3, so what it asked for and
+        // what would run are different plans.
+        var waves = waveOf.Values.Distinct().OrderBy(w => w).ToList();
+        for (var i = 0; i < waves.Count; i++)
+            if (waves[i] != i + 1)
+            {
+                errors.Add(
+                    $"Waves must run from 1 with no gaps; this document has {string.Join(", ", waves)}. "
+                    + $"Wave {i + 1} is empty.");
+                break;
+            }
+
+        return waveOf;
+    }
+
+    private static string Describe(IEnumerable<string> keys) =>
+        string.Join(", ", keys.OrderBy(k => k, StringComparer.Ordinal));
 
     /// <summary>The 1-based wave each merge request landed in.</summary>
     private static Dictionary<Guid, int> WavesOf(PlanGraphResult graph)
@@ -256,6 +495,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         HashSet<Guid> Closure,
         IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> Adjacency,
         List<PlanMergeRequest> PlanMrs,
+        IReadOnlyList<PlanEdge> RuleEdges,
         PlanGraphResult Graph);
 
     /// <summary>Computes the target's closure and its ordered plan from the atlas -- shared by build and read.</summary>
@@ -294,7 +534,8 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         var ruleEdges = await LoadRuleEdgesAsync(settings.Rules, [.. ordered.Select(mr => mr.Id)], ct);
 
         return new Computed(
-            closure, adjacency, ordered, ReleasePlanGraph.Build(ordered, add, remove, ruleEdges));
+            closure, adjacency, ordered, ruleEdges,
+            ReleasePlanGraph.Build(ordered, add, remove, ruleEdges));
     }
 
     /// <summary>Loads the whole task graph as adjacency, with the wait policy applied.</summary>

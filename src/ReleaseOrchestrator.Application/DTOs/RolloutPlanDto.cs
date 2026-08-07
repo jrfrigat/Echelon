@@ -95,3 +95,29 @@ public record PlanItemDto(
 
 /// <summary>One execution wave: merge requests that deploy in parallel.</summary>
 public record PlanWaveDto(int Sequence, IReadOnlyList<Guid> MergeRequestIds);
+
+/// <summary>
+/// A mandatory ordering constraint an imported plan does not honour, named the way the document is.
+/// </summary>
+/// <param name="Kind">Which constraint: a task dependency or a hard repository link.</param>
+/// <param name="From">The merge request that should deploy first, by its document key.</param>
+/// <param name="To">The merge request that should wait.</param>
+/// <remarks>
+/// Keys rather than ids: this answers an operator looking at the YAML they just wrote, and a pair of
+/// GUIDs would send them back to the database to find out which two lines to change.
+/// </remarks>
+public record PlanImportViolationDto(string Kind, string From, string To);
+
+/// <summary>What validating or importing a plan document produced.</summary>
+/// <param name="Accepted">Whether the document would be (or was) applied.</param>
+/// <param name="Errors">Why it cannot be applied at all. Empty when it can.</param>
+/// <param name="Violations">
+/// Constraints the requested order breaks. Not errors: an operator may deploy against the declared
+/// order, which is what <c>force</c> is for — but never without the plan recording it.
+/// </param>
+/// <param name="Plan">The plan as stored, on a successful import. Null for a validate.</param>
+public record PlanImportDto(
+    bool Accepted,
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<PlanImportViolationDto> Violations,
+    RolloutPlanDto? Plan);

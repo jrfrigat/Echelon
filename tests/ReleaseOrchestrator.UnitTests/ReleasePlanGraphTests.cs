@@ -416,4 +416,68 @@ public class ReleasePlanGraphTests
         var edge = Assert.Single(edges);
         Assert.Equal(PlanEdgeKind.TaskDependency, edge.Kind);
     }
+
+    // ---- never a silent plan --------------------------------------------------
+
+    /// <summary>
+    /// Dropping a mandatory edge with an override reorders the plan AND is reported.
+    /// </summary>
+    /// <remarks>
+    /// It used to reorder silently. Removing the edge leaves no cycle, so the cycle-breaker had
+    /// nothing to say, and the plan came back with an empty conflict list while deploying a dependent
+    /// task before the one it waits on. <c>ViolatedBy</c> existed for this and was called by nothing.
+    /// </remarks>
+    [Fact]
+    public void RemovingATaskDependencyEdgeIsReportedAsAConflict()
+    {
+        var first = Task();
+        var second = Task();
+        DependsOn(second, first);
+
+        var mrA = Mr(first);
+        var mrB = Mr(second);
+
+        var result = ReleasePlanGraph.Build([mrA, mrB], removeEdges: [(mrA.Id, mrB.Id)]);
+
+        // Both deploy together now, which is exactly what the operator asked for.
+        Assert.Equal(StageOf(result, mrA), StageOf(result, mrB));
+
+        var conflict = Assert.Single(result.Conflicts);
+        Assert.Equal(PlanEdgeKind.TaskDependency, conflict.DroppedEdgeKind);
+        Assert.Equal(mrA.Id, conflict.FromMrId);
+        Assert.Equal(mrB.Id, conflict.ToMrId);
+    }
+
+    /// <summary>A soft repository link is advisory, so overriding it is not a breach to report.</summary>
+    [Fact]
+    public void RemovingASoftRepositoryEdgeIsNotReported()
+    {
+        var a = Repo();
+        var b = Repo();
+        RepoDependsOn(a, b, StackDependencyType.Soft);
+
+        var first = Mr(repo: b);
+        var second = Mr(repo: a);
+
+        var result = ReleasePlanGraph.Build([first, second], removeEdges: [(first.Id, second.Id)]);
+
+        Assert.Empty(result.Conflicts);
+    }
+
+    /// <summary>An edge dropped to break a cycle is reported once, not once per mechanism.</summary>
+    [Fact]
+    public void ACycleBrokenByTheGraphIsReportedOnlyOnce()
+    {
+        var a = Repo();
+        var b = Repo();
+        RepoDependsOn(a, b, StackDependencyType.Hard);
+        RepoDependsOn(b, a, StackDependencyType.Hard);
+
+        var first = Mr(repo: a);
+        var second = Mr(repo: b);
+
+        var result = ReleasePlanGraph.Build([first, second]);
+
+        Assert.Single(result.Conflicts);
+    }
 }

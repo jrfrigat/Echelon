@@ -76,9 +76,8 @@ public class TasksController(
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The plan in the per-task schema, or 404 when the task has no active plan.</returns>
     /// <remarks>
-    /// Export only — there is no import. A plan is a projection of the atlas, so a round trip would
-    /// have to go through the ordering rules and the plan overrides rather than through this text;
-    /// what this is for is reading, diffing and attaching to a change record.
+    /// For reading, diffing, attaching to a change record — and for editing the waves and posting back
+    /// to <c>plan/import</c>.
     /// </remarks>
     [HttpGet("{id:guid}/plan/export")]
     public async Task<IActionResult> ExportPlan(Guid id, CancellationToken ct)
@@ -88,6 +87,42 @@ public class TasksController(
         // text/yaml so a browser shows it and curl can pipe it, rather than JSON-escaping a document
         // whose whole point is being readable.
         return yaml is null ? NotFound() : Content(yaml, "text/yaml; charset=utf-8");
+    }
+
+    /// <summary>Checks a plan document against this task's plan, storing nothing.</summary>
+    /// <param name="id">The target task.</param>
+    /// <param name="req">The document.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>200 with the verdict — an unacceptable document is an answer, not an error.</returns>
+    /// <remarks>
+    /// Read permission, not approve: checking a document changes nothing, and making the safe way to
+    /// find out what an edit would do the privileged one teaches people to skip it.
+    /// </remarks>
+    [HttpPost("{id:guid}/plan/validate")]
+    public async Task<IActionResult> ValidatePlan(
+        Guid id, [FromBody] PlanDocumentRequest req, CancellationToken ct) =>
+        Ok(await planner.ValidatePlanAsync(id, req.Document, ct));
+
+    /// <summary>Applies a plan document to this task.</summary>
+    /// <param name="id">The target task.</param>
+    /// <param name="req">The document.</param>
+    /// <param name="force">
+    /// Accept an order that breaks a task dependency or hard repository link. The plan records the
+    /// breach either way; this only skips the refusal.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>200 with the stored plan, or 422 with what is wrong.</returns>
+    /// <remarks>
+    /// 422 rather than 400: the request is well-formed and the document parsed — what failed is
+    /// reconciling it with the plan it claims to describe, which the body explains in full.
+    /// </remarks>
+    [HttpPost("{id:guid}/plan/import")]
+    [Authorize(Policy = Permissions.ReleasePlanApprove)]
+    public async Task<IActionResult> ImportPlan(
+        Guid id, [FromBody] PlanDocumentRequest req, [FromQuery] bool force, CancellationToken ct)
+    {
+        var result = await planner.ImportPlanAsync(id, req.Document, force, this.ResolveActor(), ct);
+        return result.Accepted ? Ok(result) : UnprocessableEntity(result);
     }
 
     /// <summary>Rebuilds the task's plan from the atlas and makes it active.</summary>
@@ -121,3 +156,10 @@ public class TasksController(
 /// repository's deploy target for the environment sets <c>RedeployPolicy.Always</c>.
 /// </param>
 public record LaunchRolloutRequest([Required] Guid EnvironmentId, bool Redeploy = false);
+
+/// <summary>A plan document, as text.</summary>
+/// <param name="Document">
+/// The plan in the export schema. YAML, and JSON is also accepted since JSON is valid YAML — which
+/// matters for a client assembling the document rather than editing an exported one.
+/// </param>
+public record PlanDocumentRequest([Required] string Document);

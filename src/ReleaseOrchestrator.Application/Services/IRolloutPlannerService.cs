@@ -41,12 +41,46 @@ public interface IRolloutPlannerService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The plan in the per-task schema of docs/issues/006-per-task-planning.md §6.</returns>
     /// <remarks>
-    /// Export only: there is no import yet, so this is a readable, diffable artifact of what the plan
-    /// currently is — for review, for attaching to a change record, and for seeing the tree without
-    /// clicking through it. It is a projection of the atlas either way, so a round trip would have to
-    /// go through the override deltas rather than through this text.
+    /// A readable, diffable artifact of what the plan is — for review, for attaching to a change
+    /// record, and for seeing the tree without clicking through it. It is also the input format of
+    /// <see cref="ImportPlanAsync"/>: what round-trips is the wave assignment, since everything else
+    /// in the document belongs to the atlas.
     /// </remarks>
     Task<string?> ExportPlanYamlAsync(Guid taskId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Checks a plan document against the task's derived plan without storing anything.
+    /// </summary>
+    /// <param name="taskId">The target task.</param>
+    /// <param name="document">The plan, in the export schema.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// The same work <see cref="ImportPlanAsync"/> does, stopped before the write — deliberately the
+    /// same code, not a parallel check. A validate that agreed with import only by convention would be
+    /// worse than none: it would eventually pass a document import then rejects, or accept one import
+    /// silently reorders.
+    /// </remarks>
+    Task<PlanImportDto> ValidatePlanAsync(Guid taskId, string document, CancellationToken ct = default);
+
+    /// <summary>
+    /// Applies a plan document: the wave assignment becomes ordering deltas, and the plan is rebuilt
+    /// from them.
+    /// </summary>
+    /// <param name="taskId">The target task.</param>
+    /// <param name="document">The plan, in the export schema.</param>
+    /// <param name="force">
+    /// Accept a document whose order breaks a task dependency or hard repository link. It skips the
+    /// REFUSAL only — the plan still records every constraint it breaks.
+    /// </param>
+    /// <param name="actor">Who imported it.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Nothing about the imported plan is stored as a plan: plan rows are rebuilt on every ingestion
+    /// event and would carry the import away with them. What is stored is the deltas, which every
+    /// later rebuild replays — the same mechanism an operator's drag-and-drop uses.
+    /// </remarks>
+    Task<PlanImportDto> ImportPlanAsync(
+        Guid taskId, string document, bool force, ActorRef? actor, CancellationToken ct = default);
 
     /// <summary>
     /// Rebuilds the target task's plan from the atlas and makes it the active plan for that task.

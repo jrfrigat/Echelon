@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Rebus.Bus;
+using ReleaseOrchestrator.Application.Contracts.Messages;
 using ReleaseOrchestrator.Application.ReleasePlanning;
 using ReleaseOrchestrator.Core.Enums;
 using ReleaseOrchestrator.Infrastructure.Auth;
@@ -22,8 +24,21 @@ namespace ReleaseOrchestrator.Web.Controllers;
 [ApiController]
 [Route("api/planning")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class PlanningController(AppDbContext db) : ControllerBase
+public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) : ControllerBase
 {
+    /// <summary>
+    /// Asks for every active plan to be rebuilt, because something that decides deploy order changed.
+    /// </summary>
+    /// <remarks>
+    /// Sent rather than done here: rebuilding every active plan inside a PUT is unbounded work behind
+    /// a request. It was previously left to the next ingestion event, which was defensible only while
+    /// the plan screen recomputed on read and therefore looked up to date. It no longer does — a plan
+    /// version now means what it says — so a settings change nobody rebuilt is a change nobody sees.
+    /// This is the same trigger repository ordering has always used, for the same reason.
+    /// </remarks>
+    private Task RequestRecalculationAsync(string reason) =>
+        bus.Send(new ReleasePlanRecalculationRequested(clock.GetUtcNow().UtcDateTime, reason));
+
     /// <summary>The installation-wide wait policy.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The saved settings, or the built-in defaults when none were ever saved.</returns>
@@ -61,10 +76,7 @@ public class PlanningController(AppDbContext db) : ControllerBase
         settings.WaitForLinked = req.WaitForLinked;
         settings.PrerequisiteGroupOrder = order;
         await db.SaveChangesAsync(ct);
-
-        // Not recalculated here: plans rebuild on the next ingestion event, and an operator who wants
-        // it now presses Recalculate on the task. Rebuilding every active plan from a settings save
-        // would be an unbounded amount of work behind a PUT.
+        await RequestRecalculationAsync("Installation wait policy changed");
         return NoContent();
     }
 
@@ -236,9 +248,7 @@ public class PlanningController(AppDbContext db) : ControllerBase
 
         settings.OrderingRulesDocument = string.IsNullOrWhiteSpace(req.Document) ? null : req.Document;
         await db.SaveChangesAsync(ct);
-
-        // Not recalculated here, as with the policy above: plans rebuild on the next ingestion event,
-        // and an operator who wants it now presses Recalculate.
+        await RequestRecalculationAsync("Ordering-rule document changed");
         return NoContent();
     }
 
@@ -325,6 +335,7 @@ public class PlanningController(AppDbContext db) : ControllerBase
         await ReplaceMergeRequestOrderAsync(taskId, req.MergeRequestOrder ?? [], ct);
 
         await db.SaveChangesAsync(ct);
+        await RequestRecalculationAsync($"Planning overrides changed for task {taskId}");
         return NoContent();
     }
 
@@ -405,19 +416,49 @@ public class PlanningController(AppDbContext db) : ControllerBase
             }
         }
 
-        // Rebuild the chain: the head is the one nothing points at, then follow the links.
-        var next = edges.ToDictionary(e => e.From, e => e.To);
-        var head = edges.Select(e => e.From).Except(edges.Select(e => e.To)).FirstOrDefault();
+        return Linearise(edges);
+    }
+
+    /// <summary>Reads a set of "A before B" edges back as one sequence.</summary>
+    /// <remarks>
+    /// <para>
+    /// A topological read, not a walk down a chain. What this screen WRITES is a chain — an operator
+    /// drags a list into an order — but an imported plan writes a wave assignment, which pins several
+    /// merge requests to the same predecessor. The chain walk could not represent that, and its
+    /// <c>ToDictionary(e => e.From)</c> did worse than misread it: two edges out of one merge request
+    /// threw, so opening the planning screen of any imported task answered 500.
+    /// </para>
+    /// <para>
+    /// Reading a partial order as a sequence loses the parallelism, which is honest for a control that
+    /// only offers a sequence. Saving from that control then flattens the import into a strict order —
+    /// deliberately, because the operator just stated one — and the import can be posted again.
+    /// </para>
+    /// <para>
+    /// Kahn's algorithm, keyed on nothing but the edges. A cycle (which the planner would have broken
+    /// anyway) leaves nodes unplaced; they are appended rather than dropped, so the screen shows every
+    /// merge request the deltas mention even when they contradict each other.
+    /// </para>
+    /// </remarks>
+    private static List<Guid> Linearise(List<(Guid From, Guid To)> edges)
+    {
+        var nodes = edges.SelectMany(e => new[] { e.From, e.To }).Distinct().ToList();
+        var successors = edges.ToLookup(e => e.From, e => e.To);
+        var inDegree = nodes.ToDictionary(n => n, _ => 0);
+        foreach (var edge in edges) inDegree[edge.To]++;
 
         var sequence = new List<Guid>();
-        var cursor = head;
-        while (cursor != Guid.Empty && sequence.Count <= edges.Count)
+        var ready = new Queue<Guid>(nodes.Where(n => inDegree[n] == 0));
+
+        while (ready.Count > 0)
         {
-            sequence.Add(cursor);
-            if (!next.TryGetValue(cursor, out var following)) break;
-            cursor = following;
+            var node = ready.Dequeue();
+            sequence.Add(node);
+
+            foreach (var next in successors[node])
+                if (--inDegree[next] == 0) ready.Enqueue(next);
         }
 
+        sequence.AddRange(nodes.Where(n => !sequence.Contains(n)));
         return sequence;
     }
 

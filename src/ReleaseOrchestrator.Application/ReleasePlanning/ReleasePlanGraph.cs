@@ -70,7 +70,49 @@ public static class ReleasePlanGraph
         var conflicts = BreakCycles(edges, ids, rank);
         var stages = TopoSort(edges, ids, rank);
 
+        ReportOverriddenConstraints(mrs, stages, conflicts);
+
         return new PlanGraphResult(stages, conflicts);
+    }
+
+    /// <summary>
+    /// Records every mandatory constraint the finished order does not honour.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The other half of <see cref="ApplyOverrides"/>. Dropping a task or hard edge there reorders the
+    /// plan and leaves no trace in the edge set — no cycle forms, so <see cref="BreakCycles"/> has
+    /// nothing to report, and a plan that deploys against a hard dependency would come back looking
+    /// clean. That is the one thing a plan may never do.
+    /// </para>
+    /// <para>
+    /// Placed in <see cref="Build"/> rather than in the caller so it cannot be forgotten by a new one:
+    /// an override arriving from the plan screen, from an ordering rule or from an imported document
+    /// is checked by the same code, which is what "one derivation" has to mean here.
+    /// </para>
+    /// <para>
+    /// Deduplicated against what the cycle-breaker already said: an edge dropped to break a cycle is
+    /// necessarily violated by the resulting order, and reporting it twice would read as two problems.
+    /// </para>
+    /// </remarks>
+    private static void ReportOverriddenConstraints(
+        IReadOnlyList<PlanMergeRequest> mrs, List<List<Guid>> stages, List<PlanConflict> conflicts)
+    {
+        var stageOf = new Dictionary<Guid, int>();
+        for (int i = 0; i < stages.Count; i++)
+            foreach (var id in stages[i]) stageOf[id] = i;
+
+        var reported = conflicts.Select(c => (c.FromMrId, c.ToMrId)).ToHashSet();
+
+        foreach (var edge in ViolatedBy(mrs, stageOf))
+        {
+            if (!reported.Add((edge.FromMrId, edge.ToMrId))) continue;
+
+            conflicts.Add(new PlanConflict(
+                edge.Kind, edge.FromMrId, edge.ToMrId,
+                $"The plan's order does not honour this {edge.Kind} constraint. An override or an "
+                + "imported wave assignment put these merge requests in this order deliberately."));
+        }
     }
 
     /// <summary>
@@ -173,13 +215,28 @@ public static class ReleasePlanGraph
     /// (docs/issues/006-per-task-planning.md) against the same edge derivation the planner itself
     /// uses, so the two cannot drift — one derivation for import, edit and recalculate alike.
     /// </summary>
-    public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs)
+    public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs) =>
+        DerivedEdges(mrs).Where(e => e.Kind != PlanEdgeKind.RepoSoft).ToList();
+
+    /// <summary>
+    /// Every ordering edge the derivation produces before any operator override — the constraints an
+    /// imported plan has to be reconciled against.
+    /// </summary>
+    /// <param name="mrs">The plan's merge requests.</param>
+    /// <param name="ruleEdges">The ordering-rule document's edges, which are derived too.</param>
+    /// <remarks>
+    /// Public because import needs the edge SET, not just the resulting order: turning a wave
+    /// assignment into deltas means knowing exactly which derived edges contradict it. Deriving that
+    /// set a second time in the importer is the drift 006 §1 forbids, so it is exposed from here.
+    /// </remarks>
+    public static IReadOnlyList<PlanEdge> DerivedEdges(
+        IReadOnlyList<PlanMergeRequest> mrs, IReadOnlyList<PlanEdge>? ruleEdges = null)
     {
         var ids = mrs.Select(mr => mr.Id).ToHashSet();
-        return BuildEdges(mrs, ids)
-            .Where(kv => kv.Value != PlanEdgeKind.RepoSoft)
-            .Select(kv => new PlanEdge(kv.Key.From, kv.Key.To, kv.Value))
-            .ToList();
+        var edges = BuildEdges(mrs, ids);
+        ApplyRuleEdges(edges, ids, ruleEdges);
+
+        return edges.Select(kv => new PlanEdge(kv.Key.From, kv.Key.To, kv.Value)).ToList();
     }
 
     /// <summary>
