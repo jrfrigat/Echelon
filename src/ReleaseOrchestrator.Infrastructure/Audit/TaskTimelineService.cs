@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using ReleaseOrchestrator.Application.Auditing;
 using ReleaseOrchestrator.Application.DTOs;
@@ -276,7 +277,7 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
     };
 
     private sealed record PlanVersion(
-        DateTime CreatedAt, string Version, string? ContentHash,
+        DateTime CreatedAt, int Version, string? ContentHash,
         string? CreatedByOid, string? CreatedByKind, string? CreatedByName);
 
     /// <summary>
@@ -322,7 +323,7 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
 
             result.Add(Entry(
                 version.CreatedAt, TimelineCategories.Plan, TimelineKinds.PlanRecalculated,
-                subject: version.Version,
+                subject: version.Version.ToString(CultureInfo.InvariantCulture),
                 actorOid: version.CreatedByOid, actorKind: version.CreatedByKind, actorName: version.CreatedByName,
                 repetitions: repetitions,
                 repeatedUntil: repetitions > 1 ? oldest.CreatedAt : null));

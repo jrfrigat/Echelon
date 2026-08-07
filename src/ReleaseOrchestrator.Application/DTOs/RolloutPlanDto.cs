@@ -64,7 +64,7 @@ public record RolloutPlanDto(
     Guid Id,
     Guid TargetTaskId,
     string TargetTaskKey,
-    string Version,
+    int Version,
     string Source,
     string Status,
     bool IsActive,

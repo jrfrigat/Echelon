@@ -653,9 +653,6 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("IntraTaskOrder")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("ManualInclusion")
                         .HasColumnType("boolean");
 
@@ -664,6 +661,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
 
                     b.Property<Guid>("PlanTaskNodeId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Wave")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -703,6 +703,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("DependsOnTaskIdsJson")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("RolloutPlanId")
                         .HasColumnType("uuid");
@@ -1095,10 +1098,8 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
 
                     b.Property<string>("YamlHash")
                         .HasMaxLength(64)
@@ -1120,6 +1121,9 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
                     b.HasIndex(new[] { "CreatedAt" }, "IX_RolloutPlan_CreatedAt");
 
                     b.HasIndex(new[] { "TargetTaskId", "CreatedAt" }, "IX_RolloutPlan_TargetTaskId_CreatedAt");
+
+                    b.HasIndex(new[] { "TargetTaskId", "Version" }, "UX_RolloutPlan_TargetTaskId_Version")
+                        .IsUnique();
 
                     b.ToTable("RolloutPlans");
                 });

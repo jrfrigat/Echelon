@@ -20,8 +20,11 @@ public enum PlanOverrideKind
     IncludeMr = 3,
 
     /// <summary>Force a merge request out of the plan.</summary>
-    ExcludeMr = 4,
+    ExcludeMr = 4
 
-    /// <summary>Pin the order of a merge request within its task.</summary>
-    SetIntraTaskOrder = 5
+    // 5 was SetIntraTaskOrder: pin a merge request's order within its task. Removed, and the number
+    // is not reused -- old rows would resurface under a new meaning. It was superseded rather than
+    // dropped: an intra-task order is an ordering edge like any other, so it is expressed as
+    // AddEdge/RemoveEdge and replayed on every build. Its storage (PlanItem.IntraTaskOrder) could
+    // not have worked -- plan rows are recreated on each recalculation.
 }

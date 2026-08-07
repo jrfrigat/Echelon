@@ -104,7 +104,7 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             TargetTaskId = task.Id,
-            Version = "1",
+            Version = 1,
             IsActive = active,
             CreatedAt = Now,
             UpdatedAt = Now,

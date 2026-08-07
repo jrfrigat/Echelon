@@ -110,13 +110,15 @@ public sealed class TaskTimelineServiceTests : IAsyncLifetime
         return mr;
     }
 
+    private int _planVersion;
+
     private RolloutPlan AddPlan(TaskItem task, DateTime at, string? hash, ActorRef? actor = null)
     {
         var plan = new RolloutPlan
         {
             Id = Guid.NewGuid(),
             TargetTaskId = task.Id,
-            Version = at.ToString("yyyyMMddHHmmss"),
+            Version = ++_planVersion,
             Source = PlanSource.Generated,
             Status = PlanStatus.Ready,
             IsActive = false,

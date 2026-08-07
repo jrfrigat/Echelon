@@ -251,7 +251,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             TargetTaskId = task.Id,
-            Version = "1",
+            Version = 1,
             IsActive = true,
             CreatedAt = Now,
             UpdatedAt = Now,

@@ -70,19 +70,41 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .FirstOrDefaultAsync(ct);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Reads the stored nodes, waves and conflicts rather than recomputing them. It used to take the
+    /// metadata from the row and the CONTENT from a fresh computation, which meant version N was
+    /// displayed with content version N never had as soon as the atlas moved — and the launch, which
+    /// reads the stored rows, would then deploy an order the operator had not seen. A plan version has
+    /// to mean one thing; keeping it current is what recalculation is for, and every ingestion event
+    /// triggers one.
+    /// </remarks>
     public async Task<RolloutPlanDto?> GetActivePlanAsync(Guid taskId, CancellationToken ct = default)
     {
         var plan = await db.RolloutPlans
+            .Include(p => p.Nodes).ThenInclude(n => n.Items)
+            .AsSplitQuery()
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.TargetTaskId == taskId && p.IsActive, ct);
-        if (plan is null) return null;
 
-        var computed = await ComputeAsync(taskId, ct);
-        return await BuildDtoAsync(plan, computed, ct);
+        return plan is null ? null : await BuildStoredDtoAsync(plan, ct);
     }
 
     /// <inheritdoc/>
-    public async Task<RolloutPlanDto> RecalculateAsync(Guid taskId, ActorRef? actor, CancellationToken ct = default)
+    public Task<RolloutPlanDto> RecalculateAsync(Guid taskId, ActorRef? actor, CancellationToken ct = default) =>
+        StoreAsync(taskId, actor, PlanSource.Generated, yamlHash: null, ct);
+
+    /// <summary>
+    /// Derives the plan for a task and stores it as the new active version.
+    /// </summary>
+    /// <param name="source">How this version came about; an import records itself as such.</param>
+    /// <param name="yamlHash">The imported document's hash, or null when nobody imported one.</param>
+    /// <remarks>
+    /// The single writer. Recalculation and import both land here rather than each assembling a plan,
+    /// which is what keeps 006 §1 true at the storage layer as well as in the derivation: an imported
+    /// plan is a derived plan whose deltas were written first.
+    /// </remarks>
+    private async Task<RolloutPlanDto> StoreAsync(
+        Guid taskId, ActorRef? actor, PlanSource source, string? yamlHash, CancellationToken ct)
     {
         // Stamped before the read: anything committed before this instant is in the plan.
         var snapshotStartedAt = clock.GetUtcNow().UtcDateTime;
@@ -93,12 +115,24 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         var computed = await ComputeAsync(taskId, ct);
         var now = clock.GetUtcNow().UtcDateTime;
 
+        // One active plan per task: deactivate the previous one and insert in a single transaction,
+        // so a crash between the two never leaves the task with no active plan and two concurrent
+        // recalculations cannot both leave one active (the filtered unique index is the backstop).
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Read inside the transaction, together with the deactivation that serialises concurrent
+        // rebuilds of this task. Max over the task's own history rather than a count: superseded rows
+        // are never deleted today, but a retention that removed them must not restart the numbering.
+        var previousVersion = await db.RolloutPlans
+            .Where(p => p.TargetTaskId == taskId)
+            .MaxAsync(p => (int?)p.Version, ct) ?? 0;
+
         var plan = new RolloutPlan
         {
             Id = Guid.NewGuid(),
             TargetTaskId = taskId,
-            Version = now.ToString("yyyyMMddHHmmss"),
-            Source = PlanSource.Generated,
+            Version = previousVersion + 1,
+            Source = source,
             Status = PlanStatus.Ready,
             IsActive = true,
             CreatedAt = now,
@@ -106,6 +140,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             SnapshotStartedAt = snapshotStartedAt,
             ConflictsJson = computed.Graph.Conflicts.Count == 0 ? null : JsonSerializer.Serialize(computed.Graph.Conflicts),
             ContentHash = ComputeContentHash(computed),
+            YamlHash = yamlHash,
             // Null for the recalculation consumer, which rebuilds every active plan on every
             // ingestion event. Stamped inside the same transaction as the plan below, so authorship
             // cannot commit without the version it describes.
@@ -115,20 +150,38 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             Nodes = []
         };
 
+        var waveOf = WavesOf(computed.Graph);
+
         // A node per closure task -- including tasks with no merge requests, so the tree shows the
-        // whole closure. Items hang off their task's node.
+        // whole closure. Items hang off their task's node, each carrying the wave it was placed in:
+        // the plan of record has to record its own order, or the launch has to guess it again.
         foreach (var closureTaskId in computed.Closure)
         {
-            var node = new PlanTaskNode { Id = Guid.NewGuid(), RolloutPlanId = plan.Id, TaskId = closureTaskId, Items = [] };
+            var dependsOn = computed.Adjacency.TryGetValue(closureTaskId, out var d)
+                ? d.Where(computed.Closure.Contains).OrderBy(id => id).ToList()
+                : [];
+
+            var node = new PlanTaskNode
+            {
+                Id = Guid.NewGuid(),
+                RolloutPlanId = plan.Id,
+                TaskId = closureTaskId,
+                DependsOnTaskIdsJson = dependsOn.Count == 0 ? null : JsonSerializer.Serialize(dependsOn),
+                Items = []
+            };
+
             foreach (var mr in computed.PlanMrs.Where(m => m.TaskId == closureTaskId))
-                node.Items.Add(new PlanItem { Id = Guid.NewGuid(), PlanTaskNodeId = node.Id, MergeRequestId = mr.Id });
+                node.Items.Add(new PlanItem
+                {
+                    Id = Guid.NewGuid(),
+                    PlanTaskNodeId = node.Id,
+                    MergeRequestId = mr.Id,
+                    Wave = waveOf.GetValueOrDefault(mr.Id)
+                });
+
             plan.Nodes.Add(node);
         }
 
-        // One active plan per task: deactivate the previous one and insert in a single transaction,
-        // so a crash between the two never leaves the task with no active plan and two concurrent
-        // recalculations cannot both leave one active (the filtered unique index is the backstop).
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.RolloutPlans
             .Where(p => p.TargetTaskId == taskId && p.IsActive)
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, false), ct);
@@ -141,7 +194,16 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 "Rollout plan for task {Task} built with {Count} dropped dependency link(s); the order violates them.",
                 target.ExternalId, computed.Graph.Conflicts.Count);
 
-        return await BuildDtoAsync(plan, computed, ct);
+        return await BuildStoredDtoAsync(plan, ct);
+    }
+
+    /// <summary>The 1-based wave each merge request landed in.</summary>
+    private static Dictionary<Guid, int> WavesOf(PlanGraphResult graph)
+    {
+        var waveOf = new Dictionary<Guid, int>();
+        for (var i = 0; i < graph.Stages.Count; i++)
+            foreach (var id in graph.Stages[i]) waveOf[id] = i + 1;
+        return waveOf;
     }
 
     /// <summary>
@@ -451,27 +513,50 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     private sealed record PlanEdgeOverridePayload(Guid From, Guid To);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Renders the STORED plan, so an exported document and the rollout that runs describe the same
+    /// order. That is also what makes the document importable: a schema that reports a fresh
+    /// computation could never round-trip, since the thing it described was never stored anywhere.
+    /// </remarks>
     public async Task<string?> ExportPlanYamlAsync(Guid taskId, CancellationToken ct = default)
     {
-        var plan = await db.RolloutPlans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.TargetTaskId == taskId && p.IsActive, ct);
+        var plan = await LoadStoredPlanAsync(taskId, ct);
         if (plan is null) return null;
 
-        var computed = await ComputeAsync(taskId, ct);
+        var (taskKeys, mrKeys) = await LoadKeysAsync(plan, ct);
+        return RenderPlanYaml(plan, taskKeys, mrKeys);
+    }
+
+    /// <summary>The active plan for a task with its tree loaded, or null when it has none.</summary>
+    private Task<RolloutPlan?> LoadStoredPlanAsync(Guid taskId, CancellationToken ct) =>
+        db.RolloutPlans
+            .Include(p => p.Nodes).ThenInclude(n => n.Items)
+            .AsSplitQuery()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.TargetTaskId == taskId && p.IsActive, ct);
+
+    /// <summary>
+    /// The human-readable keys a plan document is written in: task keys and merge-request keys.
+    /// </summary>
+    /// <remarks>
+    /// The merge-request key is 006 §6's natural key — connection, repository path and the provider's
+    /// own id. GitLab's vocabulary, but a key rather than a dialect leaking into the domain, and it is
+    /// what lets a human read an exported plan and find the merge requests it names — and what lets
+    /// import resolve them back without asking for database ids.
+    /// </remarks>
+    private async Task<(Dictionary<Guid, string> TaskKeys, Dictionary<Guid, string> MrKeys)> LoadKeysAsync(
+        RolloutPlan plan, CancellationToken ct)
+    {
+        var closure = plan.Nodes.Select(n => n.TaskId).ToHashSet();
+        var mrIds = plan.Nodes.SelectMany(n => n.Items).Select(i => i.MergeRequestId).ToList();
 
         var taskKeys = (await db.Tasks
-                .Where(t => computed.Closure.Contains(t.Id))
+                .Where(t => closure.Contains(t.Id))
                 .Select(t => new { t.Id, t.ExternalId })
                 .AsNoTracking()
                 .ToListAsync(ct))
             .ToDictionary(t => t.Id, t => t.ExternalId);
 
-        var mrIds = computed.PlanMrs.Select(m => m.Id).ToList();
-
-        // The natural key from 006 §6: connection, repository path and the provider's own id. GitLab's
-        // vocabulary, but it is a key rather than a dialect leaking into the domain — and it is what
-        // makes an exported plan resolvable back to real merge requests by a human reading it.
         var mrKeys = (await db.MergeRequests
                 .Where(m => mrIds.Contains(m.Id))
                 .Select(m => new
@@ -483,11 +568,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 .ToListAsync(ct))
             .ToDictionary(m => m.Id, m => m.Key);
 
-        var waveOf = new Dictionary<Guid, int>();
-        for (var i = 0; i < computed.Graph.Stages.Count; i++)
-            foreach (var id in computed.Graph.Stages[i]) waveOf[id] = i + 1;
-
-        return RenderPlanYaml(plan, computed, taskKeys, mrKeys, waveOf);
+        return (taskKeys, mrKeys);
     }
 
     /// <summary>
@@ -499,38 +580,38 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// one needs quoting is exactly the job a serializer exists to do correctly.
     ///
     /// <c>wave</c> is included and <c>order</c> is not. 006 §6 names an optional authored intra-task
-    /// order; what this document reports is the wave the planner COMPUTED, which is a different fact,
-    /// and labelling a derived value with the key that means "what I asked for" would invite an
-    /// operator to edit it and expect that to matter.
+    /// order; what this document reports is the wave the planner COMPUTED — but it is also the one
+    /// field import reads back, because a wave assignment is the only thing about a plan an operator
+    /// can state that the atlas does not already decide.
     /// </remarks>
     private static string RenderPlanYaml(
         RolloutPlan plan,
-        Computed computed,
         IReadOnlyDictionary<Guid, string> taskKeys,
-        IReadOnlyDictionary<Guid, string> mrKeys,
-        IReadOnlyDictionary<Guid, int> waveOf)
+        IReadOnlyDictionary<Guid, string> mrKeys)
     {
         string TaskKey(Guid id) => taskKeys.GetValueOrDefault(id, id.ToString("D"));
 
-        var nodes = computed.Closure
-            .Where(taskKeys.ContainsKey)
-            .OrderByDescending(id => id == plan.TargetTaskId)
-            .ThenBy(TaskKey, StringComparer.Ordinal)
-            .Select(id =>
+        var nodes = plan.Nodes
+            .Where(n => taskKeys.ContainsKey(n.TaskId))
+            .OrderByDescending(n => n.TaskId == plan.TargetTaskId)
+            .ThenBy(n => TaskKey(n.TaskId), StringComparer.Ordinal)
+            .Select(n =>
             {
-                var node = new Dictionary<string, object?> { ["task"] = TaskKey(id) };
+                var node = new Dictionary<string, object?> { ["task"] = TaskKey(n.TaskId) };
 
-                var dependsOn = computed.Adjacency.TryGetValue(id, out var d)
-                    ? d.Where(computed.Closure.Contains).Select(TaskKey).OrderBy(k => k, StringComparer.Ordinal).ToList()
-                    : [];
+                var dependsOn = ReadDependsOn(n)
+                    .Where(taskKeys.ContainsKey)
+                    .Select(TaskKey)
+                    .OrderBy(k => k, StringComparer.Ordinal)
+                    .ToList();
                 if (dependsOn.Count > 0) node["depends_on"] = dependsOn;
 
-                var items = computed.PlanMrs
-                    .Where(m => m.TaskId == id)
-                    .Select(m => new Dictionary<string, object?>
+                var items = n.Items
+                    .Where(i => mrKeys.ContainsKey(i.MergeRequestId))
+                    .Select(i => new Dictionary<string, object?>
                     {
-                        ["mr"] = mrKeys.GetValueOrDefault(m.Id, m.Id.ToString("D")),
-                        ["wave"] = waveOf.GetValueOrDefault(m.Id)
+                        ["mr"] = mrKeys[i.MergeRequestId],
+                        ["wave"] = i.Wave
                     })
                     .OrderBy(m => (int)m["wave"]!)
                     .ThenBy(m => (string)m["mr"]!, StringComparer.Ordinal)
@@ -550,9 +631,11 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         };
 
         // Echoed read-only, exactly as 006 says: a plan may violate a constraint, but the document
-        // that describes it must never read as clean while it does.
-        if (computed.Graph.Conflicts.Count > 0)
-            document["conflicts"] = computed.Graph.Conflicts
+        // that describes it must never read as clean while it does. Import ignores the key rather than
+        // rejecting it, so a document can be exported, edited and fed straight back.
+        var conflicts = ReadConflicts(plan);
+        if (conflicts.Count > 0)
+            document["conflicts"] = conflicts
                 .Select(c => new Dictionary<string, object?>
                 {
                     ["dropped"] = c.DroppedEdgeKind.ToString(),
@@ -564,59 +647,79 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
 
         var yaml = new SerializerBuilder().WithIndentedSequences().Build().Serialize(document);
 
-        return "# Exported plan. Read-only: importing a plan is not implemented, and a plan is a\n"
-             + "# projection of the atlas -- edits belong in the ordering rules or the plan overrides.\n"
+        return "# Exported plan. Editable: change the 'wave' values and POST it back to\n"
+             + "# /plan/import. Membership is not editable here -- which tasks and merge requests a\n"
+             + "# plan covers comes from the atlas, and import rejects a document that disagrees.\n"
              + yaml;
     }
 
-    private async Task<RolloutPlanDto> BuildDtoAsync(RolloutPlan plan, Computed c, CancellationToken ct)
+    /// <summary>
+    /// Presents a stored plan: its tree, its waves and the constraints it could not honour, all read
+    /// back from the row rather than derived again.
+    /// </summary>
+    /// <remarks>
+    /// Only the display text — task titles, repository names, current merge-request status — is
+    /// resolved live, because a name is not part of what the plan decided. The ORDER is not resolved
+    /// live, and that is the whole distinction: renaming a repository must change the screen, whereas
+    /// a new dependency link must not, until somebody recalculates.
+    /// </remarks>
+    private async Task<RolloutPlanDto> BuildStoredDtoAsync(RolloutPlan plan, CancellationToken ct)
     {
+        var closure = plan.Nodes.Select(n => n.TaskId).ToHashSet();
         var taskById = (await db.Tasks
-                .Where(t => c.Closure.Contains(t.Id))
+                .Where(t => closure.Contains(t.Id))
                 .Select(t => new { t.Id, t.ExternalId, t.Title })
                 .AsNoTracking()
                 .ToListAsync(ct))
             .ToDictionary(t => t.Id);
 
-        var mrIds = c.PlanMrs.Select(m => m.Id).ToList();
+        var mrIds = plan.Nodes.SelectMany(n => n.Items).Select(i => i.MergeRequestId).ToList();
         var mrById = (await db.MergeRequests
                 .Where(m => mrIds.Contains(m.Id))
                 .Select(m => new
                 {
-                    m.Id, m.ExternalId, m.SourceBranch, m.TargetBranch,
+                    m.Id, m.ExternalId, m.SourceBranch, m.TargetBranch, m.CreatedAt,
                     RepoName = m.Repository.Name, m.Status
                 })
                 .AsNoTracking()
                 .ToListAsync(ct))
             .ToDictionary(m => m.Id);
 
-        var waveOf = new Dictionary<Guid, int>();
-        for (int i = 0; i < c.Graph.Stages.Count; i++)
-            foreach (var id in c.Graph.Stages[i]) waveOf[id] = i + 1;
-
-        var nodes = c.Closure
-            .Where(taskById.ContainsKey)
-            .Select(tid =>
+        var nodes = plan.Nodes
+            .Where(n => taskById.ContainsKey(n.TaskId))
+            .Select(n =>
             {
-                var deps = c.Adjacency.TryGetValue(tid, out var d)
-                    ? d.Where(c.Closure.Contains).ToList()
-                    : [];
-                var items = c.PlanMrs
-                    .Where(m => m.TaskId == tid)
-                    .Select(m => mrById[m.Id])
-                    .OrderBy(m => m.RepoName).ThenBy(m => m.ExternalId)
-                    .Select(m => new PlanItemDto(
-                        m.Id, m.ExternalId, m.RepoName, m.SourceBranch, m.TargetBranch,
-                        m.Status.ToString(), waveOf.GetValueOrDefault(m.Id)))
+                var info = taskById[n.TaskId];
+                var items = n.Items
+                    .Where(i => mrById.ContainsKey(i.MergeRequestId))
+                    .Select(i => (Item: i, Mr: mrById[i.MergeRequestId]))
+                    .OrderBy(x => x.Mr.RepoName).ThenBy(x => x.Mr.ExternalId)
+                    .Select(x => new PlanItemDto(
+                        x.Mr.Id, x.Mr.ExternalId, x.Mr.RepoName, x.Mr.SourceBranch, x.Mr.TargetBranch,
+                        x.Mr.Status.ToString(), x.Item.Wave))
                     .ToList();
-                var info = taskById[tid];
-                return new PlanTaskNodeDto(tid, info.ExternalId, info.Title, tid == plan.TargetTaskId, deps, items);
+
+                return new PlanTaskNodeDto(
+                    n.TaskId, info.ExternalId, info.Title, n.TaskId == plan.TargetTaskId,
+                    ReadDependsOn(n).Where(closure.Contains).ToList(), items);
             })
             .OrderByDescending(n => n.IsTarget).ThenBy(n => n.TaskKey)
             .ToList();
 
-        var waves = c.Graph.Stages.Select((stage, i) => new PlanWaveDto(i + 1, stage)).ToList();
-        var conflicts = c.Graph.Conflicts
+        // Ties inside a wave keep the planner's own ordering rule -- oldest merge request first --
+        // so the stored plan reads in the same sequence the derivation produced it in.
+        var waves = plan.Nodes
+            .SelectMany(n => n.Items)
+            .Where(i => mrById.ContainsKey(i.MergeRequestId))
+            .GroupBy(i => i.Wave)
+            .OrderBy(g => g.Key)
+            .Select(g => new PlanWaveDto(
+                g.Key,
+                [.. g.OrderBy(i => mrById[i.MergeRequestId].CreatedAt).ThenBy(i => i.MergeRequestId)
+                     .Select(i => i.MergeRequestId)]))
+            .ToList();
+
+        var conflicts = ReadConflicts(plan)
             .Select(x => new PlanConflictDto(x.DroppedEdgeKind.ToString(), x.FromMrId, x.ToMrId, x.Reason))
             .ToList();
 
@@ -626,5 +729,40 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             plan.Id, plan.TargetTaskId, targetKey,
             plan.Version, plan.Source.ToString(), plan.Status.ToString(), plan.IsActive,
             plan.CreatedAt, plan.UpdatedAt, nodes, waves, conflicts);
+    }
+
+    /// <summary>The wait edges recorded on a node, empty when the plan predates the column or is unreadable.</summary>
+    /// <remarks>
+    /// Empty rather than throwing, for the same reason a bad override is skipped: a plan an operator
+    /// cannot open is a plan they cannot fix. A missing tree edge understates the dependencies on
+    /// screen, which the next recalculation restores.
+    /// </remarks>
+    private static IReadOnlyList<Guid> ReadDependsOn(PlanTaskNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.DependsOnTaskIdsJson)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Guid>>(node.DependsOnTaskIdsJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>The conflicts recorded on a plan, empty when there are none or the payload is unreadable.</summary>
+    private static IReadOnlyList<PlanConflict> ReadConflicts(RolloutPlan plan)
+    {
+        if (string.IsNullOrWhiteSpace(plan.ConflictsJson)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<PlanConflict>>(plan.ConflictsJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 }

@@ -21,6 +21,10 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 // it fluently as well yields two indexes in the model and one in the database, which
 // has-pending-model-changes cannot see and only ModelMappingTests catches.
 [Index(nameof(TargetTaskId), nameof(CreatedAt), Name = "IX_RolloutPlan_TargetTaskId_CreatedAt")]
+// One version number per task, enforced rather than assumed. Without it the ordinal is only as good
+// as the code that assigns it, and the whole point of replacing the timestamp was that two plans
+// could share a name.
+[Index(nameof(TargetTaskId), nameof(Version), IsUnique = true, Name = "UX_RolloutPlan_TargetTaskId_Version")]
 public class RolloutPlan
 {
     /// <summary>Primary key.</summary>
@@ -30,9 +34,25 @@ public class RolloutPlan
     /// <summary>The task this plan rolls out. Restrict: a task with a plan is not deleted from under it.</summary>
     public Guid TargetTaskId { get; set; }
 
-    /// <summary>Version label; a generated plan stamps the time it was built.</summary>
-    [Required, MaxLength(50)]
-    public string Version { get; set; } = string.Empty;
+    /// <summary>Version ordinal within the target task: 1 for its first plan, incrementing from there.</summary>
+    /// <remarks>
+    /// <para>
+    /// An ordinal, not a timestamp. It used to be <c>yyyyMMddHHmmss</c>, which is not a version but a
+    /// label that happens to sort: two rebuilds inside one second produced the same string, and every
+    /// ingestion event rebuilds every active plan, so a burst reached that easily. The history then
+    /// showed two different plans under one name with nothing to tell them apart.
+    /// </para>
+    /// <para>
+    /// Uniqueness is the index below, not a convention. Concurrent recalculation of the SAME task
+    /// cannot produce a duplicate anyway — both attempts insert an active row and the filtered unique
+    /// index rejects one — so no retry is layered on top; the loser faults and Rebus redelivers it.
+    /// </para>
+    /// <para>
+    /// When the plan was built is <see cref="CreatedAt"/>, which is what the timestamp was really
+    /// being read for.
+    /// </para>
+    /// </remarks>
+    public int Version { get; set; }
 
     /// <summary>How the plan came to exist. See <see cref="PlanSource"/>.</summary>
     public PlanSource Source { get; set; }

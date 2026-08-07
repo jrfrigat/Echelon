@@ -130,17 +130,24 @@ public class RolloutService(
             }
         }
 
-        // Waves come from the same pure graph the plan is shown with, over the plan's merge requests.
-        var planInputs = await db.MergeRequests
-            .Where(m => mrIds.Contains(m.Id))
-            .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
-            .Select(PlanInput.FromEntity)
-            .AsSplitQuery().AsNoTracking()
-            .ToListAsync(ct);
-        var graph = ReleasePlanGraph.Build(planInputs);
-        var waveOf = new Dictionary<Guid, int>();
-        for (int i = 0; i < graph.Stages.Count; i++)
-            foreach (var id in graph.Stages[i]) waveOf[id] = i + 1;
+        // Waves come from the plan being launched, not from a fresh derivation.
+        //
+        // This used to call ReleasePlanGraph.Build over the plan's merge requests, reading their EF
+        // navigations directly -- which meant the deploy order ignored everything the planner had been
+        // told: the wait policy, the operator's edge overrides and the ordering-rule document all
+        // vanished at exactly the moment they mattered, and the rollout ran an order nobody had
+        // approved. One derivation, in the planner, recorded on the plan (006 §1).
+        var waveOf = plan.Nodes
+            .SelectMany(n => n.Items)
+            .GroupBy(i => i.MergeRequestId)
+            .ToDictionary(g => g.Key, g => g.Max(i => i.Wave));
+
+        // A plan stored before waves were recorded has none. Refusing is the only safe answer: any
+        // fallback here would be the second derivation this change exists to remove, and every
+        // ingestion event rebuilds active plans, so the fix is immediate.
+        if (waveOf.Values.Any(w => w <= 0))
+            throw new DomainValidationException(
+                "This plan version predates recorded deploy waves. Recalculate the plan before launching.");
 
         var mrDetails = await db.MergeRequests
             .Where(m => mrIds.Contains(m.Id))
