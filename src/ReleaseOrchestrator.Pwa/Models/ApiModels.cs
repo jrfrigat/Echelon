@@ -197,6 +197,37 @@ public record PlanMembershipDto(
     Guid MergeRequestId, string MrExternalId, string RepositoryName,
     string SourceBranch, string MrStatus, string State);
 
+/// <summary>A named selector in the ordering rules, as the visual editor holds it.</summary>
+/// <remarks>Mutable, unlike the read DTOs: this one is bound to form fields.</remarks>
+public class OrderingRuleGroupDto
+{
+    public string Name { get; set; } = "";
+    public List<string> Connectors { get; set; } = [];
+    public List<string> Repositories { get; set; } = [];
+    public List<string> Branches { get; set; } = [];
+    public List<string> TaskKeys { get; set; } = [];
+    public List<string> Labels { get; set; } = [];
+}
+
+/// <summary>One ordering rule, as the visual editor holds it.</summary>
+public class OrderingRuleOrderDto
+{
+    public string Group { get; set; } = "";
+    public List<string> Needs { get; set; } = [];
+    public string Type { get; set; } = "Hard";
+    public string Scope { get; set; } = "AcrossPlan";
+}
+
+/// <summary>The ordering rules as a structure.</summary>
+/// <param name="Editable">
+/// False when the stored document says something the form cannot express, so the form must not own it.
+/// </param>
+public record OrderingRulesModelDto(
+    bool Editable,
+    List<string> Problems,
+    List<OrderingRuleGroupDto> Groups,
+    List<OrderingRuleOrderDto> Order);
+
 public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);
 
 // ---- environments and rollouts (mirrors Application.DTOs.RolloutDto + EnvironmentsController) ----

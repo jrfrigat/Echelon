@@ -76,12 +76,160 @@
             @UiStrings.Rules_Description
         </FlareText>
 
+        @* Two ways in, one document. The form builds a model and the SERVER renders it into the same
+           text the box below holds -- the editor never becomes a second source of truth, and anything
+           the form cannot express keeps the text as the only way in. *@
+        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+            <FlareChip Size="ChipSize.Sm" Selected="@(!_visualEditor)" OnClick="@(() => SetEditor(false))"
+                       Label="@UiStrings.Rules_Mode_Text" />
+            <FlareChip Size="ChipSize.Sm" Selected="_visualEditor" OnClick="@(() => SetEditor(true))"
+                       Label="@UiStrings.Rules_Mode_Visual" />
+        </FlareStack>
+
+        @if (_visualEditor)
+        {
+            <FlareCard Variant="CardVariant.Outlined">
+                <FlareCardContent>
+                    @if (_model is null)
+                    {
+                        <FlareProgress Variant="ProgressVariant.Circular" />
+                    }
+                    else if (!_model.Editable)
+                    {
+                        @* Refused rather than offered with parts missing: saving from the form would
+                           drop what it cannot hold, and silently deleting a rule is worse than
+                           telling somebody to use the text box. *@
+                        <FlareAlert Severity="AlertSeverity.Info" Title="@UiStrings.Rules_Visual_Unavailable">
+                            <FlareStack Gap="FlareSpacing.XSmall">
+                                <FlareText Typo="TypographyScale.BodySmall">@UiStrings.Rules_Visual_Unavailable_Body</FlareText>
+                                @foreach (var problem in _model.Problems)
+                                {
+                                    <FlareText Typo="TypographyScale.BodySmall">@problem</FlareText>
+                                }
+                            </FlareStack>
+                        </FlareAlert>
+                    }
+                    else
+                    {
+                        <FlareStack Gap="FlareSpacing.Medium">
+                            @* ---- groups: what each name selects ---- *@
+                            <FlareText Typo="TypographyScale.TitleSmall">@UiStrings.Rules_Visual_Groups</FlareText>
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                @UiStrings.Rules_Visual_Groups_Hint
+                            </FlareText>
+
+                            @foreach (var group in _model.Groups)
+                            {
+                                <FlareCard Variant="CardVariant.Filled">
+                                    <FlareCardContent>
+                                        <FlareStack Gap="FlareSpacing.Small">
+                                            <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End">
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_GroupName"
+                                                                Value="@group.Name"
+                                                                ValueChanged="@(v => group.Name = v ?? "")"
+                                                                Style="min-width:12rem;" />
+                                                <FlareSpacer />
+                                                <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                                                 AriaLabel="@UiStrings.Rules_Visual_RemoveGroup"
+                                                                 OnClick="@(() => _model.Groups.Remove(group))">
+                                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                                                </FlareIconButton>
+                                            </FlareStack>
+                                            <FlareStack Row Gap="FlareSpacing.Small" Wrap>
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_Repositories"
+                                                                Value="@Join(group.Repositories)"
+                                                                ValueChanged="@(v => group.Repositories = Split(v))"
+                                                                Style="min-width:16rem;" />
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_Connectors"
+                                                                Value="@Join(group.Connectors)"
+                                                                ValueChanged="@(v => group.Connectors = Split(v))"
+                                                                Style="min-width:12rem;" />
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_Branches"
+                                                                Value="@Join(group.Branches)"
+                                                                ValueChanged="@(v => group.Branches = Split(v))"
+                                                                Style="min-width:12rem;" />
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_TaskKeys"
+                                                                Value="@Join(group.TaskKeys)"
+                                                                ValueChanged="@(v => group.TaskKeys = Split(v))"
+                                                                Style="min-width:12rem;" />
+                                                <FlareTextField Label="@UiStrings.Rules_Visual_Labels"
+                                                                Value="@Join(group.Labels)"
+                                                                ValueChanged="@(v => group.Labels = Split(v))"
+                                                                Style="min-width:12rem;" />
+                                            </FlareStack>
+                                        </FlareStack>
+                                    </FlareCardContent>
+                                </FlareCard>
+                            }
+
+                            <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined" OnClick="AddGroup">
+                                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
+                                <ChildContent>@UiStrings.Rules_Visual_AddGroup</ChildContent>
+                            </FlareButton>
+
+                            @* ---- order: which group waits for which ---- *@
+                            <FlareText Typo="TypographyScale.TitleSmall">@UiStrings.Rules_Visual_Order</FlareText>
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                                @UiStrings.Rules_Visual_Order_Hint
+                            </FlareText>
+
+                            @foreach (var rule in _model.Order)
+                            {
+                                <FlareCard Variant="CardVariant.Filled">
+                                    <FlareCardContent>
+                                        <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.End" Wrap>
+                                            <FlareSelect TValue="string" Label="@UiStrings.Rules_Visual_Group"
+                                                         Value="@rule.Group" ValueChanged="@(v => rule.Group = v ?? "")"
+                                                         Items="@GroupNames" Style="min-width:10rem;" />
+                                            <FlareTextField Label="@UiStrings.Rules_Visual_Needs"
+                                                            Value="@Join(rule.Needs)"
+                                                            ValueChanged="@(v => rule.Needs = Split(v))"
+                                                            Style="min-width:14rem;" />
+                                            <FlareSelect TValue="string" Label="@UiStrings.DefaultPlan_Col_Type"
+                                                         Value="@rule.Type" ValueChanged="@(v => rule.Type = v ?? "Hard")"
+                                                         Items="@(new[] { "Hard", "Soft" })"
+                                                         ItemLabel="@(t => t == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)" />
+                                            <FlareSelect TValue="string" Label="@UiStrings.Rules_Visual_Scope"
+                                                         Value="@rule.Scope" ValueChanged="@(v => rule.Scope = v ?? "AcrossPlan")"
+                                                         Items="@(new[] { "AcrossPlan", "WithinTask" })"
+                                                         ItemLabel="@(s => s == "WithinTask" ? UiStrings.Rules_Visual_Scope_WithinTask : UiStrings.Rules_Visual_Scope_AcrossPlan)" />
+                                            <FlareSpacer />
+                                            <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error"
+                                                             AriaLabel="@UiStrings.Rules_Visual_RemoveRule"
+                                                             OnClick="@(() => _model.Order.Remove(rule))">
+                                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                                            </FlareIconButton>
+                                        </FlareStack>
+                                    </FlareCardContent>
+                                </FlareCard>
+                            }
+
+                            <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Outlined"
+                                         OnClick="AddRule" Disabled="@(_model.Groups.Count == 0)">
+                                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
+                                <ChildContent>@UiStrings.Rules_Visual_AddRule</ChildContent>
+                            </FlareButton>
+
+                            <FlareStack Row Gap="FlareSpacing.Small" Wrap>
+                                @* Preview before save, because what is being written is the deploy
+                                   order of every rollout in the installation. *@
+                                <FlareButton Variant="ButtonVariant.Outlined" OnClick="PreviewModel" Loading="_validating">
+                                    @UiStrings.Rules_Visual_Preview
+                                </FlareButton>
+                                <FlareButton OnClick="SaveModel" Loading="_savingRules">@UiStrings.Common_Save</FlareButton>
+                            </FlareStack>
+                        </FlareStack>
+                    }
+                </FlareCardContent>
+            </FlareCard>
+        }
+
         <FlareCard Variant="CardVariant.Outlined">
             <FlareCardContent>
                 <FlareStack Gap="FlareSpacing.Small">
-                    @* A text area, not a visual editor. The format is still being settled, and an
-                       editor built on a moving schema would have to be rebuilt with it -- so the
-                       document is edited as text and the page's job is to show what it MEANS. *@
+                    @* The document itself stays editable as text whichever mode is on: the language
+                       says things no form will (nested excludes, per-task policy), and the form
+                       renders INTO this box so the two never disagree about what is stored. *@
                     <FlareTextArea Label="@UiStrings.Rules_Document_Label" @bind-Value="_document"
                                    Rows="16" Style="font-family:monospace;" />
 
@@ -308,6 +456,68 @@
 
         _savingRules = false;
     }
+
+    // ---- visual editor ------------------------------------------------------------------------
+
+    bool _visualEditor;
+    OrderingRulesModelDto? _model;
+
+    IEnumerable<string> GroupNames => _model?.Groups.Select(g => g.Name) ?? [];
+
+    /// <summary>
+    /// Switches between editing the document as text and building it from a form.
+    /// </summary>
+    /// <remarks>
+    /// The model is fetched on every switch rather than cached, so the form always starts from what
+    /// is STORED. Starting from an unsaved edit in the text box would give the form a document the
+    /// server never parsed, and it is the server's parse that decides what a rule means.
+    /// </remarks>
+    async Task SetEditor(bool visual)
+    {
+        _visualEditor = visual;
+        if (visual) await RunAsync(async () => _model = await Api.GetOrderingRulesModelAsync());
+    }
+
+    void AddGroup() => _model?.Groups.Add(new OrderingRuleGroupDto { Name = "" });
+
+    void AddRule() =>
+        _model?.Order.Add(new OrderingRuleOrderDto { Group = _model.Groups.FirstOrDefault()?.Name ?? "" });
+
+    /// <summary>Renders the form into the text box, so what will be saved can be read first.</summary>
+    async Task PreviewModel()
+    {
+        if (_model is null) return;
+        _validating = true;
+        if (await RunAsync(async () => _document = (await Api.RenderOrderingRulesModelAsync(_model)).Document))
+            await ValidateRules();
+        _validating = false;
+    }
+
+    /// <summary>Renders the form and stores it, through the same gate the text editor uses.</summary>
+    async Task SaveModel()
+    {
+        if (_model is null) return;
+        _savingRules = true;
+        if (await RunAsync(() => Api.SaveOrderingRulesModelAsync(_model), UiStrings.Rules_Saved))
+        {
+            await Load();
+            await RunAsync(async () => _model = await Api.GetOrderingRulesModelAsync());
+        }
+        _savingRules = false;
+    }
+
+    /// <summary>
+    /// A list as one comma-separated field, and back.
+    /// </summary>
+    /// <remarks>
+    /// Globs and labels are short and are usually pasted from somewhere else, so one field beats a
+    /// row of chips with an add button. Blank entries are dropped on the way in: a trailing comma is
+    /// how everyone types a list, and an empty glob would silently match nothing.
+    /// </remarks>
+    static string Join(IEnumerable<string>? values) => string.Join(", ", values ?? []);
+
+    static List<string> Split(string? value) =>
+        [.. (value ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
     /// <summary>Fills the editor with a document equivalent to the rules configured on screen.</summary>
     /// <remarks>

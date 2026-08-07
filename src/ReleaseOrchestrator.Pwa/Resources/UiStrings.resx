@@ -1386,4 +1386,76 @@
   <data name="Rules_Owns_ReadOnly" xml:space="preserve">
     <value>Adding rules here is disabled while the document defines the order.</value>
   </data>
+  <data name="Rules_Mode_Text" xml:space="preserve">
+    <value>Edit as text</value>
+  </data>
+  <data name="Rules_Mode_Visual" xml:space="preserve">
+    <value>Build with a form</value>
+  </data>
+  <data name="Rules_Visual_Unavailable" xml:space="preserve">
+    <value>This document cannot be edited with the form</value>
+  </data>
+  <data name="Rules_Visual_Unavailable_Body" xml:space="preserve">
+    <value>It uses something the form does not hold — a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</value>
+  </data>
+  <data name="Rules_Visual_Groups" xml:space="preserve">
+    <value>Groups</value>
+  </data>
+  <data name="Rules_Visual_Groups_Hint" xml:space="preserve">
+    <value>A group is a name for a set of work. Patterns may use * and ?; several values in one field are alternatives.</value>
+  </data>
+  <data name="Rules_Visual_GroupName" xml:space="preserve">
+    <value>Group name</value>
+  </data>
+  <data name="Rules_Visual_Repositories" xml:space="preserve">
+    <value>Repositories</value>
+  </data>
+  <data name="Rules_Visual_Connectors" xml:space="preserve">
+    <value>Connectors</value>
+  </data>
+  <data name="Rules_Visual_Branches" xml:space="preserve">
+    <value>Branches</value>
+  </data>
+  <data name="Rules_Visual_TaskKeys" xml:space="preserve">
+    <value>Task keys</value>
+  </data>
+  <data name="Rules_Visual_Labels" xml:space="preserve">
+    <value>Labels</value>
+  </data>
+  <data name="Rules_Visual_AddGroup" xml:space="preserve">
+    <value>Add a group</value>
+  </data>
+  <data name="Rules_Visual_RemoveGroup" xml:space="preserve">
+    <value>Remove this group</value>
+  </data>
+  <data name="Rules_Visual_Order" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="Rules_Visual_Order_Hint" xml:space="preserve">
+    <value>Each rule says which group waits for which. Hard is never dropped to break a cycle; soft is dropped first.</value>
+  </data>
+  <data name="Rules_Visual_Group" xml:space="preserve">
+    <value>Waits</value>
+  </data>
+  <data name="Rules_Visual_Needs" xml:space="preserve">
+    <value>Waits for</value>
+  </data>
+  <data name="Rules_Visual_Scope" xml:space="preserve">
+    <value>Reach</value>
+  </data>
+  <data name="Rules_Visual_Scope_AcrossPlan" xml:space="preserve">
+    <value>Across the plan</value>
+  </data>
+  <data name="Rules_Visual_Scope_WithinTask" xml:space="preserve">
+    <value>Within one task</value>
+  </data>
+  <data name="Rules_Visual_AddRule" xml:space="preserve">
+    <value>Add a rule</value>
+  </data>
+  <data name="Rules_Visual_RemoveRule" xml:space="preserve">
+    <value>Remove this rule</value>
+  </data>
+  <data name="Rules_Visual_Preview" xml:space="preserve">
+    <value>Preview as text</value>
+  </data>
 </root>

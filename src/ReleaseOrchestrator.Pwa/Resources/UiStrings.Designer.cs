@@ -3639,5 +3639,173 @@ namespace ReleaseOrchestrator.Pwa.Resources {
                 return ResourceManager.GetString("Plugins_Cat_Action", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Edit as text</summary>
+        public static string Rules_Mode_Text {
+            get {
+                return ResourceManager.GetString("Rules_Mode_Text", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Build with a form</summary>
+        public static string Rules_Mode_Visual {
+            get {
+                return ResourceManager.GetString("Rules_Mode_Visual", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to This document cannot be edited with the form</summary>
+        public static string Rules_Visual_Unavailable {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Unavailable", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to It uses something the form does not hold — a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</summary>
+        public static string Rules_Visual_Unavailable_Body {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Unavailable_Body", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Groups</summary>
+        public static string Rules_Visual_Groups {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Groups", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to A group is a name for a set of work. Patterns may use * and ?; several values in one field are alternatives.</summary>
+        public static string Rules_Visual_Groups_Hint {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Groups_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Group name</summary>
+        public static string Rules_Visual_GroupName {
+            get {
+                return ResourceManager.GetString("Rules_Visual_GroupName", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Repositories</summary>
+        public static string Rules_Visual_Repositories {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Repositories", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Connectors</summary>
+        public static string Rules_Visual_Connectors {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Connectors", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Branches</summary>
+        public static string Rules_Visual_Branches {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Branches", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Task keys</summary>
+        public static string Rules_Visual_TaskKeys {
+            get {
+                return ResourceManager.GetString("Rules_Visual_TaskKeys", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Labels</summary>
+        public static string Rules_Visual_Labels {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Labels", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Add a group</summary>
+        public static string Rules_Visual_AddGroup {
+            get {
+                return ResourceManager.GetString("Rules_Visual_AddGroup", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Remove this group</summary>
+        public static string Rules_Visual_RemoveGroup {
+            get {
+                return ResourceManager.GetString("Rules_Visual_RemoveGroup", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Order</summary>
+        public static string Rules_Visual_Order {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Order", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Each rule says which group waits for which. Hard is never dropped to break a cycle; soft is dropped first.</summary>
+        public static string Rules_Visual_Order_Hint {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Order_Hint", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Waits</summary>
+        public static string Rules_Visual_Group {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Group", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Waits for</summary>
+        public static string Rules_Visual_Needs {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Needs", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Reach</summary>
+        public static string Rules_Visual_Scope {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Scope", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Across the plan</summary>
+        public static string Rules_Visual_Scope_AcrossPlan {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Scope_AcrossPlan", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Within one task</summary>
+        public static string Rules_Visual_Scope_WithinTask {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Scope_WithinTask", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Add a rule</summary>
+        public static string Rules_Visual_AddRule {
+            get {
+                return ResourceManager.GetString("Rules_Visual_AddRule", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Remove this rule</summary>
+        public static string Rules_Visual_RemoveRule {
+            get {
+                return ResourceManager.GetString("Rules_Visual_RemoveRule", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Preview as text</summary>
+        public static string Rules_Visual_Preview {
+            get {
+                return ResourceManager.GetString("Rules_Visual_Preview", resourceCulture);
+            }
+        }
     }
 }

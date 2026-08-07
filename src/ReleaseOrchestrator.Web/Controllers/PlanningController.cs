@@ -224,6 +224,135 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
         return Ok(new OrderingRulesValidationDto(true, [], groups));
     }
 
+    /// <summary>
+    /// The ordering rules as a structure, for editing them by clicking rather than typing.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The parsed document, or an empty model when none is stored or it cannot be read.</returns>
+    /// <remarks>
+    /// Parsed on the server, deliberately. The client could not do it without shipping a YAML reader
+    /// into the browser, and then two readers would decide what a document means — the exact
+    /// divergence the single-document design exists to prevent. This one is the planner's.
+    ///
+    /// An unreadable document answers <c>Editable: false</c> rather than an error: the text editor
+    /// above it is how you fix that, and a form silently offering to overwrite a document it failed
+    /// to understand would lose whatever the author actually wrote.
+    /// </remarks>
+    [HttpGet("rules/model")]
+    public async Task<IActionResult> GetRulesModel(CancellationToken ct)
+    {
+        var document = await db.PlanningSettings
+            .AsNoTracking()
+            .Select(s => s.OrderingRulesDocument)
+            .FirstOrDefaultAsync(ct);
+
+        if (string.IsNullOrWhiteSpace(document))
+            return Ok(new OrderingRulesModelDto(true, [], [], []));
+
+        var parsed = OrderingRuleDocument.Read(document);
+        return parsed.IsValid
+            ? Ok(ToModel(parsed.Rules!))
+            : Ok(new OrderingRulesModelDto(false, parsed.Errors, [], []));
+    }
+
+    /// <summary>
+    /// Renders a structure into a document without saving it.
+    /// </summary>
+    /// <param name="req">The model the editor built.</param>
+    /// <remarks>
+    /// A preview, so an operator can see the text their clicks produced before it becomes the
+    /// installation's deploy order. It also proves the round trip: the rendered document is read back
+    /// with the same reader the planner uses, and a model that cannot survive that is refused here
+    /// rather than stored.
+    /// </remarks>
+    [HttpPost("rules/model/render")]
+    public IActionResult RenderRulesModel([FromBody] OrderingRulesModelDto req)
+    {
+        var (document, errors) = Render(req);
+        return errors.Count > 0
+            ? BadRequest(new { error = "The rules could not be written.", problems = errors })
+            : Ok(new OrderingRulesDocumentDto(document));
+    }
+
+    /// <summary>
+    /// Renders a structure and stores it as the ordering-rule document.
+    /// </summary>
+    /// <param name="req">The model the editor built.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Goes through exactly the same gate as saving the text: rendered, then read back, then stored
+    /// only if valid. The editor gets no privileged path to the database.
+    /// </remarks>
+    [HttpPut("rules/model")]
+    [Authorize(Policy = Permissions.ConfigEdit)]
+    public async Task<IActionResult> SetRulesModel([FromBody] OrderingRulesModelDto req, CancellationToken ct)
+    {
+        var (document, errors) = Render(req);
+        if (errors.Count > 0)
+            return BadRequest(new { error = "The rules could not be written.", problems = errors });
+
+        return await SetRules(new OrderingRulesDocumentDto(document), ct);
+    }
+
+    /// <summary>
+    /// Writes a model out and reads it straight back, so a document the editor cannot round-trip
+    /// never reaches storage.
+    /// </summary>
+    /// <returns>The rendered text, and everything wrong with it.</returns>
+    private static (string Document, IReadOnlyList<string> Errors) Render(OrderingRulesModelDto req)
+    {
+        var rules = new OrderingRules(
+            1,
+            new TaskPolicySpec(null, null, null, []),
+            req.Groups.ToDictionary(
+                g => g.Name,
+                g => new WorkSelector(
+                    g.Connectors ?? [], g.Repositories ?? [], g.Branches ?? [],
+                    g.TaskKeys ?? [], g.Labels ?? []),
+                StringComparer.Ordinal),
+            [.. req.Order.Select(o => new GroupOrderSpec(
+                o.Group,
+                o.Needs ?? [],
+                string.Equals(o.Type, "Soft", StringComparison.OrdinalIgnoreCase)
+                    ? StackDependencyType.Soft
+                    : StackDependencyType.Hard,
+                string.Equals(o.Scope, "WithinTask", StringComparison.OrdinalIgnoreCase)
+                    ? OrderScope.WithinTask
+                    : OrderScope.AcrossPlan))]);
+
+        var document = OrderingRuleWriter.Write(rules);
+
+        // The round trip is the check. Anything the form let through that the language does not
+        // accept -- a blank group name, a 'needs' pointing at a group nobody defined -- surfaces here
+        // as the reader's own message, which is the message the text editor would have given.
+        var parsed = OrderingRuleDocument.Read(document);
+        return (document, parsed.IsValid ? [] : parsed.Errors);
+    }
+
+    /// <summary>Projects the parsed rules onto the editor's shape.</summary>
+    /// <remarks>
+    /// The wait policy and the per-task overrides are carried in the document but not offered by the
+    /// form: they are edited on their own screens, and duplicating them here would give an operator
+    /// two places to set one thing. The renderer therefore writes them empty — which is why saving
+    /// from the editor is refused while a document defines them (see the page).
+    /// </remarks>
+    private static OrderingRulesModelDto ToModel(OrderingRules rules) =>
+        new(
+            // Editable only when the form can express the whole document. A document using the task
+            // policy or nested excludes would come back through the renderer with those silently
+            // dropped, so the form declines to own it rather than quietly deleting a rule.
+            Editable:
+                rules.Tasks is { WaitForSubtasks: null, WaitForLinked: null, GroupOrder: null, Overrides.Count: 0 }
+                && rules.Groups.Values.All(g => g.Exclude is null),
+            Problems: [],
+            Groups: [.. rules.Groups
+                .OrderBy(g => g.Key, StringComparer.Ordinal)
+                .Select(g => new OrderingRuleGroupDto(
+                    g.Key, g.Value.Connectors, g.Value.Repositories, g.Value.Branches,
+                    g.Value.TaskKeys, g.Value.Labels))],
+            Order: [.. rules.Order.Select(o => new OrderingRuleOrderDto(
+                o.Group, o.Needs, o.Type.ToString(), o.Scope.ToString()))]);
+
     /// <summary>Saves the ordering-rule document. An invalid one is refused.</summary>
     /// <param name="req">The document.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -643,6 +772,47 @@ public record PlanMembershipDto(
     string SourceBranch,
     string MrStatus,
     string State);
+
+/// <summary>A named selector, as the visual editor holds it.</summary>
+/// <param name="Name">The group name that <c>order</c> entries refer to.</param>
+/// <param name="Connectors">Connection-name globs.</param>
+/// <param name="Repositories">Repository external-id globs.</param>
+/// <param name="Branches">Source-branch globs.</param>
+/// <param name="TaskKeys">Task-key globs.</param>
+/// <param name="Labels">Labels, matched exactly.</param>
+public record OrderingRuleGroupDto(
+    string Name,
+    IReadOnlyList<string>? Connectors,
+    IReadOnlyList<string>? Repositories,
+    IReadOnlyList<string>? Branches,
+    IReadOnlyList<string>? TaskKeys,
+    IReadOnlyList<string>? Labels);
+
+/// <summary>One ordering rule, as the visual editor holds it.</summary>
+/// <param name="Group">The group that waits.</param>
+/// <param name="Needs">The groups it waits for.</param>
+/// <param name="Type">"Hard" or "Soft".</param>
+/// <param name="Scope">"AcrossPlan" or "WithinTask".</param>
+public record OrderingRuleOrderDto(
+    string Group,
+    IReadOnlyList<string>? Needs,
+    string? Type,
+    string? Scope);
+
+/// <summary>The ordering rules as a structure the visual editor can hold.</summary>
+/// <param name="Editable">
+/// False when the stored document says something the form cannot express — a wait policy, a per-task
+/// override, a nested exclude. Saving from the form would drop it, so the form refuses to own it and
+/// the text editor stays the way in.
+/// </param>
+/// <param name="Problems">Why the stored document could not be read, when it could not.</param>
+/// <param name="Groups">The named selectors.</param>
+/// <param name="Order">The ordering between them.</param>
+public record OrderingRulesModelDto(
+    bool Editable,
+    IReadOnlyList<string> Problems,
+    IReadOnlyList<OrderingRuleGroupDto> Groups,
+    IReadOnlyList<OrderingRuleOrderDto> Order);
 
 /// <summary>Request to force a merge request into or out of a rollout.</summary>
 /// <param name="State">

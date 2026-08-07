@@ -322,6 +322,24 @@ public class ApiService(HttpClient http)
     public Task DeleteReadinessPinAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/readiness-pins/{id}", ct), ct);
 
+    /// <summary>The ordering rules as a structure, for the visual editor.</summary>
+    /// <remarks>
+    /// Parsed on the server. Doing it here would mean a second YAML reader deciding what a document
+    /// means, and the planner's is the one that counts.
+    /// </remarks>
+    public Task<OrderingRulesModelDto> GetOrderingRulesModelAsync(CancellationToken ct = default) =>
+        GetAsync<OrderingRulesModelDto>("api/planning/rules/model", ct);
+
+    /// <summary>Renders a structure into document text without saving it.</summary>
+    public Task<OrderingRulesDocumentDto> RenderOrderingRulesModelAsync(
+        OrderingRulesModelDto model, CancellationToken ct = default) =>
+        SendAsync<OrderingRulesDocumentDto>(
+            () => http.PostAsJsonAsync("api/planning/rules/model/render", model, ct), ct);
+
+    /// <summary>Renders a structure and stores it as the ordering-rule document.</summary>
+    public Task SaveOrderingRulesModelAsync(OrderingRulesModelDto model, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync("api/planning/rules/model", model, ct), ct);
+
     /// <summary>The merge requests forced into or out of a task's rollout.</summary>
     /// <remarks>
     /// Read separately from the plan, because an excluded merge request is by definition absent from

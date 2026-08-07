@@ -1386,4 +1386,76 @@
   <data name="Rules_Owns_ReadOnly" xml:space="preserve">
     <value>Добавление правил здесь отключено, пока порядок задаёт документ.</value>
   </data>
+  <data name="Rules_Mode_Text" xml:space="preserve">
+    <value>Текстом</value>
+  </data>
+  <data name="Rules_Mode_Visual" xml:space="preserve">
+    <value>Формой</value>
+  </data>
+  <data name="Rules_Visual_Unavailable" xml:space="preserve">
+    <value>Этот документ формой не правится</value>
+  </data>
+  <data name="Rules_Visual_Unavailable_Body" xml:space="preserve">
+    <value>В нём есть то, чего форма не держит: политика ожидания, исключение под задачу или вложенный exclude. Форма это потеряла бы, поэтому правьте текстом ниже.</value>
+  </data>
+  <data name="Rules_Visual_Groups" xml:space="preserve">
+    <value>Группы</value>
+  </data>
+  <data name="Rules_Visual_Groups_Hint" xml:space="preserve">
+    <value>Группа — это имя для набора работы. В шаблонах можно * и ?; несколько значений в поле — это варианты.</value>
+  </data>
+  <data name="Rules_Visual_GroupName" xml:space="preserve">
+    <value>Имя группы</value>
+  </data>
+  <data name="Rules_Visual_Repositories" xml:space="preserve">
+    <value>Репозитории</value>
+  </data>
+  <data name="Rules_Visual_Connectors" xml:space="preserve">
+    <value>Коннекторы</value>
+  </data>
+  <data name="Rules_Visual_Branches" xml:space="preserve">
+    <value>Ветки</value>
+  </data>
+  <data name="Rules_Visual_TaskKeys" xml:space="preserve">
+    <value>Ключи задач</value>
+  </data>
+  <data name="Rules_Visual_Labels" xml:space="preserve">
+    <value>Лейблы</value>
+  </data>
+  <data name="Rules_Visual_AddGroup" xml:space="preserve">
+    <value>Добавить группу</value>
+  </data>
+  <data name="Rules_Visual_RemoveGroup" xml:space="preserve">
+    <value>Удалить группу</value>
+  </data>
+  <data name="Rules_Visual_Order" xml:space="preserve">
+    <value>Очерёдность</value>
+  </data>
+  <data name="Rules_Visual_Order_Hint" xml:space="preserve">
+    <value>Каждое правило говорит, какая группа кого ждёт. Hard не снимается при разрыве цикла, soft снимается первым.</value>
+  </data>
+  <data name="Rules_Visual_Group" xml:space="preserve">
+    <value>Ждёт</value>
+  </data>
+  <data name="Rules_Visual_Needs" xml:space="preserve">
+    <value>Ждёт кого</value>
+  </data>
+  <data name="Rules_Visual_Scope" xml:space="preserve">
+    <value>Охват</value>
+  </data>
+  <data name="Rules_Visual_Scope_AcrossPlan" xml:space="preserve">
+    <value>По всему плану</value>
+  </data>
+  <data name="Rules_Visual_Scope_WithinTask" xml:space="preserve">
+    <value>Внутри задачи</value>
+  </data>
+  <data name="Rules_Visual_AddRule" xml:space="preserve">
+    <value>Добавить правило</value>
+  </data>
+  <data name="Rules_Visual_RemoveRule" xml:space="preserve">
+    <value>Удалить правило</value>
+  </data>
+  <data name="Rules_Visual_Preview" xml:space="preserve">
+    <value>Показать текстом</value>
+  </data>
 </root>
