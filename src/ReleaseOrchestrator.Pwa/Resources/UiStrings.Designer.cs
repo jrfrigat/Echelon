@@ -998,6 +998,30 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Membership overrides.</summary>
+        public static string Plan_Membership_Title => ResourceManager.GetString("Plan_Membership_Title", resourceCulture)!;
+
+        /// <summary>Looks up a localized string explaining that membership overrides survive every rebuild.</summary>
+        public static string Plan_Membership_Intro => ResourceManager.GetString("Plan_Membership_Intro", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Excluded.</summary>
+        public static string Plan_Membership_Excluded => ResourceManager.GetString("Plan_Membership_Excluded", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Forced in.</summary>
+        public static string Plan_Membership_Included => ResourceManager.GetString("Plan_Membership_Included", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Forced in.</summary>
+        public static string Plan_Membership_Forced => ResourceManager.GetString("Plan_Membership_Forced", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Restore.</summary>
+        public static string Plan_Membership_Restore => ResourceManager.GetString("Plan_Membership_Restore", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Membership updated.</summary>
+        public static string Plan_Membership_Saved => ResourceManager.GetString("Plan_Membership_Saved", resourceCulture)!;
+
+        /// <summary>Looks up a localized string similar to Exclude merge request {0} from this rollout.</summary>
+        public static string Plan_Membership_Exclude_Aria => ResourceManager.GetString("Plan_Membership_Exclude_Aria", resourceCulture)!;
+
         /// <summary>Looks up a localized string similar to Close.</summary>
         public static string Common_Close {
             get {

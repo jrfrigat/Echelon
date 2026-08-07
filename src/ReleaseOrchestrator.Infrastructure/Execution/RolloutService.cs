@@ -101,6 +101,15 @@ public class RolloutService(
         var closure = plan.Nodes.Select(n => n.TaskId).ToHashSet();
         var mrIds = plan.Nodes.SelectMany(n => n.Items.Select(i => i.MergeRequestId)).Distinct().ToList();
 
+        // A plan with nothing in it produces a run with no steps, which nothing can ever advance: it
+        // stays Running for good, and the liveness check below then refuses every later launch for
+        // this pair with "a rollout is already running". Refusing up front is the difference between
+        // an answer and a wedged pair that only a database edit clears.
+        if (mrIds.Count == 0)
+            throw new DomainValidationException(
+                "This plan has no merge requests to deploy. The task may have none yet, or they may all "
+                + "be excluded from the rollout.");
+
         // Readiness: every prerequisite task in the closure must be deployed in this environment.
         var blocking = await BlockingTasksAsync(closure, exceptTaskId: taskId, environmentId, ct);
         if (blocking.Count > 0)

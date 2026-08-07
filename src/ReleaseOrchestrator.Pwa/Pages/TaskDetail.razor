@@ -178,6 +178,11 @@ else
                                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
                                     <FlareChip Size="ChipSize.Sm" Label="@string.Format(UiStrings.Plan_Wave, item.Wave)" />
                                     <FlareChip Size="ChipSize.Sm" Color="@StatusColor(item.MrStatus)" Label="@item.MrStatus" />
+                                    @if (item.ManuallyIncluded)
+                                    {
+                                        @* The one row in the plan that does not follow from the atlas. *@
+                                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Plan_Membership_Forced" />
+                                    }
                                     <FlareStack Gap="FlareSpacing.None">
                                         <FlareText Typo="TypographyScale.BodyMedium">@item.RepositoryName !@item.MrExternalId</FlareText>
                                         <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
@@ -192,6 +197,14 @@ else
                                                      OnClick="@(() => OpenPins(item.MergeRequestId, item.MrExternalId))">
                                         <FlareIconView Value="MaterialDesign3Icons.Regular.Approval" />
                                     </FlareIconButton>
+                                    @* Membership: keep this merge request out of the rollout without touching
+                                       it in the provider. Stored as a delta on the task, so it survives the
+                                       rebuild that every ingestion event triggers. *@
+                                    <FlareIconButton Size="ButtonSize.Sm" Color="FlareColor.Error" Disabled="_busy"
+                                                     AriaLabel="@string.Format(UiStrings.Plan_Membership_Exclude_Aria, item.MrExternalId)"
+                                                     OnClick="@(() => SetMembership(item.MergeRequestId, "excluded"))">
+                                        <FlareIconView Value="MaterialDesign3Icons.Regular.Block" />
+                                    </FlareIconButton>
                                 </FlareStack>
                             }
                         </FlareStack>
@@ -200,6 +213,40 @@ else
             </FlareCard>
         }
     </FlareStack>
+}
+
+@* Excluded work is invisible in the tree by construction, so it is listed here. Without this the
+   exclude button would be a one-way door. *@
+@if (_membership.Count > 0)
+{
+    <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Plan_Membership_Title</FlareText>
+    <FlareCard Variant="CardVariant.Outlined">
+        <FlareCardContent>
+            <FlareStack Gap="FlareSpacing.XSmall">
+                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                    @UiStrings.Plan_Membership_Intro
+                </FlareText>
+                @foreach (var entry in _membership)
+                {
+                    <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Center">
+                        <FlareChip Size="ChipSize.Sm"
+                                   Color="@(entry.State == "Excluded" ? FlareColor.Error : FlareColor.Warning)"
+                                   Label="@(entry.State == "Excluded" ? UiStrings.Plan_Membership_Excluded : UiStrings.Plan_Membership_Included)" />
+                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(entry.MrStatus)" Label="@entry.MrStatus" />
+                        <FlareStack Gap="FlareSpacing.None">
+                            <FlareText Typo="TypographyScale.BodyMedium">@entry.RepositoryName !@entry.MrExternalId</FlareText>
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@entry.SourceBranch</FlareText>
+                        </FlareStack>
+                        <FlareSpacer />
+                        <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" Disabled="_busy"
+                                     OnClick="@(() => SetMembership(entry.MergeRequestId, "auto"))">
+                            @UiStrings.Plan_Membership_Restore
+                        </FlareButton>
+                    </FlareStack>
+                }
+            </FlareStack>
+        </FlareCardContent>
+    </FlareCard>
 }
 
 <FlareDialog Visible="_showPins" Title="@string.Format(UiStrings.Pin_Dialog_Title, _pinMrExternalId)"
@@ -287,6 +334,35 @@ else
             await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(_pinMrId));
     }
 
+    // Merge requests forced into or out of this rollout.
+    List<PlanMembershipDto> _membership = [];
+
+    /// <summary>
+    /// Forces a merge request in or out of the rollout, then rebuilds the plan so the screen shows
+    /// the result rather than the request.
+    /// </summary>
+    /// <remarks>
+    /// Recalculated here explicitly. The endpoint also asks for a rebuild, but that goes through the
+    /// queue and lands whenever it lands — and the plan is read from storage now, so without this the
+    /// operator would press exclude and watch nothing happen.
+    /// </remarks>
+    async Task SetMembership(Guid mergeRequestId, string state)
+    {
+        _busy = true;
+        if (await RunAsync(
+                async () => await Api.SetPlanMembershipAsync(Id, mergeRequestId, state),
+                UiStrings.Plan_Membership_Saved))
+        {
+            await RunAsync(async () => _plan = await Api.RecalculateTaskPlanAsync(Id));
+            await LoadMembership();
+            RebuildKeyMap();
+        }
+        _busy = false;
+    }
+
+    Task LoadMembership() =>
+        RunAsync(async () => _membership = await Api.GetPlanMembershipAsync(Id));
+
     /// <summary>
     /// Keyed on the route parameter rather than on first render: the parent and subtask chips
     /// navigate to another task, and Blazor reuses this component for that — OnInitializedAsync
@@ -308,6 +384,7 @@ else
             _task = await Api.GetTaskAsync(Id);
             _plan = await Api.GetTaskPlanAsync(Id);
             _environments = await Api.GetEnvironmentsAsync();
+            _membership = await Api.GetPlanMembershipAsync(Id);
         });
         var first = _environments?.FirstOrDefault(e => e.IsEnabled);
         if (first is not null && _selectedEnvironmentId == Guid.Empty) _selectedEnvironmentId = first.Id;

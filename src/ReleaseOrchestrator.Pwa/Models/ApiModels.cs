@@ -190,7 +190,12 @@ public record PlanTaskNodeDto(
 
 public record PlanItemDto(
     Guid MergeRequestId, string MrExternalId, string RepositoryName,
-    string SourceBranch, string TargetBranch, string MrStatus, int Wave);
+    string SourceBranch, string TargetBranch, string MrStatus, int Wave, bool ManuallyIncluded);
+
+/// <summary>A merge request an operator forced into or out of a task's rollout.</summary>
+public record PlanMembershipDto(
+    Guid MergeRequestId, string MrExternalId, string RepositoryName,
+    string SourceBranch, string MrStatus, string State);
 
 public record PlanWaveDto(int Sequence, List<Guid> MergeRequestIds);
 

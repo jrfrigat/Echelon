@@ -402,6 +402,30 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Wave {0}</value>
   </data>
+  <data name="Plan_Membership_Title" xml:space="preserve">
+    <value>Membership overrides</value>
+  </data>
+  <data name="Plan_Membership_Intro" xml:space="preserve">
+    <value>Merge requests forced into or out of this rollout. They stay this way through every rebuild until you restore them.</value>
+  </data>
+  <data name="Plan_Membership_Excluded" xml:space="preserve">
+    <value>Excluded</value>
+  </data>
+  <data name="Plan_Membership_Included" xml:space="preserve">
+    <value>Forced in</value>
+  </data>
+  <data name="Plan_Membership_Forced" xml:space="preserve">
+    <value>Forced in</value>
+  </data>
+  <data name="Plan_Membership_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Plan_Membership_Saved" xml:space="preserve">
+    <value>Membership updated</value>
+  </data>
+  <data name="Plan_Membership_Exclude_Aria" xml:space="preserve">
+    <value>Exclude merge request {0} from this rollout</value>
+  </data>
   <data name="Common_Close" xml:space="preserve">
     <value>Close</value>
   </data>

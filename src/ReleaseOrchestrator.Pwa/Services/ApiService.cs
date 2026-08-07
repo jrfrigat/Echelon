@@ -322,6 +322,20 @@ public class ApiService(HttpClient http)
     public Task DeleteReadinessPinAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/readiness-pins/{id}", ct), ct);
 
+    /// <summary>The merge requests forced into or out of a task's rollout.</summary>
+    /// <remarks>
+    /// Read separately from the plan, because an excluded merge request is by definition absent from
+    /// it — this is the only way back for a decision that would otherwise be one-way.
+    /// </remarks>
+    public Task<List<PlanMembershipDto>> GetPlanMembershipAsync(Guid taskId, CancellationToken ct = default) =>
+        GetAsync<List<PlanMembershipDto>>($"api/planning/tasks/{taskId}/membership", ct);
+
+    /// <param name="state">"auto", "included" or "excluded".</param>
+    public Task SetPlanMembershipAsync(
+        Guid taskId, Guid mergeRequestId, string state, CancellationToken ct = default) =>
+        SendAsync(() => http.PutAsJsonAsync(
+            $"api/planning/tasks/{taskId}/membership/{mergeRequestId}", new { State = state }, ct), ct);
+
     // ---- rollouts -------------------------------------------------------------
 
     /// <param name="redeploy">Redeploy already-deployed merge requests, where their target permits it.</param>

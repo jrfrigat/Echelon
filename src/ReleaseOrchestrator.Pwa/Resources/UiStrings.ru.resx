@@ -402,6 +402,30 @@
   <data name="Plan_Wave" xml:space="preserve">
     <value>Волна {0}</value>
   </data>
+  <data name="Plan_Membership_Title" xml:space="preserve">
+    <value>Правки состава</value>
+  </data>
+  <data name="Plan_Membership_Intro" xml:space="preserve">
+    <value>Merge request'ы, принудительно убранные из выкатки или добавленные в неё. Так и останется при каждой пересборке, пока не вернёте.</value>
+  </data>
+  <data name="Plan_Membership_Excluded" xml:space="preserve">
+    <value>Исключён</value>
+  </data>
+  <data name="Plan_Membership_Included" xml:space="preserve">
+    <value>Добавлен вручную</value>
+  </data>
+  <data name="Plan_Membership_Forced" xml:space="preserve">
+    <value>Добавлен вручную</value>
+  </data>
+  <data name="Plan_Membership_Restore" xml:space="preserve">
+    <value>Вернуть</value>
+  </data>
+  <data name="Plan_Membership_Saved" xml:space="preserve">
+    <value>Состав обновлён</value>
+  </data>
+  <data name="Plan_Membership_Exclude_Aria" xml:space="preserve">
+    <value>Исключить merge request {0} из выкатки</value>
+  </data>
   <data name="Common_Close" xml:space="preserve">
     <value>Закрыть</value>
   </data>

@@ -339,6 +339,126 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
         return NoContent();
     }
 
+    /// <summary>
+    /// The merge requests an operator forced into or out of this task's rollout.
+    /// </summary>
+    /// <param name="taskId">The task.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Resolved to display keys here rather than returned as bare ids. An excluded merge request is
+    /// absent from the plan by construction, so this endpoint is the only place it can be seen — and
+    /// a list of GUIDs would make the decision effectively irreversible.
+    /// </remarks>
+    [HttpGet("tasks/{taskId:guid}/membership")]
+    public async Task<IActionResult> GetMembership(Guid taskId, CancellationToken ct)
+    {
+        var rows = await db.PlanOverrides
+            .Where(o => o.TaskId == taskId
+                        && (o.Kind == PlanOverrideKind.IncludeMr || o.Kind == PlanOverrideKind.ExcludeMr))
+            .Select(o => new { o.Kind, o.Payload })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        var byId = new Dictionary<Guid, PlanOverrideKind>();
+        foreach (var row in rows)
+            if (ReadMembershipPayload(row.Payload) is { } id)
+                byId[id] = row.Kind;
+
+        var ids = byId.Keys.ToList();
+        var details = await db.MergeRequests
+            .Where(m => ids.Contains(m.Id))
+            .Select(m => new
+            {
+                m.Id, m.ExternalId, m.SourceBranch, m.Status,
+                RepositoryName = m.Repository.Name
+            })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return Ok(details
+            .Select(m => new PlanMembershipDto(
+                m.Id, m.ExternalId, m.RepositoryName, m.SourceBranch, m.Status.ToString(),
+                byId[m.Id] == PlanOverrideKind.IncludeMr ? "Included" : "Excluded"))
+            .OrderBy(m => m.RepositoryName, StringComparer.Ordinal)
+            .ThenBy(m => m.MrExternalId, StringComparer.Ordinal)
+            .ToList());
+    }
+
+    /// <summary>
+    /// Forces one merge request into or out of a task's rollout, or hands it back to the derivation.
+    /// </summary>
+    /// <param name="taskId">The task.</param>
+    /// <param name="mergeRequestId">The merge request.</param>
+    /// <param name="req">The decision: <c>auto</c>, <c>included</c> or <c>excluded</c>.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// One merge request per call rather than a replace-the-set body. Two operators excluding
+    /// different merge requests from the same plan would otherwise overwrite each other with a stale
+    /// list, and the loser's exclusion would come back on the next rebuild without anyone noticing.
+    /// </remarks>
+    [HttpPut("tasks/{taskId:guid}/membership/{mergeRequestId:guid}")]
+    [Authorize(Policy = Permissions.ReleasePlanApprove)]
+    public async Task<IActionResult> SetMembership(
+        Guid taskId, Guid mergeRequestId, [FromBody] PlanMembershipRequest req, CancellationToken ct)
+    {
+        if (!await db.Tasks.AnyAsync(t => t.Id == taskId, ct)) return NotFound();
+        if (!await db.MergeRequests.AnyAsync(m => m.Id == mergeRequestId, ct))
+            return NotFound(new { error = "Unknown merge request." });
+
+        PlanOverrideKind? kind;
+        switch (req.State?.ToLowerInvariant())
+        {
+            case null or "" or "auto": kind = null; break;
+            case "included": kind = PlanOverrideKind.IncludeMr; break;
+            case "excluded": kind = PlanOverrideKind.ExcludeMr; break;
+            default:
+                return BadRequest(new
+                {
+                    error = $"Unknown membership state '{req.State}'. Valid values: auto, included, excluded."
+                });
+        }
+
+        // Both kinds are cleared first, so the three states are genuinely exclusive and re-applying
+        // one is idempotent rather than accumulating rows that all replay.
+        var payload = JsonSerializer.Serialize(new { MergeRequestId = mergeRequestId });
+        var existing = await db.PlanOverrides
+            .Where(o => o.TaskId == taskId
+                        && (o.Kind == PlanOverrideKind.IncludeMr || o.Kind == PlanOverrideKind.ExcludeMr))
+            .ToListAsync(ct);
+
+        foreach (var row in existing.Where(r => ReadMembershipPayload(r.Payload) == mergeRequestId))
+            db.PlanOverrides.Remove(row);
+
+        if (kind is { } chosen)
+            db.PlanOverrides.Add(new PlanOverride
+            {
+                Id = Guid.NewGuid(),
+                TaskId = taskId,
+                Kind = chosen,
+                Payload = payload
+            });
+
+        await db.SaveChangesAsync(ct);
+        await RequestRecalculationAsync($"Plan membership changed for task {taskId}");
+        return NoContent();
+    }
+
+    /// <summary>Reads a membership delta's merge-request id, or null when the payload is unreadable.</summary>
+    private static Guid? ReadMembershipPayload(string payload)
+    {
+        try
+        {
+            var value = JsonSerializer.Deserialize<MembershipPayload>(payload);
+            return value is null || value.MergeRequestId == Guid.Empty ? null : value.MergeRequestId;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private sealed record MembershipPayload(Guid MergeRequestId);
+
     /// <summary>Replaces the explicit sequence over a task's prerequisites.</summary>
     /// <remarks>
     /// Replaced wholesale rather than diffed: the sequence is positional, and a partial update would
@@ -508,3 +628,25 @@ public record TaskPlanningDto(
     string? PrerequisiteGroupOrder,
     IReadOnlyList<Guid>? PrerequisiteOrder,
     IReadOnlyList<Guid>? MergeRequestOrder);
+
+/// <summary>A merge request an operator forced into or out of a task's rollout.</summary>
+/// <param name="MergeRequestId">The merge request.</param>
+/// <param name="MrExternalId">Its provider id, for display.</param>
+/// <param name="RepositoryName">Its repository, for display.</param>
+/// <param name="SourceBranch">Its branch, for display.</param>
+/// <param name="MrStatus">Its current status — an excluded merge request may since have been merged.</param>
+/// <param name="State">"Included" or "Excluded".</param>
+public record PlanMembershipDto(
+    Guid MergeRequestId,
+    string MrExternalId,
+    string RepositoryName,
+    string SourceBranch,
+    string MrStatus,
+    string State);
+
+/// <summary>Request to force a merge request into or out of a rollout.</summary>
+/// <param name="State">
+/// <c>auto</c> hands the decision back to the derivation, <c>included</c> forces it in,
+/// <c>excluded</c> forces it out.
+/// </param>
+public record PlanMembershipRequest(string? State);

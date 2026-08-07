@@ -182,7 +182,11 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                     Id = Guid.NewGuid(),
                     PlanTaskNodeId = node.Id,
                     MergeRequestId = mr.Id,
-                    Wave = waveOf.GetValueOrDefault(mr.Id)
+                    Wave = waveOf.GetValueOrDefault(mr.Id),
+                    // Recorded so the stored plan says which rows are here because someone asked,
+                    // rather than because the derivation chose them. Reading it off the delta at
+                    // display time would answer for the CURRENT deltas, not for this version.
+                    ManualInclusion = computed.ManuallyIncluded.Contains(mr.Id)
                 });
 
             plan.Nodes.Add(node);
@@ -496,6 +500,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> Adjacency,
         List<PlanMergeRequest> PlanMrs,
         IReadOnlyList<PlanEdge> RuleEdges,
+        IReadOnlySet<Guid> ManuallyIncluded,
         PlanGraphResult Graph);
 
     /// <summary>Computes the target's closure and its ordered plan from the atlas -- shared by build and read.</summary>
@@ -505,11 +510,23 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         var closure = PlanClosureBuilder.Closure(taskId, adjacency).ToHashSet();
         var closureIds = closure.Select(id => (Guid?)id).ToList();
 
+        // Replayed on every build, exactly like the ordering deltas: membership is an operator
+        // decision about the ROLLOUT, not a fact about the merge request, so it must survive the next
+        // ingestion event rather than being re-derived away.
+        var membership = await LoadMembershipOverridesAsync(taskId, ct);
+
         var planMrs = await db.MergeRequests
             // A closed (abandoned) merge request is not part of the rollout; everything else the
             // task owns is, so the tree shows the full picture. The executor decides at launch what
             // is already deployed and skips it.
-            .Where(mr => closureIds.Contains(mr.TaskId) && mr.Status != MergeRequestStatus.Closed)
+            //
+            // Either half is overridable. Excluding is the common one -- work that belongs to the
+            // task but is deliberately not being shipped with it. Including brings back a merge
+            // request the derivation dropped, which today means a closed one that is being deployed
+            // anyway; without it the only recourse was reopening it in the provider.
+            .Where(mr => closureIds.Contains(mr.TaskId)
+                         && (mr.Status != MergeRequestStatus.Closed || membership.Include.Contains(mr.Id))
+                         && !membership.Exclude.Contains(mr.Id))
             .OrderBy(mr => mr.CreatedAt).ThenBy(mr => mr.Id)
             .Select(PlanInput.FromEntity)
             .AsSplitQuery()
@@ -534,9 +551,66 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         var ruleEdges = await LoadRuleEdgesAsync(settings.Rules, [.. ordered.Select(mr => mr.Id)], ct);
 
         return new Computed(
-            closure, adjacency, ordered, ruleEdges,
+            closure, adjacency, ordered, ruleEdges, membership.Include,
             ReleasePlanGraph.Build(ordered, add, remove, ruleEdges));
     }
+
+    /// <summary>
+    /// The merge requests an operator forced into or out of this task's rollout.
+    /// </summary>
+    /// <remarks>
+    /// Kept as deltas on the task and replayed on every build, for the same reason the ordering edits
+    /// are: a plan is rebuilt on every ingestion event, so a decision recorded on the plan itself
+    /// would last until the next webhook.
+    ///
+    /// Exclusion wins when a merge request is somehow named by both. That is the conservative
+    /// direction — "do not deploy this" is a stronger statement than "deploy this", and the surprise
+    /// of something not shipping is recoverable in a way that shipping it is not.
+    /// </remarks>
+    private async Task<(HashSet<Guid> Include, HashSet<Guid> Exclude)> LoadMembershipOverridesAsync(
+        Guid taskId, CancellationToken ct)
+    {
+        var rows = await db.PlanOverrides
+            .Where(o => o.TaskId == taskId
+                        && (o.Kind == PlanOverrideKind.IncludeMr || o.Kind == PlanOverrideKind.ExcludeMr))
+            .Select(o => new { o.Kind, o.Payload })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        HashSet<Guid> include = [];
+        HashSet<Guid> exclude = [];
+
+        foreach (var row in rows)
+        {
+            if (DeserializeMergeRequest(row.Payload) is not { } id) continue;
+
+            if (row.Kind == PlanOverrideKind.IncludeMr) include.Add(id);
+            else exclude.Add(id);
+        }
+
+        include.ExceptWith(exclude);
+        return (include, exclude);
+    }
+
+    /// <summary>Reads a membership delta's payload, answering null for one that cannot be read.</summary>
+    /// <remarks>Null rather than throwing, for the same reason as an unreadable edge: a bad row must
+    /// not make the task unplannable, and the safe direction is the derived membership.</remarks>
+    private static Guid? DeserializeMergeRequest(string payload)
+    {
+        try
+        {
+            var value = JsonSerializer.Deserialize<PlanMembershipOverridePayload>(payload);
+            return value is null || value.MergeRequestId == Guid.Empty ? null : value.MergeRequestId;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The stored shape of an <c>IncludeMr</c>/<c>ExcludeMr</c> delta.</summary>
+    /// <param name="MergeRequestId">The merge request forced into or out of the rollout.</param>
+    private sealed record PlanMembershipOverridePayload(Guid MergeRequestId);
 
     /// <summary>Loads the whole task graph as adjacency, with the wait policy applied.</summary>
     /// <remarks>
@@ -937,7 +1011,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                     .OrderBy(x => x.Mr.RepoName).ThenBy(x => x.Mr.ExternalId)
                     .Select(x => new PlanItemDto(
                         x.Mr.Id, x.Mr.ExternalId, x.Mr.RepoName, x.Mr.SourceBranch, x.Mr.TargetBranch,
-                        x.Mr.Status.ToString(), x.Item.Wave))
+                        x.Mr.Status.ToString(), x.Item.Wave, x.Item.ManualInclusion))
                     .ToList();
 
                 return new PlanTaskNodeDto(
