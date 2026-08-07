@@ -23,7 +23,7 @@ namespace ReleaseOrchestrator.UnitTests.Archive;
 ///
 /// The FK itself was checked against a real SQL Server on 2026-07-17, by hand rather than by a
 /// test here: deleting a merge request a plan still refers to fails with error 547, so the
-/// Restrict that <see cref="MergeRequestStillReferencedByTheExecutionEngineIsNotArchived"/> relies on is real and not
+/// Restrict that <see cref="MergeRequestStillReferencedByAPlanIsNotArchived"/> relies on is real and not
 /// merely modelled. That check is not automated — nothing in CI has a database — so it is a
 /// point-in-time fact, not a guard.
 /// </remarks>
@@ -186,13 +186,54 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A merge request still referenced by the execution engine must stay: the per-task plan, the
-    /// rollout history and the deployment state each point at it with Restrict. Here the reference
-    /// is a deployment-state row; the merge-request phase skips it rather than FK-violating on the
-    /// delete, exactly as the retired global plan's StageItem gate used to.
+    /// A merge request a plan item still refers to must stay: <c>PlanItem</c> points at it with
+    /// Restrict, so the phase skips it rather than FK-violating on the delete — exactly as the
+    /// retired global plan's StageItem gate used to.
     /// </summary>
     [Fact]
-    public async Task MergeRequestStillReferencedByTheExecutionEngineIsNotArchived()
+    public async Task MergeRequestStillReferencedByAPlanIsNotArchived()
+    {
+        var mr = await AddMergeRequestAsync(MergeRequestStatus.Merged, mergedAt: Cutoff.AddDays(-1));
+        var task = await AddOpenTaskAsync();
+
+        _db.RolloutPlans.Add(new RolloutPlan
+        {
+            Id = Guid.NewGuid(),
+            TargetTaskId = task.Id,
+            Version = 1,
+            IsActive = true,
+            CreatedAt = Now,
+            UpdatedAt = Now,
+            SnapshotStartedAt = Now,
+            Nodes =
+            [
+                new PlanTaskNode
+                {
+                    Id = Guid.NewGuid(),
+                    TaskId = task.Id,
+                    Items = [new PlanItem { Id = Guid.NewGuid(), MergeRequestId = mr.Id, Wave = 1 }]
+                }
+            ]
+        });
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().ArchiveMergeRequestsAsync(Cutoff, Ct);
+
+        Assert.Single(await _db.MergeRequests.ToListAsync(Ct));
+    }
+
+    /// <summary>
+    /// Per-environment deployment state goes WITH the merge request rather than blocking it.
+    /// </summary>
+    /// <remarks>
+    /// This used to be a gate, and it was the wrong shape of one: nothing ever deletes a deployment
+    /// state, so a merge request that had been deployed anywhere was never archivable — which is most
+    /// of them, and the archive's whole purpose. "Deployed to prod" is a fact ABOUT this merge
+    /// request; once the row is gone the fact has no subject. The gates that remain (plan item,
+    /// rollout step) are what guarantee nothing live is still asking.
+    /// </remarks>
+    [Fact]
+    public async Task DeploymentStateIsRemovedWithItsMergeRequest()
     {
         var mr = await AddMergeRequestAsync(MergeRequestStatus.Merged, mergedAt: Cutoff.AddDays(-1));
 
@@ -216,7 +257,9 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
         await Runner().ArchiveMergeRequestsAsync(Cutoff, Ct);
 
-        Assert.Single(await _db.MergeRequests.ToListAsync(Ct));
+        Assert.Empty(await _db.MergeRequests.ToListAsync(Ct));
+        Assert.Empty(await _db.MrDeploymentStates.ToListAsync(Ct));
+        Assert.Single(await _archiveDb.ArchivedMergeRequests.ToListAsync(Ct));
     }
 
     /// <summary>
@@ -363,5 +406,235 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
         var remaining = Assert.Single(await _db.MergeRequestLabelChanges.ToListAsync(Ct));
         Assert.Equal("2", remaining.MergeRequestExternalId);
+    }
+
+    // ---- retention: the phases that let the archive drain at all ----------------------------
+
+    /// <summary>
+    /// A task that was deployed reaches the archive — after a full cycle, not before it.
+    /// </summary>
+    /// <remarks>
+    /// The point of the retention phases. Rollout steps reference the merge request and the task with
+    /// Restrict and nothing ever deleted them, so before this any task that had been deployed once was
+    /// pinned in the operational database permanently: the archive re-examined and re-skipped it every
+    /// night for the life of the installation, and the rollout tables grew without bound.
+    ///
+    /// Asserted as a full cycle in the real order, because the phases only work as a sequence: each
+    /// unblocks the next, and running them the other way round archives nothing while looking fine.
+    /// </remarks>
+    [Fact]
+    public async Task DeployedTaskIsArchivedOnceItsRolloutHistoryAges()
+    {
+        var (task, mr) = await AddDeployedTaskAsync(finishedAt: Now.AddDays(-800));
+        var runner = Runner();
+
+        // Before retention: pinned, exactly as it used to be forever.
+        await runner.ArchiveMergeRequestsAsync(Cutoff, Ct);
+        await runner.ArchiveTasksAsync(Cutoff, Ct);
+        Assert.Single(await _db.Tasks.ToListAsync(Ct));
+
+        await runner.PruneRolloutHistoryAsync(Now, Ct);
+        await runner.PrunePlanHistoryAsync(Now, Cutoff, Ct);
+        await runner.ArchiveMergeRequestsAsync(Cutoff, Ct);
+        await runner.ArchiveTasksAsync(Cutoff, Ct);
+
+        Assert.Empty(await _db.Tasks.ToListAsync(Ct));
+        Assert.Empty(await _db.MergeRequests.ToListAsync(Ct));
+        Assert.Empty(await _db.Rollouts.ToListAsync(Ct));
+        Assert.Empty(await _db.RolloutSteps.ToListAsync(Ct));
+
+        // Archived, not merely deleted: the history has to survive somewhere.
+        Assert.Equal(task.ExternalId, (await _archiveDb.ArchivedTasks.SingleAsync(Ct)).ExternalId);
+        Assert.Equal(mr.ExternalId, (await _archiveDb.ArchivedMergeRequests.SingleAsync(Ct)).ExternalId);
+    }
+
+    /// <summary>A rollout inside its retention window keeps its task where it is.</summary>
+    [Fact]
+    public async Task RecentRolloutHistoryIsKeptAndStillPinsItsTask()
+    {
+        await AddDeployedTaskAsync(finishedAt: Now.AddDays(-10));
+        var runner = Runner();
+
+        await runner.PruneRolloutHistoryAsync(Now, Ct);
+        await runner.PrunePlanHistoryAsync(Now, Cutoff, Ct);
+        await runner.ArchiveMergeRequestsAsync(Cutoff, Ct);
+        await runner.ArchiveTasksAsync(Cutoff, Ct);
+
+        Assert.Single(await _db.Rollouts.ToListAsync(Ct));
+        Assert.Single(await _db.Tasks.ToListAsync(Ct));
+    }
+
+    /// <summary>
+    /// A rollout that never finished is not history, however old the row is.
+    /// </summary>
+    /// <remarks>
+    /// Its age says how long it has been stuck, not how long ago it ended — and deleting it would
+    /// take away the steps that say where it stopped, which is the only reason anyone opens it.
+    /// </remarks>
+    [Fact]
+    public async Task AnUnfinishedRolloutIsNeverPruned()
+    {
+        await AddDeployedTaskAsync(finishedAt: null, status: RolloutStatus.Running);
+
+        await Runner().PruneRolloutHistoryAsync(Now, Ct);
+
+        Assert.Single(await _db.Rollouts.ToListAsync(Ct));
+    }
+
+    /// <summary>Superseded versions age out on their own retention; the active one stays.</summary>
+    [Fact]
+    public async Task SupersededPlanVersionsArePrunedAndTheActiveOneIsKept()
+    {
+        var task = await AddOpenTaskAsync();
+        AddPlan(task, version: 1, isActive: false, createdAt: Now.AddDays(-200));
+        AddPlan(task, version: 2, isActive: false, createdAt: Now.AddDays(-10));
+        AddPlan(task, version: 3, isActive: true, createdAt: Now);
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().PrunePlanHistoryAsync(Now, Cutoff, Ct);
+
+        var remaining = await _db.RolloutPlans.OrderBy(p => p.Version).ToListAsync(Ct);
+        Assert.Equal([2, 3], remaining.Select(p => p.Version));
+    }
+
+    /// <summary>
+    /// The active plan of a long-closed task goes too, because otherwise the task never can.
+    /// </summary>
+    /// <remarks>
+    /// The surprising half of the rule, and deliberate: PlanTaskNode pins the task with Restrict, so
+    /// keeping the plan keeps the task. Rebuilding it is one Recalculate away — that is what a plan
+    /// being a projection of the atlas buys.
+    /// </remarks>
+    [Fact]
+    public async Task ActivePlanOfALongClosedTaskIsPruned()
+    {
+        var task = await AddOpenTaskAsync();
+        task.Status = "closed";
+        task.ClosedAt = Cutoff.AddDays(-1);
+        AddPlan(task, version: 1, isActive: true, createdAt: Now);
+        await _db.SaveChangesAsync(Ct);
+
+        await Runner().PrunePlanHistoryAsync(Now, Cutoff, Ct);
+
+        Assert.Empty(await _db.RolloutPlans.ToListAsync(Ct));
+    }
+
+    // ---- retention builders -----------------------------------------------------------------
+
+    private async Task<TaskItem> AddOpenTaskAsync()
+    {
+        var tracker = new TrackerConnection
+        {
+            Id = Guid.NewGuid(),
+            Name = $"tracker-{Guid.NewGuid():N}",
+            ProviderType = "fake",
+            ApiUrl = "https://tracker.example.com"
+        };
+        var task = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            ExternalId = "PROJ-1",
+            Title = "t",
+            Status = "open",
+            TrackerConnectionId = tracker.Id
+        };
+
+        _db.TrackerConnections.Add(tracker);
+        _db.Tasks.Add(task);
+        await _db.SaveChangesAsync(Ct);
+        return task;
+    }
+
+    private void AddPlan(TaskItem task, int version, bool isActive, DateTime createdAt) =>
+        _db.RolloutPlans.Add(new RolloutPlan
+        {
+            Id = Guid.NewGuid(),
+            TargetTaskId = task.Id,
+            Version = version,
+            IsActive = isActive,
+            CreatedAt = createdAt,
+            UpdatedAt = createdAt,
+            SnapshotStartedAt = createdAt
+        });
+
+    /// <summary>
+    /// A closed task that was planned and deployed: a plan with its node and item, a rollout with a
+    /// step, and per-environment deployment state — every Restrict that used to pin it.
+    /// </summary>
+    private async Task<(TaskItem Task, MergeRequest Mr)> AddDeployedTaskAsync(
+        DateTime? finishedAt, RolloutStatus status = RolloutStatus.Succeeded)
+    {
+        var task = await AddOpenTaskAsync();
+        task.Status = "closed";
+        task.ClosedAt = Cutoff.AddDays(-1);
+
+        var mr = await AddMergeRequestAsync(MergeRequestStatus.Merged, mergedAt: Cutoff.AddDays(-1));
+        mr.TaskId = task.Id;
+
+        var environment = new DeploymentEnvironment
+        {
+            Id = Guid.NewGuid(),
+            Key = "prod",
+            Name = "Production",
+            Order = 1
+        };
+        _db.DeploymentEnvironments.Add(environment);
+
+        var plan = new RolloutPlan
+        {
+            Id = Guid.NewGuid(),
+            TargetTaskId = task.Id,
+            Version = 1,
+            IsActive = true,
+            CreatedAt = Now.AddDays(-150),
+            UpdatedAt = Now.AddDays(-150),
+            SnapshotStartedAt = Now.AddDays(-150),
+            Nodes =
+            [
+                new PlanTaskNode
+                {
+                    Id = Guid.NewGuid(),
+                    TaskId = task.Id,
+                    Items = [new PlanItem { Id = Guid.NewGuid(), MergeRequestId = mr.Id, Wave = 1 }]
+                }
+            ]
+        };
+        _db.RolloutPlans.Add(plan);
+
+        var rollout = new Rollout
+        {
+            Id = Guid.NewGuid(),
+            TargetTaskId = task.Id,
+            EnvironmentId = environment.Id,
+            RolloutPlanId = plan.Id,
+            Status = status,
+            IdempotencyKey = Guid.NewGuid().ToString("N"),
+            StartedAt = Now.AddDays(-150),
+            FinishedAt = finishedAt,
+            Steps =
+            [
+                new RolloutStep
+                {
+                    Id = Guid.NewGuid(),
+                    MergeRequestId = mr.Id,
+                    TaskId = task.Id,
+                    Wave = 1,
+                    DeployStrategyKey = "merge",
+                    State = RolloutStepState.Succeeded
+                }
+            ]
+        };
+        _db.Rollouts.Add(rollout);
+
+        _db.MrDeploymentStates.Add(new MrDeploymentState
+        {
+            MergeRequestId = mr.Id,
+            EnvironmentId = environment.Id,
+            State = DeploymentState.Deployed,
+            UpdatedAt = Now.AddDays(-150)
+        });
+
+        await _db.SaveChangesAsync(Ct);
+        return (task, mr);
     }
 }

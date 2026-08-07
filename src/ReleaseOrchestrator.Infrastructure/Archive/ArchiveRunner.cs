@@ -76,6 +76,86 @@ internal sealed class ArchiveRunner(
             logger.LogInformation("Pruned {Count} merge-request label change(s) older than {Cutoff:u}", removed, cutoff);
     }
 
+    /// <summary>
+    /// Deletes rollouts that finished before the retention cutoff, with their steps and events.
+    /// </summary>
+    /// <param name="now">The current time; the cutoff is measured back from here.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// <para>
+    /// The phase that unblocks the two below. <c>RolloutStep</c> references a merge request and a task
+    /// with <c>Restrict</c>, so before this existed a single deploy pinned its task and its merge
+    /// requests in the operational database forever — the archive re-examined and re-skipped them
+    /// every night, and the rollout tables themselves grew without any bound at all.
+    /// </para>
+    /// <para>
+    /// Only TERMINAL rollouts. A run that is still live, or wedged part-way through, is not history:
+    /// deleting it would drop the steps an operator needs to see why it stopped, and the age of such a
+    /// row says how long it has been stuck rather than how long ago it ended.
+    /// </para>
+    /// <para>
+    /// Steps and events go with it by cascade, which is exactly right — neither means anything without
+    /// its run — and is why this is one delete rather than three in an order that has to be correct.
+    /// </para>
+    /// </remarks>
+    public async Task PruneRolloutHistoryAsync(DateTime now, CancellationToken ct)
+    {
+        var cutoff = now.AddDays(-options.RolloutHistoryRetentionDays);
+
+        var removed = await db.Rollouts
+            .Where(r => (r.Status == RolloutStatus.Succeeded
+                         || r.Status == RolloutStatus.Failed
+                         || r.Status == RolloutStatus.Cancelled)
+                        && r.FinishedAt != null && r.FinishedAt < cutoff)
+            .ExecuteDeleteAsync(ct);
+
+        if (removed > 0)
+            logger.LogInformation("Pruned {Count} finished rollout(s) older than {Cutoff:u}", removed, cutoff);
+    }
+
+    /// <summary>
+    /// Deletes plan versions nobody can act on: superseded ones past retention, and every version of
+    /// a task that closed before the archive cutoff.
+    /// </summary>
+    /// <param name="now">The current time; the retention cutoff is measured back from here.</param>
+    /// <param name="archiveCutoff">The cutoff the archive itself uses for cold tasks.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// <para>
+    /// Two rules, because a plan stops mattering for two different reasons. A SUPERSEDED version is
+    /// churn — every ingestion event mints one — and ages out on its own retention. The ACTIVE version
+    /// of a closed task is not churn, but it is not actionable either: the task is on its way to the
+    /// archive, and keeping its plan would keep the task from getting there, through
+    /// <c>PlanTaskNode</c>'s <c>Restrict</c>.
+    /// </para>
+    /// <para>
+    /// The second rule is the one that could surprise someone: a task closed in the tracker but not
+    /// yet deployed everywhere loses its built plan after the archive cutoff. Recalculating rebuilds
+    /// it from the atlas — that is what a plan being a projection means — and the alternative is a
+    /// database that never sheds a row because somebody might still press Launch.
+    /// </para>
+    /// </remarks>
+    public async Task PrunePlanHistoryAsync(DateTime now, DateTime archiveCutoff, CancellationToken ct)
+    {
+        var cutoff = now.AddDays(-options.PlanHistoryRetentionDays);
+
+        var removed = await db.RolloutPlans
+            .Where(p => ((!p.IsActive && p.CreatedAt < cutoff)
+                         || db.Tasks.Any(t => t.Id == p.TargetTaskId && t.ClosedAt < archiveCutoff))
+                        // A rollout keeps a Restrict reference to the plan it was materialised from,
+                        // so a plan a retained run still points at cannot go -- and trying wedges the
+                        // phase on a foreign-key violation rather than skipping the row. It is also
+                        // right on its own terms: that plan is part of the run's evidence, and it
+                        // drains on the cycle after the run does.
+                        && !db.Rollouts.Any(r => r.RolloutPlanId == p.Id))
+            .ExecuteDeleteAsync(ct);
+
+        if (removed > 0)
+            logger.LogInformation(
+                "Pruned {Count} plan version(s): superseded before {Cutoff:u}, or belonging to a task closed before {ArchiveCutoff:u}",
+                removed, cutoff, archiveCutoff);
+    }
+
     // ---- merge requests ------------------------------------------------------------------
 
     private Task<List<MergeRequest>> LoadMergeRequestBatchAsync(DateTime cutoff, CancellationToken ct) =>
@@ -83,16 +163,13 @@ internal sealed class ArchiveRunner(
             .AsNoTracking()
             .Where(mr => ((mr.Status == MergeRequestStatus.Merged && mr.MergedAt < cutoff)
                     || (mr.Status == MergeRequestStatus.Closed && mr.ClosedAt < cutoff))
-                // The per-task plan, the rollout history and the deployment state each reference a
-                // merge request with Restrict, so it cannot be deleted while any of them survive. A
-                // merge request that never entered a rollout (closed without deploying) has none and
-                // is archived here; one that did stays until its rollout history is cleared -- a
-                // follow-up, as nothing prunes that yet. Without this gate the delete FK-violates and
-                // the batch wedges, exactly as the old StageItem gate prevented for the global plan.
+                // The per-task plan and the rollout history reference a merge request with Restrict,
+                // so it cannot be deleted while either survives. Both are now pruned by the phases
+                // that run first, so this is a wait rather than the permanent block it used to be.
+                // Without the gate the delete FK-violates and wedges the batch, exactly as the old
+                // StageItem gate prevented for the global plan.
                 && !db.PlanItems.Any(pi => pi.MergeRequestId == mr.Id)
-                && !db.RolloutSteps.Any(rs => rs.MergeRequestId == mr.Id)
-                && !db.MrDeploymentStates.Any(s => s.MergeRequestId == mr.Id)
-                && !db.MrDeployClaims.Any(c => c.MergeRequestId == mr.Id))
+                && !db.RolloutSteps.Any(rs => rs.MergeRequestId == mr.Id))
             .OrderBy(mr => mr.Id)
             .Take(options.MrBatchSize)
             .Include(mr => mr.Repository)
@@ -125,7 +202,25 @@ internal sealed class ArchiveRunner(
 
         await InsertMissingAsync(archiveDb.ArchivedMergeRequests, archived, a => a.Id, [.. existing], ct);
 
-        await db.MergeRequests.Where(mr => ids.Contains(mr.Id)).ExecuteDeleteAsync(ct);
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+            // Per-environment deployment state and deploy claims both point here with Restrict, so
+            // they are removed with the row rather than gating it. They are facts ABOUT this merge
+            // request -- "deployed to staging", "being deployed right now" -- and mean nothing once it
+            // is gone; gating on them instead (as this did) meant a merge request that had ever been
+            // deployed anywhere was never archived, which is most of them.
+            //
+            // Safe because the gate above still holds: no plan item and no rollout step, so nothing
+            // live is asking about this merge request's readiness.
+            await db.MrDeployClaims.Where(c => ids.Contains(c.MergeRequestId)).ExecuteDeleteAsync(ct);
+            await db.MrDeploymentStates.Where(s => ids.Contains(s.MergeRequestId)).ExecuteDeleteAsync(ct);
+            await db.MergeRequests.Where(mr => ids.Contains(mr.Id)).ExecuteDeleteAsync(ct);
+
+            await tx.CommitAsync(ct);
+        });
     }
 
     // ---- tasks ---------------------------------------------------------------------------
@@ -154,8 +249,8 @@ internal sealed class ArchiveRunner(
                 // (PlanTaskNode.TaskId, RolloutPlan/Rollout.TargetTaskId, RolloutStep.TaskId), and a
                 // prerequisite task can hold a PlanTaskNode with no merge requests of its own -- so
                 // the two gates above do not cover it. Without these the ExecuteDeleteAsync below
-                // FK-violates and wedges the whole task batch. Nothing prunes rollout history yet, so
-                // such a task simply waits (a follow-up), rather than failing every nightly cycle.
+                // FK-violates and wedges the whole task batch. The retention phases that run first
+                // clear both, so this is now a wait of at most one cycle rather than forever.
                 && !db.PlanTaskNodes.Any(n => n.TaskId == t.Id)
                 && !db.RolloutPlans.Any(p => p.TargetTaskId == t.Id)
                 && !db.Rollouts.Any(r => r.TargetTaskId == t.Id)

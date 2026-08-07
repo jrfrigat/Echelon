@@ -103,10 +103,20 @@ public class ArchiveHostedService(
 
         var cutoff = clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.ArchiveAfterDays);
 
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        // Retention first, and in this order, because everything below it is blocked by what it
+        // clears. Rollout steps and plan items both reference merge requests and tasks with Restrict,
+        // so until these two phases existed the archive could only ever move work that had never been
+        // planned or deployed -- which is to say, almost nothing.
+        //
+        // Each phase is skipped-not-fatal (see RunPhaseAsync), so a retention failure delays the
+        // archive by a night rather than taking the cycle down.
+        await RunPhaseAsync("rollout history", c => runner.PruneRolloutHistoryAsync(now, c), ct);
+        await RunPhaseAsync("plan history", c => runner.PrunePlanHistoryAsync(now, cutoff, c), ct);
+
         // Merge requests before tasks: MergeRequest.TaskId is SetNull, so deleting a task first
-        // blanks the link and the archived merge request loses its TaskExternalId. (A merge request
-        // referenced by a live plan, rollout or deployment state is skipped by the merge-request
-        // phase itself -- those references are Restrict -- so no plan phase has to run first.)
+        // blanks the link and the archived merge request loses its TaskExternalId.
         await RunPhaseAsync("merge requests", c => runner.ArchiveMergeRequestsAsync(cutoff, c), ct);
         await RunPhaseAsync("tasks", c => runner.ArchiveTasksAsync(cutoff, c), ct);
 

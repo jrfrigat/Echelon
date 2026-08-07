@@ -41,4 +41,38 @@ public class ArchiveOptions
     /// trade a flat cutoff makes; raise this if a task's whole history matters more than the rows.
     /// </remarks>
     public int StatusJournalRetentionDays { get; set; } = 730;
+
+    /// <summary>
+    /// How long a finished rollout and its steps are kept, in days. Two years by default.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Not a tidiness setting. <c>RolloutStep</c> references both a merge request and a task with
+    /// <c>Restrict</c>, and nothing used to delete rollout history — so ANY task that had ever been
+    /// deployed was pinned in the operational database permanently, and the archive skipped it every
+    /// night for the rest of the installation's life. Retention here is what lets the archive drain
+    /// at all.
+    /// </para>
+    /// <para>
+    /// Longer than the archive cutoff on purpose: "when did we deploy this, and did it work" is asked
+    /// long after the task itself has gone quiet. Deleted rather than archived, like the journals —
+    /// what a rollout was is reconstructable from the archived task and merge requests; what is lost
+    /// is the per-attempt detail, which no tool reads once the rows are cold.
+    /// </para>
+    /// </remarks>
+    public int RolloutHistoryRetentionDays { get; set; } = 730;
+
+    /// <summary>
+    /// How long a superseded plan version is kept, in days. Ninety days by default.
+    /// </summary>
+    /// <remarks>
+    /// Every ingestion event rebuilds every active plan, so this is structurally the largest table
+    /// here and the overwhelming majority of its rows are byte-identical restatements — the timeline
+    /// already collapses them on read. It also pins tasks and merge requests through
+    /// <c>PlanTaskNode</c> and <c>PlanItem</c>, both <c>Restrict</c>.
+    ///
+    /// Shorter than the rollout history because it is churn rather than evidence: what actually
+    /// happened is the rollout, not the hundred versions of the plan that preceded it.
+    /// </remarks>
+    public int PlanHistoryRetentionDays { get; set; } = 90;
 }
