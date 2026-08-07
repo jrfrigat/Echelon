@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.Infrastructure.Queue;
 /// duplicate of an event already handled to completion, so it short-circuits and Rebus acks it
 /// without invoking the handler. Otherwise the handler runs, and ONLY once it succeeds is the event
 /// recorded as processed. Messages with no identity pass straight through, so this is inert for the
-/// records that do not carry one (docs/issues/008-ingestion-and-messaging.md).
+/// records that do not carry one.
 ///
 /// <para>
 /// Mark-after-handle is the load-bearing ordering: a handler that throws to be retried -- a status

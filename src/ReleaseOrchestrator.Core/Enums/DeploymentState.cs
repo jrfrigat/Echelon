@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// The orchestrator's truth, kept separate from <see cref="MergeRequestStatus"/> (the ingestion
 /// truth of what the provider reports). Tracked per (merge request, environment): the same merge
 /// request can be <see cref="Deployed"/> in staging and <see cref="NotStarted"/> in prod
-/// (docs/issues/004-target-architecture.md, docs/issues/007-execution-engine.md).
+///.
 /// </remarks>
 public enum DeploymentState
 {

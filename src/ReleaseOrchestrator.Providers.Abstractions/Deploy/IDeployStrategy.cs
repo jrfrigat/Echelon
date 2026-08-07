@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Deploy;
 ///
 /// Idempotency is a contract obligation: <see cref="StartAsync"/> on an already-deployed target must
 /// return <see cref="DeployOutcome.AlreadyDone"/>, not deploy again. It is testable, not enforced by
-/// the type system (docs/issues/007-execution-engine.md).
+/// the type system.
 /// </remarks>
 public interface IDeployStrategy
 {

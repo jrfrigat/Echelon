@@ -20,9 +20,9 @@ namespace ReleaseOrchestrator.Infrastructure.ReleasePlanning;
 /// </summary>
 /// <remarks>
 /// The plan of record is persisted as <see cref="RolloutPlan"/> + its task nodes and items; the
-/// execution waves shown to an operator are derived from the same pure graph the global planner
-/// uses, so the two cannot disagree about ordering. Override replay (edits surviving a recalculate)
-/// is a follow-up within P2; a generated plan currently reflects the atlas as-is.
+/// execution waves shown to an operator are derived from the same pure graph, so the two cannot
+/// disagree about ordering. Operator edits survive a recalculation: they are stored as deltas
+/// against the task and replayed on every build, which is what a projection of the atlas requires.
 /// </remarks>
 public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<RolloutPlanner> logger) : IRolloutPlannerService
 {
@@ -206,7 +206,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         var planMrs = await db.MergeRequests
             // A closed (abandoned) merge request is not part of the rollout; everything else the
             // task owns is, so the tree shows the full picture. The executor decides at launch what
-            // is already deployed and skips it (docs/issues/007-execution-engine.md).
+            // is already deployed and skips it.
             .Where(mr => closureIds.Contains(mr.TaskId) && mr.Status != MergeRequestStatus.Closed)
             .OrderBy(mr => mr.CreatedAt).ThenBy(mr => mr.Id)
             .Select(PlanInput.FromEntity)

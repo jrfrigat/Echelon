@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <see cref="System.Environment"/>. Environment is an orthogonal dimension: the plan tree and its
 /// ordering are the same in every environment; a rollout is scoped to one. <see cref="Order"/> sets
 /// the promotion sequence (staging before prod) that the optional progression gate enforces at
-/// launch (docs/issues/007-execution-engine.md).
+/// launch.
 /// </remarks>
 [Index(nameof(Key), IsUnique = true, Name = "IX_DeploymentEnvironment_Key")]
 public class DeploymentEnvironment

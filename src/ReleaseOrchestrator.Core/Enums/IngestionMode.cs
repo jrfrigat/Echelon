@@ -3,7 +3,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// <summary>How a connection's events reach the service.</summary>
 /// <remarks>
 /// Two interchangeable channels that produce the same normalized events, so a consumer cannot tell
-/// which one a change arrived through (docs/issues/008-ingestion-and-messaging.md).
+/// which one a change arrived through.
 /// </remarks>
 public enum IngestionMode
 {

@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <remarks>
 /// Keyed per (merge request, environment): the same merge request can be Deployed in staging and
 /// NotStarted in prod. Separate from <see cref="MergeRequest.Status"/> (the ingestion truth), so the
-/// two cannot overwrite each other (docs/issues/004-target-architecture.md).
+/// two cannot overwrite each other.
 /// </remarks>
 [PrimaryKey(nameof(MergeRequestId), nameof(EnvironmentId))]
 public class MrDeploymentState

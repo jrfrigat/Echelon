@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// the same reason the ordering rules and the readiness rules live where they do.
 /// </para>
 /// <para>
-/// The distinction the two flags draw is the one docs/issues/002 drew from surveying trackers:
+/// The distinction the two flags draw is the one a survey of trackers arrived at:
 /// <c>depends on</c>/<c>blocks</c> is the only link every tracker agrees is an ordering, while
 /// <c>parent</c>/<c>subtask</c> is a hierarchy that may or may not imply one. Treating the hierarchy
 /// as ordering unconditionally — which the planner used to do — is right for a parent that is an

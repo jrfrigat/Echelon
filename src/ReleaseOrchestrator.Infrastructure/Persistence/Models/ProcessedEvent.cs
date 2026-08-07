@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <remarks>
 /// Checked in a Rebus incoming step before dispatch; a composite-key conflict means the event was
 /// already processed, so it is acked and dropped. Handler-level upsert idempotency alone is not
-/// enough once push and poll can both observe the same change (docs/issues/008-ingestion-and-messaging.md).
+/// enough once push and poll can both observe the same change.
 /// The key columns are bounded so the composite primary key fits SQL Server's index-key size limit.
 /// </remarks>
 [PrimaryKey(nameof(Source), nameof(EventId))]

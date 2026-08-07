@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// </summary>
 /// <remarks>
 /// A binding is configuration, so a new event-to-action wiring is a row, and a new action TYPE is a
-/// new handler class -- neither is a core change (docs/issues/005-extension-model.md).
+/// new handler class -- neither is a core change.
 /// </remarks>
 [Index(nameof(EventType), Name = "IX_ActionBinding_EventType")]
 public class ActionBinding

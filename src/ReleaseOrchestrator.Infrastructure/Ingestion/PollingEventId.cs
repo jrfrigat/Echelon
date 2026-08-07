@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Infrastructure.Ingestion;
 /// The whole reason a poller can share the dedup inbox: an unchanged merge request hashes to the
 /// same id every cycle and self-dedups, while a status or label change hashes to a new id and is
 /// processed. Without this, every poll would re-process every open merge request
-/// (docs/issues/008-ingestion-and-messaging.md).
+///.
 /// </remarks>
 internal static class PollingEventId
 {

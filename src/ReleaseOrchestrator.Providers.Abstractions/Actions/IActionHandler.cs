@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Actions;
 /// The third pluggable family (Telegram is neither a VCS nor a tracker), selected by an action-type
 /// key on an <c>ActionBinding</c>. A binding is data; a new action TYPE is one class plus a
 /// registration. Actions run off the deploy path and their failures never fail a rollout step
-/// (docs/issues/007-execution-engine.md).
+///.
 /// </remarks>
 public interface IActionHandler
 {

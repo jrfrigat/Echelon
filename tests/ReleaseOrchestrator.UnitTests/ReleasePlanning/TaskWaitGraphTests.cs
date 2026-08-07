@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// The planner used to merge declared dependencies and the task hierarchy unconditionally, so
 /// "a parent waits for its subtasks" was an assumption with no way to decline it — right for a parent
 /// that is an umbrella over its children's work, wrong for one that merely files unrelated tickets.
-/// docs/issues/002 had already noted that only <c>depends on</c> is an ordering every tracker agrees
+/// A survey of trackers had already found that only <c>depends on</c> is an ordering every one agrees
 /// on. These pin the policy that replaced the assumption.
 /// </remarks>
 public class TaskWaitGraphTests

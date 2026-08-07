@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <remarks>
 /// All execution state lives in the database so a restarted coordinator resumes from rows, not
 /// memory. <see cref="IdempotencyKey"/> is unique so a double-submit cannot launch two runs
-/// (docs/issues/007-execution-engine.md).
+///.
 /// </remarks>
 [Index(nameof(IdempotencyKey), IsUnique = true, Name = "IX_Rollout_IdempotencyKey")]
 [Index(nameof(TargetTaskId), Name = "IX_Rollout_TargetTaskId")]

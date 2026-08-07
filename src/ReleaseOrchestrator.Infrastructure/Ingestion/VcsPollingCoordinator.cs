@@ -26,7 +26,7 @@ public class VcsPollingOptions
 /// <summary>
 /// Polls the merge requests of connections whose provider type is registered <see cref="IngestionMode.Poll"/>
 /// and emits the same <see cref="MrOpened"/> events the webhook front door does -- the pull half of the
-/// symmetric ingestion seam (docs/issues/008-ingestion-and-messaging.md).
+/// symmetric ingestion seam.
 /// </summary>
 /// <remarks>
 /// Reuses the read provider (<see cref="IVcsProvider.GetOpenMergeRequestsAsync"/>): no provider-side

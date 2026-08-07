@@ -21,7 +21,7 @@ namespace ReleaseOrchestrator.Infrastructure.Execution;
 /// Drives running rollouts to completion: it re-derives the ready frontier from the step rows on
 /// every tick (so a restart resumes for free), takes the atomic per-(MR, environment) claim before
 /// any deploy, runs the wave, and polls async deploys until they settle
-/// (docs/issues/007-execution-engine.md).
+///.
 /// </summary>
 /// <remarks>
 /// Registered in every replica but gated on a lease, so one coordinator drives at a time. Correctness

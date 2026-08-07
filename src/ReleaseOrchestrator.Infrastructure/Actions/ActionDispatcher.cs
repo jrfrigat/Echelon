@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Infrastructure.Actions;
 /// <summary>
 /// Runs the action bindings that match an event. Isolated: a handler that throws is logged and the
 /// next binding still runs, and nothing here propagates to the caller -- an action must never fail a
-/// rollout step (docs/issues/007-execution-engine.md).
+/// rollout step.
 /// </summary>
 public class ActionDispatcher(AppDbContext db, IActionHandlerFactory factory, TokenProtector protector, ILogger<ActionDispatcher> logger)
 {

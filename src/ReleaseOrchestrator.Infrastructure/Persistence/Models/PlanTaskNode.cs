@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <summary>A task in the target's dependency closure, as covered by one <see cref="RolloutPlan"/>.</summary>
 /// <remarks>
 /// The tree the operator sees is these nodes (target at the root, prerequisites as children); the
-/// execution order is not -- waves are a merge-request property (docs/issues/004-target-architecture.md).
+/// execution order is not -- waves are a merge-request property.
 /// </remarks>
 [Index(nameof(RolloutPlanId), nameof(TaskId), IsUnique = true, Name = "IX_PlanTaskNode_Plan_Task")]
 public class PlanTaskNode

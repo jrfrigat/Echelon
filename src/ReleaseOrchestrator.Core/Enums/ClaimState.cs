@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// <remarks>
 /// The atomic guard against double-deploy: a step compare-and-sets <see cref="NotStarted"/> to
 /// <see cref="Claiming"/> before any external call, so only one rollout can be mid-deploy for a
-/// given merge request in a given environment (docs/issues/007-execution-engine.md).
+/// given merge request in a given environment.
 /// </remarks>
 public enum ClaimState
 {

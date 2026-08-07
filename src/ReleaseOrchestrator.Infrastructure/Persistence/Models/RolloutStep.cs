@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <remarks>
 /// <see cref="Wave"/> is the merge-request-level Kahn level from the pure graph; a task's merge
 /// requests can occupy different waves. The coordinator re-derives the ready frontier from these
-/// rows, so it holds no state in memory (docs/issues/007-execution-engine.md).
+/// rows, so it holds no state in memory.
 /// </remarks>
 [Index(nameof(RolloutId), nameof(MergeRequestId), IsUnique = true, Name = "IX_RolloutStep_Rollout_Mr")]
 public class RolloutStep

@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Actions;
 /// <remarks>
 /// Payload is a flat string map (task key, environment, status, ...) so a handler and the dispatcher
 /// share no domain types -- the same reason the deploy and ingestion ports stay thin
-/// (docs/issues/005-extension-model.md). Provider credentials, when a handler needs them (a tracker
+///. Provider credentials, when a handler needs them (a tracker
 /// mutation), are resolved by the handler from its own factory, not carried here.
 /// </remarks>
 /// <param name="EventType">The event that triggered the action, e.g. <c>RolloutSucceeded</c>.</param>

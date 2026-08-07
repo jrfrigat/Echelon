@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Application.Services;
 /// </summary>
 /// <remarks>
 /// The sole planner since the pivot retired the global release plan: a plan is always rooted at one
-/// target task and covers its dependency closure (docs/issues/009-admin-and-migration.md).
+/// target task and covers its dependency closure.
 /// </remarks>
 public interface IRolloutPlannerService
 {

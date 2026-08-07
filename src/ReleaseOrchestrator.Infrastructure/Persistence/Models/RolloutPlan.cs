@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// Holds at most one active plan PER task, enforced by a filtered unique index scoped to
 /// <see cref="TargetTaskId"/> (declared in <c>RolloutPlanConfiguration</c>, because <c>[Index]</c>
 /// has no filter). This is the only plan aggregate since the pivot retired the single global
-/// release plan (docs/issues/009-admin-and-migration.md).
+/// release plan.
 /// </remarks>
 [Index(nameof(CreatedAt), Name = "IX_RolloutPlan_CreatedAt")]
 // Plan history per task. The other TargetTaskId index is filtered to the active row, so it excludes
@@ -93,8 +93,8 @@ public class RolloutPlan
 
     /// <summary>
     /// Ordering constraints this plan does not honour, as JSON. Null means it honours every one.
-    /// A plan may break a constraint, but it may never report itself clean while doing so
-    /// (docs/issues/001-current-state.md, the "never a silent plan" rule).
+    /// A plan may break a constraint, but it may never report itself clean while doing so — the
+    /// "never a silent plan" rule.
     /// </summary>
     public string? ConflictsJson { get; set; }
 

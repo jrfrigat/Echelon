@@ -20,7 +20,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// </summary>
 /// <remarks>
 /// Error messages here are not localized yet; localization is folded in with the rest of the PWA
-/// in the finalize phase (docs/issues/009-admin-and-migration.md).
+/// in the finalize phase.
 /// </remarks>
 [ApiController]
 [Route("api/repository-ordering")]

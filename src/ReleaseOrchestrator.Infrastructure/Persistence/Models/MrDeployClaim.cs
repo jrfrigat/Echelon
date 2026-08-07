@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// The atomic guard against double-deploy: a step compare-and-sets <see cref="ClaimState.NotStarted"/>
 /// to <see cref="ClaimState.Claiming"/> in one UPDATE (rows-affected decides the winner) before any
 /// external call. The pair is the key, so the same merge request can deploy to two environments at
-/// once but never twice in one (docs/issues/007-execution-engine.md). Correctness rests on this
+/// once but never twice in one. Correctness rests on this
 /// claim, not on lease expiry; <see cref="ExpiresAt"/> is only a liveness hint.
 /// </remarks>
 [PrimaryKey(nameof(MergeRequestId), nameof(EnvironmentId))]

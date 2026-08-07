@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 /// a webhook push and a poll, at-least-once delivery over two channels means the same event arrives
 /// more than once; the inbox drops the repeats by that pair. This is the only part taken from
 /// CloudEvents -- a full envelope would cost type safety for nothing dedup needs
-/// (docs/issues/008-ingestion-and-messaging.md).
+///.
 /// </remarks>
 public interface IHasEventIdentity
 {

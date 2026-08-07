@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Application.Services;
 /// <summary>
 /// Launches and drives per-task rollouts: readiness gates, materialisation into steps, and the
 /// operator controls over a run (cancel / retry / skip). The step-by-step deploy is driven by the
-/// coordinator background service (docs/issues/007-execution-engine.md).
+/// coordinator background service.
 /// </summary>
 public interface IRolloutService
 {

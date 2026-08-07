@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Deploy;
 /// same division as the VCS provider seam. A deploy strategy is chosen per repository
 /// (<c>Repository.DeployStrategyKey</c>), independent of the connection's provider type, and the
 /// environment is a runtime parameter -- one strategy serves every environment
-/// (docs/issues/007-execution-engine.md).
+///.
 /// </remarks>
 /// <param name="ApiUrl">Base address of the provider's API.</param>
 /// <param name="AccessToken">The decrypted access token for the connection.</param>

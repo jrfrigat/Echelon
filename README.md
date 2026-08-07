@@ -40,7 +40,7 @@ Release Orchestrator помогает автоматически выстраи�
 - Behavior against real GitLab or Yandex Tracker instances
 - Concurrency and load testing
 
-**See [Current State Audit](docs/issues/001-current-state.md) §4 for full details.**
+**See [what the release audit left open](docs/issues/011-release-audit.md) for the current list.**
 
 Before deploying to production:
 1. Test locally with Docker Compose (see [Getting Started](docs/en/getting-started.md))
@@ -160,9 +160,8 @@ Providers are registered explicitly in `InfrastructureExtensions.cs`, not discov
 - **Checked by the compiler** — a contract change is a build error, not a runtime surprise
 
 Dynamic loading was considered and rejected. It and container deployment cancel each other out:
-the only payoff is "add a provider without rebuilding", and the image rebuilds anyway. See
-[docs/issues/002](docs/issues/002-provider-independence.md) §4 for the full argument, including
-what Orchard Core and Backstage did about the same question.
+the only payoff is "add a provider without rebuilding", and the image rebuilds anyway — which is
+also where Orchard Core and Backstage ended up after trying the other way.
 
 ### Why Multiple Databases?
 
@@ -292,7 +291,7 @@ past one and Redis comes back.
   restart loses it silently. Not losing events across an outage needs a persistent outbox
 - TLS is terminated outside the app; nothing in `docker-compose.yml` does it
 
-See [docs/issues/003-roadmap.md](docs/issues/003-roadmap.md) for planned improvements.
+See [docs/issues](docs/issues/README.md) for what is still open.
 
 ---
 
@@ -347,11 +346,15 @@ Before submitting a PR:
 
 ---
 
-## Audit Reports
+## Open work
 
-- **[001. Current State](docs/issues/001-current-state.md)** — What was broken, what was fixed, what was never tested
-- **[002. Provider Independence](docs/issues/002-provider-independence.md)** — Why providers are registered at compile-time, not discovered
-- **[003. Roadmap](docs/issues/003-roadmap.md)** — Planned features, known gaps, performance improvements
+[docs/issues](docs/issues/README.md) holds what is **not** done. Documents describing work that has
+shipped were removed — the reasoning lives in the code's own comments and in the commit history,
+which is where it stays accurate.
+
+- **[006. Per-task planning](docs/issues/006-per-task-planning.md)** — plan `validate`/`import` still missing
+- **[011. Release audit](docs/issues/011-release-audit.md)** — three findings left open, and what was deliberately not changed
+- **[012. Ordering rules](docs/issues/012-ordering-rules.md)** — the YAML schema reference; a visual editor is still to come
 
 ---
 

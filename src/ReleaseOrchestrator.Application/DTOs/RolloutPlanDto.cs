@@ -58,7 +58,7 @@ public record TaskDetailDto(
 /// <remarks>
 /// <see cref="Nodes"/> is the presentation tree (target and its prerequisite tasks); <see cref="Waves"/>
 /// is the execution order, which is a merge-request property -- a task's merge requests can land in
-/// different waves (docs/issues/004-target-architecture.md).
+/// different waves.
 /// </remarks>
 public record RolloutPlanDto(
     Guid Id,

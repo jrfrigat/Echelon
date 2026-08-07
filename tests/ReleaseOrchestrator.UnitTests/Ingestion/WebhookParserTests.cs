@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.UnitTests.Ingestion;
 /// the container by provider key — so these tests also prove the registration exists and is keyed
 /// correctly. There is no integration-test host for the endpoint itself (the unit project does not
 /// reference the ingress), so the endpoint's own behaviour — the 401, the 400, the bus send — is
-/// covered by the live check in docs/issues/010, not here.
+/// not covered here and has to be checked against a running host.
 /// </remarks>
 public class WebhookParserTests
 {

@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 /// id as the external reference; the executor's watcher polls <see cref="PollAsync"/> until it
 /// settles. <see cref="ReconcileAsync"/> returns null: GitLab does not tag a pipeline with our key,
 /// so a resumed step cannot reliably re-find one -- a known limitation
-/// (docs/issues/007-execution-engine.md).
+///.
 ///
 /// NOT VERIFIED against a live GitLab. Endpoints and status values follow the GitLab REST API.
 /// </remarks>

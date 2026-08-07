@@ -17,7 +17,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// reverses the deploy order of everything between the two repositories.
 ///
 /// This is now the only repository-ordering model — stacks were removed with the global plan
-/// (docs/issues/009-admin-and-migration.md). <see cref="StackDependencyType"/> keeps the old name
+///. <see cref="StackDependencyType"/> keeps the old name
 /// because it is persisted by name, so renaming the type is a data migration rather than a rename.
 /// </remarks>
 [Index(nameof(FromRepositoryId), nameof(ToRepositoryId), IsUnique = true, Name = "IX_RepositoryDependency_From_To")]

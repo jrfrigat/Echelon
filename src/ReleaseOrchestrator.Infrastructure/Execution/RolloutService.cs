@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Infrastructure.Execution;
 /// <summary>
 /// Launches per-task rollouts and exposes the operator controls over a run. The step-by-step deploy
 /// is driven by <see cref="RolloutCoordinator"/>; this type owns the launch gates, materialisation,
-/// and the cancel / retry / skip transitions (docs/issues/007-execution-engine.md).
+/// and the cancel / retry / skip transitions.
 /// </summary>
 public class RolloutService(
     AppDbContext db,

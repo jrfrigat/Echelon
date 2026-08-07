@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 /// <remarks>
 /// Probed with an <c>is</c> check, the same template as <see cref="ITrackerDependencySource"/>, so a
 /// read-only tracker stays read-only and the tracker-status / tracker-comment action handlers simply
-/// do nothing for a provider that does not implement this (docs/issues/005-extension-model.md).
+/// do nothing for a provider that does not implement this.
 /// </remarks>
 public interface ITrackerMutator
 {
