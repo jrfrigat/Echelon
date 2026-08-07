@@ -355,9 +355,10 @@ history, which is where it stays accurate.
 
 - **[006. Per-task planning](docs/issues/006-per-task-planning.md)** — the one-derivation invariant, and the plan document schema
 - **[011. Release audit](docs/issues/011-release-audit.md)** — three behaviour changes it produced, and what is still unverified
-- **[012. Ordering rules](docs/issues/012-ordering-rules.md)** — the YAML schema reference; a visual editor is still to come
+- **[012. Ordering rules](docs/issues/012-ordering-rules.md)** — the YAML schema reference, and why its editor renders into the document rather than replacing it
 
-A visual editor for the ordering rules is the only open item in that folder.
+Nothing in that folder is open work. What is still unverified is listed in
+[011 §3](docs/issues/011-release-audit.md).
 
 ---
 
