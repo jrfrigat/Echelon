@@ -40,7 +40,7 @@ Release Orchestrator помогает автоматически выстраи�
 - Behavior against real GitLab or Yandex Tracker instances
 - Concurrency and load testing
 
-**See [what the release audit left open](docs/issues/011-release-audit.md) for the current list.**
+**See [the release audit](docs/issues/011-release-audit.md) §3 for what remains unverified.**
 
 Before deploying to production:
 1. Test locally with Docker Compose (see [Getting Started](docs/en/getting-started.md))
@@ -346,15 +346,17 @@ Before submitting a PR:
 
 ---
 
-## Open work
+## Design notes
 
-[docs/issues](docs/issues/README.md) holds what is **not** done. Documents describing work that has
-shipped were removed — the reasoning lives in the code's own comments and in the commit history,
-which is where it stays accurate.
+[docs/issues](docs/issues/README.md) keeps only what is still worth reading. Documents describing
+work that has shipped were removed — the reasoning lives in the code's own comments and in the commit
+history, which is where it stays accurate.
 
-- **[006. Per-task planning](docs/issues/006-per-task-planning.md)** — plan `validate`/`import` still missing
-- **[011. Release audit](docs/issues/011-release-audit.md)** — three findings left open, and what was deliberately not changed
+- **[006. Per-task planning](docs/issues/006-per-task-planning.md)** — the one-derivation invariant, and the plan document schema
+- **[011. Release audit](docs/issues/011-release-audit.md)** — three behaviour changes it produced, and what is still unverified
 - **[012. Ordering rules](docs/issues/012-ordering-rules.md)** — the YAML schema reference; a visual editor is still to come
+
+A visual editor for the ordering rules is the only open item in that folder.
 
 ---
 

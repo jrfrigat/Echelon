@@ -148,6 +148,20 @@ URI (TLS, a cluster, a non-default vhost).
 - **Default:** 730 (two years)
 - **Behavior:** Pruned outright, not archived — these rows back the task timeline and nothing else reads them. A long-lived task can lose its earliest transitions while still open; raise this if that history matters more than the rows
 
+**`Archiving__RolloutHistoryRetentionDays`**
+- **What:** How long a finished rollout and its steps are kept, in days
+- **Example:** `730`
+- **Default:** 730 (two years)
+- **Behavior:** Only terminal runs are pruned; one that never finished is kept whatever its age. Steps and events go with it by cascade
+- **Why it matters:** Not a tidiness setting. `RolloutStep` references a task and a merge request with `Restrict`, so until history ages out, a task that was ever deployed cannot be archived at all — this is what lets the archive drain
+
+**`Archiving__PlanHistoryRetentionDays`**
+- **What:** How long a superseded plan version is kept, in days
+- **Example:** `90`
+- **Default:** 90
+- **Behavior:** Also removes every version of a task closed before `ArchiveAfterDays`, active one included — `PlanTaskNode` pins the task otherwise. Recalculating rebuilds a plan from the atlas, so nothing is unrecoverable
+- **Why shorter than the rollout history:** Every ingestion event rebuilds every active plan, so this is churn rather than evidence — what actually happened is the rollout
+
 ### Task Reconciliation Service
 
 **`TaskReconciliation__Enabled`** (section: `TaskReconciliation`)
