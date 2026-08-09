@@ -37,7 +37,14 @@
   <ItemGroup>
     <ProjectReference Include="..\ReleaseOrchestrator.Application\ReleaseOrchestrator.Application.csproj" />
     <ProjectReference Include="..\ReleaseOrchestrator.Infrastructure\ReleaseOrchestrator.Infrastructure.csproj" />
+    <!-- BOTH migration assemblies, because the provider is chosen at runtime by configuration.
+         Only the SQL Server one used to be here, so a PostgreSQL deployment with
+         Database:MigrateOnStartup (which docker-compose turns on) died at startup with
+         FileNotFoundException on ReleaseOrchestrator.Migrations.Postgres. Nothing at compile time
+         could see it: DatabaseProviders.MigrationsAssembly names the assembly as a string, and EF
+         loads it by name. MigrationAssembliesAreDeployedTests is what catches it now. -->
     <ProjectReference Include="..\ReleaseOrchestrator.Migrations.MsSql\ReleaseOrchestrator.Migrations.MsSql.csproj" />
+    <ProjectReference Include="..\ReleaseOrchestrator.Migrations.Postgres\ReleaseOrchestrator.Migrations.Postgres.csproj" />
     <ProjectReference Include="..\ReleaseOrchestrator.Pwa\ReleaseOrchestrator.Pwa.csproj" />
   </ItemGroup>
 

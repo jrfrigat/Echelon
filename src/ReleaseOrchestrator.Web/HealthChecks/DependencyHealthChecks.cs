@@ -11,6 +11,13 @@ namespace ReleaseOrchestrator.Web.HealthChecks;
 /// "healthy", so an orchestrator kept routing traffic to an instance whose database was
 /// unreachable.
 /// </summary>
+/// <remarks>
+/// Reachable is not the same as usable, and this used to check only the first. An instance pointed
+/// at a database with no schema — a fresh deployment that did not migrate, or one upgraded ahead of
+/// its database — connected fine, reported itself ready, took traffic, and answered every data
+/// request with a 500. Verified against a live PostgreSQL: the app came up Healthy on an empty
+/// database. Pending migrations are therefore part of the readiness answer.
+/// </remarks>
 public class DatabaseHealthCheck(AppDbContext db) : IHealthCheck
 {
     /// <inheritdoc/>
@@ -18,9 +25,18 @@ public class DatabaseHealthCheck(AppDbContext db) : IHealthCheck
     {
         try
         {
-            return await db.Database.CanConnectAsync(ct)
+            if (!await db.Database.CanConnectAsync(ct))
+                return HealthCheckResult.Unhealthy("Cannot connect to the operational database.");
+
+            // Handles a missing history table by reporting every migration as pending, which is the
+            // answer that matters: an empty database is the worst case of this, not an exception to it.
+            var pending = (await db.Database.GetPendingMigrationsAsync(ct)).ToList();
+
+            return pending.Count == 0
                 ? HealthCheckResult.Healthy()
-                : HealthCheckResult.Unhealthy("Cannot connect to the operational database.");
+                : HealthCheckResult.Unhealthy(
+                    $"The operational database is missing {pending.Count} migration(s), starting with "
+                    + $"'{pending[0]}'. Apply them, or set Database:MigrateOnStartup.");
         }
         catch (Exception ex)
         {
