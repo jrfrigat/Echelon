@@ -31,14 +31,19 @@ Release Orchestrator помогает автоматически выстраи�
 
 ## ⚠️ Critical Note: Not Yet Production-Ready
 
-**The application has never been run in a live environment.** The following have not been tested:
+Still unproven in production, though less of it than before. What has and has not been tested:
 
-- Application startup against a live database (SQL Server or PostgreSQL), RabbitMQ, Redis
+- ~~Application startup against a live database, RabbitMQ, Redis~~ — started 2026-08-09 against
+  PostgreSQL and RabbitMQ with in-process coordination: migrations applied, both health endpoints
+  green, every API route present and authenticating. It found two startup defects; see
+  [011 §4](docs/issues/011-release-audit.md)
 - ~~Database migrations (on real instance)~~ — done for **both** providers: SQL Server on
-  2026-07-17, PostgreSQL on 2026-08-07 (all 32 applied from empty, provider-specific mappings
-  verified)
-- Docker image builds (registry blocked in dev environment)
-- Behavior against real GitLab or Yandex Tracker instances
+  2026-07-17, PostgreSQL on 2026-08-07 (all applied from empty, provider-specific mappings verified)
+- **API responses under an authenticated call** — routes and authorization are verified, response
+  bodies are not
+- **Behavior against real GitLab or Yandex Tracker instances** — no poll and no webhook from a real
+  provider has ever been processed
+- Docker image builds (registry filtered in this dev environment)
 - Concurrency and load testing
 
 **See [the release audit](docs/issues/011-release-audit.md) §3 for what remains unverified.**
