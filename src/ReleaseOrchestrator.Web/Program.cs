@@ -220,7 +220,13 @@ try
     app.Run();
     return 0;
 }
-catch (Exception ex)
+// HostAbortedException is not a failure: it is how tooling stops this program once the host is
+// built. `dotnet ef` throws it to grab the service provider without serving, and
+// WebApplicationFactory throws it to take the host for a test. Catching it logged "Application
+// startup failed" over a perfectly good run and, worse, hid the host from the factory -- every API
+// test failed with "the entry point exited without ever building an IHost", which says nothing
+// about the real cause.
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Application startup failed");
     // Non-zero exit: swallowing this returned 0, which Docker and Kubernetes read as a
@@ -231,3 +237,14 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+/// <summary>
+/// The host's entry point, named so tests can boot it.
+/// </summary>
+/// <remarks>
+/// Top-level statements compile into an internal <c>Program</c> that
+/// <c>WebApplicationFactory&lt;T&gt;</c> cannot reach. Declaring it public here is the documented way
+/// to make the REAL host testable — which is the point: an API test against a hand-assembled
+/// pipeline proves the test's wiring, not the deployment's.
+/// </remarks>
+public partial class Program;
