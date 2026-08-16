@@ -101,6 +101,13 @@ jobs:
       - name: Install dotnet-ef
         run: dotnet tool install --global dotnet-ef
 
+      # dotnet-ef builds the project itself but does not restore it first, and says so obscurely:
+      # "Assets file obj/project.assets.json not found". It only shows on a clean checkout, which is
+      # why this passed on a developer machine, where obj/ already existed, and failed on the first
+      # CI run after publication.
+      - name: Restore
+        run: dotnet restore Echelon.slnx
+
       # Editing an entity without adding a migration compiles, tests green, and then fails at
       # deployment against a schema that does not match - or worse, does not fail, and the column
       # is quietly missing. No database needed: this compares the model to the snapshot.
@@ -148,14 +155,21 @@ jobs:
 
       # Empty files named after code fragments ("_success", "t.ClosedAt") are the residue of stray
       # shell redirects and have reached commits repeatedly. Cheap to catch, confusing to inherit.
+      # The check used to fail exactly when the repository was CLEAN. Its loop ended on
+      # `[ -n "$f" ] && ...`, which is false for the empty line `read` produces from an empty list,
+      # so the loop exited 1, the command substitution carried that out, and `set -e` failed the
+      # step - reporting nothing, because the error branch was never reached. It went unnoticed
+      # until the first run on a repository with no empty files, which was the first run ever.
       - name: No committed empty files
         run: |
           set -euo pipefail
-          empty=$(git ls-files --empty-directory -z 2>/dev/null || true)
-          found=$(find . -path ./.git -prune -o -type f -empty -print | grep -v '/obj/\|/bin/' || true)
-          tracked_empty=$(echo "$found" | while read -r f; do
-            [ -n "$f" ] && git ls-files --error-unmatch "$f" >/dev/null 2>&1 && echo "$f"
-          done)
+          tracked_empty=""
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+              tracked_empty="${tracked_empty}${f}"$'\n'
+            fi
+          done <<< "$(find . -path ./.git -prune -o -type f -empty -print | grep -v '/obj/\|/bin/' || true)"
           if [ -n "$tracked_empty" ]; then
             echo "::error::Empty files are committed:"
             echo "$tracked_empty"
