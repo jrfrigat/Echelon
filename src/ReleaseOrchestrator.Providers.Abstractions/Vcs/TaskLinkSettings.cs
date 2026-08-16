@@ -23,11 +23,23 @@ public static class TaskLinkSettings
     public const string PatternKey = "taskKeyPattern";
 
     /// <summary>
-    /// The default pattern: an uppercase tracker key like <c>PROJ-12</c> or <c>S3-42</c>, on a token
-    /// boundary so <c>release/2024-01-ABC-15</c> does not yield <c>01-ABC</c>. The bracketed group is
-    /// the key; the boundary assertions are not part of it.
+    /// The default pattern: an uppercase tracker key like <c>PROJ-12</c>, <c>S3-42</c> or
+    /// <c>ПР-5639</c>, on a token boundary so <c>release/2024-01-ABC-15</c> does not yield
+    /// <c>01-ABC</c>. The bracketed group is the key; the boundary assertions are not part of it.
     /// </summary>
-    public const string DefaultPattern = @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A-Za-z0-9])";
+    /// <remarks>
+    /// Unicode categories rather than <c>A-Z0-9</c>, and that is not tidying. Yandex Tracker projects
+    /// are routinely keyed in Cyrillic, and a Latin-only pattern does not fail on such a key — it
+    /// silently links nothing. The merge request then has no task, so no plan, no rollout, and no
+    /// message anywhere saying why. On the first real repository this met, roughly six in ten merge
+    /// requests were affected.
+    ///
+    /// <c>\p{Lu}</c> keeps the "uppercase key" rule that stops a branch called <c>feature/x-1</c> from
+    /// looking like a task, and the boundaries widen to <c>\p{L}\p{N}</c> so they still bind on a
+    /// non-Latin alphabet. Underscore and hyphen remain boundaries, so <c>ПР-00041379_09_01</c> yields
+    /// <c>ПР-00041379</c> exactly as <c>RPR-1502-2</c> yields <c>RPR-1502</c>.
+    /// </remarks>
+    public const string DefaultPattern = @"(?<![\p{L}\p{N}])(\p{Lu}[\p{Lu}\p{N}]*-\d+)(?![\p{L}\p{N}])";
 
     /// <summary>The source assumed when a connection configures none.</summary>
     public const TaskKeySource DefaultSource = TaskKeySource.Branch;

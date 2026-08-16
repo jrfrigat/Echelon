@@ -26,10 +26,42 @@ public class TaskKeyExtractorTests
     public void ExtractsTheKeyFromABranchWithTheDefaultPattern(string branch, string expected) =>
         Assert.Equal(expected, TaskKeyExtractor.Extract(TaskKeySource.Branch, Default, branch, title: null, labels: null));
 
+    /// <summary>
+    /// A task key written in Cyrillic, in the branch shapes such repositories actually use.
+    /// </summary>
+    /// <remarks>
+    /// Yandex Tracker projects are routinely keyed in Cyrillic, so this is the common case for a
+    /// Russian-language installation rather than an edge one — and a Latin-only pattern does not fail
+    /// on those keys, it links nothing at all: no task, so no plan, no rollout, and no message saying
+    /// why. Roughly six in ten merge requests were affected on the first repository this met.
+    ///
+    /// The names below are invented; what is copied from reality is their SHAPE — an author segment,
+    /// a two- or four-letter project code, zero-padded numbers, and the trailing suffixes people add
+    /// when they branch twice for one task.
+    /// </remarks>
+    [Theory]
+    [InlineData("feature/dv/ПР-5639", "ПР-5639")]
+    [InlineData("feature/dv/МПРО-1015", "МПРО-1015")]
+    [InlineData("feature/dv/ТЕХ-90", "ТЕХ-90")]
+    [InlineData("feature/dv/ЗД-47", "ЗД-47")]
+    [InlineData("origin/Feature/d.petrov/ПР-00046886", "ПР-00046886")]
+    // Trailing suffixes are cut at the token boundary, exactly as they are for a Latin key.
+    [InlineData("feature/dv/ПР-00041379_09_01", "ПР-00041379")]
+    [InlineData("feature/dv/АТП-0047832-11", "АТП-0047832")]
+    [InlineData("hotfix/dv/ПР-9477", "ПР-9477")]
+    public void ExtractsACyrillicKey(string branch, string expected) =>
+        Assert.Equal(expected, TaskKeyExtractor.Extract(TaskKeySource.Branch, Default, branch, null, null));
+
     [Theory]
     [InlineData("main")]
     [InlineData("feature/no-key-here")]
     [InlineData("feature/lower-12")]
+    // Shapes that legitimately name no task: hand-written branches with no key in any alphabet.
+    [InlineData("bsn_feature_hotFix")]
+    [InlineData("hotfix/dv/Control_update")]
+    [InlineData("feature/dv/Corr_Error_bonus_v1")]
+    // Lowercase Cyrillic is not a key, for the same reason lowercase Latin is not.
+    [InlineData("feature/dv/фикс-123")]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
