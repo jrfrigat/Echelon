@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Release Orchestrator is pre-1.0; only the latest released version receives security fixes.
+Echelon is pre-1.0; only the latest released version receives security fixes.
 
 | Version | Supported |
 | ------- | --------- |
@@ -39,4 +39,4 @@ timeline. Please give us reasonable time to address the issue before any public 
 - Keep connection strings, broker credentials and provider tokens out of source control; supply them
   through the environment or a secret store. `.env` is ignored, `.env.example` names what is needed.
 
-Thank you for helping keep Release Orchestrator and its users safe.
+Thank you for helping keep Echelon and its users safe.

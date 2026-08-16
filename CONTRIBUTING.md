@@ -1,4 +1,4 @@
-# Contributing to Release Orchestrator
+# Contributing to Echelon
 
 Thanks for your interest. This document is short on purpose: the conventions that matter are the
 ones the build enforces, and the rest is explained where it applies.
@@ -12,8 +12,8 @@ ones the build enforces, and the rest is explained where it applies.
 ## Build and test
 
 ```bash
-dotnet build ReleaseOrchestrator.slnx
-dotnet test ReleaseOrchestrator.slnx
+dotnet build Echelon.slnx
+dotnet test Echelon.slnx
 ```
 
 The build must be **0 errors and 0 warnings**: `TreatWarningsAsErrors` is on, so a warning is a
@@ -45,8 +45,8 @@ files have reached commits; this script removes them.
   Postgres breaks half the deployments, and only CI notices:
 
   ```bash
-  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.MsSql --context AppDbContext
-  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.Postgres --context AppDbContext
+  dotnet ef migrations add <Name> --project src/Echelon.Migrations.MsSql --context AppDbContext
+  dotnet ef migrations add <Name> --project src/Echelon.Migrations.Postgres --context AppDbContext
   ```
 
 - **Use ASCII and Cyrillic only** in source, documentation and commit messages: no em dashes, no

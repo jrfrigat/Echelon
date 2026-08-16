@@ -1,4 +1,4 @@
-# Release Orchestrator - Getting Started
+# Echelon - Getting Started
 
 > [Русская версия ->](../ru/getting-started.md) - [← Back to docs](../README.md)
 
@@ -41,10 +41,10 @@ OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URI=https://localhost:5173/authentication/login-callback
 
-# Release Orchestrator
+# Echelon
 ASPNETCORE_ENVIRONMENT=Development
-CONNECTION_STRING_DEFAULT=Server=sqlserver;Database=ReleaseOrchestrator;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
-CONNECTION_STRING_ARCHIVE=Server=sqlserver;Database=ReleaseOrchestratorArchive;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
+CONNECTION_STRING_DEFAULT=Server=sqlserver;Database=Echelon;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
+CONNECTION_STRING_ARCHIVE=Server=sqlserver;Database=EchelonArchive;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
 REDIS_CONNECTION_STRING=redis:6379
 QUEUE_USERNAME=guest
 QUEUE_PASSWORD=guest
@@ -82,13 +82,13 @@ Migrations live in a provider-specific project (`...Migrations.MsSql` for SQL Se
 
 ```bash
 # From project root - operational database
-dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql \
-  --startup-project src/ReleaseOrchestrator.Web \
+dotnet ef database update --project src/Echelon.Migrations.MsSql \
+  --startup-project src/Echelon.Web \
   --context AppDbContext
 
 # Archive database
-dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql \
-  --startup-project src/ReleaseOrchestrator.Web \
+dotnet ef database update --project src/Echelon.Migrations.MsSql \
+  --startup-project src/Echelon.Web \
   --context ArchiveDbContext
 ```
 
@@ -101,7 +101,7 @@ On first run no user has permissions. Use bootstrap admin mode to grant the firs
 $env:AUTHORIZATION__BOOTSTRAPADMINOBJECTIDS="your-oid-value"
 
 # Then start the app
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet run --project src/Echelon.Web
 ```
 
 **How to find your OID:**

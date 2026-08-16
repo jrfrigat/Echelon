@@ -38,19 +38,19 @@ jobs:
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Restore
-        run: dotnet restore ReleaseOrchestrator.slnx
+        run: dotnet restore Echelon.slnx
 
       - name: Build
-        run: dotnet build ReleaseOrchestrator.slnx -c Release --no-restore
+        run: dotnet build Echelon.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test ReleaseOrchestrator.slnx -c Release --no-build --verbosity normal
+        run: dotnet test Echelon.slnx -c Release --no-build --verbosity normal
 
       # Only IsPackable=true projects produce packages (Core, Providers.Abstractions, Application).
       # The hosts, the PWA, the migration assemblies and the tests are IsPackable=false, so pack
       # skips them: they ship as container images, not as a dependency anyone should take.
       - name: Pack
-        run: dotnet pack ReleaseOrchestrator.slnx -c Release --no-build -o artifacts
+        run: dotnet pack Echelon.slnx -c Release --no-build -o artifacts
 
       # Trusted Publishing: exchange the GitHub OIDC token for a short-lived NuGet API key. Requires
       # a Trusted Publisher policy on nuget.org for this repository + workflow, plus the nuget.org
@@ -86,16 +86,16 @@ jobs:
             echo "${GHCR}:${VERSION}"
             echo "${GHCR}:latest"
             if [ -n "${DOCKERHUB_USER}" ]; then
-              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator:${VERSION}"
-              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator:latest"
+              echo "docker.io/${DOCKERHUB_USER}/echelon:${VERSION}"
+              echo "docker.io/${DOCKERHUB_USER}/echelon:latest"
             fi
             echo "EOF"
             echo "ingress<<EOF"
             echo "${GHCR}-ingress:${VERSION}"
             echo "${GHCR}-ingress:latest"
             if [ -n "${DOCKERHUB_USER}" ]; then
-              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator-ingress:${VERSION}"
-              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator-ingress:latest"
+              echo "docker.io/${DOCKERHUB_USER}/echelon-ingress:${VERSION}"
+              echo "docker.io/${DOCKERHUB_USER}/echelon-ingress:latest"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -118,7 +118,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/ReleaseOrchestrator.Web/Dockerfile
+          file: src/Echelon.Web/Dockerfile
           push: true
           tags: ${{ steps.tags.outputs.app }}
 
@@ -126,7 +126,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/ReleaseOrchestrator.Ingress.Webhooks/Dockerfile
+          file: src/Echelon.Ingress.Webhooks/Dockerfile
           push: true
           tags: ${{ steps.tags.outputs.ingress }}
 
@@ -140,7 +140,7 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ vars.DOCKERHUB_USERNAME }}/release-orchestrator
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/echelon
           short-description: "Release planning and rollout across issue trackers and repositories. .NET 10."
           readme-filepath: build/dockerhub-overview.md
 

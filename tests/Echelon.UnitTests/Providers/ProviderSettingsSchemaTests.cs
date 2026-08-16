@@ -1,0 +1,158 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Echelon.Infrastructure;
+using Echelon.Providers.Abstractions;
+using Echelon.Providers.Abstractions.Tracker;
+using Echelon.Providers.Abstractions.Vcs;
+using Echelon.Providers.YandexTracker;
+using Xunit;
+
+namespace Echelon.UnitTests.Providers;
+
+/// <summary>
+/// The settings schema is what lets the admin UI configure a provider it has never heard of. If it
+/// drifts from what the adapter actually reads, the form asks for the wrong thing and the
+/// connection fails at first use - so the two are asserted against each other here.
+/// </summary>
+public class ProviderSettingsSchemaTests
+{
+    private static ServiceProvider BuildProvider()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            // See DependencyInjectionTests: outside Development the composition root requires a
+            // certificate for the key ring.
+            ["ASPNETCORE_ENVIRONMENT"] = "Development",
+            ["ConnectionStrings:Default"] = "Server=unused;Database=unused;Trusted_Connection=True",
+            ["ConnectionStrings:Archive"] = "Server=unused;Database=unused-archive;Trusted_Connection=True",
+            ["Redis:ConnectionString"] = "localhost:6379",
+            ["Queue:Host"] = "localhost",
+            ["Queue:Username"] = "unused",
+            ["Queue:Password"] = "unused"
+        }).Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddInfrastructure(config);
+        return services.BuildServiceProvider();
+    }
+
+    [Fact]
+    public void YandexTrackerDeclaresTheOrganizationIdItActuallyReads()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var schema = scope.ServiceProvider
+            .GetRequiredService<ITrackerProviderFactory>()
+            .GetSettingsSchema("yandextracker-webhook");
+
+        // The key is the contract between the form and YandexTrackerOptions.From. A rename on one
+        // side alone leaves the adapter throwing "requires an organization id" at a connection the
+        // operator plainly filled in.
+        var orgId = Assert.Single(schema, s => s.Key == YandexTrackerOptions.OrgIdKey);
+        Assert.True(orgId.Required);
+        Assert.False(string.IsNullOrWhiteSpace(orgId.Label));
+
+        // The closed-status set is per-project, so the adapter declares it too - optional, and
+        // pre-filled with the defaults so a fresh connection reads the same set the form shows.
+        var closed = Assert.Single(schema, s => s.Key == YandexTrackerOptions.ClosedStatusesKey);
+        Assert.False(closed.Required);
+        Assert.False(string.IsNullOrWhiteSpace(closed.Default));
+    }
+
+    /// <summary>
+    /// The poll tracker type declares its interval (a bounded integer, refused at the form rather than
+    /// failing when the poller runs) on top of the base tracker settings; the webhook type declares none.
+    /// </summary>
+    [Fact]
+    public void YandexTrackerPollDeclaresItsIntervalAndTheWebhookDoesNot()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<ITrackerProviderFactory>();
+
+        var poll = factory.GetSettingsSchema("yandextracker-poll");
+        var interval = Assert.Single(poll, s => s.Key == VcsPollSettings.IntervalKey);
+        Assert.Equal(ProviderSettingKind.Int, interval.Kind);
+        Assert.Contains(poll, s => s.Key == YandexTrackerOptions.OrgIdKey);
+
+        var webhook = factory.GetSettingsSchema("yandextracker-webhook");
+        Assert.DoesNotContain(webhook, s => s.Key == VcsPollSettings.IntervalKey);
+    }
+
+    /// <summary>
+    /// The webhook GitLab type declares only the task-linking rule (source + pattern): no webhook
+    /// secret field, because that is ingress configuration, and no poll interval, because it is pushed.
+    /// </summary>
+    [Fact]
+    public void GitLabWebhookDeclaresTheLinkingRuleOnly()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var keys = scope.ServiceProvider
+            .GetRequiredService<IVcsProviderFactory>()
+            .GetSettingsSchema("gitlab-webhook")
+            .Select(s => s.Key)
+            .ToList();
+
+        Assert.Equal([TaskLinkSettings.SourceKey, TaskLinkSettings.PatternKey], keys);
+    }
+
+    /// <summary>
+    /// The poll GitLab type declares its interval (a bounded integer, so a non-numeric value is
+    /// refused at the form rather than failing when the poller first runs) on top of the same linking
+    /// rule every GitLab connection carries.
+    /// </summary>
+    [Fact]
+    public void GitLabPollDeclaresItsIntervalAndTheLinkingRule()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var schema = scope.ServiceProvider
+            .GetRequiredService<IVcsProviderFactory>()
+            .GetSettingsSchema("gitlab-poll");
+
+        var interval = Assert.Single(schema, s => s.Key == VcsPollSettings.IntervalKey);
+        Assert.Equal(ProviderSettingKind.Int, interval.Kind);
+
+        Assert.Contains(schema, s => s.Key == TaskLinkSettings.SourceKey);
+        Assert.Contains(schema, s => s.Key == TaskLinkSettings.PatternKey);
+    }
+
+    [Theory]
+    [InlineData("YandexTracker-Webhook")]
+    [InlineData("  yandextracker-webhook  ")]
+    public void SchemaLookupMatchesTheProviderTypeCanonically(string providerType)
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var schema = scope.ServiceProvider
+            .GetRequiredService<ITrackerProviderFactory>()
+            .GetSettingsSchema(providerType);
+
+        Assert.NotEmpty(schema);
+    }
+
+    /// <summary>
+    /// An unknown provider names the alternatives here too. The UI asks for a schema before it can
+    /// render a form, so this is the first place a typo surfaces.
+    /// </summary>
+    [Fact]
+    public void UnknownProviderFailsListingTheRegisteredOnes()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        var factory = scope.ServiceProvider.GetRequiredService<IVcsProviderFactory>();
+
+        var exception = Assert.Throws<UnknownProviderException>(() => factory.GetSettingsSchema("gitab"));
+
+        Assert.Contains("gitab", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("gitlab", exception.Message, StringComparison.Ordinal);
+    }
+}

@@ -1,6 +1,0 @@
-@ReleaseOrchestrator.Web_HostAddress = http://localhost:5070
-
-GET {{ReleaseOrchestrator.Web_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

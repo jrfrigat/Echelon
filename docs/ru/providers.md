@@ -5,7 +5,7 @@
 ## Обзор
 
 **Провайдер** - это адаптер, приводящий один диалект (эндпоинты API, аутентификацию, строки статусов)
-к общему порту. ReleaseOrchestrator регистрирует провайдеров через **keyed DI на этапе компиляции**, а
+к общему порту. Echelon регистрирует провайдеров через **keyed DI на этапе компиляции**, а
 не через динамическое обнаружение или плагины.
 
 ### Почему compile-time DI?
@@ -91,12 +91,12 @@ VCS-адаптер добавляет `TaskLinkSettings.Schema` в свой `Set
 
 ## Добавление VCS-провайдера
 
-Ориентир - существующий провайдер GitLab (`src/ReleaseOrchestrator.Providers.GitLab/`).
+Ориентир - существующий провайдер GitLab (`src/Echelon.Providers.GitLab/`).
 
 ### 1. Реализуйте порты
 
 ```csharp
-using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using Echelon.Providers.Abstractions.Vcs;
 
 internal sealed class MyVcsAdapter(HttpClient http) : IVcsProviderAdapter
 {
@@ -198,7 +198,7 @@ deploy target и объявляет свой `SettingsSchema`.
 ### 5. Подключение в корне композиции
 
 ```csharp
-// src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs (API-хост)
+// src/Echelon.Infrastructure/InfrastructureExtensions.cs (API-хост)
 services.AddGitLabProvider();
 services.AddMyVcsProvider();          // ← read-адаптеры + регистрации
 services.AddMyVcsDeployStrategies();
@@ -213,7 +213,7 @@ services.AddMyVcsWebhookParser();
 
 ## Добавление провайдера трекера
 
-Ориентир - `src/ReleaseOrchestrator.Providers.YandexTracker/`. Контекст трекер-адаптера **несёт** мешок
+Ориентир - `src/Echelon.Providers.YandexTracker/`. Контекст трекер-адаптера **несёт** мешок
 настроек (`TrackerProviderContext(ConnectionName, ApiUrl, AccessToken, ProviderSettings)`), потому что
 они нужны самому адаптеру (заголовок с org id, какие статусы "завершены").
 

@@ -1,4 +1,4 @@
-# Ruflo - Claude Code Configuration
+# Echelon - Claude Code Configuration
 
 ## Rules
 
@@ -39,144 +39,14 @@ Core (enum'ы, чистый разбор; ноль зависимостей - н
 - **Провайдеры регистрируются на этапе компиляции** (keyed services + фабрика), без динамической загрузки сборок. Динамическая загрузка и контейнерная поставка взаимно обнуляются: единственный выигрыш - "добавить провайдера без пересборки", а образ пересобирается всё равно
 - **Локализация** - `Resources/*.resx` (нейтральная культура = en) + `*.ru.resx`. Логи не локализуются: они для операторов и должны быть на одном языке
 
-## Agent Comms (SendMessage-First Coordination)
-
-Named agents coordinate via `SendMessage`, not polling or shared state.
-
-```
-Lead (you) ←-> architect ←-> developer ←-> tester ←-> reviewer
-              (named agents message each other directly)
-```
-
-### Spawning a Coordinated Team
-
-```javascript
-// ALL agents in ONE message, each knows WHO to message next
-Agent({ prompt: "Research the codebase. SendMessage findings to 'architect'.",
-  subagent_type: "researcher", name: "researcher", run_in_background: true })
-Agent({ prompt: "Wait for 'researcher'. Design solution. SendMessage to 'coder'.",
-  subagent_type: "system-architect", name: "architect", run_in_background: true })
-Agent({ prompt: "Wait for 'architect'. Implement it. SendMessage to 'tester'.",
-  subagent_type: "coder", name: "coder", run_in_background: true })
-Agent({ prompt: "Wait for 'coder'. Write tests. SendMessage results to 'reviewer'.",
-  subagent_type: "tester", name: "tester", run_in_background: true })
-Agent({ prompt: "Wait for 'tester'. Review code quality and security.",
-  subagent_type: "reviewer", name: "reviewer", run_in_background: true })
-
-// Kick off the pipeline
-SendMessage({ to: "researcher", summary: "Start", message: "[task context]" })
-```
-
-### Patterns
-
-| Pattern | Flow | Use When |
-|---------|------|----------|
-| **Pipeline** | A -> B -> C -> D | Sequential dependencies (feature dev) |
-| **Fan-out** | Lead -> A, B, C -> Lead | Independent parallel work (research) |
-| **Supervisor** | Lead ↔ workers | Ongoing coordination (complex refactor) |
-
-### Rules
-
-- ALWAYS name agents - `name: "role"` makes them addressable
-- ALWAYS include comms instructions in prompts - who to message, what to send
-- Spawn ALL agents in ONE message with `run_in_background: true`
-- After spawning: STOP, tell user what's running, wait for results
-- NEVER poll status - agents message back or complete automatically
-
-## Swarm & Routing
-
-### Config
-- **Topology**: hierarchical-mesh (anti-drift)
-- **Max Agents**: 15
-- **Memory**: hybrid
-- **HNSW**: Enabled
-- **Neural**: Enabled
-
-```bash
-npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
-```
-
-### Agent Routing
-
-| Task | Agents | Topology |
-|------|--------|----------|
-| Bug Fix | researcher, coder, tester | hierarchical |
-| Feature | architect, coder, tester, reviewer | hierarchical |
-| Refactor | architect, coder, reviewer | hierarchical |
-| Performance | perf-engineer, coder | hierarchical |
-| Security | security-architect, auditor | hierarchical |
-
-### When to Swarm
-- **YES**: 3+ files, new features, cross-module refactoring, API changes, security, performance
-- **NO**: single file edits, 1-2 line fixes, docs updates, config changes, questions
-
-### 3-Tier Model Routing
-
-| Tier | Handler | Use Cases |
-|------|---------|-----------|
-| 1 | Agent Booster (WASM) | Simple transforms - skip LLM, use Edit directly |
-| 2 | Haiku | Simple tasks, low complexity |
-| 3 | Sonnet/Opus | Architecture, security, complex reasoning |
-
-## Memory & Learning
-
-### Before Any Task
-```bash
-npx @claude-flow/cli@latest memory search --query "[task keywords]" --namespace patterns
-npx @claude-flow/cli@latest hooks route --task "[task description]"
-```
-
-### After Success
-```bash
-npx @claude-flow/cli@latest memory store --namespace patterns --key "[name]" --value "[what worked]"
-npx @claude-flow/cli@latest hooks post-task --task-id "[id]" --success true --store-results true
-```
-
-### MCP Tools (use `ToolSearch("keyword")` to discover)
-
-| Category | Key Tools |
-|----------|-----------|
-| **Memory** | `memory_store`, `memory_search`, `memory_search_unified` |
-| **Bridge** | `memory_import_claude`, `memory_bridge_status` |
-| **Swarm** | `swarm_init`, `swarm_status`, `swarm_health` |
-| **Agents** | `agent_spawn`, `agent_list`, `agent_status` |
-| **Hooks** | `hooks_route`, `hooks_post-task`, `hooks_worker-dispatch` |
-| **Security** | `aidefence_scan`, `aidefence_is_safe`, `aidefence_has_pii` |
-| **Hive-Mind** | `hive-mind_init`, `hive-mind_consensus`, `hive-mind_spawn` |
-
-### Background Workers
-
-| Worker | When |
-|--------|------|
-| `audit` | After security changes |
-| `optimize` | After performance work |
-| `testgaps` | After adding features |
-| `map` | Every 5+ file changes |
-| `document` | After API changes |
-
-```bash
-npx @claude-flow/cli@latest hooks worker dispatch --trigger audit
-```
-
-## Agents
-
-**Core**: `coder`, `reviewer`, `tester`, `planner`, `researcher`
-**Architecture**: `system-architect`, `backend-dev`, `mobile-dev`
-**Security**: `security-architect`, `security-auditor`
-**Performance**: `performance-engineer`, `perf-analyzer`
-**Coordination**: `hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`
-**GitHub**: `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`
-
-Any string works as a custom agent type.
-
 ## Build & Test
 
 - ALWAYS run tests after code changes
 - ALWAYS verify build succeeds before committing
 
 ```bash
-dotnet build ReleaseOrchestrator.slnx -v q --nologo   # must be 0 errors, 0 warnings
-dotnet test ReleaseOrchestrator.slnx
+dotnet build Echelon.slnx -v q --nologo   # must be 0 errors, 0 warnings
+dotnet test Echelon.slnx
 bash scripts/clean-empty-files.sh                        # before every commit
 ```
 
@@ -187,7 +57,7 @@ bash scripts/clean-empty-files.sh                        # before every commit
 - **`python3` - заглушка Windows Store: печатает `Python`, ничего не делает и возвращает `0`.** Самый опасный вид отказа: скрипт "отработал успешно", файл не изменился. Так молча не применились правки конфигураций EF, а сборка и `has-pending-model-changes` при этом оставались зелёными. Файлы править только Write/Edit; для текстовых замен - `perl -pi -e` или `sed`, и **проверять результат `grep`, а не кодом возврата**
 - **nuget.org закрыт прокси, но доступен в обход него** (проверено 2026-08-09). В окружении заданы `HTTP_PROXY`/`HTTPS_PROXY` на `ai.comss.one:8888`, и он отвечает `403` на `api.nuget.org` -> `NU1301` и провал restore. Прямое соединение работает, поэтому снимайте переменные для одной команды, а не правьте источники:
   ```bash
-  env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy dotnet restore ReleaseOrchestrator.slnx
+  env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy dotnet restore Echelon.slnx
   ```
   Так приехал `Flare 0.17.1`. **Не говорите, что пакет недостижим, не попробовав это** - заметка здесь дважды переворачивалась (было "заблокирован", стало "доступен" 17.07, снова закрылось к 09.08), то есть состояние прокси меняется и проверять надо каждый раз. `NU1900` (предупреждение, не ошибка) - признак, что аудит уязвимостей молча ничего не проверил; при рабочем обходе он не появляется, и **NU1902/NU1903 остаются ошибками**
 - **Реестр Docker фильтруется** - образы не собрать, теги не проверить
@@ -206,32 +76,8 @@ bash scripts/clean-empty-files.sh                        # before every commit
 - **sqlcmd ставит `QUOTED_IDENTIFIER OFF`** (в отличие от SSMS), а фильтрованный индекс требует `ON` для любой записи в таблицу - иначе `Msg 1934`. Приложение через SqlClient ставит `ON` само; скриптам нужен флаг `-I` или явный `SET`
 - **Миграции - на оба провайдера, всегда обе.** Добавить в MsSql и забыть Postgres - значит сломать вторую половину деплоев, и заметит это только CI:
   ```bash
-  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.MsSql    --context AppDbContext
-  dotnet ef migrations add <Name> --project src/ReleaseOrchestrator.Migrations.Postgres --context AppDbContext
+  dotnet ef migrations add <Name> --project src/Echelon.Migrations.MsSql    --context AppDbContext
+  dotnet ef migrations add <Name> --project src/Echelon.Migrations.Postgres --context AppDbContext
   ```
 - **Расхождения SQL Server и PostgreSQL живут в `ProviderSpecificMapping`** и больше нигде. Их два, и оба найдены не чтением, а сборкой модели: токен конкурентности (`rowversion` против системной `xmin` - Npgsql молча принимает `[Timestamp]` и делает `bytea`, который никогда не заполняется, то есть проверка конкурентности **не срабатывает вообще**) и фильтр индекса (`[IsActive] = 1` против `"IsActive"` - фильтр это кусок SQL, EF передаёт его дословно). Добавляете третье - туда же, с объяснением
 - **Даты: только `Kind=Utc`.** PostgreSQL кладёт `DateTime` в `timestamptz`, Npgsql пишет туда лишь `Utc` и бросает на `Local`/`Unspecified`; SQL Server проглатывает любой - поэтому баг невидим, пока не запустят вторую БД. В адаптерах разбирать даты через `DateTimeOffset` и отдавать `.UtcDateTime`
-
-## CLI Quick Reference
-
-```bash
-npx @claude-flow/cli@latest init --wizard           # Setup
-npx @claude-flow/cli@latest swarm init --v3-mode     # Start swarm
-npx @claude-flow/cli@latest memory search --query "" # Vector search
-npx @claude-flow/cli@latest hooks route --task ""    # Route to agent
-npx @claude-flow/cli@latest doctor --fix             # Diagnostics
-npx @claude-flow/cli@latest security scan            # Security scan
-npx @claude-flow/cli@latest performance benchmark    # Benchmarks
-```
-
-26 commands, 140+ subcommands. Use `--help` on any command for details.
-
-## Setup
-
-```bash
-claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
-npx @claude-flow/cli@latest daemon start
-npx @claude-flow/cli@latest doctor --fix
-```
-
-**Agent tool** handles execution (agents, files, code, git). **MCP tools** handle coordination (swarm, memory, hooks). **CLI** is the same via Bash.

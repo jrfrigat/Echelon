@@ -17,16 +17,16 @@ scrape_configs:
 
   # The Core process: API request rates and durations, the .NET runtime (GC, thread pool, memory),
   # outbound calls to GitLab and the tracker, and Rebus message throughput.
-  - job_name: release-orchestrator-core
+  - job_name: echelon-core
     static_configs:
       - targets: ["core:8080"]
         labels:
-          service: release-orchestrator-core
+          service: echelon-core
 
   # The Ingress process: webhook request rates and the same runtime and Rebus metrics on the
   # send side.
-  - job_name: release-orchestrator-ingress
+  - job_name: echelon-ingress
     static_configs:
       - targets: ["ingress:8080"]
         labels:
-          service: release-orchestrator-ingress
+          service: echelon-ingress

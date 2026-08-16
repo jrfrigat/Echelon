@@ -1,4 +1,4 @@
-# Release Orchestrator - Начало работы
+# Echelon - Начало работы
 
 > [English version ->](../en/getting-started.md) - [← Вернуться к документации](../README.md)
 
@@ -41,10 +41,10 @@ OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URI=https://localhost:5173/authentication/login-callback
 
-# Release Orchestrator
+# Echelon
 ASPNETCORE_ENVIRONMENT=Development
-CONNECTION_STRING_DEFAULT=Server=sqlserver;Database=ReleaseOrchestrator;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
-CONNECTION_STRING_ARCHIVE=Server=sqlserver;Database=ReleaseOrchestratorArchive;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
+CONNECTION_STRING_DEFAULT=Server=sqlserver;Database=Echelon;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
+CONNECTION_STRING_ARCHIVE=Server=sqlserver;Database=EchelonArchive;User Id=sa;Password=YourComplexPassword123!;TrustServerCertificate=true;
 REDIS_CONNECTION_STRING=redis:6379
 QUEUE_USERNAME=guest
 QUEUE_PASSWORD=guest
@@ -84,13 +84,13 @@ docker-compose logs -f sqlserver | grep "Recovery is complete"
 
 ```bash
 # Из корня проекта - рабочая БД
-dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql \
-  --startup-project src/ReleaseOrchestrator.Web \
+dotnet ef database update --project src/Echelon.Migrations.MsSql \
+  --startup-project src/Echelon.Web \
   --context AppDbContext
 
 # Архивная БД
-dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql \
-  --startup-project src/ReleaseOrchestrator.Web \
+dotnet ef database update --project src/Echelon.Migrations.MsSql \
+  --startup-project src/Echelon.Web \
   --context ArchiveDbContext
 ```
 
@@ -103,7 +103,7 @@ dotnet ef database update --project src/ReleaseOrchestrator.Migrations.MsSql \
 $env:AUTHORIZATION__BOOTSTRAPADMINOBJECTIDS="your-oid-value"
 
 # Затем запустите приложение
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet run --project src/Echelon.Web
 ```
 
 **Как найти свой OID:**

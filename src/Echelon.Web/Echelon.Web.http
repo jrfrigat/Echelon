@@ -1,0 +1,6 @@
+@Echelon.Web_HostAddress = http://localhost:5070
+
+GET {{Echelon.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

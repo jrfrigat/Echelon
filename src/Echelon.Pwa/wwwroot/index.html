@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Echelon</title>
+    <base href="/" />
+    <meta name="theme-color" content="#1e293b" />
+    <!-- Flare component styles. The VisualStudio theme declares its own stylesheets via
+         ITheme.StyleAssets and injects them at runtime, so they are not listed here. -->
+    <link rel="stylesheet" href="_content/Flare.Components/css/flare-components.css" />
+    <!-- Also carries the self-hosted Material Symbols @font-face; see the comment there. -->
+    <link rel="stylesheet" href="app.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <!-- Applies the saved theme/palette/mode classes to <html> before first paint, so the app does
+         not flash the wrong colour scheme. An external file, not an inline block: script-src is
+         'self' 'wasm-unsafe-eval', with no 'unsafe-inline'. -->
+    <script src="_content/Flare.Components/js/flare-bootstrap.js"></script>
+    <!-- Flare's consolidated JS-interop bundle (FlareDataGrid infinite-scroll, clipboard, file
+         download, ...). Separate from bootstrap; without it interactive components fail at runtime
+         with "FlareDataGrid was undefined". Both Flare reference apps load it right after bootstrap. -->
+    <script src="_content/Flare.Components/js/flare-components.js"></script>
+    <script src="js/icon-font-ready.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="app-loading">
+            <div class="app-loading-spinner" role="status" aria-label="Loading"></div>
+        </div>
+    </div>
+    <div id="blazor-error-ui" style="display:none">
+        An unhandled error has occurred. <a href="" class="reload">Reload</a>
+    </div>
+    <!-- MSAL's JS interop for AddMsalAuthentication. Without it AuthenticationService is undefined
+         and the app dies on startup with "Could not find 'AuthenticationService.init'". Must load
+         before Blazor starts. -->
+    <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="js/register-sw.js"></script>
+</body>
+</html>

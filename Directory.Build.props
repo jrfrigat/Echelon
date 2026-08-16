@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup Label="Identity">
-    <Product>Release Orchestrator</Product>
+    <Product>Echelon</Product>
     <Authors>FrigaT</Authors>
     <Company>FrigaT</Company>
     <Copyright>Copyright (c) 2026 FrigaT</Copyright>
@@ -22,8 +22,8 @@
   <PropertyGroup Label="Packaging">
     <IsPackable>false</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/jrfrigat/release-orchestrator</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/jrfrigat/release-orchestrator</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jrfrigat/echelon</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jrfrigat/echelon</RepositoryUrl>
     <PackageTags>release-management;deployment;rollout;gitlab;yandex-tracker;devops;aspnetcore;dotnet</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>

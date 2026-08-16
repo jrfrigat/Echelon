@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Echelon.Core\Echelon.Core.csproj" />
+    <ProjectReference Include="..\Echelon.Providers.Abstractions\Echelon.Providers.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Label="Package">
+    <IsPackable>true</IsPackable>
+    <PackageId>FrigaT.Echelon.Application</PackageId>
+    <Description>Ports, message contracts and the rollout planning algorithm: dependency closure, wave ordering, the YAML ordering-rule language. Pure, with no Entity Framework, so it can be used and tested on its own.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

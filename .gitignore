@@ -48,15 +48,14 @@ appsettings.Development.json
 # tracked .example beside it holds placeholders - copy it and fill in your connection.
 docker-compose.override.yml
 
-# Tooling artifacts (ruflo / claude-flow). Local assistant configuration, not project source:
-# it is regenerated per machine and carries no decision anyone reviews, so it stays out of the
-# repository as it does in Flare and Weir.
-ruvector.db
+# SQLite sidecar files (write-ahead log and shared memory) - never source.
 *.db-shm
 *.db-wal
+
+# Tooling artifacts (Claude Code). Local assistant configuration, not project source:
+# it is regenerated per machine and carries no decision anyone reviews, so it stays out of the
+# repository as it does in Flare and Weir.
 .claude/
-.claude-flow/
-.swarm/
 .mcp.json
 
 # OS

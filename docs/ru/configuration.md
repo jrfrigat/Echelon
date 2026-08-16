@@ -1,4 +1,4 @@
-# Release Orchestrator - Конфигурация
+# Echelon - Конфигурация
 
 > [English version ->](../en/configuration.md) - [← Вернуться к документации](../README.md)
 
@@ -21,14 +21,14 @@
 **`ConnectionStrings__Default`** (ОБЯЗАТЕЛЬНО)
 - **Что:** Connection string оперативной БД
 - **Формат:** SQL Server connection string
-- **Пример:** `Server=localhost;Database=ReleaseOrchestrator;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
+- **Пример:** `Server=localhost;Database=Echelon;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
 - **При отсутствии:** `InvalidOperationException` при старте - "ConnectionStrings:Default is required"
 - **Retry при транзиентных ошибках:** Включен (timeout SQL Server, deadlock -> автоматический retry, exponential backoff)
 
 **`ConnectionStrings__Archive`** (ОБЯЗАТЕЛЬНО)
 - **Что:** Connection string архивной БД (исторические данные >90 дней)
 - **Формат:** SQL Server connection string
-- **Пример:** `Server=localhost;Database=ReleaseOrchestratorArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
+- **Пример:** `Server=localhost;Database=EchelonArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
 - **При отсутствии:** `InvalidOperationException` при старте
 - **Примечание:** Может быть той же инстанцией SQL Server (но другая БД) или полностью отдельным сервером
 
@@ -276,7 +276,7 @@ merge request'а или результат пайплайна - на стран�
 
 ## OpenID Connect
 
-Release Orchestrator полагается на внешний OIDC-провайдер. Конфигурация обычно находится в конфигурации вебприложения (например, `appsettings.json` или Azure AD в admin-портале), не в переменных окружения.
+Echelon полагается на внешний OIDC-провайдер. Конфигурация обычно находится в конфигурации вебприложения (например, `appsettings.json` или Azure AD в admin-портале), не в переменных окружения.
 
 **Используемые claims:**
 - `oid` - Уникальный идентификатор пользователя (обязателен)
@@ -295,7 +295,7 @@ Release Orchestrator полагается на внешний OIDC-провай�
 
 **Управление уровнем:** Установите через стандартный .NET Core:
 ```bash
-LOGLEVEL_ReleaseOrchestrator=Debug
+LOGLEVEL_Echelon=Debug
 LOGLEVEL_Microsoft.EntityFrameworkCore=Warning
 ```
 
@@ -306,7 +306,7 @@ LOGLEVEL_Microsoft.EntityFrameworkCore=Warning
 {
   "timestamp": "2025-01-15T10:30:00Z",
   "level": "Information",
-  "logger": "ReleaseOrchestrator.Application.ReleasePlanning.ReleasePlanner",
+  "logger": "Echelon.Application.ReleasePlanning.ReleasePlanner",
   "message": "Release plan recalculated",
   "planId": "550e8400-e29b-41d4-a716-446655440000",
   "stageCount": 5,
@@ -428,8 +428,8 @@ StackExchange.Redis автоматически управляет pooling. Яв�
 
 ```bash
 # Database
-ConnectionStrings__Default=Server=sqlserver;Database=ReleaseOrchestrator;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
-ConnectionStrings__Archive=Server=sqlserver;Database=ReleaseOrchestratorArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
+ConnectionStrings__Default=Server=sqlserver;Database=Echelon;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
+ConnectionStrings__Archive=Server=sqlserver;Database=EchelonArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
 
 # RabbitMQ
 Queue__Username=guest
@@ -459,7 +459,7 @@ Authorization__BootstrapAdminObjectIds=
 
 # Observability (опционально)
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-LOGLEVEL_ReleaseOrchestrator=Information
+LOGLEVEL_Echelon=Information
 ```
 
 ---

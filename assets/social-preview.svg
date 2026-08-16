@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Release Orchestrator - deploy a task, not a branch">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Echelon - deploy a task, not a branch">
   <!-- GitHub social preview (1280x640). Same mark and palette as the banner, laid out for a card
        that is usually seen small: one line of name, one of promise, nothing else competing. -->
   <defs>
@@ -14,16 +14,6 @@
       <stop offset="0" stop-color="#4fd6c9"/>
       <stop offset="1" stop-color="#4ea1ff"/>
     </linearGradient>
-    <mask id="spNodeCut">
-      <rect x="0" y="0" width="256" height="256" fill="white"/>
-      <g fill="black">
-        <circle cx="68" cy="84" r="24"/>
-        <circle cx="68" cy="172" r="24"/>
-        <circle cx="128" cy="128" r="26"/>
-        <circle cx="188" cy="84" r="24"/>
-        <circle cx="188" cy="172" r="24"/>
-      </g>
-    </mask>
   </defs>
 
   <rect x="0" y="0" width="1280" height="640" fill="url(#spPanel)"/>
@@ -32,22 +22,15 @@
     <rect x="0" y="0" width="256" height="256" rx="56" fill="#131416"/>
     <rect x="5.6" y="5.6" width="244.8" height="244.8" rx="51.2" fill="none" stroke="#26282b" stroke-width="9.6"/>
 
-    <g fill="none" stroke="url(#spMarkEdge)" stroke-width="11" mask="url(#spNodeCut)" stroke-linecap="round">
-      <path d="M68 84 L128 128"/>
-      <path d="M68 172 L128 128"/>
-      <path d="M128 128 L188 84"/>
-      <path d="M128 128 L188 172"/>
+    <g fill="url(#spMarkEdge)">
+      <rect x="60" y="68" width="136" height="28" rx="14"/>
+      <rect x="60" y="114" width="100" height="28" rx="14" opacity="0.72"/>
+      <rect x="60" y="160" width="64" height="28" rx="14" opacity="0.46"/>
     </g>
-    <g fill="#131416" stroke="url(#spMarkEdge)" stroke-width="10">
-      <circle cx="68" cy="84" r="16"/>
-      <circle cx="68" cy="172" r="16"/>
-      <circle cx="188" cy="84" r="16"/>
-      <circle cx="188" cy="172" r="16"/>
-    </g>
-    <circle cx="128" cy="128" r="19" fill="url(#spMarkEdge)"/>
+    <rect x="40" y="60" width="10" height="136" rx="5" fill="#4fd6c9"/>
   </g>
 
-  <text x="640" y="452" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="66" font-weight="700" fill="url(#spText)">Release Orchestrator</text>
+  <text x="640" y="452" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="78" font-weight="700" fill="url(#spText)">Echelon</text>
   <text x="640" y="504" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="30" font-weight="400" fill="#a3a3a8">Deploy a task, not a branch</text>
   <text x="640" y="552" text-anchor="middle" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#6d6d73">Rollout planning across trackers and repositories, on .NET 10</text>
 </svg>

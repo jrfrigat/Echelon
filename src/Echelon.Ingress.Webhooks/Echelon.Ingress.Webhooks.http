@@ -1,0 +1,6 @@
+@Echelon.Ingress.Webhooks_HostAddress = http://localhost:5089
+
+GET {{Echelon.Ingress.Webhooks_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

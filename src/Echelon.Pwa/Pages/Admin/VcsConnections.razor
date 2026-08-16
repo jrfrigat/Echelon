@@ -1,0 +1,229 @@
+@page "/admin/vcs"
+@attribute [Authorize]
+@inherits CrudPageBase<VcsConnectionDto>
+@using Echelon.Providers.Abstractions.Vcs
+
+<PageTitle>@UiStrings.Vcs_Title</PageTitle>
+
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Vcs_Title">
+        <Actions>
+            <FlareButton Size="ButtonSize.Sm" OnClick="OpenCreate">
+                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Add" /></LeadingIcon>
+                <ChildContent>@UiStrings.Vcs_New</ChildContent>
+            </FlareButton>
+        </Actions>
+    </PageHeader>
+
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+    @if (Loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (Result is not null)
+    {
+        <FlareDataGrid TItem="VcsConnectionDto" Items="Result.Items" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
+                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Type">
+                    <Template>
+                        <FlareChip Label="@context.VcsType" Size="ChipSize.Sm" />
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
+                <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            @* Poll-mode connections are refreshed on a timer; offer a manual poll so an
+                               operator does not have to wait for the next tick. *@
+                            @if (IsPollType(context.VcsType))
+                            {
+                                @* Loading on the button itself, keyed to this row: a poll walks every
+                                   repository of the connection over the network and can take a while,
+                                   and without it the click looked like nothing happened -- so it got
+                                   clicked again, starting a second sweep. Disabled while any poll runs
+                                   so two cannot overlap. *@
+                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)"
+                                                 Loading="@(_pollingId == context.Id)"
+                                                 Disabled="@(_pollingId is not null)"
+                                                 OnClick="@(() => Poll(context))">
+                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
+                                </FlareIconButton>
+                            }
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                            </FlareIconButton>
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                            </FlareIconButton>
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+
+        @if (Result.Total > Result.PageSize)
+        {
+            <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
+                             TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
+        }
+    }
+</FlareStack>
+
+<FlareDialog Visible="ShowModal"
+             Title="@(_editId.HasValue ? UiStrings.Vcs_Dialog_Edit : UiStrings.Vcs_Dialog_New)"
+             VisibleChanged="OnDialogVisibleChanged">
+    <ChildContent>
+        @* A form so Enter saves. The dialog renders its actions in a separate fragment, so the Save
+           button is not inside this element and cannot be the submit control - hence the hidden one
+           at the end. Without it Enter did nothing and the dialog had to be dismissed with the mouse. *@
+        <form @onsubmit="Save" @onsubmit:preventDefault>
+        <FlareStack Gap="FlareSpacing.Medium">
+            <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />
+            @if (!_editId.HasValue)
+            {
+                @* The type carries push vs poll: gitlab-webhook is pushed, gitlab-poll is polled and
+                   shows its interval among the provider settings below. *@
+                <FlareSelect TValue="string" Label="@UiStrings.Common_Type"
+                             Value="_fType" ValueChanged="OnTypeChanged" Items="VcsTypes" />
+            }
+            <FlareTextField Label="@UiStrings.Common_ApiUrl" @bind-Value="_fUrl" Placeholder="https://gitlab.example.com" />
+
+            @* Declared by the selected provider, not by this page. *@
+            <ProviderSettingsFields Schema="SelectedSchema" Values="_fSettings" OnChanged="StateHasChanged" />
+
+            @* Shown only when this provider carries the linking rule, so a provider without one gets
+               no preview. The scalar source/pattern re-render it as the operator edits the fields. *@
+            @if (DeclaresLinkRule)
+            {
+                <TaskLinkPreview Source="@_fSettings.GetValueOrDefault(TaskLinkSettings.SourceKey, "")"
+                                 Pattern="@_fSettings.GetValueOrDefault(TaskLinkSettings.PatternKey, "")" />
+            }
+
+            <FlarePasswordField Label="@(_editId.HasValue ? UiStrings.Common_AccessToken_Keep : UiStrings.Common_AccessToken)"
+                                @bind-Value="_fToken" />
+        </FlareStack>
+        <button type="submit" hidden aria-hidden="true" tabindex="-1"></button>
+        </form>
+    </ChildContent>
+    <Actions>
+        <FlareButton Variant="ButtonVariant.Text" OnClick="CloseModal">@UiStrings.Common_Cancel</FlareButton>
+        <FlareButton OnClick="Save" Loading="Saving" Disabled="IsFormIncomplete">@UiStrings.Common_Save</FlareButton>
+    </Actions>
+</FlareDialog>
+
+@code {
+    // Served by the API, not compiled in: this was a literal ["GitLab"], so a second VCS meant
+    // editing the page - and a provider needing its own field had nowhere to declare one.
+    List<ProviderTypeDto>? _providers;
+
+    Guid? _editId;
+    string _fName = "", _fType = "", _fUrl = "", _fToken = "";
+    Dictionary<string, string> _fSettings = [];
+
+    IEnumerable<string> VcsTypes => _providers?.Select(p => p.ProviderType) ?? [];
+
+    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+        _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
+
+    // Every GitLab type carries the linking rule; a future provider that links some other way would
+    // not declare these keys and simply gets no preview.
+    bool DeclaresLinkRule => SelectedSchema.Any(s => s.Key == TaskLinkSettings.SourceKey);
+
+    // A poll-mode type's events would otherwise wait for its timer, so the manual poll is offered only
+    // for those; a webhook connection gets its events pushed and needs no button.
+    bool IsPollType(string vcsType) =>
+        string.Equals(_providers?.FirstOrDefault(p => p.ProviderType == vcsType)?.Ingestion, "Poll", StringComparison.Ordinal);
+
+    /// <summary>Which connection is being polled right now, or null when none is. Drives the spinner.</summary>
+    Guid? _pollingId;
+
+    async Task Poll(VcsConnectionDto c)
+    {
+        PollResultDto? result = null;
+
+        _pollingId = c.Id;
+        Success = null;
+        try
+        {
+            if (!await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id))) return;
+        }
+        finally
+        {
+            // In a finally: a failed poll must release the button, or the row is stuck spinning and
+            // every other connection stays disabled behind it.
+            _pollingId = null;
+        }
+
+        Success = string.Format(UiStrings.Vcs_Polled, c.Name, result!.Emitted, result.Branches);
+
+        // A repository that could not be read is the operator's to fix (usually a wrong external id),
+        // so name it rather than letting a silent zero look like "nothing to do".
+        if (result.Failures is { Count: > 0 } failures)
+            Error = string.Format(
+                UiStrings.Vcs_Poll_Failures,
+                string.Join("; ", failures.Select(f => $"{f.Repository}: {f.Reason}")));
+    }
+
+    // The type is fixed at creation: an existing connection's stored repositories and token are
+    // meaningless against a different provider, so Update takes no vcsType.
+    /// <summary>Enter submits the dialog too, so the keyboard refuses what the disabled button does.</summary>
+    protected override bool IsEditorIncomplete => IsFormIncomplete;
+
+    bool IsFormIncomplete => string.IsNullOrWhiteSpace(_fName)
+                             || string.IsNullOrWhiteSpace(_fUrl)
+                             || string.IsNullOrWhiteSpace(_fType)
+                             || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken))
+                             || ProviderSettingsFields.MissingRequired(SelectedSchema, _fSettings, _editId.HasValue);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAsync(async () => _providers = await Api.GetVcsProviderTypesAsync());
+        await base.OnInitializedAsync();
+    }
+
+    protected override Task<PagedResult<VcsConnectionDto>> FetchPageAsync(int page) =>
+        Api.GetVcsConnectionsAsync(page);
+
+    void OpenCreate()
+    {
+        _editId = null;
+        _fName = ""; _fUrl = ""; _fToken = "";
+        // The first registered provider, so a single-provider install needs no choice made; with
+        // several, the operator picks and the fields follow.
+        _fType = VcsTypes.FirstOrDefault() ?? "";
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
+        ShowModal = true;
+    }
+
+    void OpenEdit(VcsConnectionDto c)
+    {
+        _editId = c.Id;
+        _fName = c.Name; _fType = c.VcsType; _fUrl = c.ApiUrl;
+        _fToken = "";
+        _fSettings = ProviderSettingsFields.ForEdit(SelectedSchema, c.Settings);
+        ShowModal = true;
+    }
+
+    /// <summary>Switching provider starts a fresh value map: the keys belong to the old schema.</summary>
+    void OnTypeChanged(string value)
+    {
+        _fType = value;
+        _fSettings = ProviderSettingsFields.Blank(SelectedSchema);
+    }
+
+    Task Save() => SaveAsync(async () =>
+    {
+        var settings = ProviderSettingsFields.ForSubmit(_fSettings);
+
+        if (_editId.HasValue)
+            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
+        else
+            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
+    });
+
+    Task Delete(VcsConnectionDto c) =>
+        DeleteAsync(string.Format(UiStrings.Vcs_Delete_What, c.Name), () => Api.DeleteVcsConnectionAsync(c.Id));
+}

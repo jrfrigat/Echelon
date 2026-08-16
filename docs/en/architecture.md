@@ -1,4 +1,4 @@
-# Release Orchestrator - Architecture
+# Echelon - Architecture
 
 > [Русская версия ->](../ru/architecture.md) - [← Back to docs](../README.md)
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Release Orchestrator plans and executes deployments **per task**. There is no single global release
+Echelon plans and executes deployments **per task**. There is no single global release
 plan and no "stacks": for each task imported from a tracker, it builds the order in which that task's
 merge requests deploy, then executes that order as a **rollout** into an environment. A
 **readiness gate** is checked once, at launch, and refuses the launch outright unless every merge
@@ -62,7 +62,7 @@ Core                enums, pure parsing (task-key extraction, readiness signals)
 - **The planning algorithm (`Application/ReleasePlanning`) has no EF dependency** - it is pure and
   tested without a database.
 - **Providers register at compile time** (keyed DI + marker records), no dynamic assembly loading.
-- **Migrations exist for both providers** - `ReleaseOrchestrator.Migrations.MsSql` and
+- **Migrations exist for both providers** - `Echelon.Migrations.MsSql` and
   `...Migrations.Postgres`, each with two contexts (operational + archive).
 - **The PWA is a separate client.** It talks to the API over HTTP and references only the inward,
   zero-dependency assemblies (Core, Providers.Abstractions) so the merge-request->task linking preview

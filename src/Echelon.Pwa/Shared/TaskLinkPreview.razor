@@ -1,0 +1,94 @@
+@*
+    Shows, live, which tracker task the configured linking rule would pull out of a merge request.
+
+    The rule (a source and a regex) is abstract on the form; this makes it concrete. The operator
+    types a sample branch/title/label and sees the key the rule extracts -- computed here by the very
+    TaskKeyExtractor the ingestion runs, so the preview cannot drift from what actually happens. This
+    is why the client references the domain contracts: the answer to "how do I set the linking rule"
+    is to watch it work, not to read a description of a regex.
+
+    Source and Pattern arrive as scalar strings rather than the settings dictionary so that editing
+    either re-renders this preview -- a shared dictionary reference would not trip change detection.
+*@
+
+@using Echelon.Core.Enums
+@using Echelon.Core.Parsing
+@using Echelon.Providers.Abstractions.Vcs
+
+<FlareCard Variant="CardVariant.Outlined">
+    <FlareCardContent>
+        <FlareStack Gap="FlareSpacing.Small">
+            <FlareText Typo="TypographyScale.TitleSmall">@UiStrings.LinkPreview_Title</FlareText>
+            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                @UiStrings.LinkPreview_Explanation
+            </FlareText>
+
+            <FlareTextField Label="@SampleLabel" Placeholder="@SamplePlaceholder"
+                            Value="@_sample" ValueChanged="OnSampleChanged" />
+
+            @{ var key = Extract(); }
+            @if (!string.IsNullOrWhiteSpace(_sample))
+            {
+                @if (key is not null)
+                {
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Primary" Label="@key" />
+                        <FlareText Typo="TypographyScale.BodySmall">
+                            @string.Format(UiStrings.LinkPreview_Match, key)
+                        </FlareText>
+                    </FlareStack>
+                }
+                else
+                {
+                    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Error">
+                        @UiStrings.LinkPreview_NoMatch
+                    </FlareText>
+                }
+            }
+        </FlareStack>
+    </FlareCardContent>
+</FlareCard>
+
+@code {
+    /// <summary>The task-key source the connection has set (a <see cref="TaskKeySource"/> name); blank falls back to the default.</summary>
+    [Parameter, EditorRequired]
+    public string? Source { get; set; }
+
+    /// <summary>The task-key pattern the connection has set; blank falls back to the default.</summary>
+    [Parameter, EditorRequired]
+    public string? Pattern { get; set; }
+
+    // A concrete example so the preview demonstrates itself the moment the dialog opens, rather than
+    // sitting empty until the operator guesses what to type. The default rule extracts PROJ-12 from it.
+    string _sample = "feature/PROJ-12";
+
+    (TaskKeySource Source, string Pattern) Rule => TaskLinkSettings.RuleFrom(new Dictionary<string, string>
+    {
+        [TaskLinkSettings.SourceKey] = Source ?? "",
+        [TaskLinkSettings.PatternKey] = Pattern ?? ""
+    });
+
+    string SampleLabel => Rule.Source switch
+    {
+        TaskKeySource.Title => UiStrings.LinkPreview_Sample_Title,
+        TaskKeySource.Label => UiStrings.LinkPreview_Sample_Label,
+        _ => UiStrings.LinkPreview_Sample_Branch
+    };
+
+    string SamplePlaceholder => Rule.Source switch
+    {
+        TaskKeySource.Title => "PROJ-12 Fix the login redirect",
+        TaskKeySource.Label => "PROJ-12",
+        _ => "feature/PROJ-12"
+    };
+
+    // The sample stands in for whichever field the source selects, so it is fed to all three slots;
+    // Extract reads only the one the source names.
+    string? Extract()
+    {
+        var (source, pattern) = Rule;
+        return TaskKeyExtractor.Extract(source, pattern, _sample, _sample, [_sample]);
+    }
+
+    void OnSampleChanged(string value) => _sample = value;
+}

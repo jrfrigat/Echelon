@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Echelon.Application\Echelon.Application.csproj" />
+    <ProjectReference Include="..\Echelon.Core\Echelon.Core.csproj" />
+    <ProjectReference Include="..\Echelon.Providers.Abstractions\Echelon.Providers.Abstractions.csproj" />
+
+    <!--
+      The concrete adapters are referenced only so AddInfrastructure can register them: this
+      assembly is where the container is composed, and it already played that role for the two
+      hard-wired clients these replace. Nothing outside AddInfrastructure may name a provider
+      type - everything else goes through the factories in Providers/, which resolve by a key
+      from the database.
+
+      Compile-time references, deliberately. Dynamic loading buys "add a provider without
+      rebuilding", which is worth nothing when the container image is rebuilt on every change,
+      and costs assembly-isolation faults that Orchard 1.x had and Orchard Core removed. Adding a
+      provider is a new project and one line here.
+    -->
+    <ProjectReference Include="..\Echelon.Providers.GitLab\Echelon.Providers.GitLab.csproj" />
+    <ProjectReference Include="..\Echelon.Providers.YandexTracker\Echelon.Providers.YandexTracker.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Rebus" />
+    <PackageReference Include="Rebus.RabbitMq" />
+    <PackageReference Include="Rebus.ServiceProvider" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Seq" />
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

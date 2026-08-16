@@ -5,7 +5,7 @@
 ## Overview
 
 A **provider** is an adapter that normalizes one dialect (API endpoints, authentication, state
-strings) into a common port. ReleaseOrchestrator registers providers with **compile-time keyed
+strings) into a common port. Echelon registers providers with **compile-time keyed
 dependency injection**, not dynamic discovery or plugins.
 
 ### Why compile-time DI?
@@ -91,12 +91,12 @@ single copy of the rule. The connection form previews the extracted key live.
 
 ## Adding a VCS provider
 
-Use the existing GitLab provider (`src/ReleaseOrchestrator.Providers.GitLab/`) as the reference.
+Use the existing GitLab provider (`src/Echelon.Providers.GitLab/`) as the reference.
 
 ### 1. Implement the ports
 
 ```csharp
-using ReleaseOrchestrator.Providers.Abstractions.Vcs;
+using Echelon.Providers.Abstractions.Vcs;
 
 internal sealed class MyVcsAdapter(HttpClient http) : IVcsProviderAdapter
 {
@@ -198,7 +198,7 @@ How a repository is deployed is an `IDeployStrategy`, keyed and paired with a
 ### 5. Wire into the composition root
 
 ```csharp
-// src/ReleaseOrchestrator.Infrastructure/InfrastructureExtensions.cs (API host)
+// src/Echelon.Infrastructure/InfrastructureExtensions.cs (API host)
 services.AddGitLabProvider();
 services.AddMyVcsProvider();          // ← the read-adapters + registrations
 services.AddMyVcsDeployStrategies();
@@ -213,7 +213,7 @@ Add the project reference to the relevant host `.csproj`, and the package versio
 
 ## Adding a tracker provider
 
-Use `src/ReleaseOrchestrator.Providers.YandexTracker/` as the reference. A tracker adapter's context
+Use `src/Echelon.Providers.YandexTracker/` as the reference. A tracker adapter's context
 **does** carry the settings bag (`TrackerProviderContext(ConnectionName, ApiUrl, AccessToken,
 ProviderSettings)`), because the tracker adapter itself needs them (an org id header, which statuses
 are "done").

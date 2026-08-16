@@ -1,4 +1,4 @@
-# Release Orchestrator - Operations & Deployment
+# Echelon - Operations & Deployment
 
 > [Русская версия ->](../ru/operations.md) - [← Back to docs](../README.md)
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document covers production deployment, monitoring, and operational concerns for Release Orchestrator.
+This document covers production deployment, monitoring, and operational concerns for Echelon.
 
 **⚠️ Warning:** This application has **never been deployed or run in a live environment**. The following guidance is based on code analysis, not production experience. Treat recommendations as starting points; test thoroughly in staging before production.
 
@@ -38,7 +38,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0.8
 WORKDIR /app
 COPY --from=builder /app .
 EXPOSE 5000
-ENTRYPOINT ["dotnet", "ReleaseOrchestrator.Web.dll"]
+ENTRYPOINT ["dotnet", "Echelon.Web.dll"]
 ```
 
 **Base image:** `mcr.microsoft.com/dotnet/aspnet:10.0.8`
@@ -52,20 +52,20 @@ ENTRYPOINT ["dotnet", "ReleaseOrchestrator.Web.dll"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: release-orchestrator
+  name: echelon
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: release-orchestrator
+      app: echelon
   template:
     metadata:
       labels:
-        app: release-orchestrator
+        app: echelon
     spec:
       containers:
       - name: web
-        image: your-registry/release-orchestrator:latest
+        image: your-registry/echelon:latest
         ports:
         - containerPort: 5000
         env:
@@ -122,14 +122,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: release-orchestrator
+  name: echelon
 spec:
   type: ClusterIP
   ports:
   - port: 80
     targetPort: 5000
   selector:
-    app: release-orchestrator
+    app: echelon
 ```
 
 ---
@@ -245,7 +245,7 @@ are pushed there too, in addition to being scrapeable:
 ```bash
 # Example: send traces and metrics to a collector
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet run --project src/Echelon.Web
 ```
 
 Traces capture:
@@ -279,7 +279,7 @@ All components are stateless:
 EF Core automatically manages pool (default 100 connections). Monitor:
 
 ```sql
-SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE database_id = DB_ID('ReleaseOrchestrator');
+SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE database_id = DB_ID('Echelon');
 ```
 
 If approaching limit, increase in connection string:
@@ -307,13 +307,13 @@ Current configuration (from code):
 ### Database Backups
 
 **Frequency:** Daily (adjust based on criticality)
-**Scope:** Both `ReleaseOrchestrator` and `ReleaseOrchestratorArchive` databases
+**Scope:** Both `Echelon` and `EchelonArchive` databases
 
 **Example (SQL Server):**
 ```bash
 sqlcmd -S your-server -U sa -P password -Q "
-BACKUP DATABASE ReleaseOrchestrator 
-TO DISK = '/var/opt/mssql/backup/ReleaseOrchestrator.bak'
+BACKUP DATABASE Echelon 
+TO DISK = '/var/opt/mssql/backup/Echelon.bak'
 WITH FORMAT, COMPRESSION;
 "
 ```
@@ -386,7 +386,7 @@ Async paths have poor visibility. Recommendation:
 ### PostgreSQL is supported, but has never been run
 
 Both databases are supported on the same terms: one model, one test suite, and a migration assembly
-each (`ReleaseOrchestrator.Migrations.MsSql`, `...Migrations.Postgres`). The three places where they
+each (`Echelon.Migrations.MsSql`, `...Migrations.Postgres`). The three places where they
 genuinely differ are isolated in `ProviderSpecificMapping` - the concurrency token (`rowversion` vs
 the system `xmin` column), the filtered-index dialect, and the case-sensitive collation above - and
 each is asserted by a test that builds both models offline.
@@ -429,13 +429,13 @@ check available without a server; it is not a substitute for one.
 ```bash
 # Weekly full backup
 sqlcmd -S server -U sa -P pwd -Q "
-BACKUP DATABASE ReleaseOrchestrator 
+BACKUP DATABASE Echelon 
 TO DISK = '/mnt/backups/full_$(date +%Y%m%d).bak' 
 WITH FORMAT, COMPRESSION;
 "
 
 # Daily incremental (if using full backup model)
-BACKUP DATABASE ReleaseOrchestrator 
+BACKUP DATABASE Echelon 
 TO DISK = '/mnt/backups/incr_$(date +%Y%m%d).bak' 
 WITH DIFFERENTIAL;
 ```
@@ -444,12 +444,12 @@ WITH DIFFERENTIAL;
 
 ```bash
 # Restore latest full backup
-RESTORE DATABASE ReleaseOrchestrator 
+RESTORE DATABASE Echelon 
 FROM DISK = '/mnt/backups/full_20250115.bak' 
 WITH REPLACE;
 
 # Restore latest incremental (if applicable)
-RESTORE DATABASE ReleaseOrchestrator 
+RESTORE DATABASE Echelon 
 FROM DISK = '/mnt/backups/incr_20250117.bak' 
 WITH RECOVERY;
 ```

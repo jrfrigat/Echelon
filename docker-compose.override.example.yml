@@ -18,8 +18,8 @@ services:
     environment:
       # host.docker.internal resolves to the Docker host (see extra_hosts below). Point these at
       # your databases; both must exist (EF applies migrations into them on startup).
-      ConnectionStrings__Default: "Server=host.docker.internal;Database=ReleaseOrchestrator;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
-      ConnectionStrings__Archive: "Server=host.docker.internal;Database=ReleaseOrchestratorArchive;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Default: "Server=host.docker.internal;Database=Echelon;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Archive: "Server=host.docker.internal;Database=EchelonArchive;User Id=<sql-login>;Password=<password>;Encrypt=True;TrustServerCertificate=True"
 
       # ---- Authentication ---------------------------------------------------------------------
       # Auth__Provider selects the scheme, fixed at deploy time (not runtime):

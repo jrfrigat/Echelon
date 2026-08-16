@@ -1,4 +1,4 @@
-# Release Orchestrator - Localization
+# Echelon - Localization
 
 > [Русская версия ->](../ru/localization.md) - [← Back to docs](../README.md)
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Release Orchestrator supports **multiple languages** with localization for both UI and API responses. Currently shipped with **English** and **Russian**.
+Echelon supports **multiple languages** with localization for both UI and API responses. Currently shipped with **English** and **Russian**.
 
 This document explains:
 - How localization is implemented
@@ -22,8 +22,8 @@ This document explains:
 
 - **.resx files** - XML resource files for each language (.NET standard)
 - **Resource namespaces:**
-  - `ReleaseOrchestrator.Pwa.Resources.UiStrings` - UI strings (PWA)
-  - `ReleaseOrchestrator.Web.Resources.ApiStrings` - API error/status messages
+  - `Echelon.Pwa.Resources.UiStrings` - UI strings (PWA)
+  - `Echelon.Web.Resources.ApiStrings` - API error/status messages
 - **Language selection:**
   - PWA: `LanguageService` (localStorage-backed, browser preference fallback)
   - API: `AcceptLanguageHandler` (reads `Accept-Language` header)
@@ -35,7 +35,7 @@ The PWA (Blazor WebAssembly) stores language preference in browser localStorage 
 
 **Component example:**
 ```csharp
-@using ReleaseOrchestrator.Pwa.Resources
+@using Echelon.Pwa.Resources
 
 <button>@UiStrings.SaveButton</button>
 <p>@UiStrings.ReleasePlanDescription</p>
@@ -71,12 +71,12 @@ Response error will be in Russian if available, otherwise English.
 ### File Structure
 
 ```
-src/ReleaseOrchestrator.Pwa/
+src/Echelon.Pwa/
   Resources/
     UiStrings.resx              # English (default)
     UiStrings.ru.resx           # Russian
     
-src/ReleaseOrchestrator.Web/
+src/Echelon.Web/
   Resources/
     ApiStrings.resx             # English (default)
     ApiStrings.ru.resx          # Russian
@@ -127,10 +127,10 @@ Equivalent Russian file (`UiStrings.ru.resx`):
 
 ### Step 1: Create Resource Files
 
-1. **For UI:** Copy `src/ReleaseOrchestrator.Pwa/Resources/UiStrings.resx` to `UiStrings.{cultureCode}.resx`
+1. **For UI:** Copy `src/Echelon.Pwa/Resources/UiStrings.resx` to `UiStrings.{cultureCode}.resx`
    - Example: `UiStrings.es.resx` for Spanish
    
-2. **For API:** Copy `src/ReleaseOrchestrator.Web/Resources/ApiStrings.resx` to `ApiStrings.{cultureCode}.resx`
+2. **For API:** Copy `src/Echelon.Web/Resources/ApiStrings.resx` to `ApiStrings.{cultureCode}.resx`
 
 3. **Translate every value** in both files
 
@@ -147,7 +147,7 @@ Equivalent Russian file (`UiStrings.ru.resx`):
 
 ### Step 2: Register in `LanguageService`
 
-Edit `src/ReleaseOrchestrator.Pwa/Services/LanguageService.cs`:
+Edit `src/Echelon.Pwa/Services/LanguageService.cs`:
 
 ```csharp
 public static readonly IReadOnlyList<(string Code, string DisplayName)> SupportedCultures =
@@ -169,7 +169,7 @@ dotnet build
 ### Step 4: Test in PWA
 
 ```bash
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet run --project src/Echelon.Web
 ```
 
 Navigate to the app, open language switcher (bottom-right), and verify the new language appears and displays correctly.

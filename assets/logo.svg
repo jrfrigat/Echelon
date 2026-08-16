@@ -1,40 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Release Orchestrator logo">
-  <!-- Release Orchestrator mark: a rollout plan. Work fans in from the first wave, converges on a
-       gate, and fans out into the last one - which is what the planner does to a task's merge
-       requests. Command Center palette: cyan #4fd6c9 -> accent #4ea1ff on #131416, as in Weir. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Echelon logo">
+  <!-- Echelon mark: three ranks in echelon - each stepped back and committed after the one ahead of
+       it. That is what the planner produces, a rollout in successive waves. Command Center palette:
+       cyan #4fd6c9 -> accent #4ea1ff on #131416, as in Flare and Weir. -->
   <defs>
-    <linearGradient id="roEdge" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+    <linearGradient id="echEdge" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#4fd6c9"/>
       <stop offset="1" stop-color="#4ea1ff"/>
     </linearGradient>
-    <!-- Edges stop short of the nodes, so the joins read as separate pieces at 16px. -->
-    <mask id="roNodeCut">
-      <rect x="0" y="0" width="128" height="128" fill="white"/>
-      <g fill="black">
-        <circle cx="34" cy="42" r="12"/>
-        <circle cx="34" cy="86" r="12"/>
-        <circle cx="64" cy="64" r="13"/>
-        <circle cx="94" cy="42" r="12"/>
-        <circle cx="94" cy="86" r="12"/>
-      </g>
-    </mask>
   </defs>
 
   <rect x="0" y="0" width="128" height="128" rx="28" fill="#131416"/>
   <rect x="2.8" y="2.8" width="122.4" height="122.4" rx="25.6" fill="none" stroke="#26282b" stroke-width="4.8"/>
 
-  <g fill="none" stroke="url(#roEdge)" stroke-width="5.5" mask="url(#roNodeCut)" stroke-linecap="round">
-    <path d="M34 42 L64 64"/>
-    <path d="M34 86 L64 64"/>
-    <path d="M64 64 L94 42"/>
-    <path d="M64 64 L94 86"/>
+  <!-- The leading rank is solid and full width; each following one is shorter and stepped back, so
+       the order reads left to right even at 16px. -->
+  <g fill="url(#echEdge)">
+    <rect x="30" y="34" width="68" height="14" rx="7"/>
+    <rect x="30" y="57" width="50" height="14" rx="7" opacity="0.72"/>
+    <rect x="30" y="80" width="32" height="14" rx="7" opacity="0.46"/>
   </g>
 
-  <g fill="#131416" stroke="url(#roEdge)" stroke-width="5">
-    <circle cx="34" cy="42" r="8"/>
-    <circle cx="34" cy="86" r="8"/>
-    <circle cx="94" cy="42" r="8"/>
-    <circle cx="94" cy="86" r="8"/>
-  </g>
-  <circle cx="64" cy="64" r="9.5" fill="url(#roEdge)"/>
+  <!-- The gate every rank waits at before it moves. -->
+  <rect x="20" y="30" width="5" height="68" rx="2.5" fill="#4fd6c9"/>
 </svg>

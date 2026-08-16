@@ -1,23 +1,23 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Release Orchestrator - выкатывайте задачу, а не ветку" width="760">
+  <img src="assets/banner.svg" alt="Echelon - выкатывайте задачу, а не ветку" width="760">
 </p>
 
 <p align="center"><a href="README.md">English</a> - <b>Русский</b></p>
 
 <p align="center">
-  <a href="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4.svg" alt=".NET 10">
 </p>
 
-# Release Orchestrator
+# Echelon
 
-**Release Orchestrator** планирует и выполняет выкатки вокруг той единицы, в которой люди на самом
+**Echelon** планирует и выполняет выкатки вокруг той единицы, в которой люди на самом
 деле работают, - вокруг **задачи**. Он читает задачи из трекера и merge request'ы из одного или
 нескольких VCS-подключений, выясняет всё, чего задача ждёт, раскладывает работу по волнам выкатки и
 ведёт её в каждое окружение.
 
-Задача редко умещается в один репозиторий. Release Orchestrator берёт подзадачи, связанные задачи и
+Задача редко умещается в один репозиторий. Echelon берёт подзадачи, связанные задачи и
 правила порядка репозиториев и отвечает на вопрос, который релиз-инженер задаёт каждый день: что
 должно уехать, в каком порядке и что ещё не готово.
 
@@ -86,8 +86,8 @@ Core                    enum'ы, чистый разбор; ноль завис�
 Нужны .NET 10 SDK и Docker.
 
 ```bash
-git clone https://github.com/jrfrigat/release-orchestrator.git
-cd release-orchestrator
+git clone https://github.com/jrfrigat/echelon.git
+cd echelon
 cp .env.example .env      # задайте пароли, которые он перечисляет
 docker compose up -d
 # Откройте http://localhost:8081
@@ -102,9 +102,9 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-co
 ## Сборка и запуск
 
 ```bash
-dotnet build ReleaseOrchestrator.slnx    # 0 ошибок, 0 предупреждений; предупреждения - ошибки
-dotnet test ReleaseOrchestrator.slnx
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet build Echelon.slnx    # 0 ошибок, 0 предупреждений; предупреждения - ошибки
+dotnet test Echelon.slnx
+dotnet run --project src/Echelon.Web
 ```
 
 Миграции по умолчанию применяются на старте. Для нескольких реплик выключите это

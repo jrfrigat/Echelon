@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Echelon.Application/Echelon.Application.csproj" />
+    <Project Path="src/Echelon.Core/Echelon.Core.csproj" />
+    <Project Path="src/Echelon.Infrastructure/Echelon.Infrastructure.csproj" />
+    <Project Path="src/Echelon.Ingress.Webhooks/Echelon.Ingress.Webhooks.csproj" />
+    <Project Path="src/Echelon.Migrations.MsSql/Echelon.Migrations.MsSql.csproj" />
+    <Project Path="src/Echelon.Migrations.Postgres/Echelon.Migrations.Postgres.csproj" />
+    <Project Path="src/Echelon.Providers.Abstractions/Echelon.Providers.Abstractions.csproj" />
+    <Project Path="src/Echelon.Providers.GitLab/Echelon.Providers.GitLab.csproj" />
+    <Project Path="src/Echelon.Providers.YandexTracker/Echelon.Providers.YandexTracker.csproj" />
+    <Project Path="src/Echelon.Pwa/Echelon.Pwa.csproj" />
+    <Project Path="src/Echelon.Web/Echelon.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Echelon.UnitTests/Echelon.UnitTests.csproj" />
+  </Folder>
+</Solution>

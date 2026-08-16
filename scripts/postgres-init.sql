@@ -9,5 +9,5 @@
 --
 -- The SQL Server side has no equivalent because its image creates no database at all: EF's
 -- migrations create both. PostgreSQL creates POSTGRES_DB itself, so only the second one is left.
-SELECT 'CREATE DATABASE releaseorchestrator_archive'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'releaseorchestrator_archive')\gexec
+SELECT 'CREATE DATABASE echelon_archive'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'echelon_archive')\gexec

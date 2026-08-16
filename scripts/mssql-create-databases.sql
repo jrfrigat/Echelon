@@ -9,8 +9,8 @@
         sqlcmd -S <server> -E -i scripts/mssql-create-databases.sql ^
                -v AppPassword="<password>" ^
                -v AppLogin="ro_app" ^
-               -v DbName="ReleaseOrchestrator" ^
-               -v ArchiveDbName="ReleaseOrchestratorArchive"
+               -v DbName="Echelon" ^
+               -v ArchiveDbName="EchelonArchive"
 
     SQL authentication for the operator running it: replace -E with -U <admin> -P <admin-password>.
 

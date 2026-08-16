@@ -1,23 +1,23 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Release Orchestrator - deploy a task, not a branch" width="760">
+  <img src="assets/banner.svg" alt="Echelon - deploy a task, not a branch" width="760">
 </p>
 
 <p align="center"><b>English</b> - <a href="README.ru.md">Русский</a></p>
 
 <p align="center">
-  <a href="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4.svg" alt=".NET 10">
 </p>
 
-# Release Orchestrator
+# Echelon
 
-**Release Orchestrator** plans and runs releases around the unit people actually work in: the
+**Echelon** plans and runs releases around the unit people actually work in: the
 **task**. It reads tasks from an issue tracker and merge requests from one or more VCS connections,
 works out everything a task waits on, orders the work into deploy waves, and drives the rollout into
 each environment.
 
-A task is rarely one repository. Release Orchestrator takes the subtasks, the linked tasks and the
+A task is rarely one repository. Echelon takes the subtasks, the linked tasks and the
 repository ordering rules, and answers the question a release engineer asks every day: what has to
 ship, in what order, and what is not ready yet.
 
@@ -86,8 +86,8 @@ Design notes that are still open are in [docs/issues](docs/issues/README.md).
 Requires .NET 10 SDK and Docker.
 
 ```bash
-git clone https://github.com/jrfrigat/release-orchestrator.git
-cd release-orchestrator
+git clone https://github.com/jrfrigat/echelon.git
+cd echelon
 cp .env.example .env      # set the passwords it names
 docker compose up -d
 # Open http://localhost:8081
@@ -102,9 +102,9 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-co
 ## Build and run
 
 ```bash
-dotnet build ReleaseOrchestrator.slnx    # 0 errors, 0 warnings; warnings are errors
-dotnet test ReleaseOrchestrator.slnx
-dotnet run --project src/ReleaseOrchestrator.Web
+dotnet build Echelon.slnx    # 0 errors, 0 warnings; warnings are errors
+dotnet test Echelon.slnx
+dotnet run --project src/Echelon.Web
 ```
 
 Migrations are applied at startup by default. For more than one replica, turn that off

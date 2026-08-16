@@ -1,4 +1,4 @@
-# Release Orchestrator - Configuration
+# Echelon - Configuration
 
 > [Русская версия ->](../ru/configuration.md) - [← Back to docs](../README.md)
 
@@ -21,14 +21,14 @@ These must be set or the application will not start.
 **`ConnectionStrings__Default`** (REQUIRED)
 - **What:** Connection string for the operational database
 - **Format:** SQL Server connection string
-- **Example:** `Server=localhost;Database=ReleaseOrchestrator;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
+- **Example:** `Server=localhost;Database=Echelon;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
 - **If missing:** `InvalidOperationException` on startup - "ConnectionStrings:Default is required"
 - **Retry on transient errors:** Enabled (SQL Server timeout, deadlock -> automatic retry, exponential backoff)
 
 **`ConnectionStrings__Archive`** (REQUIRED)
 - **What:** Connection string for the archive database (historical data >90 days old)
 - **Format:** SQL Server connection string
-- **Example:** `Server=localhost;Database=ReleaseOrchestratorArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
+- **Example:** `Server=localhost;Database=EchelonArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
 - **If missing:** `InvalidOperationException` on startup
 - **Note:** Can be the same SQL Server instance as Default, but separate database, or entirely separate server
 
@@ -271,7 +271,7 @@ These are provider-specific and documented in [Providers](providers.md).
 
 ## OpenID Connect
 
-Release Orchestrator relies on an external OIDC provider. Configuration is typically in web application configuration (e.g., `appsettings.json` or Azure AD in admin portal), not environment variables.
+Echelon relies on an external OIDC provider. Configuration is typically in web application configuration (e.g., `appsettings.json` or Azure AD in admin portal), not environment variables.
 
 **Key claims used:**
 - `oid` - Unique user identifier (required)
@@ -290,7 +290,7 @@ Ensure your OIDC provider includes `oid` in ID tokens.
 
 **Level control:** Set via standard .NET Core:
 ```bash
-LOGLEVEL_ReleaseOrchestrator=Debug
+LOGLEVEL_Echelon=Debug
 LOGLEVEL_Microsoft.EntityFrameworkCore=Warning
 ```
 
@@ -301,7 +301,7 @@ All operational events are logged as JSON. Example:
 {
   "timestamp": "2025-01-15T10:30:00Z",
   "level": "Information",
-  "logger": "ReleaseOrchestrator.Application.ReleasePlanning.ReleasePlanner",
+  "logger": "Echelon.Application.ReleasePlanning.ReleasePlanner",
   "message": "Release plan recalculated",
   "planId": "550e8400-e29b-41d4-a716-446655440000",
   "stageCount": 5,
@@ -423,8 +423,8 @@ StackExchange.Redis automatically handles pooling. No explicit configuration nee
 
 ```bash
 # Database
-ConnectionStrings__Default=Server=sqlserver;Database=ReleaseOrchestrator;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
-ConnectionStrings__Archive=Server=sqlserver;Database=ReleaseOrchestratorArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
+ConnectionStrings__Default=Server=sqlserver;Database=Echelon;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
+ConnectionStrings__Archive=Server=sqlserver;Database=EchelonArchive;User Id=sa;Password=MyPassword;TrustServerCertificate=true;
 
 # RabbitMQ
 Queue__Username=guest
@@ -454,7 +454,7 @@ Authorization__BootstrapAdminObjectIds=
 
 # Observability (optional)
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-LOGLEVEL_ReleaseOrchestrator=Information
+LOGLEVEL_Echelon=Information
 ```
 
 ---

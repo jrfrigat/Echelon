@@ -10,7 +10,7 @@ services:
     build:
       # Repo root, so the build can reach Directory.Packages.props (Central Package Management).
       context: .
-      dockerfile: src/ReleaseOrchestrator.Ingress.Webhooks/Dockerfile
+      dockerfile: src/Echelon.Ingress.Webhooks/Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -43,15 +43,15 @@ services:
     build:
       # Repo root, so the build can reach Directory.Packages.props (Central Package Management).
       context: .
-      dockerfile: src/ReleaseOrchestrator.Web/Dockerfile
+      dockerfile: src/Echelon.Web/Dockerfile
     ports:
       - "8081:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # TrustServerCertificate stays on: the mssql image serves a self-signed certificate, and the
       # connection never leaves this compose network. Drop it once a real cert is provisioned.
-      ConnectionStrings__Default: "Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
-      ConnectionStrings__Archive: "Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Default: "Server=mssql;Database=Echelon;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
+      ConnectionStrings__Archive: "Server=mssql;Database=EchelonArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
       # This stack runs a single replica, so startup migration is safe here. Concurrent replicas
       # race on Migrate() - move this to an init container or CI before scaling out.
       Database__MigrateOnStartup: "${DB_MIGRATE_ON_STARTUP:-true}"

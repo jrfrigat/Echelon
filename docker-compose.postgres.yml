@@ -20,8 +20,8 @@ services:
   core:
     environment:
       Database__Provider: postgresql
-      ConnectionStrings__Default: "Host=postgres;Database=releaseorchestrator;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
-      ConnectionStrings__Archive: "Host=postgres;Database=releaseorchestrator_archive;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
+      ConnectionStrings__Default: "Host=postgres;Database=echelon;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
+      ConnectionStrings__Archive: "Host=postgres;Database=echelon_archive;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
 
     # Merged, not !override: overriding the whole map would drop what another override file put
     # there, and the two are meant to combine - postgres.yml plus single-instance.yml is a valid
@@ -41,13 +41,13 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
       # The archive is a second database, so it cannot be POSTGRES_DB - that creates only one.
       # Both are created by the init script below.
-      POSTGRES_DB: releaseorchestrator
+      POSTGRES_DB: echelon
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/10-archive.sql:ro
     healthcheck:
       # -U, or pg_isready checks the OS user and reports ready before the role exists.
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d releaseorchestrator"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d echelon"]
       interval: 5s
       timeout: 3s
       retries: 10

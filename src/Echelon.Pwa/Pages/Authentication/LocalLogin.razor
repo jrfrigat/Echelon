@@ -1,0 +1,66 @@
+@page "/login"
+@using Echelon.Pwa.Services.LocalAuth
+@inject LocalAuthService Auth
+@inject NavigationManager Navigation
+
+<PageTitle>@UiStrings.Login_Title</PageTitle>
+
+@* The one bare element left in the app. Centring a card in the viewport is a page-layout concern
+   with no Flare component for it, and the Flare reference app does exactly the same on its own
+   login screen. Everything inside is Flare. *@
+<div style="display:flex; justify-content:center; margin-top:4rem;">
+    <FlareCard Variant="CardVariant.Elevated" Style="width: 100%; max-width: 22rem;">
+        <FlareCardContent>
+            @* A real <form>, and the button is type=submit inside it. Without both, Enter in a field
+               does nothing: a browser only submits implicitly when the input is in a form that has a
+               submit control, so the credentials had to be entered and then the button found with the
+               mouse. preventDefault stops the browser navigating away with the fields in the query
+               string. The form element also gives password managers something to recognise, which is
+               what the autocomplete hints below are for. *@
+            <form @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+                <FlareStack Gap="FlareSpacing.Medium">
+                    <FlareText Typo="TypographyScale.HeadlineSmall">@UiStrings.Login_Title</FlareText>
+
+                    @if (_failed)
+                    {
+                        <FlareAlert Severity="AlertSeverity.Error">@UiStrings.Login_Failed</FlareAlert>
+                    }
+
+                    <FlareTextField Label="@UiStrings.Login_Username" @bind-Value="_username" autocomplete="username" />
+                    <FlarePasswordField Label="@UiStrings.Login_Password" @bind-Value="_password" autocomplete="current-password" />
+
+                    <FlareButton Type="ButtonType.Submit" Variant="ButtonVariant.Filled" Color="FlareColor.Primary"
+                                 Loading="_busy">@UiStrings.Login_Title</FlareButton>
+                </FlareStack>
+            </form>
+        </FlareCardContent>
+    </FlareCard>
+</div>
+
+@code {
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+    private bool _failed;
+    private bool _busy;
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        // Enter and the button are now the same path, so a second Enter while the first request is in
+        // flight would sign in twice. The button shows Loading but a keypress does not consult it.
+        if (_busy) return;
+
+        _busy = true;
+        _failed = false;
+
+        if (await Auth.LoginAsync(_username, _password))
+            // forceLoad so the app re-boots with the token already in storage: the auth state is read
+            // fresh on startup, which sidesteps a race between NotifyChanged and the router.
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        else
+            _failed = true;
+
+        _busy = false;
+    }
+}
