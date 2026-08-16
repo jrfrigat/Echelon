@@ -39,12 +39,12 @@ Still unproven in production, though less of it than before. What has and has no
   [011 §4](docs/issues/011-release-audit.md)
 - ~~Database migrations (on real instance)~~ — done for **both** providers: SQL Server on
   2026-07-17, PostgreSQL on 2026-08-07 (all applied from empty, provider-specific mappings verified)
-- **API responses under an authenticated call** — routes and authorization are verified, response
-  bodies are not
+- ~~API responses under an authenticated call~~ — covered by tests that boot the real host
+  (`tests/…/Api`): routes, authorization policies, model binding, status codes and response bodies
 - **Behavior against real GitLab or Yandex Tracker instances** — no poll and no webhook from a real
   provider has ever been processed
 - Docker image builds (registry filtered in this dev environment)
-- Concurrency and load testing
+- Concurrency and multi-replica behaviour: reasoned about, never measured
 
 **See [the release audit](docs/issues/011-release-audit.md) §3 for what remains unverified.**
 
