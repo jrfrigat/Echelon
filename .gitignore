@@ -29,7 +29,7 @@ coverage*.xml
 .nuget/
 packages/
 
-# Secrets — never commit
+# Secrets - never commit
 .env
 .env.*
 !.env.example
@@ -38,22 +38,26 @@ packages/
 appsettings.*.local.json
 
 # A developer's own machine: a real server, a real login, a real password. It used to be tracked
-# and was safe only because it used Trusted_Connection and named no password — the moment anyone
+# and was safe only because it used Trusted_Connection and named no password - the moment anyone
 # pointed it at a SQL login, the password would have been committed. Copy the .example beside it
 # and fill it in; that one is tracked and holds placeholders.
 appsettings.Development.json
 
 # Same reasoning for the compose override: it points the stack at a developer's own SQL Server and
 # carries that login's password, so it is machine-specific and never committed (as in Weir). The
-# tracked .example beside it holds placeholders — copy it and fill in your connection.
+# tracked .example beside it holds placeholders - copy it and fill in your connection.
 docker-compose.override.yml
 
-# Tooling artifacts (ruflo / claude-flow)
+# Tooling artifacts (ruflo / claude-flow). Local assistant configuration, not project source:
+# it is regenerated per machine and carries no decision anyone reviews, so it stays out of the
+# repository as it does in Flare and Weir.
 ruvector.db
 *.db-shm
 *.db-wal
+.claude/
 .claude-flow/
 .swarm/
+.mcp.json
 
 # OS
 Thumbs.db
