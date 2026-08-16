@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="Release Orchestrator - deploy a task, not a branch">
+  <defs>
+    <linearGradient id="roPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16181a"/>
+      <stop offset="1" stop-color="#0f1011"/>
+    </linearGradient>
+    <!-- The mark's gradient lives in the logo box's user space: the group below is translated, so
+         0..128 here maps onto the 128px badge. -->
+    <linearGradient id="roMarkEdge" x1="36" y1="36" x2="164" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fd6c9"/>
+      <stop offset="1" stop-color="#4ea1ff"/>
+    </linearGradient>
+    <linearGradient id="roText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4fd6c9"/>
+      <stop offset="1" stop-color="#4ea1ff"/>
+    </linearGradient>
+    <mask id="bannerNodeCut">
+      <rect x="0" y="0" width="128" height="128" fill="white"/>
+      <g fill="black">
+        <circle cx="34" cy="42" r="12"/>
+        <circle cx="34" cy="86" r="12"/>
+        <circle cx="64" cy="64" r="13"/>
+        <circle cx="94" cy="42" r="12"/>
+        <circle cx="94" cy="86" r="12"/>
+      </g>
+    </mask>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="200" rx="20" fill="url(#roPanel)"/>
+  <rect x="1.5" y="1.5" width="757" height="197" rx="18.5" fill="none" stroke="#26282b" stroke-width="3"/>
+
+  <g transform="translate(36,36)">
+    <rect x="0" y="0" width="128" height="128" rx="28" fill="#131416"/>
+    <rect x="2.8" y="2.8" width="122.4" height="122.4" rx="25.6" fill="none" stroke="#26282b" stroke-width="4.8"/>
+
+    <g fill="none" stroke="url(#roMarkEdge)" stroke-width="5.5" mask="url(#bannerNodeCut)" stroke-linecap="round">
+      <path d="M34 42 L64 64"/>
+      <path d="M34 86 L64 64"/>
+      <path d="M64 64 L94 42"/>
+      <path d="M64 64 L94 86"/>
+    </g>
+    <g fill="#131416" stroke="url(#roMarkEdge)" stroke-width="5">
+      <circle cx="34" cy="42" r="8"/>
+      <circle cx="34" cy="86" r="8"/>
+      <circle cx="94" cy="42" r="8"/>
+      <circle cx="94" cy="86" r="8"/>
+    </g>
+    <circle cx="64" cy="64" r="9.5" fill="url(#roMarkEdge)"/>
+  </g>
+
+  <text x="210" y="98" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="52" font-weight="700" fill="url(#roText)">Release Orchestrator</text>
+  <text x="213" y="132" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="21" font-weight="400" fill="#a3a3a8">Deploy a task, not a branch</text>
+  <text x="213" y="159" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="15" font-weight="400" fill="#6d6d73">Rollout planning across trackers and repositories, on .NET 10</text>
+</svg>

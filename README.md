@@ -1,385 +1,135 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="Release Orchestrator - deploy a task, not a branch" width="760">
+</p>
+
+<p align="center"><b>English</b> - <a href="README.ru.md">Русский</a></p>
+
+<p align="center">
+  <a href="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/release-orchestrator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/.NET-10-512BD4.svg" alt=".NET 10">
+</p>
+
 # Release Orchestrator
 
-Enterprise release planning and orchestration platform for heterogeneous VCS and issue tracker environments.
+**Release Orchestrator** plans and runs releases around the unit people actually work in: the
+**task**. It reads tasks from an issue tracker and merge requests from one or more VCS connections,
+works out everything a task waits on, orders the work into deploy waves, and drives the rollout into
+each environment.
 
-Release Orchestrator помогает автоматически выстраивать последовательность merge request'ов, управлять ручными правками плана и архивировать завершённые задачи.
+A task is rarely one repository. Release Orchestrator takes the subtasks, the linked tasks and the
+repository ordering rules, and answers the question a release engineer asks every day: what has to
+ship, in what order, and what is not ready yet.
 
----
+> **Status: not production-proven.** The code is covered and both database providers are verified
+> against live servers, but no rollout has yet been executed against a real GitLab. See
+> [Maturity](#maturity) before you rely on it.
 
-## Quick Start
+## Principles
 
-**👉 Start here:** [Comprehensive Documentation](docs/README.md)
+- **A plan is a projection, never a stored opinion.** Every ingestion event rebuilds it from the
+  atlas, so it cannot drift from reality. Operator decisions survive as deltas that are replayed on
+  each build, not as a frozen result the next webhook would overwrite.
+- **One derivation.** Recalculation, a hand edit, an imported YAML document and the launch itself all
+  reach the deploy order through the same code, and the plan records the order it decided. Three
+  copies of that logic is three chances to deploy in an order nobody approved.
+- **Never a silent plan.** A rollout may deploy against a declared constraint - sometimes it must -
+  but it can never look clean while doing so. Every broken constraint is recorded on the plan.
+- **The core knows no provider.** GitLab and Yandex Tracker vocabularies, status dictionaries and key
+  formats live in adapters. The domain sees normalised values only.
+- **Deploy order is one thing, deploy method is another.** The order is the same everywhere; only
+  how a repository ships to a given environment, and what counts as ready there, vary by environment.
 
-- **[User Guide](docs/en/user-guide.md)** — Why each part exists and how to use it (start here if you use the product)
-- **[Getting Started](docs/en/getting-started.md)** — Local setup with Docker Compose
-- **[Architecture](docs/en/architecture.md)** — System design and data flow
-- **[Configuration](docs/en/configuration.md)** — All environment variables
-- **[Providers](docs/en/providers.md)** — How to add new VCS or tracker providers
-- **[Operations](docs/en/operations.md)** — Deployment and monitoring
-- **[Localization](docs/en/localization.md)** — How i18n works
+## What it does
 
-**Русский:**
-- **[Руководство пользователя](docs/ru/user-guide.md)** — зачем нужна каждая часть и как ей пользоваться
-- **[Начало работы](docs/ru/getting-started.md)**
-- **[Архитектура](docs/ru/architecture.md)**
-- **[Конфигурация](docs/ru/configuration.md)**
-- **[Провайдеры](docs/ru/providers.md)**
-- **[Эксплуатация](docs/ru/operations.md)**
-- **[Локализация](docs/ru/localization.md)**
+| | |
+| :-- | :-- |
+| **Ingestion** | Webhooks and polling from VCS and tracker connections, deduplicated through an inbox |
+| **Planning** | The task's dependency closure, ordered into waves by task links, hierarchy and repository rules |
+| **Ordering rules** | A YAML document (groups and `needs`) that generalises "repository A after repository B", with a visual editor |
+| **Execution** | Per-environment rollouts, one claim per (merge request, environment), pluggable deploy strategies |
+| **Readiness** | Rules per environment, overridable per repository, with a per-merge-request pin as the escape hatch |
+| **Retention** | Rollout and plan history age out, so archived tasks can actually leave the operational database |
 
----
+## Solution layout
 
-## ⚠️ Critical Note: Not Yet Production-Ready
-
-Still unproven in production, though less of it than before. What has and has not been tested:
-
-- ~~Application startup against a live database, RabbitMQ, Redis~~ — started 2026-08-09 against
-  PostgreSQL and RabbitMQ with in-process coordination: migrations applied, both health endpoints
-  green, every API route present and authenticating. It found two startup defects; see
-  [011 §4](docs/issues/011-release-audit.md)
-- ~~Database migrations (on real instance)~~ — done for **both** providers: SQL Server on
-  2026-07-17, PostgreSQL on 2026-08-07 (all applied from empty, provider-specific mappings verified)
-- ~~API responses under an authenticated call~~ — covered by tests that boot the real host
-  (`tests/…/Api`): routes, authorization policies, model binding, status codes and response bodies
-- **Behavior against real GitLab or Yandex Tracker instances** — no poll and no webhook from a real
-  provider has ever been processed
-- Docker image builds (registry filtered in this dev environment)
-- Concurrency and multi-replica behaviour: reasoned about, never measured
-
-**See [the release audit](docs/issues/011-release-audit.md) §3 for what remains unverified.**
-
-Before deploying to production:
-1. Test locally with Docker Compose (see [Getting Started](docs/en/getting-started.md))
-2. Verify migrations apply cleanly to your database — `Database__Provider` picks the assembly
-3. Build and test Docker images
-4. Test against staging instances of your VCS/tracker
-5. Load testing with expected traffic volume
-
----
-
-## What It Does
-
-Release Orchestrator transforms merge requests into a **staged deployment plan**:
-
-1. **Input:** Merge requests from multiple VCS systems + task dependencies from trackers
-2. **Processing:** Combines VCS and task dependencies into a graph, resolves cycles, topologically sorts
-3. **Output:** Stages (sets of MRs that can deploy in parallel) with conflict logging
+Onion, with dependencies pointing inwards only:
 
 ```
-VCS webhooks → Ingress → RabbitMQ → Core → Release Plan
-                           ↓
-                        Database
+Core                    enums, pure parsing; no dependencies at all
+  <- Application        ports, message contracts, the planning algorithm (no EF)
+      <- Infrastructure EF models, DbContext, adapters (Rebus, Redis, DataProtection)
+      <- Providers.Abstractions <- Providers.GitLab / Providers.YandexTracker
+          <- Web (composition root, API, hosted PWA) / Ingress.Webhooks
 ```
 
-**Key features:**
-- Automatic plan generation from dependencies
-- Manual editing (drag-and-drop stages, override order)
-- YAML export/import for version control
-- Multi-repository support (GitLab, Yandex Tracker, extensible to others)
-- Permission-based access control (claim-based, integrates with OIDC)
-- 90-day archival for data retention
-- Prometheus metrics at `/metrics`, plus OpenTelemetry OTLP for traces and metrics
+The planning algorithm is pure and unit-tested without a database. Providers are registered at
+compile time through keyed services, not discovered at runtime.
 
----
+## Documentation
 
-## Architecture Layers
+| Doc | Description |
+| :-- | :-- |
+| [User guide](docs/en/user-guide.md) | What each part is for and how to use it |
+| [Getting started](docs/en/getting-started.md) | Local setup with Docker Compose |
+| [Architecture](docs/en/architecture.md) | System design and data flow |
+| [Configuration](docs/en/configuration.md) | Every setting and environment variable |
+| [Providers](docs/en/providers.md) | Adding a VCS or tracker provider |
+| [Operations](docs/en/operations.md) | Deployment, monitoring, archiving |
+| [Localization](docs/en/localization.md) | How i18n works |
 
-```
-Core                        enums and pure parsing; zero dependencies, not one
-  ↑
-Providers.Abstractions      provider contracts + normalized models
-  ↑                    ↖
-Application            Providers.GitLab / Providers.YandexTracker
-  ↑                    ↗       (adapters: see only Abstractions + Core)
-Infrastructure              EF models, DbContext, adapters — the composition root
-  ↑
-Web / Ingress.Webhooks      HTTP
-```
+Russian versions live in [docs/ru](docs/ru); the index is [docs/README.md](docs/README.md).
+Design notes that are still open are in [docs/issues](docs/issues/README.md).
 
-**Dependencies point inward only.** Two consequences worth stating, because both were absent
-before and both cost real defects:
+## Install
 
-- The planning algorithm lives in `Application` and touches no EF. It used to be a private method
-  on a class built around `DbContext` — unreachable from a test, which is exactly why its
-  dependency edges were inverted for as long as they were. It now takes `PlanMergeRequest`, so
-  the data it needs is a type rather than a comment asking callers to remember an `Include`.
-- No provider name appears in `Core`, and neither does an EF model. Adding a VCS, a tracker or a
-  database is a project and a line of registration, not a domain change.
-
----
-
-## Tech Stack
-
-- **.NET 10** (C# 14)
-- **Database:** Microsoft SQL Server 2019+ or PostgreSQL 13+ (EF Core 10) — see §7.2
-- **Message Queue:** RabbitMQ 3.8+ (Rebus)
-- **Coordination:** Redis 6.0+ (StackExchange.Redis), or none — see §7.1
-- **Frontend:** Blazor WebAssembly (PWA, .NET 10)
-- **Authentication:** OpenID Connect (external provider)
-- **Observability:** Prometheus `/metrics` (on by default) + OpenTelemetry OTLP (optional)
-
----
-
-## Build
+Requires .NET 10 SDK and Docker.
 
 ```bash
-dotnet build
-# 0 errors, 0 warnings (checked in CI)
+git clone https://github.com/jrfrigat/release-orchestrator.git
+cd release-orchestrator
+cp .env.example .env      # set the passwords it names
+docker compose up -d
+# Open http://localhost:8081
 ```
 
-## Test
+PostgreSQL instead of SQL Server, and a single instance without Redis:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.single-instance.yml up -d
+```
+
+## Build and run
+
+```bash
+dotnet build ReleaseOrchestrator.slnx    # 0 errors, 0 warnings; warnings are errors
 dotnet test ReleaseOrchestrator.slnx
+dotnet run --project src/ReleaseOrchestrator.Web
 ```
 
-Unit tests only. They cover the pure logic — the graph algorithm, the EF model's shape, the
-provider registry, the composition root — and deliberately touch no database, broker or cache.
-There are no integration tests: the environment this was built in has no database server, and no EF
-in-memory provider is available offline, so the paths that talk to one are **unverified**.
+Migrations are applied at startup by default. For more than one replica, turn that off
+(`Database__MigrateOnStartup=false`) and apply them from CI or an init container, or the replicas
+race.
 
-## Run Locally
+## Maturity
 
-```bash
-cd docs/en
-# or
-cd docs/ru
+Verified:
 
-# See getting-started.md for Docker Compose setup
-```
+- 667 tests, 0 warnings, warnings-as-errors in CI
+- migrations applied from empty on live SQL Server 2022 and PostgreSQL 16, including rollback cycles
+- the application starts, migrates and reports healthy against both
+- the HTTP API is covered against the real host: routes, authorization policies, status codes, bodies
 
----
+Not verified:
 
-## Key Architectural Decisions
+- **no rollout has been executed against a real GitLab** - no deploy strategy has ever run for real
+- container images are not built in the development environment (the registry is filtered)
+- behaviour under load and with several replicas is reasoned about, not measured
 
-### Why Modular Monolith, Not Microservices?
+## Contributing and security
 
-Tasks, MRs, and stack definitions are tightly coupled. Building a plan requires simultaneous access to all three. A monolith with message queue allows future service extraction without coupling.
-
-### Why Compile-Time Provider Registration?
-
-Providers are registered explicitly in `InfrastructureExtensions.cs`, not discovered at runtime:
-
-- **Fail-fast** — an unknown provider type is rejected when the connection is saved, naming the
-  ones that would have worked, rather than becoming a stored row that fails on first use
-- **Visible** — `grep AddGitLabProvider` finds every provider this deployment has
-- **Checked by the compiler** — a contract change is a build error, not a runtime surprise
-
-Dynamic loading was considered and rejected. It and container deployment cancel each other out:
-the only payoff is "add a provider without rebuilding", and the image rebuilds anyway — which is
-also where Orchard Core and Backstage ended up after trying the other way.
-
-### Why Multiple Databases?
-
-Operational DB holds current MRs and plans. Archive DB (same server or separate) holds closed tasks >90 days old. This keeps operational queries fast and allows archival deletion without impacting backups.
-
-### Why a Lease, Not Consensus?
-
-Archiving and reconciliation are registered in every replica, so both are gated on a lease —
-one run per cycle across the deployment rather than one per replica. It is deliberately not a
-consensus algorithm: one Redis is one point of failure, and under a partition two replicas could
-briefly both believe they hold it. That is acceptable here because both jobs are idempotent, so
-the worst case is the double run that used to be the *normal* case. A job where a double run were
-a correctness bug would need fencing tokens instead.
-
-### 7.1 Running Without Redis
-
-Redis carries two things here, and neither is a source of truth:
-
-| | What it holds | What losing it costs |
-|---|---|---|
-| Permission cache | Computed permissions, keyed by a hash of the stored rules | Three reads. The database decides who may do what; a stamp that is evicted recomputes to the same value. |
-| Job lease | Which replica runs tonight's archive pass | The double run described above. Both jobs are idempotent. |
-
-So the backend is selectable, and a deployment that runs **one replica of `core`** can drop Redis:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.single-instance.yml up -d
-```
-
-| Setting | Values | Meaning |
-|---|---|---|
-| `Coordination__Provider` | `redis` (default), `memory` | Which backend carries the cache and the lease. |
-| `Coordination__SingleInstance` | `true` / `false` | Required for `memory`. The operator's statement that the deployment is one replica. |
-| `Redis__ConnectionString` | connection string | Required for `redis`; unread otherwise. |
-
-### 7.2 SQL Server or PostgreSQL
-
-Unlike the coordination backend, the database *is* the source of truth — so this choice is only
-about which one you already run, never about doing without.
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
-```
-
-| Setting | Values | Meaning |
-|---|---|---|
-| `Database__Provider` | `sqlserver` (default), `postgresql` | Which database, and therefore which migrations assembly. |
-| `ConnectionStrings__Default` | connection string | Operational store, in that provider's own format. |
-| `ConnectionStrings__Archive` | connection string | Archive store. |
-
-Both are first-class: the same model, the same tests, the same CI checks. Migrations live in one
-assembly per provider, because a migration is generated SQL rather than a description of intent —
-`nvarchar(200)` and `character varying(200)` cannot share a file. The application picks the
-assembly from `Database__Provider` at startup, so a mismatch is a startup failure and not a
-half-applied schema.
-
-Two mappings genuinely differ, and both live in `ProviderSpecificMapping` where they are named
-rather than left to a convention:
-
-| | SQL Server | PostgreSQL | Why it matters |
-|---|---|---|---|
-| Concurrency token | `rowversion` | the `xmin` system column | Npgsql accepts `[Timestamp] byte[]` and maps it to a `bytea` PostgreSQL never fills. The model builds, the migration scaffolds, and the concurrency check **silently never fires**. |
-| One-active-plan index | `WHERE [IsActive] = 1` | `WHERE "IsActive"` | A filter is a fragment of SQL passed through verbatim. SQL Server's brackets are not quoting in PostgreSQL, and a boolean does not equal 1. |
-
-The override files compose, in any order:
-
-```bash
-# PostgreSQL, single replica, no Redis
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
-               -f docker-compose.single-instance.yml up -d
-```
-
-**Neither database has ever been run.** See Known Limitations — this is the same "never started"
-that applies to SQL Server, and PostgreSQL does not change it in either direction.
-
-### 7.3 The single-instance caveat
-
-`memory` is correct for one process and **wrong for two**, and it cannot tell the difference: each
-process would hold its own lease and believe it leads, so every replica would run its own archive
-cycle, every one would sweep the tracker, and a revoked permission would linger in the others until
-the stamp expires. That is why the assertion is separate from the provider name — an unconfigured
-Redis fails at startup rather than quietly becoming a single-instance deployment, the same way
-`DataProtection:AllowUnprotectedKeys` makes an operator say the risky thing out loud. Scale `core`
-past one and Redis comes back.
-
----
-
-## Security Model
-
-- **Credentials encrypted at rest** — VCS and tracker tokens are encrypted with ASP.NET Core Data
-  Protection. The key ring lives in the same database, so outside Development a certificate to
-  encrypt the keys themselves is **required**: without one, a database dump yields both the
-  ciphertext and the key. See [Configuration](docs/en/configuration.md)
-- **Authentication:** OpenID Connect (delegated to external provider)
-- **Authorization:** Claim-based permissions (no roles)
-- **HTTPS:** Assumed at reverse proxy (Nginx/Traefik)
-- **Redis cache:** Caches computed permissions; must be password-protected when used. Write access
-  to it is equivalent to granting yourself permissions, since a cache hit never reaches the
-  database. Not deployed under `Coordination__Provider=memory`, which removes the exposure along
-  with the service (§7.1)
-
----
-
-## Known Limitations
-
-- **Never run at all.** Not "untested under load" — the application has never started against a
-  live SQL Server, PostgreSQL, RabbitMQ or Redis.
-
-  Migrations are the one part of that which is no longer true. On 2026-07-17 all six applied
-  cleanly to a real SQL Server 2022, and the archive's to its own database, from empty. What that
-  bought is small but it is not nothing: it is the first time anything here met a real database,
-  and it settled two claims that SQLite had left open — the filtered unique index really does
-  reject a second active plan (error 2601), and `Restrict` really does block deleting a merge
-  request a plan still refers to (error 547). Both were previously marked unverifiable in
-  `ArchiveRunnerTests` and CLAUDE.md.
-
-  Everything else on this list stands. The application still has not started; PostgreSQL's
-  migrations still have not been applied to anything
-- **Neither database has ever been run.** PostgreSQL is supported on the same terms as SQL Server: same model, same tests, same CI, and the same "никогда не запускался" above. Its mapping differences are covered by tests against the built model and by generated SQL, which is the strongest check possible without a server — it is not a substitute for one
-- Metrics are exposed for Prometheus at `/metrics` on both hosts (ASP.NET Core, .NET runtime,
-  outbound HTTP and Rebus), scraped directly with no collector in between; OTLP export of traces
-  and metrics stays available for a collector when one is configured. `docker compose -f
-  docker-compose.yml -f docker-compose.observability.yml up` brings up Prometheus and Grafana wired
-  to it
-- No buffering when RabbitMQ is down: webhooks answer **503**, which senders retry. Buffering in
-  memory was considered and rejected — it answers 200 while the event exists only in RAM, so a
-  restart loses it silently. Not losing events across an outage needs a persistent outbox
-- TLS is terminated outside the app; nothing in `docker-compose.yml` does it
-
-See [docs/issues](docs/issues/README.md) for what is still open.
-
----
-
-## Project Structure
-
-```
-src/
-  ReleaseOrchestrator.Core/                    # Domain entities
-  ReleaseOrchestrator.Application/             # Application logic
-  ReleaseOrchestrator.Infrastructure/          # EF Core, providers, queue
-  ReleaseOrchestrator.Web/                     # REST API + BFF
-  ReleaseOrchestrator.Ingress.Webhooks/        # Webhook receiver
-  ReleaseOrchestrator.Pwa/                     # Blazor WebAssembly UI
-  ReleaseOrchestrator.Providers.Abstractions/  # Port interfaces
-  ReleaseOrchestrator.Providers.GitLab/        # GitLab adapter
-  ReleaseOrchestrator.Providers.YandexTracker/ # Yandex Tracker adapter
-  ReleaseOrchestrator.Migrations.MsSql/        # EF Core migrations
-
-tests/
-  ReleaseOrchestrator.UnitTests/               # unit tests (no live dependencies)
-
-docs/
-  README.md                                    # This doc's parent (navigation)
-  en/, ru/                                     # Comprehensive guides
-  issues/                                      # Audit reports & decision logs
-```
-
----
-
-## Development
-
-### Prerequisites
-
-- .NET SDK 10
-- Visual Studio 2024, VS Code, or Rider
-- Docker & Docker Compose (for local stack)
-
-### First Steps
-
-1. Clone repo
-2. Read [Architecture](docs/en/architecture.md)
-3. Run `dotnet build` (verify 0/0)
-4. See [Getting Started](docs/en/getting-started.md) for Docker Compose setup
-
-### Contributing
-
-Before submitting a PR:
-1. Run `dotnet build` (must be 0/0 errors/warnings)
-2. Run `dotnet test` (all tests must pass)
-3. Follow commit style: lowercase, imperative, reference issue
-4. Update docs if you change architecture or add configuration
-
----
-
-## Design notes
-
-[docs/issues](docs/issues/README.md) keeps only what is still worth reading. Documents describing
-work that has shipped were removed — the reasoning lives in the code's own comments and in the commit
-history, which is where it stays accurate.
-
-- **[006. Per-task planning](docs/issues/006-per-task-planning.md)** — the one-derivation invariant, and the plan document schema
-- **[011. Release audit](docs/issues/011-release-audit.md)** — three behaviour changes it produced, and what is still unverified
-- **[012. Ordering rules](docs/issues/012-ordering-rules.md)** — the YAML schema reference, and why its editor renders into the document rather than replacing it
-
-Nothing in that folder is open work. What is still unverified is listed in
-[011 §3](docs/issues/011-release-audit.md).
-
----
-
-## Support
-
-**Community:** GitHub Issues (if enabled)
-**Documentation:** [docs/README.md](docs/README.md)
-**Security:** Report privately (see SECURITY.md if present)
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## License
 
-[Add license here if applicable]
-
----
-
-**Last Updated:** 2025-01-17  
-**Status:** Audit complete, documentation published, app untested in live environment
+MIT - see [LICENSE](LICENSE).
