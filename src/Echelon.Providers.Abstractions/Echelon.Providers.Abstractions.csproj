@@ -16,7 +16,7 @@
 
   <PropertyGroup Label="Package">
     <IsPackable>true</IsPackable>
-    <PackageId>FrigaT.Echelon.Providers.Abstractions</PackageId>
+    <PackageId>Echelon.Providers.Abstractions</PackageId>
     <Description>Provider ports and the normalized models they exchange: VCS and tracker contracts, deploy strategies, action handlers, readiness signals. Reference this to write a Echelon provider.</Description>
   </PropertyGroup>
 

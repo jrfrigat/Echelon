@@ -2,7 +2,7 @@
 
   <PropertyGroup Label="Package">
     <IsPackable>true</IsPackable>
-    <PackageId>FrigaT.Echelon.Core</PackageId>
+    <PackageId>Echelon.Core</PackageId>
     <Description>Enums and pure parsing rules shared by every Echelon component: task-key extraction, label sets, status vocabularies. No dependencies, so a provider adapter can reference it alone.</Description>
   </PropertyGroup>
 

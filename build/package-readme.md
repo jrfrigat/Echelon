@@ -5,21 +5,20 @@ It reads tasks from an issue tracker and merge requests from one or more VCS con
 everything a task waits on, orders the work into deploy waves, and drives the rollout into each
 environment.
 
-This is one of the Echelon libraries. Reference the `FrigaT.Echelon.*`
-packages only if you are writing a provider - a VCS, a tracker, a deploy strategy or an action
-handler. Most users just run the container image (`docker.io/frigat/echelon`).
+This is one of the Echelon libraries. Reference them only if you are writing a provider - a VCS, a
+tracker, a deploy strategy or an action handler. Most users just run the container image
+(`docker.io/frigat/echelon`).
 
-The NuGet IDs are prefixed `FrigaT.Echelon.*`; the assemblies and namespaces stay
-`Echelon.*`, so `dotnet add package FrigaT.Echelon.Providers.Abstractions`
-gives you `using Echelon.Providers.Abstractions`.
+The package IDs match the namespaces, so `dotnet add package Echelon.Providers.Abstractions` gives
+you `using Echelon.Providers.Abstractions`.
 
 Library packages:
 
 | Package | What is in it |
 | :-- | :-- |
-| `FrigaT.Echelon.Core` | Enums and pure parsing: task-key extraction, label sets, status vocabularies. No dependencies |
-| `FrigaT.Echelon.Providers.Abstractions` | The provider ports and the normalized models they exchange |
-| `FrigaT.Echelon.Application` | Ports, message contracts and the planning algorithm, with no Entity Framework |
+| `Echelon.Core` | Enums and pure parsing: task-key extraction, label sets, status vocabularies. No dependencies |
+| `Echelon.Providers.Abstractions` | The provider ports and the normalized models they exchange |
+| `Echelon.Application` | Ports, message contracts and the planning algorithm, with no Entity Framework |
 
 ## Writing a provider
 
