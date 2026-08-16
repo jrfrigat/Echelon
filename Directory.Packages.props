@@ -64,9 +64,9 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.17.0-beta.1" />
   </ItemGroup>
   <ItemGroup Label="UI">
-    <PackageVersion Include="Flare.Blazor" Version="0.14.0" />
-    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.14.0" />
-    <PackageVersion Include="Flare.Icons.MaterialDesign3.Svg" Version="0.14.0" />
+    <PackageVersion Include="Flare.Blazor" Version="0.17.1" />
+    <PackageVersion Include="Flare.Theme.VisualStudio" Version="0.17.1" />
+    <PackageVersion Include="Flare.Icons.MaterialDesign3.Svg" Version="0.17.1" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
