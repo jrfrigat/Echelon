@@ -9,6 +9,12 @@
     <ProjectReference Include="..\ReleaseOrchestrator.Providers.Abstractions\ReleaseOrchestrator.Providers.Abstractions.csproj" />
   </ItemGroup>
 
+  <PropertyGroup Label="Package">
+    <IsPackable>true</IsPackable>
+    <PackageId>FrigaT.ReleaseOrchestrator.Application</PackageId>
+    <Description>Ports, message contracts and the rollout planning algorithm: dependency closure, wave ordering, the YAML ordering-rule language. Pure, with no Entity Framework, so it can be used and tested on its own.</Description>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -1,0 +1,150 @@
+name: Release
+
+# Runs when a version tag is pushed, e.g. v0.2.0. Builds and tests, packs the three library NuGet
+# packages and publishes them to NuGet.org via Trusted Publishing (OIDC, no long-lived API key),
+# builds and pushes the two host images to GHCR and Docker Hub, and creates a GitHub Release. The
+# version comes from the tag (v1.2.3 -> 1.2.3).
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # create the GitHub Release
+  packages: write   # push the container images to GHCR
+  id-token: write   # OIDC token for NuGet Trusted Publishing (no long-lived API key)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer needs the full history + tags to derive the version
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The package version is derived from the tag by MinVer. This value is only for the container
+      # image tags below (which want the bare version), and matches MinVer on a tagged build.
+      - name: Resolve version from tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore ReleaseOrchestrator.slnx
+
+      - name: Build
+        run: dotnet build ReleaseOrchestrator.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ReleaseOrchestrator.slnx -c Release --no-build --verbosity normal
+
+      # Only IsPackable=true projects produce packages (Core, Providers.Abstractions, Application).
+      # The hosts, the PWA, the migration assemblies and the tests are IsPackable=false, so pack
+      # skips them: they ship as container images, not as a dependency anyone should take.
+      - name: Pack
+        run: dotnet pack ReleaseOrchestrator.slnx -c Release --no-build -o artifacts
+
+      # Trusted Publishing: exchange the GitHub OIDC token for a short-lived NuGet API key. Requires
+      # a Trusted Publisher policy on nuget.org for this repository + workflow, plus the nuget.org
+      # account username in the NUGET_USER repository variable. No long-lived secret is stored here.
+      - name: NuGet login (Trusted Publishing)
+        id: nuget-login
+        if: ${{ vars.NUGET_USER != '' }}
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push to NuGet.org
+        if: ${{ vars.NUGET_USER != '' }}
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      # Two images, because the product is two hosts: the application (API + admin PWA) and the
+      # webhook ingress, which is deployed separately so the API need not be exposed. GHCR needs a
+      # lowercase repository path (github.repository preserves the repo's case). Docker Hub tags are
+      # added only when DOCKERHUB_USERNAME is set, so a release still works with GHCR alone.
+      - name: Compute image tags
+        id: tags
+        env:
+          DOCKERHUB_USER: ${{ vars.DOCKERHUB_USERNAME }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          GHCR="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "app<<EOF"
+            echo "${GHCR}:${VERSION}"
+            echo "${GHCR}:latest"
+            if [ -n "${DOCKERHUB_USER}" ]; then
+              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator:${VERSION}"
+              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator:latest"
+            fi
+            echo "EOF"
+            echo "ingress<<EOF"
+            echo "${GHCR}-ingress:${VERSION}"
+            echo "${GHCR}-ingress:latest"
+            if [ -n "${DOCKERHUB_USER}" ]; then
+              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator-ingress:${VERSION}"
+              echo "docker.io/${DOCKERHUB_USER}/release-orchestrator-ingress:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push the application image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/ReleaseOrchestrator.Web/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.app }}
+
+      - name: Build and push the ingress image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/ReleaseOrchestrator.Ingress.Webhooks/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.ingress }}
+
+      # Sync the Docker Hub repository overview and short description from build/dockerhub-overview.md.
+      # Non-fatal, so a description hiccup never fails a release, and gated on Docker Hub being
+      # configured at all.
+      - name: Update Docker Hub description
+        if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/release-orchestrator
+          short-description: "Release planning and rollout across issue trackers and repositories. .NET 10."
+          readme-filepath: build/dockerhub-overview.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" artifacts/*.nupkg --generate-notes --title "${{ github.ref_name }}"

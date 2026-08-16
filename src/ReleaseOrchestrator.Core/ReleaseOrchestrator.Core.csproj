@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup Label="Package">
+    <IsPackable>true</IsPackable>
+    <PackageId>FrigaT.ReleaseOrchestrator.Core</PackageId>
+    <Description>Enums and pure parsing rules shared by every Release Orchestrator component: task-key extraction, label sets, status vocabularies. No dependencies, so a provider adapter can reference it alone.</Description>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

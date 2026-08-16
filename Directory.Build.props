@@ -1,12 +1,48 @@
 <Project>
 
   <PropertyGroup Label="Identity">
+    <Product>Release Orchestrator</Product>
     <Authors>FrigaT</Authors>
     <Company>FrigaT</Company>
     <Copyright>Copyright (c) 2026 FrigaT</Copyright>
     <RepositoryType>git</RepositoryType>
+    <NeutralLanguage>en</NeutralLanguage>
     <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
   </PropertyGroup>
+
+  <!--
+    Package / release metadata. The version comes from the git tag through MinVer (tag v1.2.3 ->
+    1.2.3; commits after a tag get a -preview suffix), so no VersionPrefix is set anywhere.
+
+    Nothing is packable by default. Only the projects a third party would reference to write a
+    provider opt in, with <IsPackable>true</IsPackable> and a PackageId: the hosts and the migration
+    assemblies are shipped as a container image, and publishing them would invite people to depend
+    on internals that change without notice.
+  -->
+  <PropertyGroup Label="Packaging">
+    <IsPackable>false</IsPackable>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jrfrigat/release-orchestrator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jrfrigat/release-orchestrator</RepositoryUrl>
+    <PackageTags>release-management;deployment;rollout;gitlab;yandex-tracker;devops;aspnetcore;dotnet</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <!-- SourceLink + symbols: embed repo/commit info and ship snupkg symbol packages. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- MinVer: derive the version from the "v" git tag. -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>preview</MinVerDefaultPreReleaseIdentifiers>
+  </PropertyGroup>
+
+  <!-- One brand README and one icon for every package on nuget.org. Harmless where IsPackable is
+       false, since those projects are never packed. -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)build\package-readme.md" Pack="true" PackagePath="README.md" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)build\package-icon.png" Pack="true" PackagePath="icon.png" Visible="false" />
+  </ItemGroup>
 
   <PropertyGroup Label="Language">
     <TargetFramework>net10.0</TargetFramework>
@@ -14,13 +50,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <!--
-      Warnings are errors, which is stricter than the Flare reference — deliberately. This is a
+      Warnings are errors, which is stricter than the Flare reference - deliberately. This is a
       service, not a library: nobody consumes its warnings downstream, and a clean build is a
       precondition we can actually hold.
 
       The analyzer level is left at the SDK default, matching Flare. Raising it to
       latest-recommended demanded renaming the domain's own word (CA1711 objects to a type called
-      Stack — "стек" is the term the README is written in) and would have traded a real design
+      Stack - "стек" is the term the README is written in) and would have traded a real design
       vocabulary for a rule's preference.
     -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -33,14 +69,14 @@
       CS1591 (missing comment on a public member) is suppressed, matching the Flare repository:
       the "document every public member" rule is enforced by review, not by the compiler. Turning
       it on wholesale here produced 276 errors across entity properties whose names already say
-      everything a comment would — noise that teaches people to write "Gets or sets the Id."
+      everything a comment would - noise that teaches people to write "Gets or sets the Id."
       Comments earn their place by explaining what the code cannot.
     -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!--
       CS1573 (some parameters documented, not all) is suppressed for the same reason. A method
-      here carries exactly one <param> — "Blank keeps the stored token" — because that one
+      here carries exactly one <param> - "Blank keeps the stored token" - because that one
       parameter has a contract the signature cannot express. CS1573 answers by demanding prose for
       `id` and `name` too. That turns a useful note into a reason to delete the note.
     -->
@@ -51,14 +87,14 @@
     <!--
       NU1900 means NuGet could not reach the feed to check packages for known vulnerabilities.
       That is a statement about the network, not the code, so it stays a warning rather than a
-      fatal error — a restore must not fail because a feed is briefly unreachable.
+      fatal error - a restore must not fail because a feed is briefly unreachable.
 
       It is deliberately NOT suppressed. It used to be, back when the feed was unreachable here
       and the warning was constant noise; now it is the signal that the audit below did not
       actually run, and an audit that silently checked nothing is worse than no audit.
 
       Kept a warning takes an explicit line, because TreatWarningsAsErrors above is unconditional
-      and was promoting it to a fatal error — the exact outcome the paragraph above rules out. An
+      and was promoting it to a fatal error - the exact outcome the paragraph above rules out. An
       offline feed failed the build with nine NU1900 errors and no way to proceed, which is how the
       contradiction was found. WarningsNotAsErrors, not NoWarn: the warning has to stay visible,
       since it is what says the vulnerability audit did not run.
@@ -72,7 +108,7 @@
       vulnerability we cannot see is worse than one we can.
 
       NU1902/NU1903 are errors, here as well as in CI. They were warnings locally for one stated
-      reason — nuget.org was proxy-blocked, so a patched package could not be restored and the
+      reason - nuget.org was proxy-blocked, so a patched package could not be restored and the
       build would have failed with no way out. That is no longer true: the feed and the advisory
       database are both reachable. With the reason gone the exemption goes with it, rather than
       outliving it as a security control nobody remembers loosening.

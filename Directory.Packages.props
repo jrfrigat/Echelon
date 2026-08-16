@@ -6,11 +6,19 @@
 
     Why it matters here specifically: before CPM the same package sat at different versions in
     different projects (Microsoft.AspNetCore.OpenApi at 9.0.8 while everything else was 9.0.5),
-    which NuGet resolves silently by unifying upward — a version nobody chose.
+    which NuGet resolves silently by unifying upward - a version nobody chose.
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
+
+  <!-- Build-time only, in every project, PrivateAssets=all so they never flow to a consumer. MinVer
+       derives the package version from the git tag; SourceLink embeds repository and commit metadata
+       so the published packages are source-debuggable. -->
+  <ItemGroup Label="Build and packaging">
+    <GlobalPackageReference Include="MinVer" Version="7.0.0" />
+    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
+  </ItemGroup>
   <ItemGroup Label="ASP.NET Core / runtime">
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" />
