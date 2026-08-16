@@ -60,7 +60,7 @@ public class TaskItem
     public ICollection<TaskPrerequisiteOrder> PrerequisiteOrder { get; set; } = [];
 
     /// <summary>
-    /// Operator edits to this task's plan — added or dropped ordering edges between merge requests.
+    /// Operator edits to this task's plan - added or dropped ordering edges between merge requests.
     /// </summary>
     /// <remarks>
     /// Held on the task rather than on the plan because a plan is regenerated on every ingestion
@@ -95,7 +95,7 @@ public class TaskItem
     /// How it arrived: the ingestion source, or a marker for the paths that are not arrivals.
     /// </summary>
     /// <remarks>
-    /// Null where the creating path knows of no source — rendered as "arrival channel not recorded".
+    /// Null where the creating path knows of no source - rendered as "arrival channel not recorded".
     /// It is never filled in from the tracker connection instead, tempting as that is: a task
     /// created because a merge-request branch mentioned its key would then read as having been
     /// announced by the tracker, which is a webhook that never happened.
@@ -119,22 +119,22 @@ public class TaskItem
     /// <summary>
     /// Its parent task, if any. Restrict, and self-referencing: SQL Server rejects a cascade or
     /// set-null action that targets the same table, so a parent with children cannot be deleted
-    /// out from under them — the archive drains children first (see <c>ArchiveRunner</c>).
+    /// out from under them - the archive drains children first (see <c>ArchiveRunner</c>).
     /// </summary>
     [ForeignKey(nameof(ParentTaskId))]
     [InverseProperty(nameof(Children))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
     public TaskItem? ParentTask { get; set; }
 
-    /// <summary>Its child tasks — the subtasks that deploy before it. Inverse of <see cref="ParentTask"/>.</summary>
+    /// <summary>Its child tasks - the subtasks that deploy before it. Inverse of <see cref="ParentTask"/>.</summary>
     [InverseProperty(nameof(ParentTask))]
     public ICollection<TaskItem> Children { get; set; } = [];
 
-    /// <summary>Tasks this one waits on — deploy those first.</summary>
+    /// <summary>Tasks this one waits on - deploy those first.</summary>
     [InverseProperty(nameof(TaskDependency.DependentTask))]
     public ICollection<TaskDependency> Dependencies { get; set; } = [];
 
-    /// <summary>Tasks waiting on this one — deploy this first.</summary>
+    /// <summary>Tasks waiting on this one - deploy this first.</summary>
     [InverseProperty(nameof(TaskDependency.DependsOnTask))]
     public ICollection<TaskDependency> Dependents { get; set; } = [];
 

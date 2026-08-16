@@ -6,7 +6,7 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 namespace ReleaseOrchestrator.Migrations.Postgres;
 
 /// <summary>
-/// Design-time connection for `dotnet ef`, taken from the environment — the same rule as the SQL
+/// Design-time connection for `dotnet ef`, taken from the environment - the same rule as the SQL
 /// Server side, for the same reason: the tooling has to be pointable at CI or staging without
 /// editing source, and no password belongs in git.
 /// </summary>

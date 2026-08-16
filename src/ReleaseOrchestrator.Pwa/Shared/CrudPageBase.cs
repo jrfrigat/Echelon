@@ -55,7 +55,7 @@ public abstract class CrudPageBase<TItem> : PageBase
     /// submitted with Enter, so the keyboard path refuses exactly what the disabled button refuses.
     /// </summary>
     /// <remarks>
-    /// Defaults to false — a page that never overrides it behaves as it always did. It exists because
+    /// Defaults to false - a page that never overrides it behaves as it always did. It exists because
     /// Enter does not consult a button's <c>Disabled</c>: once a dialog became a real form, the
     /// keyboard could submit a half-filled editor that the mouse could not.
     /// </remarks>

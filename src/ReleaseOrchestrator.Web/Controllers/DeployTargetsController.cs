@@ -15,12 +15,12 @@ using ReleaseOrchestrator.Web.Validation;
 namespace ReleaseOrchestrator.Web.Controllers;
 
 /// <summary>
-/// How each repository deploys to each environment — the configuration a rollout resolves its steps'
+/// How each repository deploys to each environment - the configuration a rollout resolves its steps'
 /// deploy strategy from, and without which a task cannot launch.
 /// </summary>
 /// <remarks>
 /// A target's strategy key is validated against the strategies actually registered, and its settings
-/// against that strategy's own schema, exactly as a connection's settings are — so an undeclared
+/// against that strategy's own schema, exactly as a connection's settings are - so an undeclared
 /// setting is refused rather than stored and ignored, and a secret one is encrypted at rest.
 /// </remarks>
 [ApiController]
@@ -192,7 +192,7 @@ public class DeployTargetsController(
     /// Reads the redeploy policy, defaulting to <see cref="RedeployPolicy.Once"/> when absent.
     /// </summary>
     /// <remarks>
-    /// Absent means Once — production's answer, and the safe one — rather than the enum's zero, which
+    /// Absent means Once - production's answer, and the safe one - rather than the enum's zero, which
     /// it deliberately does not define. A value that is present and unrecognised is rejected, so a
     /// typo does not quietly become "deploy once".
     /// </remarks>

@@ -10,21 +10,21 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// <para>
 /// This is an INPUT to the planner, never part of the plan it produces. Every ingestion event
 /// rebuilds every active plan, so a policy stored on the generated plan would be rewritten by the
-/// next event that touched anything; kept as an input, it survives recalculation by construction —
+/// next event that touched anything; kept as an input, it survives recalculation by construction -
 /// the same reason the ordering rules and the readiness rules live where they do.
 /// </para>
 /// <para>
 /// The distinction the two flags draw is the one a survey of trackers arrived at:
 /// <c>depends on</c>/<c>blocks</c> is the only link every tracker agrees is an ordering, while
 /// <c>parent</c>/<c>subtask</c> is a hierarchy that may or may not imply one. Treating the hierarchy
-/// as ordering unconditionally — which the planner used to do — is right for a parent that is an
+/// as ordering unconditionally - which the planner used to do - is right for a parent that is an
 /// umbrella over its children's work and wrong for one that merely groups unrelated tickets. Now it
 /// is a decision rather than an assumption.
 /// </para>
 /// </remarks>
 /// <param name="WaitForSubtasks">
 /// Whether a parent waits for the tasks beneath it. Off means a parent can roll out while a subtask
-/// has not — appropriate when the hierarchy is filing rather than composition.
+/// has not - appropriate when the hierarchy is filing rather than composition.
 /// </param>
 /// <param name="WaitForLinked">
 /// Whether a task waits for the tasks it declares a dependency on. Off means declared dependencies

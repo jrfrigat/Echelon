@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.UnitTests.Persistence;
 /// <remarks>
 /// The API grants by check-then-insert, which races with itself: two admins granting the same
 /// claim at the same moment both see nothing and both insert. Revocation deletes one row by id and
-/// logs "revoked", so the group keeps the permission that the audit trail says it lost — a
+/// logs "revoked", so the group keeps the permission that the audit trail says it lost - a
 /// permission surviving its own revocation, reported as gone. The same shape the merge request and
 /// task tables already closed with a unique index; the permission tables were left out.
 /// </remarks>
@@ -132,8 +132,8 @@ public sealed class PermissionGrantTests : IAsyncLifetime
 
     /// <summary>
     /// UserId is 36 characters because a normalised object id is exactly that long. The length is
-    /// not cosmetic: at 450 the column is nvarchar(450) — 900 bytes, SQL Server's whole index key
-    /// budget — and the unique index above could not be created next to a 16-byte Guid.
+    /// not cosmetic: at 450 the column is nvarchar(450) - 900 bytes, SQL Server's whole index key
+    /// budget - and the unique index above could not be created next to a 16-byte Guid.
     /// </summary>
     [Fact]
     public void UserIdIsExactlyLongEnoughForANormalisedObjectId()

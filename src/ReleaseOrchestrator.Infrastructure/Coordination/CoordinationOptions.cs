@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Infrastructure.Coordination;
 /// <para>
 /// Neither is a source of truth. The permission stamp is a hash of the stored rules, so losing the
 /// cache costs three reads and never correctness; the lease exists to stop N replicas each running
-/// the same nightly pass, and the passes are idempotent. That is why this is selectable at all —
+/// the same nightly pass, and the passes are idempotent. That is why this is selectable at all -
 /// the backend is an efficiency and contention choice, not the place the data lives.
 /// </para>
 /// <para>
@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.Infrastructure.Coordination;
 /// replica and every replica leads its own archive cycle, every one sweeps the tracker, and a
 /// revoked permission lingers in the others for the stamp's lifetime. So the provider is named
 /// explicitly and <c>memory</c> additionally requires the operator to state that the deployment is
-/// a single instance — the same shape as <c>DataProtection:AllowUnprotectedKeys</c>: accepting a
+/// a single instance - the same shape as <c>DataProtection:AllowUnprotectedKeys</c>: accepting a
 /// risk is allowed, arriving at one unawares is not.
 /// </para>
 /// </remarks>
@@ -40,7 +40,7 @@ public class CoordinationOptions
 
 /// <summary>The coordination backends this build knows how to register.</summary>
 /// <remarks>
-/// Canonical, lower-case keys, matched through <c>ProviderKey.Normalize</c> — the same rule the
+/// Canonical, lower-case keys, matched through <c>ProviderKey.Normalize</c> - the same rule the
 /// VCS and tracker registries use, so a value typed into compose does not have to match case.
 /// </remarks>
 public static class CoordinationProviders

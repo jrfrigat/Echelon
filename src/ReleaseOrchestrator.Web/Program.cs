@@ -46,7 +46,7 @@ try
 
     // Resources/ApiStrings.resx + .ru.resx, reached through IStringLocalizer<ApiStrings>.
     // No ResourcesPath on purpose: it would make the factory look for the resource under
-    // <root>.Resources.<type name minus root> — i.e. ...Resources.Resources.ApiStrings — while the
+    // <root>.Resources.<type name minus root> - i.e. ...Resources.Resources.ApiStrings - while the
     // resx actually compiles to the marker type's own full name. See ApiStrings for the details.
     builder.Services.AddLocalization();
 
@@ -146,7 +146,7 @@ try
     // Ahead of UseExceptionHandler so DomainExceptionHandler, which runs upstream of the
     // controllers, still resolves its title in the caller's language. Culture comes from the
     // Accept-Language header (the PWA sets it from the language picked in the UI, not the
-    // browser's). Response bodies stay culture-invariant — System.Text.Json does not read
+    // browser's). Response bodies stay culture-invariant - System.Text.Json does not read
     // CurrentCulture for numbers or dates.
     string[] supportedCultures = ["en", "ru"];
     app.UseRequestLocalization(new RequestLocalizationOptions()
@@ -211,7 +211,7 @@ try
     if (string.Equals(app.Configuration["Auth:Provider"], "Local", StringComparison.OrdinalIgnoreCase))
         app.MapLocalAuthEndpoints();
 
-    // The SPA shell must load anonymously — the fallback policy above requires an authenticated
+    // The SPA shell must load anonymously - the fallback policy above requires an authenticated
     // user, which would 401 the Blazor host page and every deep link, so the admin UI never boots.
     // Auth happens inside the SPA (OIDC), and the data behind it stays protected by the API's own
     // policies; serving the static shell to anyone is the standard hosted-WASM setup.
@@ -244,7 +244,7 @@ finally
 /// <remarks>
 /// Top-level statements compile into an internal <c>Program</c> that
 /// <c>WebApplicationFactory&lt;T&gt;</c> cannot reach. Declaring it public here is the documented way
-/// to make the REAL host testable — which is the point: an API test against a hand-assembled
+/// to make the REAL host testable - which is the point: an API test against a hand-assembled
 /// pipeline proves the test's wiring, not the deployment's.
 /// </remarks>
 public partial class Program;

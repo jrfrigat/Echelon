@@ -24,7 +24,7 @@ public sealed record TaskPrerequisites(
 /// </summary>
 /// <remarks>
 /// Pure: no EF, no I/O, no clock. This is the seam where "what the tracker said" becomes "what the
-/// rollout waits for", and it is the whole reason the policy is testable — the merge used to happen
+/// rollout waits for", and it is the whole reason the policy is testable - the merge used to happen
 /// inside an EF query, where the only way to check it was to run one.
 /// </remarks>
 public static class TaskWaitGraph
@@ -34,7 +34,7 @@ public static class TaskWaitGraph
     /// </summary>
     /// <param name="tasks">Each task's prerequisites from both sources.</param>
     /// <param name="policyFor">
-    /// The effective policy for a task — the global default with that task's overrides applied.
+    /// The effective policy for a task - the global default with that task's overrides applied.
     /// </param>
     /// <returns>
     /// Adjacency in the shape <see cref="PlanClosureBuilder.Closure"/> and the planner expect. A task
@@ -78,7 +78,7 @@ public static class TaskWaitGraph
     /// Makes one whole group of prerequisites deploy before the other.
     /// </summary>
     /// <remarks>
-    /// These edges are between tasks that may be entirely unrelated — that is what the operator asked
+    /// These edges are between tasks that may be entirely unrelated - that is what the operator asked
     /// for, and it is also why this can turn an acyclic graph cyclic. The planner breaks cycles and
     /// records the conflict, so the failure mode is a reported dropped edge rather than a hang.
     /// Self-edges are skipped: a task in both groups cannot precede itself.
@@ -110,7 +110,7 @@ public static class TaskWaitGraph
     /// </summary>
     /// <remarks>
     /// A chain, not a full ordering: consecutive pairs are enough, because "after" is transitive
-    /// through the graph. Entries the policy did not admit are dropped rather than honoured — the
+    /// through the graph. Entries the policy did not admit are dropped rather than honoured - the
     /// sequence is a preference over the prerequisites that exist, and a stale entry naming a task
     /// that is no longer one must not resurrect it into the closure.
     /// </remarks>

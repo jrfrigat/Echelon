@@ -30,7 +30,7 @@
     Without it the databases were created and only then did the run stop on the missing password,
     leaving half a deployment behind. Found by running this, not by reading it.
 
-    A password containing a single quote will not survive substitution — sqlcmd replaces the text
+    A password containing a single quote will not survive substitution - sqlcmd replaces the text
     before SQL parses it, so the quote ends the literal. Pick one without.
 
     Re-running is safe: every step checks first, and nothing here drops anything.

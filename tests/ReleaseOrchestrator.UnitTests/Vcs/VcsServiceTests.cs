@@ -14,12 +14,12 @@ namespace ReleaseOrchestrator.UnitTests.Vcs;
 
 /// <summary>
 /// The reconcile path exists to catch what webhooks missed, so it must refresh the full label set
-/// the per-environment readiness gate reads — not only the coarse ready-for-deploy status.
+/// the per-environment readiness gate reads - not only the coarse ready-for-deploy status.
 /// </summary>
 /// <remarks>
 /// The gate compares <see cref="MergeRequest.Labels"/>. The reconcile re-derived the status from the
 /// provider's labels but never wrote that set back, so a missed "label removed" delivery left the
-/// gate admitting to an environment on a label the provider no longer reports — the one direction a
+/// gate admitting to an environment on a label the provider no longer reports - the one direction a
 /// gate must never fail. These run against SQLite, the same offline database the other persistence
 /// tests use.
 /// </remarks>
@@ -102,7 +102,7 @@ public sealed class VcsServiceTests : IAsyncLifetime
 
     /// <summary>
     /// The dangerous case: a "ready-for-prod removed" delivery was missed, so the stored set still
-    /// carries it. The reconcile must drop it — otherwise the gate keeps admitting to production.
+    /// carries it. The reconcile must drop it - otherwise the gate keeps admitting to production.
     /// </summary>
     [Fact]
     public async Task Reconcile_ClearsALabelTheProviderNoLongerReports()

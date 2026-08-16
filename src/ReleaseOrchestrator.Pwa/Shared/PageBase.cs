@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Pwa.Shared;
 ///
 /// Handlers must funnel through <see cref="RunAsync"/> rather than calling the API bare: an
 /// unguarded handler lets the exception escape to Blazor's unhandled-error UI, which replaces
-/// the page with a "reload" bar and throws away the reason. That reason is the useful part —
+/// the page with a "reload" bar and throws away the reason. That reason is the useful part -
 /// <see cref="ApiException"/> carries the server's own wording.
 /// </summary>
 public abstract class PageBase : LocalizedComponent
@@ -43,7 +43,7 @@ public abstract class PageBase : LocalizedComponent
     /// <summary>
     /// Asks for confirmation before a destructive action. True only on an explicit confirm: Flare
     /// reports a cancel as false and a dismissal (Escape) as null, and neither is consent. A missing
-    /// provider answers false for the same reason — losing the dialog must not mean losing the
+    /// provider answers false for the same reason - losing the dialog must not mean losing the
     /// prompt.
     /// </summary>
     protected async Task<bool> ConfirmAsync(string title, string message)
@@ -54,7 +54,7 @@ public abstract class PageBase : LocalizedComponent
     }
 
     /// <summary>
-    /// An ApiException already reads as a sentence written for the operator — and the server
+    /// An ApiException already reads as a sentence written for the operator - and the server
     /// picked its language from our Accept-Language, so it is already in the user's. Anything
     /// else is a transport or client fault, which needs framing to not look like a server
     /// rejection.

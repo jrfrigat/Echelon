@@ -15,7 +15,7 @@ html, body {
    The file is the variable font subset to only the glyphs this app and Flare itself render (via the
    fonts.googleapis.com "icon_names=" parameter): 44 KB against 5.3 MB for the full font, which
    matters because the service worker precaches every asset. Adding a <FlareIcon Name="..."> whose
-   glyph is not in the subset renders nothing — re-fetch the subset with that name included.
+   glyph is not in the subset renders nothing - re-fetch the subset with that name included.
 
    Google's stylesheet would normally supply this @font-face and the class below; both are vendored
    here because we deliberately do not load it. */

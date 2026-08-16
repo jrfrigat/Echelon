@@ -61,7 +61,7 @@ public class TaskStatusChangedConsumer(
 
         await db.SaveChangesAsync(ct);
 
-        // Any crossing of the closed boundary changes which MRs are deployable — reopening
+        // Any crossing of the closed boundary changes which MRs are deployable - reopening
         // matters as much as closing.
         if (wasClosed != (task.ClosedAt is not null))
             await bus.Send(new ReleasePlanRecalculationRequested(

@@ -34,7 +34,7 @@
                 @if (SelectedType is { Settings.Count: > 0 } selected)
                 {
                     <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
-                        @* The same renderer the connection forms use — one place that turns a declared
+                        @* The same renderer the connection forms use - one place that turns a declared
                            schema into inputs, so the secret-handling rules cannot diverge between them. *@
                         <ProviderSettingsFields Schema="selected.Settings" Values="_settings" OnChanged="StateHasChanged" />
                     </FlareStack>
@@ -129,7 +129,7 @@
 
     async Task Create()
     {
-        // Enter submits too, and a keypress does not consult the button's disabled state — so the
+        // Enter submits too, and a keypress does not consult the button's disabled state - so the
         // same conditions that disable it have to be re-checked here.
         if (_busy || string.IsNullOrWhiteSpace(_actionType) || string.IsNullOrWhiteSpace(_eventType) || MissingRequired)
             return;

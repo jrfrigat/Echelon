@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Infrastructure.Vcs;
 /// Reads a merge request from the VCS API into the local model.
 ///
 /// The webhook path is the primary source; this exists to reconcile what webhooks missed
-/// (delivery failures, downtime). Both paths must agree on how state becomes status — they
+/// (delivery failures, downtime). Both paths must agree on how state becomes status - they
 /// used to keep separate mappings, so the same MR ended up with a different status depending
 /// on which path imported it.
 /// </summary>
@@ -110,7 +110,7 @@ public class VcsService(
     /// <summary>
     /// Mirrors the webhook consumers' rules exactly: a terminal state is final and clears a manual
     /// pin, an open MR is Opened unless an operator pinned its status, and merged and closed carry
-    /// distinct timestamps — archiving needs one of them set.
+    /// distinct timestamps - archiving needs one of them set.
     /// </summary>
     private void ApplyStatus(MergeRequest mr, VcsMergeRequest info)
     {

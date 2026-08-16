@@ -114,7 +114,7 @@ public class RequestAuditPruner(
     /// <remarks>
     /// Batched rather than one statement: a single delete covering an hourly slice of a
     /// high-volume table is how a delete becomes a lock problem. Bounded by a pass limit so one
-    /// cycle cannot run indefinitely — whatever is left goes next hour.
+    /// cycle cannot run indefinitely - whatever is left goes next hour.
     /// </remarks>
     private static async Task<int> DeleteAsync(
         ArchiveDbContext db,

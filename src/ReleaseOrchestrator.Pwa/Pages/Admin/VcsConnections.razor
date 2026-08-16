@@ -77,7 +77,7 @@
              VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
         @* A form so Enter saves. The dialog renders its actions in a separate fragment, so the Save
-           button is not inside this element and cannot be the submit control — hence the hidden one
+           button is not inside this element and cannot be the submit control - hence the hidden one
            at the end. Without it Enter did nothing and the dialog had to be dismissed with the mouse. *@
         <form @onsubmit="Save" @onsubmit:preventDefault>
         <FlareStack Gap="FlareSpacing.Medium">
@@ -116,7 +116,7 @@
 
 @code {
     // Served by the API, not compiled in: this was a literal ["GitLab"], so a second VCS meant
-    // editing the page — and a provider needing its own field had nowhere to declare one.
+    // editing the page - and a provider needing its own field had nowhere to declare one.
     List<ProviderTypeDto>? _providers;
 
     Guid? _editId;

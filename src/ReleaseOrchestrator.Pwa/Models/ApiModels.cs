@@ -1,7 +1,7 @@
 namespace ReleaseOrchestrator.Pwa.Models;
 
 // Mirrors ReleaseOrchestrator.Application.DTOs. Enum-valued fields are strings here, which
-// only works because the API registers JsonStringEnumConverter — keep the two in step.
+// only works because the API registers JsonStringEnumConverter - keep the two in step.
 
 /// <summary>A dependency the plan could not honour; shown to operators as a warning. Shared by the per-task rollout plan.</summary>
 public record PlanConflictDto(
@@ -12,11 +12,11 @@ public record PlanConflictDto(
 /// </summary>
 /// <remarks>
 /// This is why the connection dialogs contain no provider's vocabulary. The form is built from
-/// whatever the server says the selected provider needs, so a new provider — or a new setting on an
-/// existing one — reaches the UI without a change here.
+/// whatever the server says the selected provider needs, so a new provider - or a new setting on an
+/// existing one - reaches the UI without a change here.
 /// </remarks>
 /// <param name="Secret">Render write-only. The API never sends a stored secret back.</param>
-/// <param name="Kind">"Text" (default), "Int", "Enum" or "Regex" — which control to render and how to validate.</param>
+/// <param name="Kind">"Text" (default), "Int", "Enum" or "Regex" - which control to render and how to validate.</param>
 /// <param name="Options">Allowed values, for an "Enum" field. Null otherwise.</param>
 /// <param name="Default">Value to pre-fill for a new connection. Null when there is none.</param>
 /// <param name="Min">Inclusive lower bound for an "Int" field; null for no bound.</param>
@@ -41,10 +41,10 @@ public record PollFailureDto(string Repository, string Reason);
 /// <param name="Ingestion">"Push" or "Poll" for a VCS connector; null otherwise.</param>
 public record PluginDto(string Category, string Key, string? Ingestion, string? Description);
 
-/// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> — this is what carries push vs poll.</param>
+/// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> - this is what carries push vs poll.</param>
 /// <param name="Settings">
 /// Provider-specific settings, keyed as the provider declares them. Secret ones are absent, not
-/// masked — a mask would be submitted back as though it were the value. See
+/// masked - a mask would be submitted back as though it were the value. See
 /// <c>ProviderSettingsFields</c>.
 /// </param>
 public record VcsConnectionDto(
@@ -174,7 +174,7 @@ public record TimelineEntryDto(
     int Repetitions, DateTime? RepeatedUntil,
     Guid? RolloutId, Guid? MergeRequestId, bool IsReassigned);
 
-/// <summary>A task's own facts and its place in the hierarchy — readable before any plan exists.</summary>
+/// <summary>A task's own facts and its place in the hierarchy - readable before any plan exists.</summary>
 public record TaskDetailDto(
     Guid Id, string ExternalId, string Title, string Status,
     TaskRefDto? Parent, List<TaskRefDto> Children);

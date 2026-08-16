@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <see cref="TaskDependency"/>: the row names who waits, then who is waited on. Reversing it
 /// reverses the deploy order of everything between the two repositories.
 ///
-/// This is now the only repository-ordering model — stacks were removed with the global plan
+/// This is now the only repository-ordering model - stacks were removed with the global plan
 ///. <see cref="StackDependencyType"/> keeps the old name
 /// because it is persisted by name, so renaming the type is a data migration rather than a rename.
 /// </remarks>

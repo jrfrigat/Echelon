@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers.GitLab;
 
 /// <summary>
 /// Version detection is what answers "is this install new enough", and a self-hosted GitLab can
-/// be any version — so the comparison has to be numeric. Text ordering puts 16.11 before 16.9,
+/// be any version - so the comparison has to be numeric. Text ordering puts 16.11 before 16.9,
 /// which would disable a capability on a server that has it.
 /// </summary>
 public class GitLabServerVersionTests

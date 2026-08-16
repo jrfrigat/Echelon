@@ -22,8 +22,8 @@ These must be set or the application will not start.
 - **What:** Connection string for the operational database
 - **Format:** SQL Server connection string
 - **Example:** `Server=localhost;Database=ReleaseOrchestrator;User Id=sa;Password=MyPassword;TrustServerCertificate=true;`
-- **If missing:** `InvalidOperationException` on startup — "ConnectionStrings:Default is required"
-- **Retry on transient errors:** Enabled (SQL Server timeout, deadlock → automatic retry, exponential backoff)
+- **If missing:** `InvalidOperationException` on startup - "ConnectionStrings:Default is required"
+- **Retry on transient errors:** Enabled (SQL Server timeout, deadlock -> automatic retry, exponential backoff)
 
 **`ConnectionStrings__Archive`** (REQUIRED)
 - **What:** Connection string for the archive database (historical data >90 days old)
@@ -38,7 +38,7 @@ Give the broker either as a full connection string **or** as its parts. The part
 `docker-compose.yml` sets; a connection string is for a deployment that would rather hand over one
 URI (TLS, a cluster, a non-default vhost).
 
-**`Queue__ConnectionString`** (optional — the connection string form)
+**`Queue__ConnectionString`** (optional - the connection string form)
 - **What:** A full AMQP URI, e.g. `amqps://user:pass@rabbit.company.com:5671/vhost`
 - **Behaviour:** When set, it is used verbatim and the parts below are ignored
 - **When to use:** TLS (`amqps`), a clustered host list, or a vhost you would rather not assemble
@@ -76,7 +76,7 @@ URI (TLS, a cluster, a non-default vhost).
 - **Format:** `{host}:{port}` or `{host}:{port},password={password}`
 - **Example:** `redis.company.com:6379` or `localhost:6379,password=MySecurePassword`
 - **If missing:** `InvalidOperationException` on startup
-- **Important:** Permissions are cached here; without Redis, every API call queries the database. **Do not expose Redis to untrusted networks** — cached permissions are not validated on every request.
+- **Important:** Permissions are cached here; without Redis, every API call queries the database. **Do not expose Redis to untrusted networks** - cached permissions are not validated on every request.
 
 ---
 
@@ -123,7 +123,7 @@ URI (TLS, a cluster, a non-default vhost).
 - **What:** Hour of day, UTC, at which the nightly cycle starts
 - **Example:** `2`
 - **Default:** 2
-- **Note:** An hour, not an interval — the cycle runs once a night. There is no cron expression: none could be honoured without a parser in this assembly, and a setting that is read but ignored is worse than no setting
+- **Note:** An hour, not an interval - the cycle runs once a night. There is no cron expression: none could be honoured without a parser in this assembly, and a setting that is read but ignored is worse than no setting
 
 **`Archiving__ArchiveAfterDays`**
 - **What:** How long a merge request or task must have been terminal before it is eligible to move
@@ -146,21 +146,21 @@ URI (TLS, a cluster, a non-default vhost).
 - **What:** How long merge-request status and label transitions are kept, in days
 - **Example:** `730`
 - **Default:** 730 (two years)
-- **Behavior:** Pruned outright, not archived — these rows back the task timeline and nothing else reads them. A long-lived task can lose its earliest transitions while still open; raise this if that history matters more than the rows
+- **Behavior:** Pruned outright, not archived - these rows back the task timeline and nothing else reads them. A long-lived task can lose its earliest transitions while still open; raise this if that history matters more than the rows
 
 **`Archiving__RolloutHistoryRetentionDays`**
 - **What:** How long a finished rollout and its steps are kept, in days
 - **Example:** `730`
 - **Default:** 730 (two years)
 - **Behavior:** Only terminal runs are pruned; one that never finished is kept whatever its age. Steps and events go with it by cascade
-- **Why it matters:** Not a tidiness setting. `RolloutStep` references a task and a merge request with `Restrict`, so until history ages out, a task that was ever deployed cannot be archived at all — this is what lets the archive drain
+- **Why it matters:** Not a tidiness setting. `RolloutStep` references a task and a merge request with `Restrict`, so until history ages out, a task that was ever deployed cannot be archived at all - this is what lets the archive drain
 
 **`Archiving__PlanHistoryRetentionDays`**
 - **What:** How long a superseded plan version is kept, in days
 - **Example:** `90`
 - **Default:** 90
-- **Behavior:** Also removes every version of a task closed before `ArchiveAfterDays`, active one included — `PlanTaskNode` pins the task otherwise. Recalculating rebuilds a plan from the atlas, so nothing is unrecoverable
-- **Why shorter than the rollout history:** Every ingestion event rebuilds every active plan, so this is churn rather than evidence — what actually happened is the rollout
+- **Behavior:** Also removes every version of a task closed before `ArchiveAfterDays`, active one included - `PlanTaskNode` pins the task otherwise. Recalculating rebuilds a plan from the atlas, so nothing is unrecoverable
+- **Why shorter than the rollout history:** Every ingestion event rebuilds every active plan, so this is churn rather than evidence - what actually happened is the rollout
 
 ### Task Reconciliation Service
 
@@ -187,7 +187,7 @@ URI (TLS, a cluster, a non-default vhost).
 
 For a connection whose provider type is a *poll* type (`gitlab-poll`, `yandextracker-poll`), the app
 re-reads it on a timer instead of receiving webhooks. Each connection carries its own interval in its
-settings; these globals set whether the poller runs and how often it wakes — the floor for a
+settings; these globals set whether the poller runs and how often it wakes - the floor for a
 connection's interval.
 
 **`VcsPolling__Enabled`** / **`TrackerPolling__Enabled`** (sections: `VcsPolling`, `TrackerPolling`)
@@ -196,7 +196,7 @@ connection's interval.
 - **Default:** `true`
 
 **`VcsPolling__IntervalSeconds`** / **`TrackerPolling__IntervalSeconds`**
-- **What:** How often the poller wakes and sweeps poll-mode connections — the floor for a connection's own interval
+- **What:** How often the poller wakes and sweeps poll-mode connections - the floor for a connection's own interval
 - **Example:** `60`
 - **Default:** 60
 
@@ -211,7 +211,7 @@ connection's interval.
 - **What:** Whether the app applies pending EF Core migrations at startup
 - **Valid values:** `true`, `false`
 - **Default:** `true`
-- **If false:** Apply migrations by hand (or from an init container / CI) — recommended for a multi-replica deployment, where concurrent auto-migration would race
+- **If false:** Apply migrations by hand (or from an init container / CI) - recommended for a multi-replica deployment, where concurrent auto-migration would race
 
 ### Authorization & Bootstrap
 
@@ -238,20 +238,20 @@ Providers are configured per **connection** (stored in database), not globally. 
 ### VCS Provider Settings
 
 Configured when adding a VCS Connection in the Admin UI. The generic fields:
-- **API URL** — endpoint of GitLab or other VCS
-- **Access Token** — encrypted at rest
+- **API URL** - endpoint of GitLab or other VCS
+- **Access Token** - encrypted at rest
 
 Everything else is declared by the chosen provider and rendered from its schema, so it varies by type:
-- **Type** — `gitlab-webhook` (GitLab pushes events to the ingress) or `gitlab-poll` (the orchestrator polls; adds a **poll interval**, in seconds)
-- **Linking rule** — how an incoming merge request is matched to its tracker task: a **task-key source** (branch, title or label) and a **pattern** (regex). The connection form previews the key the rule would extract from a sample.
+- **Type** - `gitlab-webhook` (GitLab pushes events to the ingress) or `gitlab-poll` (the orchestrator polls; adds a **poll interval**, in seconds)
+- **Linking rule** - how an incoming merge request is matched to its tracker task: a **task-key source** (branch, title or label) and a **pattern** (regex). The connection form previews the key the rule would extract from a sample.
 
-Deploy readiness is **not** a connection field. It is configured per environment (and optionally per repository) as a named **readiness rule** over normalized signals — a label, a merge-request status, or a pipeline result — on the Environments and Readiness Rules admin pages.
+Deploy readiness is **not** a connection field. It is configured per environment (and optionally per repository) as a named **readiness rule** over normalized signals - a label, a merge-request status, or a pipeline result - on the Environments and Readiness Rules admin pages.
 
 ### Tracker Provider Settings
 
 Configured when adding a Tracker Connection. Generic fields are **API URL** and **Access Token** (encrypted at rest); the rest are declared by the provider and rendered from its schema:
-- **Organization ID** — (Yandex Tracker) sent as the `X-Org-Id` header
-- **Closed statuses** — (Yandex Tracker) comma-separated status keys that mean a task is done; blank uses the defaults (`closed, cancelled, rejected, resolved`)
+- **Organization ID** - (Yandex Tracker) sent as the `X-Org-Id` header
+- **Closed statuses** - (Yandex Tracker) comma-separated status keys that mean a task is done; blank uses the defaults (`closed, cancelled, rejected, resolved`)
 
 Provider settings are stored as JSON in `TrackerConnection.ProviderSettingsJson`; secret settings are encrypted with the same key ring as the access token.
 
@@ -274,9 +274,9 @@ These are provider-specific and documented in [Providers](providers.md).
 Release Orchestrator relies on an external OIDC provider. Configuration is typically in web application configuration (e.g., `appsettings.json` or Azure AD in admin portal), not environment variables.
 
 **Key claims used:**
-- `oid` — Unique user identifier (required)
-- `name` — Display name (optional)
-- `email` — Email address (optional)
+- `oid` - Unique user identifier (required)
+- `name` - Display name (optional)
+- `email` - Email address (optional)
 
 Ensure your OIDC provider includes `oid` in ID tokens.
 
@@ -338,7 +338,7 @@ All operational events are logged as JSON. Example:
 - **What:** `grpc` (default) or `http/protobuf`, following the OTLP spec's names
 
 **Known limitation:** Prometheus stores metrics only. Without an OTLP collector there is no
-distributed tracing across the webhook → queue → processing path.
+distributed tracing across the webhook -> queue -> processing path.
 
 ---
 
@@ -361,7 +361,7 @@ The proxy must set:
 
 **Critical:** Redis caches computed permissions. Without authentication:
 ```bash
-# Unsafe — anyone on the network is admin
+# Unsafe - anyone on the network is admin
 REDIS_CONNECTION_STRING=redis.company.com:6379
 ```
 
@@ -414,7 +414,7 @@ StackExchange.Redis automatically handles pooling. No explicit configuration nee
 | **RabbitMQ health** | `GET /health/ready` | 503 if queue unavailable |
 | **Redis health** | `GET /health/ready` | 503 if cache unavailable |
 | **Disk space** | `df -h` on host | Archive DB grows ~3.6M rows/year at 10K tasks/day |
-| **Permission cache** | `redis-cli DBSIZE` | Growing → check for memory leaks |
+| **Permission cache** | `redis-cli DBSIZE` | Growing -> check for memory leaks |
 | **Active connections** | Logs + DB metrics | Should stabilize after initial load |
 
 ---

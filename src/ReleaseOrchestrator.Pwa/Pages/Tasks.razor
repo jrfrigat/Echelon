@@ -54,7 +54,7 @@
         </FlareDataGrid>
 
         @* This page is server-paged and had no pager, so past the first 50 tasks the rest were simply
-           unreachable — and nothing said so, which is the worse half: the list looked complete. *@
+           unreachable - and nothing said so, which is the worse half: the list looked complete. *@
         @if (_tasks.Total > _tasks.PageSize)
         {
             <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"

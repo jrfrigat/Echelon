@@ -7,13 +7,13 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// <para>
 /// A glob, not a regex, and not by accident. <c>group/svc-*</c> reads correctly to everyone who will
 /// ever open the ordering rules, while a regex in a file that decides deploy order is something
-/// nobody can debug at the moment they need to. The task-key rule does use a regex — there it earns
-/// it, because issue keys genuinely vary — and this deliberately does not follow that precedent.
+/// nobody can debug at the moment they need to. The task-key rule does use a regex - there it earns
+/// it, because issue keys genuinely vary - and this deliberately does not follow that precedent.
 /// </para>
 /// <para>
 /// Matched by hand rather than by translating to <see cref="System.Text.RegularExpressions.Regex"/>:
 /// translating means escaping the pattern correctly, and a missed escape turns a literal <c>.</c> in
-/// <c>group/svc.api</c> into "any character" — a selector that silently matches more than it says. A
+/// <c>group/svc.api</c> into "any character" - a selector that silently matches more than it says. A
 /// dozen lines of two-pointer matching has no such failure.
 /// </para>
 /// </remarks>

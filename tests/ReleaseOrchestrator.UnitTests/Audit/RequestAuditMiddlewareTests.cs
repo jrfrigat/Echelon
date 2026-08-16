@@ -71,7 +71,7 @@ public class RequestAuditMiddlewareTests
 
     /// <summary>
     /// The central claim: the status recorded is the one the caller received, not the one the request
-    /// started with. This is as far as a unit test can express it — the rest depends on pipeline order.
+    /// started with. This is as far as a unit test can express it - the rest depends on pipeline order.
     /// </summary>
     [Fact]
     public async Task RecordsTheFinalStatus_NotTheInboundOne()
@@ -154,7 +154,7 @@ public class RequestAuditMiddlewareTests
 
     /// <summary>
     /// The regression guard for the whole secrets posture. These values are never read, so no
-    /// allowlist can be misconfigured — this test is what keeps it that way.
+    /// allowlist can be misconfigured - this test is what keeps it that way.
     /// </summary>
     [Fact]
     public async Task NeverStoresQueryStringsHeadersOrCookies()
@@ -262,7 +262,7 @@ public class RequestAuditMiddlewareTests
     /// <remarks>
     /// MapFallbackToFile rewrites Request.Path to "/index.html" before serving the app shell. Reading
     /// the path on the way out therefore sees "/index.html" for every unmatched route, which is not
-    /// API-shaped and gets dropped — so every probe was invisible until this was caught end to end.
+    /// API-shaped and gets dropped - so every probe was invisible until this was caught end to end.
     /// The middleware captures the path on the way in; this pins that it still does.
     /// </remarks>
     [Fact]
@@ -338,8 +338,8 @@ public class RequestAuditMiddlewareTests
     /// not.
     /// </summary>
     /// <remarks>
-    /// HTTP methods are an open token set — WebDAV alone has VERSION-CONTROL (15) and
-    /// BASELINE-CONTROL (16) — while the column is 10 characters. An over-long value made
+    /// HTTP methods are an open token set - WebDAV alone has VERSION-CONTROL (15) and
+    /// BASELINE-CONTROL (16) - while the column is 10 characters. An over-long value made
     /// SaveChanges throw, and the writer's catch discarded the whole batch of up to 200 mostly
     /// unrelated records while the summary still reported zero dropped: an anonymous caller could
     /// hold the audit dark indefinitely. SQLite does not enforce length, so only an assertion here

@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// cannot be undone by a stale sequence that still lists one.
 /// </para>
 /// <para>
-/// Stored per task rather than per plan, like the wait policy and for the same reason — a plan is
+/// Stored per task rather than per plan, like the wait policy and for the same reason - a plan is
 /// regenerated on every ingestion event, so anything held against a plan's id is orphaned by the
 /// next recalculation.
 /// </para>

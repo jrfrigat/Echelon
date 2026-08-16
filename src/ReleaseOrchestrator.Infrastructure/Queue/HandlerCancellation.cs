@@ -10,8 +10,8 @@ namespace ReleaseOrchestrator.Infrastructure.Queue;
 /// Rebus hands a handler its message and nothing else; the cancellation token lives on the ambient
 /// <see cref="MessageContext"/> that the pipeline sets around each dispatch. Reading it through here
 /// rather than touching <see cref="MessageContext.Current"/> in every handler does one useful thing:
-/// it is null-safe. A handler invoked outside the pipeline — a unit test calling <c>Handle</c>
-/// directly — has no ambient context, and this returns <see cref="CancellationToken.None"/> instead
+/// it is null-safe. A handler invoked outside the pipeline - a unit test calling <c>Handle</c>
+/// directly - has no ambient context, and this returns <see cref="CancellationToken.None"/> instead
 /// of throwing, so the handler stays a plain, directly-callable class. In the running service the
 /// context is always present and the real token flows to the database calls, cancelling them when
 /// Rebus is shutting down.

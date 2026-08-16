@@ -97,7 +97,7 @@ public class YandexTrackerOptionsTests
     [Fact]
     public void ClosedStatusesReplaceTheDefaultsWhenConfigured()
     {
-        // A workflow whose terminal state is "done"/"deployed" — not one of the built-in defaults.
+        // A workflow whose terminal state is "done"/"deployed" - not one of the built-in defaults.
         var options = YandexTrackerOptions.From(Context(("orgId", "org-42"), ("closedStatuses", "done, deployed")));
 
         Assert.Contains("done", options.ClosedStatuses);

@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.UnitTests.Persistence;
 /// Guards the mapping as a whole, on both databases.
 /// </summary>
 /// <remarks>
-/// EF builds the model without touching a server, so every one of these runs offline — which is
+/// EF builds the model without touching a server, so every one of these runs offline - which is
 /// what makes them the strongest check available for PostgreSQL, a database this environment
 /// cannot start. They prove the model; only a live server proves the schema.
 ///
@@ -33,8 +33,8 @@ public class ModelMappingTests
     /// The design-time model, which keeps the configuration the runtime model drops.
     /// </summary>
     /// <remarks>
-    /// <c>context.Model</c> is read-optimized: anything only a migration needs — a collation, for
-    /// instance — is stripped from it, and asking for it throws rather than answering null. That
+    /// <c>context.Model</c> is read-optimized: anything only a migration needs - a collation, for
+    /// instance - is stripped from it, and asking for it throws rather than answering null. That
     /// distinction matters here because a collation asserted against the wrong model would look like
     /// a mapping bug when it is only the wrong accessor.
     /// </remarks>
@@ -65,7 +65,7 @@ public class ModelMappingTests
     /// <remarks>
     /// This is worth a test of its own because `ef migrations has-pending-model-changes` cannot see
     /// it: the schema is identical, so the check that guards every other mapping change stays green
-    /// while the model quietly holds two of everything. It happened — moving these declarations onto
+    /// while the model quietly holds two of everything. It happened - moving these declarations onto
     /// the models left two configuration files behind, and the duplicates went unnoticed until an
     /// unrelated test asked for a single index and got two. The PostgreSQL case is not theoretical
     /// either: its filtered index is declared a second time, in ProviderSpecificMapping.
@@ -85,7 +85,7 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// Restrict is not the convention — a required relationship defaults to Cascade — so every one
+    /// Restrict is not the convention - a required relationship defaults to Cascade - so every one
     /// of these is a deliberate refusal to let a delete propagate, and losing one silently turns a
     /// blocked delete into a successful one that takes rows with it.
     /// </summary>
@@ -116,14 +116,14 @@ public class ModelMappingTests
 
     /// <summary>
     /// The one active plan PER task is enforced by a filtered unique index, and a filter is a
-    /// fragment of SQL that EF passes through verbatim — so it is the mapping most obviously not
+    /// fragment of SQL that EF passes through verbatim - so it is the mapping most obviously not
     /// portable.
     /// </summary>
     /// <remarks>
     /// SQL Server's <c>[IsActive] = 1</c> reaching PostgreSQL is a syntax error twice over: the
     /// brackets are not quoting there, and a boolean does not compare to 1. It fails when the
-    /// migration is applied, which is late but loud. The index itself is not optional — without it
-    /// two concurrent recalculations leave two active plans for one task — so it is rewritten per
+    /// migration is applied, which is late but loud. The index itself is not optional - without it
+    /// two concurrent recalculations leave two active plans for one task - so it is rewritten per
     /// provider rather than dropped.
     /// </remarks>
     [Theory]
@@ -142,21 +142,21 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// Concurrency is a real token on both, by different means — for every entity that carries one.
+    /// Concurrency is a real token on both, by different means - for every entity that carries one.
     /// </summary>
     /// <remarks>
     /// This is the mapping that fails silently, which is why it is asserted rather than trusted.
-    /// The entities carry <c>[Timestamp] byte[] RowVersion</c> — SQL Server's auto-maintained
+    /// The entities carry <c>[Timestamp] byte[] RowVersion</c> - SQL Server's auto-maintained
     /// rowversion. Npgsql accepts that attribute and maps it to a plain <c>bytea</c>: a column
     /// PostgreSQL never writes, so the token is always null and the concurrency check never fires.
-    /// No error, no warning — two replicas processing the same webhook would both win.
+    /// No error, no warning - two replicas processing the same webhook would both win.
     ///
     /// PostgreSQL's equivalent is the system column <c>xmin</c>, which it bumps on every update, so
     /// the model uses that and drops RowVersion entirely.
     ///
     /// The cases are discovered by reflection over the model, not hard-coded, on purpose: a hard-coded
     /// list is exactly what let a new RowVersion entity ship unmapped once. Every entity SQL Server
-    /// gives a RowVersion token is required to get an xmin token on PostgreSQL — so forgetting the
+    /// gives a RowVersion token is required to get an xmin token on PostgreSQL - so forgetting the
     /// <c>ProviderSpecificMapping</c> entry for the next one fails here instead of in production on
     /// the second database.
     /// </remarks>
@@ -186,7 +186,7 @@ public class ModelMappingTests
     /// </summary>
     /// <remarks>
     /// A SQL Server instance's default collation is normally case-insensitive and every column
-    /// inherits it, which is right for most text here and wrong for these two — both sit under a
+    /// inherits it, which is right for most text here and wrong for these two - both sit under a
     /// unique index, so a CI collation turns two legitimately different values into a duplicate key.
     /// Confirmed on SQL Server 2022 before it was fixed: inserting <c>feature/Login</c> then
     /// <c>feature/login</c> gave <c>Msg 2601</c>, and inside a consumer that is a message which
@@ -209,7 +209,7 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// PostgreSQL must NOT carry the SQL Server collation name — it already compares text
+    /// PostgreSQL must NOT carry the SQL Server collation name - it already compares text
     /// case-sensitively, and the name would not resolve there.
     /// </summary>
     [Theory]
@@ -225,7 +225,7 @@ public class ModelMappingTests
     }
 
     /// <summary>
-    /// Every entity the SQL Server model gives a <c>RowVersion</c> concurrency token — the set that
+    /// Every entity the SQL Server model gives a <c>RowVersion</c> concurrency token - the set that
     /// must each be remapped to <c>xmin</c> for PostgreSQL.
     /// </summary>
     public static TheoryData<string> RowVersionEntities()

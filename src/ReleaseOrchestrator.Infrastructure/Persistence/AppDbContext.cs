@@ -50,7 +50,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // Last, and deliberately after the shared configuration: it overrides the two mappings that
-        // SQL Server and PostgreSQL cannot share. See ProviderSpecificMapping — both were found by
+        // SQL Server and PostgreSQL cannot share. See ProviderSpecificMapping - both were found by
         // building the model, not by reading, and one of them fails silently.
         builder.ApplyProviderSpecifics(Database.ProviderName);
     }

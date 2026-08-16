@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Infrastructure.Coordination;
 /// Selected at startup rather than resolved per call, so unlike the VCS and tracker registries
 /// there are no keyed services here: the choice comes from configuration and cannot change while
 /// the process runs. What is borrowed from those registries is the part that matters to an
-/// operator — an unrecognised name fails at startup and the message lists what is registered,
+/// operator - an unrecognised name fails at startup and the message lists what is registered,
 /// rather than surfacing as a missing service at the first request.
 /// </remarks>
 public static class CoordinationSetup
@@ -50,7 +50,7 @@ public static class CoordinationSetup
     private static IServiceCollection AddInProcess(IServiceCollection services, CoordinationOptions options)
     {
         // The one thing this build cannot check for itself. An in-process lease under two replicas
-        // is not degraded, it is wrong — both lead — so the operator states the fact that makes it
+        // is not degraded, it is wrong - both lead - so the operator states the fact that makes it
         // correct, and states it about the deployment rather than about Redis.
         if (!options.SingleInstance)
             throw new InvalidOperationException(
@@ -78,7 +78,7 @@ public static class CoordinationSetup
         services.AddStackExchangeRedisCache(opt => opt.Configuration = connectionString);
 
         // A multiplexer of our own: AddStackExchangeRedisCache keeps its connection private, and
-        // IDistributedCache has no compare-and-set — which is the whole of a lease.
+        // IDistributedCache has no compare-and-set - which is the whole of a lease.
         // Connect lazily so a Redis that is down delays the first lease, not startup.
         services.AddSingleton<IConnectionMultiplexer>(_ =>
             ConnectionMultiplexer.Connect(ConfigurationOptions.Parse(connectionString, ignoreUnknown: true)));

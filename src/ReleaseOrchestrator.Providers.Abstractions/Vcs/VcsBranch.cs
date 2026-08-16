@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </summary>
 /// <remarks>
 /// A branch matters to planning even when no merge request has been raised for it: it is work that
-/// has started and not landed, so a task that owns one is not finished — and a parent whose child
+/// has started and not landed, so a task that owns one is not finished - and a parent whose child
 /// still has such a branch cannot be rolled out. A branch that already has an open merge request is
 /// represented in the plan by that merge request; a bare one is the case this type exists to surface.
 /// </remarks>

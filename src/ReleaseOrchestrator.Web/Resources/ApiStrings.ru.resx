@@ -124,55 +124,55 @@
     <value>apiUrl должен использовать https.</value>
   </data>
   <data name="Url_HostNotAllowed" xml:space="preserve">
-    <value>Хост «{0}» не указан в Security:AllowedApiHosts.</value>
+    <value>Хост "{0}" не указан в Security:AllowedApiHosts.</value>
   </data>
   <data name="Url_InternalAddress" xml:space="preserve">
     <value>apiUrl не должен указывать на внутренний адрес ({0}).</value>
   </data>
   <data name="Mr_UnknownStatus" xml:space="preserve">
-    <value>Неизвестный статус «{0}». Допустимые: {1}</value>
+    <value>Неизвестный статус "{0}". Допустимые: {1}</value>
   </data>
   <data name="Mr_StatusVcsOwned" xml:space="preserve">
-    <value>Статус «{0}» приходит из VCS — вручную его установить нельзя.</value>
+    <value>Статус "{0}" приходит из VCS - вручную его установить нельзя.</value>
   </data>
   <data name="Mr_StatusFinal" xml:space="preserve">
-    <value>Merge-запрос уже в статусе «{0}» — этот статус окончательный.</value>
+    <value>Merge-запрос уже в статусе "{0}" - этот статус окончательный.</value>
   </data>
   <data name="Mr_StatusRetired" xml:space="preserve">
-    <value>Статус «{0}» выведен из употребления и больше ничего не значит. Пригодность merge-запроса к выкатке решает правило готовности целевого окружения — вместо этого закрепите готовность для нужного окружения.</value>
+    <value>Статус "{0}" выведен из употребления и больше ничего не значит. Пригодность merge-запроса к выкатке решает правило готовности целевого окружения - вместо этого закрепите готовность для нужного окружения.</value>
   </data>
   <data name="Mr_NotFound" xml:space="preserve">
     <value>Merge-запрос {0} не найден.</value>
   </data>
   <data name="Perm_ClaimNotFound" xml:space="preserve">
-    <value>Права «{0}» не существует.</value>
+    <value>Права "{0}" не существует.</value>
   </data>
   <data name="Perm_GroupAlreadyHolds" xml:space="preserve">
-    <value>У группы «{0}» уже есть право «{1}».</value>
+    <value>У группы "{0}" уже есть право "{1}".</value>
   </data>
   <data name="Perm_UserIdMustBeOid" xml:space="preserve">
-    <value>userId должен быть идентификатором объекта Entra ID (oid) — GUID.</value>
+    <value>userId должен быть идентификатором объекта Entra ID (oid) - GUID.</value>
   </data>
   <data name="Perm_UserAlreadyHolds" xml:space="preserve">
-    <value>У пользователя «{0}» уже есть право «{1}».</value>
+    <value>У пользователя "{0}" уже есть право "{1}".</value>
   </data>
   <data name="Repo_ConnectionNotFound" xml:space="preserve">
-    <value>Подключения к VCS «{0}» не существует.</value>
+    <value>Подключения к VCS "{0}" не существует.</value>
   </data>
   <data name="Repo_AlreadyRegistered" xml:space="preserve">
-    <value>Репозиторий «{0}» уже зарегистрирован в этом подключении.</value>
+    <value>Репозиторий "{0}" уже зарегистрирован в этом подключении.</value>
   </data>
   <data name="Repo_TrackerConnectionNotFound" xml:space="preserve">
-    <value>Подключения к трекеру «{0}» не существует.</value>
+    <value>Подключения к трекеру "{0}" не существует.</value>
   </data>
   <data name="Repo_HasMergeRequests" xml:space="preserve">
-    <value>У репозитория остались merge-запросы — сначала удалите их.</value>
+    <value>У репозитория остались merge-запросы - сначала удалите их.</value>
   </data>
   <data name="Stack_NameTaken" xml:space="preserve">
-    <value>Стек с названием «{0}» уже существует.</value>
+    <value>Стек с названием "{0}" уже существует.</value>
   </data>
   <data name="Stack_UnknownDependencyType" xml:space="preserve">
-    <value>Неизвестный тип «{0}». Допустимые: {1}</value>
+    <value>Неизвестный тип "{0}". Допустимые: {1}</value>
   </data>
   <data name="Stack_SelfDependency" xml:space="preserve">
     <value>Стек не может зависеть от самого себя.</value>
@@ -196,42 +196,42 @@
     <value>Контур не найден.</value>
   </data>
   <data name="DeployTarget_UnknownStrategy" xml:space="preserve">
-    <value>Неизвестная стратегия выкатки «{0}». Допустимые: {1}</value>
+    <value>Неизвестная стратегия выкатки "{0}". Допустимые: {1}</value>
   </data>
   <data name="DeployTarget_UnknownRedeployPolicy" xml:space="preserve">
-    <value>Неизвестная политика повторной выкатки «{0}». Допустимые: Once, Always, Inherit.</value>
+    <value>Неизвестная политика повторной выкатки "{0}". Допустимые: Once, Always, Inherit.</value>
   </data>
   <data name="DeployTarget_AlreadyExists" xml:space="preserve">
     <value>У этого репозитория уже есть цель выкатки для этого контура.</value>
   </data>
   <data name="Provider_UnknownSetting" xml:space="preserve">
-    <value>У этого провайдера нет настройки «{0}». Он объявляет: {1}</value>
+    <value>У этого провайдера нет настройки "{0}". Он объявляет: {1}</value>
   </data>
   <data name="Provider_MissingSetting" xml:space="preserve">
-    <value>Этот провайдер требует настройку «{0}».</value>
+    <value>Этот провайдер требует настройку "{0}".</value>
   </data>
   <data name="Provider_SettingsTooLong" xml:space="preserve">
-    <value>Настройки не помещаются: предел — {0} символов суммарно.</value>
+    <value>Настройки не помещаются: предел - {0} символов суммарно.</value>
   </data>
   <data name="Provider_InvalidSetting" xml:space="preserve">
-    <value>Значение настройки «{0}» не соответствует её типу.</value>
+    <value>Значение настройки "{0}" не соответствует её типу.</value>
   </data>
   <data name="Tracker_UnknownType" xml:space="preserve">
-    <value>Неизвестный trackerType «{0}». Допустимые: {1}</value>
+    <value>Неизвестный trackerType "{0}". Допустимые: {1}</value>
   </data>
   <data name="Tracker_NameTaken" xml:space="preserve">
-    <value>Подключение к трекеру с названием «{0}» уже существует.</value>
+    <value>Подключение к трекеру с названием "{0}" уже существует.</value>
   </data>
   <data name="Tracker_HasTasks" xml:space="preserve">
-    <value>У подключения остались задачи — сначала отправьте их в архив.</value>
+    <value>У подключения остались задачи - сначала отправьте их в архив.</value>
   </data>
   <data name="Vcs_UnknownType" xml:space="preserve">
-    <value>Неизвестный vcsType «{0}». Допустимые: {1}</value>
+    <value>Неизвестный vcsType "{0}". Допустимые: {1}</value>
   </data>
   <data name="Vcs_NameTaken" xml:space="preserve">
-    <value>Подключение к VCS с названием «{0}» уже существует.</value>
+    <value>Подключение к VCS с названием "{0}" уже существует.</value>
   </data>
   <data name="Vcs_HasRepositories" xml:space="preserve">
-    <value>У подключения остались репозитории — сначала удалите их.</value>
+    <value>У подключения остались репозитории - сначала удалите их.</value>
   </data>
 </root>

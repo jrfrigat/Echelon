@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// The pivot retired the single global plan the old debounce-timer-then-consumer design rebuilt.
 /// The claim worth pinning now is narrower: the handler rebuilds the plan of <em>every</em> task
 /// with an active plan and of no others, and a failure propagates so Rebus redelivers rather than
-/// dropping the recalculation. The planner is a recorder, not the real one — this asserts which
+/// dropping the recalculation. The planner is a recorder, not the real one - this asserts which
 /// tasks the handler asks to rebuild, which is all its own logic decides; whether a rebuild is
 /// correct is <see cref="ReleasePlanning.RolloutPlannerTests"/>' job.
 /// </remarks>

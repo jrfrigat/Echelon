@@ -8,10 +8,10 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </summary>
 /// <remarks>
 /// How a merge request names its task is a per-project convention, not a provider dialect, so it is a
-/// pair of connection settings — a source and a pattern — rather than code in an adapter. A VCS
+/// pair of connection settings - a source and a pattern - rather than code in an adapter. A VCS
 /// provider adds <see cref="Schema"/> to what it declares, and the ingestion builds a rule with
 /// <see cref="RuleFrom"/> and applies it through <see cref="Core.Parsing.TaskKeyExtractor"/>. The
-/// default reproduces the branch parser this replaced (<c>feature/PROJ-12</c> → <c>PROJ-12</c>), so a
+/// default reproduces the branch parser this replaced (<c>feature/PROJ-12</c> -> <c>PROJ-12</c>), so a
 /// connection that configures nothing keeps working exactly as before.
 /// </remarks>
 public static class TaskLinkSettings
@@ -29,7 +29,7 @@ public static class TaskLinkSettings
     /// </summary>
     /// <remarks>
     /// Unicode categories rather than <c>A-Z0-9</c>, and that is not tidying. Yandex Tracker projects
-    /// are routinely keyed in Cyrillic, and a Latin-only pattern does not fail on such a key — it
+    /// are routinely keyed in Cyrillic, and a Latin-only pattern does not fail on such a key - it
     /// silently links nothing. The merge request then has no task, so no plan, no rollout, and no
     /// message anywhere saying why. On the first real repository this met, roughly six in ten merge
     /// requests were affected.

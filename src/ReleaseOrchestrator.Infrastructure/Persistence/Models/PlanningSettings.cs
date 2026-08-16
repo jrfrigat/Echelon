@@ -10,12 +10,12 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <para>
 /// A single row, identified by <see cref="SingletonId"/>. A settings table rather than configuration
 /// because this is an operator decision that changes with how teams use their tracker, not a
-/// deployment parameter — and it has to be editable from the admin screens beside the environments
+/// deployment parameter - and it has to be editable from the admin screens beside the environments
 /// and readiness rules it sits with. Nothing here is a secret, so it needs no protection.
 /// </para>
 /// <para>
-/// The defaults reproduce what the planner did before the policy existed — wait for everything,
-/// impose no group order — so an upgrade changes no plan until somebody decides otherwise.
+/// The defaults reproduce what the planner did before the policy existed - wait for everything,
+/// impose no group order - so an upgrade changes no plan until somebody decides otherwise.
 /// </para>
 /// </remarks>
 public class PlanningSettings
@@ -44,10 +44,10 @@ public class PlanningSettings
     /// </summary>
     /// <remarks>
     /// Stored as the author's own text, not as a parsed projection, so an export returns what was
-    /// written — comments, key order and all. Re-serialising from a model would hand back a document
+    /// written - comments, key order and all. Re-serialising from a model would hand back a document
     /// the operator did not write and could not diff against their own copy.
     ///
-    /// YAML, and JSON is accepted too because JSON is valid YAML — which is what let a document
+    /// YAML, and JSON is accepted too because JSON is valid YAML - which is what let a document
     /// stored before the YAML reader existed keep working untouched.
     /// </remarks>
     public string? OrderingRulesDocument { get; set; }

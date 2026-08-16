@@ -2,7 +2,7 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
-# Opt-in via -f, like the postgres and single-instance variants — most runs do not need a metrics
+# Opt-in via -f, like the postgres and single-instance variants - most runs do not need a metrics
 # stack, and the apps expose /metrics whether or not anything scrapes it (Prometheus is on by
 # default in the app; set Prometheus__Enabled=false to turn the endpoint off). Because a -f run does
 # not auto-load docker-compose.override.yml, add it to the list when you also want the datastore

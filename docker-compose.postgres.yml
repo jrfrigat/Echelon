@@ -4,7 +4,7 @@
 #
 # Both are first-class: the same model, the same tests, the same CI checks. What differs is what
 # the two databases genuinely do not share, and each of those is named in ProviderSpecificMapping
-# rather than left to a convention — the filtered index that keeps one plan active, and the
+# rather than left to a convention - the filtered index that keeps one plan active, and the
 # concurrency token, which PostgreSQL carries on its own `xmin` system column instead of a
 # SQL Server `rowversion`.
 #
@@ -14,7 +14,7 @@
 #
 # Verified as far as this environment allows, and no further. The model, the mapping differences
 # and the generated SQL are covered by tests and by CI on both providers; `docker compose config`
-# renders this merge. What has NOT happened is either database actually running — the registry is
+# renders this merge. What has NOT happened is either database actually running - the registry is
 # filtered here, so no image was pulled and no migration was ever applied.
 services:
   core:
@@ -24,7 +24,7 @@ services:
       ConnectionStrings__Archive: "Host=postgres;Database=releaseorchestrator_archive;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
 
     # Merged, not !override: overriding the whole map would drop what another override file put
-    # there, and the two are meant to combine — postgres.yml plus single-instance.yml is a valid
+    # there, and the two are meant to combine - postgres.yml plus single-instance.yml is a valid
     # deployment. `required: false` is what removes a dependency without erasing the map: the
     # profiled-out service is not started, and Compose warns instead of refusing the project.
     depends_on:
@@ -39,7 +39,7 @@ services:
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-postgres}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (see .env.example)}"
-      # The archive is a second database, so it cannot be POSTGRES_DB — that creates only one.
+      # The archive is a second database, so it cannot be POSTGRES_DB - that creates only one.
       # Both are created by the init script below.
       POSTGRES_DB: releaseorchestrator
     volumes:

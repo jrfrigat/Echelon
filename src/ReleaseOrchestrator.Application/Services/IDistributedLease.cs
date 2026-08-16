@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Application.Services;
 /// <remarks>
 /// Background work here is registered in every replica, so without this each pass runs N times:
 /// N archive cycles competing to delete the same rows, N reconciliation sweeps asking the tracker
-/// for the same tasks. Correctness survives it — the work is idempotent — but the deadlocks and
+/// for the same tasks. Correctness survives it - the work is idempotent - but the deadlocks and
 /// the multiplied API calls are real.
 ///
 /// Expiring rather than released-on-exit: a replica that is killed cannot release anything, and a

@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// Guards the routing invariant: every message a handler consumes is routable.
 /// </summary>
 /// <remarks>
-/// The bus routes <c>MapAssemblyDerivedFrom&lt;IMessage&gt;</c> — a message type that does not
+/// The bus routes <c>MapAssemblyDerivedFrom&lt;IMessage&gt;</c> - a message type that does not
 /// implement <see cref="IMessage"/> has no destination, and the failure surfaces only at runtime
 /// when something calls <c>bus.Send</c> on it and Rebus finds no route. Every message here is both
 /// handled and sent, so requiring each handled type to implement the marker pins the whole set at

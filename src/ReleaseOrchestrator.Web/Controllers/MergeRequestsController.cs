@@ -88,7 +88,7 @@ public class MergeRequestsController(
     /// <returns>Canonical label values, sorted.</returns>
     /// <remarks>
     /// Exists so configuring a readiness rule can offer the labels that actually exist instead of
-    /// asking an operator to recall the exact spelling of one — a rule naming a label nothing carries
+    /// asking an operator to recall the exact spelling of one - a rule naming a label nothing carries
     /// is a gate nothing passes, and it fails silently at launch rather than when it was written.
     /// The labels are stored canonically (lower-cased, comma-joined), so distinct-then-split is
     /// enough; the split has to happen in memory because the column holds a joined set.
@@ -112,12 +112,12 @@ public class MergeRequestsController(
 
     /// <summary>Pins a merge request's status by hand.</summary>
     /// <param name="id">The merge request.</param>
-    /// <param name="req">The status to pin. Merged and closed are rejected — the VCS owns those.</param>
+    /// <param name="req">The status to pin. Merged and closed are rejected - the VCS owns those.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// The pin sets <c>IsStatusManual</c>, so a later observation does not re-derive the status over
     /// the top of it; a terminal state reported by the VCS still wins and clears the flag. This is no
-    /// longer a route to making a merge request deployable — that became a per-environment readiness
+    /// longer a route to making a merge request deployable - that became a per-environment readiness
     /// rule evaluated at launch, and a pin against it is <c>POST /api/readiness-pins</c>.
     /// </remarks>
     [HttpPatch("{id:guid}/status")]
@@ -134,7 +134,7 @@ public class MergeRequestsController(
         if (MergeRequestStatusResolver.IsTerminal(status))
             return BadRequest(new { error = localizer["Mr_StatusVcsOwned", status].Value });
 
-        // A retired status is still parseable — the members stay declared so old rows materialise —
+        // A retired status is still parseable - the members stay declared so old rows materialise -
         // but storing one now leaves the merge request somewhere nothing can act on: the value means
         // nothing to any reader, and the manual-status flag this sets stops observation from ever
         // correcting it. Refused with the thing to do instead.

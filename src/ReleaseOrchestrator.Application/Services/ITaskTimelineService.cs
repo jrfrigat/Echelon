@@ -14,8 +14,8 @@ namespace ReleaseOrchestrator.Application.Services;
 /// </para>
 /// <para>
 /// The cost is that it can only report what the schema happens to hold. Where a fact was never
-/// recorded — a plan's author before authorship existed, a task's arrival before arrival was
-/// stamped — the answer says so through <see cref="TimelineCoverageDto"/> rather than rendering an
+/// recorded - a plan's author before authorship existed, a task's arrival before arrival was
+/// stamped - the answer says so through <see cref="TimelineCoverageDto"/> rather than rendering an
 /// absence that reads as "nothing happened".
 /// </para>
 /// </remarks>

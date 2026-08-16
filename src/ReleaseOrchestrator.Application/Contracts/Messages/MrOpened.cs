@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 /// </summary>
 /// <remarks>
 /// <see cref="Labels"/> carries the full current set, not a promotion. A label no longer moves a
-/// merge request to a "ready" status — that was retired with the ready-for-deploy label; the set is
+/// merge request to a "ready" status - that was retired with the ready-for-deploy label; the set is
 /// stored so a per-environment readiness rule can be evaluated against it at launch.
 /// </remarks>
 /// <param name="ConnectionName">The VCS connection the observation came through.</param>
@@ -26,7 +26,7 @@ public record MrOpened(
     string ExternalMrId,
     string SourceBranch,
     string TargetBranch,
-    // The candidates the task-key rule reads from — branch, title, labels — rather than a key the
+    // The candidates the task-key rule reads from - branch, title, labels - rather than a key the
     // parser resolved. Linking is now a per-connection rule the consumer applies (which needs the
     // connection's settings the parser cannot see), so the raw fields travel and the consumer extracts.
     string? Title,

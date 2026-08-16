@@ -30,12 +30,12 @@ public record PlanGraphResult(List<List<Guid>> Stages, List<PlanConflict> Confli
 
 /// <summary>
 /// Turns a set of deployable merge requests into ordered stages.
-/// Pure: no EF, no I/O, no clock — the whole algorithm is unit-testable as-is.
+/// Pure: no EF, no I/O, no clock - the whole algorithm is unit-testable as-is.
 /// </summary>
 public static class ReleasePlanGraph
 {
     /// <param name="mrs">
-    /// Deployable merge requests, in a deterministic order — that order decides ties within a
+    /// Deployable merge requests, in a deterministic order - that order decides ties within a
     /// stage, so the same input has to give the same plan every time.
     /// </param>
     /// <param name="addEdges">
@@ -81,7 +81,7 @@ public static class ReleasePlanGraph
     /// <remarks>
     /// <para>
     /// The other half of <see cref="ApplyOverrides"/>. Dropping a task or hard edge there reorders the
-    /// plan and leaves no trace in the edge set — no cycle forms, so <see cref="BreakCycles"/> has
+    /// plan and leaves no trace in the edge set - no cycle forms, so <see cref="BreakCycles"/> has
     /// nothing to report, and a plan that deploys against a hard dependency would come back looking
     /// clean. That is the one thing a plan may never do.
     /// </para>
@@ -156,7 +156,7 @@ public static class ReleasePlanGraph
     /// </summary>
     /// <remarks>
     /// Same guard and same precedence as a derived edge: endpoints outside this plan are ignored, and
-    /// when a pair is stated twice the more critical statement wins — so a soft rule can never make an
+    /// when a pair is stated twice the more critical statement wins - so a soft rule can never make an
     /// existing hard constraint droppable.
     /// </remarks>
     private static void ApplyRuleEdges(
@@ -213,13 +213,13 @@ public static class ReleasePlanGraph
     /// Constraints an operator may not violate: hard repository links and task dependencies.
     /// Soft repository links are advisory and excluded. Used to vet imported plans
     /// (docs/issues/006-per-task-planning.md) against the same edge derivation the planner itself
-    /// uses, so the two cannot drift — one derivation for import, edit and recalculate alike.
+    /// uses, so the two cannot drift - one derivation for import, edit and recalculate alike.
     /// </summary>
     public static IReadOnlyList<PlanEdge> MandatoryEdges(IReadOnlyList<PlanMergeRequest> mrs) =>
         DerivedEdges(mrs).Where(e => e.Kind != PlanEdgeKind.RepoSoft).ToList();
 
     /// <summary>
-    /// Every ordering edge the derivation produces before any operator override — the constraints an
+    /// Every ordering edge the derivation produces before any operator override - the constraints an
     /// imported plan has to be reconciled against.
     /// </summary>
     /// <param name="mrs">The plan's merge requests.</param>
@@ -245,8 +245,8 @@ public static class ReleasePlanGraph
     /// <param name="mrs">The plan's merge requests.</param>
     /// <param name="stageOf">Stage sequence per merge request id.</param>
     /// <remarks>
-    /// A plan may violate a constraint — an operator sometimes has to deploy against the declared
-    /// order — but it may never do so silently, so this is what turns an edit into a recorded
+    /// A plan may violate a constraint - an operator sometimes has to deploy against the declared
+    /// order - but it may never do so silently, so this is what turns an edit into a recorded
     /// conflict. Soft links are excluded: the planner drops them itself to break cycles, so
     /// reporting them would flag the operator for a choice the planner makes unprompted.
     ///
@@ -287,7 +287,7 @@ public static class ReleasePlanGraph
 
         foreach (var mr in mrs)
         {
-            // Every merge request of a task this one waits on deploys first — a task may span
+            // Every merge request of a task this one waits on deploys first - a task may span
             // several repositories, so all of its merge requests are predecessors, not just one.
             //
             // PrerequisiteTaskIds, not DependsOnTaskIds: a declared dependency and a subtask are the
@@ -351,7 +351,7 @@ public static class ReleasePlanGraph
         return conflicts;
     }
 
-    /// <summary>Iterative DFS — recursion would risk a stack overflow on deep graphs.</summary>
+    /// <summary>Iterative DFS - recursion would risk a stack overflow on deep graphs.</summary>
     private static List<PlanEdge>? FindCycle(
         Dictionary<(Guid From, Guid To), PlanEdgeKind> edges,
         HashSet<Guid> ids,

@@ -21,7 +21,7 @@ namespace ReleaseOrchestrator.Observability;
 ///   <item>
 ///     Metrics are scraped by Prometheus over the <c>/metrics</c> endpoint this exposes (pull), and
 ///     also pushed over OTLP when a collector is configured. Prometheus is the default and needs no
-///     collector — the process holds the numbers and Prometheus comes and gets them.
+///     collector - the process holds the numbers and Prometheus comes and gets them.
 ///   </item>
 ///   <item>
 ///     Traces go out over OTLP only. Prometheus is a metrics store with no notion of a span, so the
@@ -98,7 +98,7 @@ public static class TelemetryExtensions
                 .AddHttpClientInstrumentation()
                 // Rebus's own instrumentation. It emits a span per send and per handle and
                 // propagates W3C trace context through the message headers, so the
-                // Ingress → RabbitMQ → Core path stays one trace instead of three. Rebus core does
+                // Ingress -> RabbitMQ -> Core path stays one trace instead of three. Rebus core does
                 // not do this; the Rebus.OpenTelemetry package is what registers the source.
                 .AddRebusInstrumentation()
                 .AddOtlpExporter(exporter =>
@@ -161,7 +161,7 @@ public static class TelemetryExtensions
     /// <param name="path">The request path.</param>
     /// <remarks>
     /// Public so request logging and the request audit share this one definition. Each of them wants
-    /// to exclude the same paths, and a second copy would drift — this file's own summary records
+    /// to exclude the same paths, and a second copy would drift - this file's own summary records
     /// that the audit already paid for duplicated rules drifting apart once.
     /// </remarks>
     public static bool IsInfrastructureRequest(PathString path) =>

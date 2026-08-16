@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// <remarks>
 /// This is what lets the admin UI stop naming providers. Before it, the form hard-coded
 /// &lt;option value="GitLab"&gt; and an "Org ID" field that only Yandex.Tracker has any use for, so
-/// adding a provider meant editing the UI — and the one provider that needed a setting decided
+/// adding a provider meant editing the UI - and the one provider that needed a setting decided
 /// the shape of the form for every provider that did not.
 ///
 /// The answer comes from the adapters actually registered in the composition root rather than
@@ -37,7 +37,7 @@ public class ProvidersController(
             .OrderBy(p => p, StringComparer.Ordinal)
             .Select(p => Describe(p, vcsFactory.GetSettingsSchema(p), IngestionOf(p))));
 
-    // Push or Poll for a VCS type, from its registration — this is what tells the UI which connections
+    // Push or Poll for a VCS type, from its registration - this is what tells the UI which connections
     // can be polled by hand (a poll type would otherwise wait for its next timer tick).
     private string? IngestionOf(string providerType) =>
         vcsRegistrations
@@ -54,7 +54,7 @@ public class ProvidersController(
 
     /// <summary>
     /// Lists the registered deploy strategies and their settings, so the deploy-target form can offer
-    /// them and render each one's fields — the same schema-driven shape the connection forms use.
+    /// them and render each one's fields - the same schema-driven shape the connection forms use.
     /// </summary>
     /// <returns>One entry per strategy, keyed by <c>ProviderType</c> (the strategy key).</returns>
     [HttpGet("deploy-strategies")]
@@ -71,7 +71,7 @@ public class ProvidersController(
             ProviderType = providerType,
             // Push/Poll for VCS providers; null for trackers and deploy strategies, which have no such axis.
             Ingestion = ingestion,
-            // Secret settings are declared but their values are never read back — the schema tells
+            // Secret settings are declared but their values are never read back - the schema tells
             // the UI to render a write-only field, and nothing here can leak one. Kind/Options/etc.
             // let the UI render a number, a dropdown or a pattern rather than a text box for all.
             Settings = schema.Select(s => new

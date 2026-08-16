@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Persisted as TEXT, not as its numeric value — see the value conversion in
+/// Persisted as TEXT, not as its numeric value - see the value conversion in
 /// <c>AppDbContext.OnModelCreating</c>. That is what makes reordering or renumbering these members
 /// safe and renaming one a breaking change, which is the opposite of the usual expectation.
 /// </para>
@@ -35,6 +35,6 @@ public enum MergeRequestStatus
     /// <summary>Merged at the provider. Terminal, and never reversed: a merge cannot be undone.</summary>
     Merged = 4,
 
-    /// <summary>Closed without merging. Terminal, but reversible — a provider can reopen it.</summary>
+    /// <summary>Closed without merging. Terminal, but reversible - a provider can reopen it.</summary>
     Closed = 5
 }

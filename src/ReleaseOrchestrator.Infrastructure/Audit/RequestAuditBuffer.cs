@@ -78,7 +78,7 @@ public sealed class RequestAuditBuffer : IRequestAuditSink
     /// <remarks>
     /// A batch whose write fails is just as absent from the audit as one the buffer refused, and the
     /// operator has the same right to know. Without this the summary reported zero dropped over a
-    /// real gap, which reads as "no traffic" — the one interpretation that is never true.
+    /// real gap, which reads as "no traffic" - the one interpretation that is never true.
     /// </remarks>
     public void RecordLoss(int count)
     {

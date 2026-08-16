@@ -44,8 +44,8 @@ public class RolloutPlan
     /// </para>
     /// <para>
     /// Uniqueness is the index below, not a convention. Concurrent recalculation of the SAME task
-    /// cannot produce a duplicate anyway — both attempts insert an active row and the filtered unique
-    /// index rejects one — so no retry is layered on top; the loser faults and Rebus redelivers it.
+    /// cannot produce a duplicate anyway - both attempts insert an active row and the filtered unique
+    /// index rejects one - so no retry is layered on top; the loser faults and Rebus redelivers it.
     /// </para>
     /// <para>
     /// When the plan was built is <see cref="CreatedAt"/>, which is what the timestamp was really
@@ -80,7 +80,7 @@ public class RolloutPlan
     /// </para>
     /// <para>
     /// Deliberately covers the ORDER, not just membership. An operator adding a repository-ordering
-    /// rule reorders the deploy stages while the set of tasks and merge requests stays identical — a
+    /// rule reorders the deploy stages while the set of tasks and merge requests stays identical - a
     /// membership fingerprint would call that "unchanged" at precisely the moment it changed most.
     /// </para>
     /// <para>
@@ -101,7 +101,7 @@ public class RolloutPlan
     /// <remarks>
     /// The recalculation consumer rebuilds every active plan on every ingestion event, so most
     /// versions are machine churn with no author. This is what separates that churn from a version
-    /// an operator deliberately asked for — and a deliberate rebuild is worth showing even when it
+    /// an operator deliberately asked for - and a deliberate rebuild is worth showing even when it
     /// changed nothing, because "I pressed it and nothing happened" answers a real question.
     /// </remarks>
     [MaxLength(32)]
@@ -113,7 +113,7 @@ public class RolloutPlan
 
     /// <summary>
     /// Ordering constraints this plan does not honour, as JSON. Null means it honours every one.
-    /// A plan may break a constraint, but it may never report itself clean while doing so — the
+    /// A plan may break a constraint, but it may never report itself clean while doing so - the
     /// "never a silent plan" rule.
     /// </summary>
     public string? ConflictsJson { get; set; }

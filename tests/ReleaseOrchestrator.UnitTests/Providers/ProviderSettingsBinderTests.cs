@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers;
 /// <remarks>
 /// This is the file for one rule, because it is the rule this codebase has already got wrong twice
 /// on other fields: a blank secret means <b>keep</b>, and a blank anything-else means <b>clear</b>.
-/// Getting the first half wrong deletes a working credential during an unrelated rename — the exact
+/// Getting the first half wrong deletes a working credential during an unrelated rename - the exact
 /// shape of the access-token bug (blank encrypted over a live token) and the ingestion-mode bug
 /// (blank silently switched a polling connection back to webhooks). Both presented as "it just
 /// stopped working" with an edit history that mentioned neither.
@@ -57,7 +57,7 @@ public class ProviderSettingsBinderTests
     }
 
     /// <summary>
-    /// Omitting the key entirely is the same as sending it blank — a form that renders no box for an
+    /// Omitting the key entirely is the same as sending it blank - a form that renders no box for an
     /// already-set secret must not be a way to delete it.
     /// </summary>
     [Fact]
@@ -85,7 +85,7 @@ public class ProviderSettingsBinderTests
     /// <summary>
     /// The other half of the rule: a non-secret left blank IS cleared, because the form showed its
     /// value, so an empty box is a deliberate erasure. Here that makes the save fail, since the
-    /// setting is required — which is the correct report, not a silent revert to the old value.
+    /// setting is required - which is the correct report, not a silent revert to the old value.
     /// </summary>
     [Fact]
     public void ABlankNonSecretIsClearedRatherThanKept()

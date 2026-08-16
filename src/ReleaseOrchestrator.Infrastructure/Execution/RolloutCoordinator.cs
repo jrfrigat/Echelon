@@ -110,7 +110,7 @@ public class RolloutCoordinator(
     /// Discards the failed unit of work so the next rollout in the pass starts clean.
     /// </summary>
     /// <remarks>
-    /// The scope — and therefore the <c>AppDbContext</c> — is shared by every rollout in one pass.
+    /// The scope - and therefore the <c>AppDbContext</c> - is shared by every rollout in one pass.
     /// A failed <c>SaveChanges</c> leaves its entities tracked as Modified, so the very next
     /// rollout's save re-submits them and fails the same way: one concurrency loss silently
     /// cascaded into every remaining rollout in the pass, each logged as its own unrelated error.

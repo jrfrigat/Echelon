@@ -39,7 +39,7 @@ public class RolloutStep
     /// </summary>
     /// <remarks>
     /// Frozen onto the step, not re-read from the repository at dispatch, so a configuration change
-    /// made while a rollout is in flight cannot alter how its remaining steps deploy — the run
+    /// made while a rollout is in flight cannot alter how its remaining steps deploy - the run
     /// executes the configuration it launched with. The strategy key was already frozen for this
     /// reason; the settings were not, and were re-read live, which this closes.
     /// </remarks>

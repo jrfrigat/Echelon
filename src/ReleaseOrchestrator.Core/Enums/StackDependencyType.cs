@@ -1,7 +1,7 @@
 namespace ReleaseOrchestrator.Core.Enums;
 
 /// <summary>
-/// How binding a repository-ordering link is — and therefore which link the planner sacrifices
+/// How binding a repository-ordering link is - and therefore which link the planner sacrifices
 /// first when the ordering graph turns out to be cyclic.
 /// </summary>
 /// <remarks>
@@ -20,7 +20,7 @@ public enum StackDependencyType
 
     /// <summary>
     /// A preference. Honoured when it can be, and the first thing dropped when a cycle forces a
-    /// choice — which is also why a soft link is excluded from the constraints an operator-edited
+    /// choice - which is also why a soft link is excluded from the constraints an operator-edited
     /// plan is vetted against.
     /// </summary>
     Soft = 2

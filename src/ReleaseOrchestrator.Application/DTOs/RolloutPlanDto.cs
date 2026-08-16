@@ -9,7 +9,7 @@ public record TaskListItemDto(
     int MergeRequestCount,
     bool HasActivePlan);
 
-/// <summary>Another task named from this one — its parent, or one of its children.</summary>
+/// <summary>Another task named from this one - its parent, or one of its children.</summary>
 public record TaskRefDto(Guid Id, string ExternalId, string Title);
 
 /// <summary>A repository in the default plan, in the wave it deploys in.</summary>
@@ -18,7 +18,7 @@ public record DefaultPlanRepositoryDto(Guid Id, string Name);
 /// <summary>One wave of the default plan: repositories that deploy in parallel.</summary>
 public record DefaultPlanWaveDto(int Sequence, IReadOnlyList<DefaultPlanRepositoryDto> Repositories);
 
-/// <summary>An ordering rule the default plan could not honour — in practice, a cycle in the rules.</summary>
+/// <summary>An ordering rule the default plan could not honour - in practice, a cycle in the rules.</summary>
 public record DefaultPlanConflictDto(string FromRepositoryName, string ToRepositoryName, string Kind, string Reason);
 
 /// <summary>
@@ -38,8 +38,8 @@ public record DefaultPlanDto(
 /// hierarchy.
 /// </summary>
 /// <remarks>
-/// Separate from <see cref="RolloutPlanDto"/> because it has to be readable when there is no plan —
-/// a task shows its parentage before anyone builds anything — and because the plan cannot carry all
+/// Separate from <see cref="RolloutPlanDto"/> because it has to be readable when there is no plan -
+/// a task shows its parentage before anyone builds anything - and because the plan cannot carry all
 /// of it: a plan is the closure of what the target waits on, and a task does not wait on its parent.
 /// Opening a subtask would therefore show a tree its parent never appears in.
 /// </remarks>
@@ -85,7 +85,7 @@ public record PlanTaskNodeDto(
 
 /// <summary>A merge request in the plan, with the wave it deploys in.</summary>
 /// <param name="ManuallyIncluded">
-/// True when an operator forced this merge request in rather than the derivation choosing it — worth
+/// True when an operator forced this merge request in rather than the derivation choosing it - worth
 /// showing, because it is the one row in the plan that does not follow from the atlas.
 /// </param>
 public record PlanItemDto(
@@ -118,7 +118,7 @@ public record PlanImportViolationDto(string Kind, string From, string To);
 /// <param name="Errors">Why it cannot be applied at all. Empty when it can.</param>
 /// <param name="Violations">
 /// Constraints the requested order breaks. Not errors: an operator may deploy against the declared
-/// order, which is what <c>force</c> is for — but never without the plan recording it.
+/// order, which is what <c>force</c> is for - but never without the plan recording it.
 /// </param>
 /// <param name="Plan">The plan as stored, on a successful import. Null for a validate.</param>
 public record PlanImportDto(

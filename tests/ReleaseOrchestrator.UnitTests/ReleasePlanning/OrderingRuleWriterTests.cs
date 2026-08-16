@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// </summary>
 /// <remarks>
 /// Every test here is a round trip through the REAL reader rather than a string comparison. What
-/// matters is not the exact text — that is the serializer's business — but that the reader
+/// matters is not the exact text - that is the serializer's business - but that the reader
 /// understands it to mean what was written. A writer checked against expected strings passes while
 /// producing a document the planner reads differently, which is the one failure that would matter.
 /// </remarks>
@@ -110,7 +110,7 @@ public class OrderingRuleWriterTests
     /// </summary>
     /// <remarks>
     /// A generated document has to read like a hand-written one, or nobody will edit it by hand
-    /// again — and hand editing must stay possible, because the language says things no form will.
+    /// again - and hand editing must stay possible, because the language says things no form will.
     /// </remarks>
     [Fact]
     public void DefaultsAreOmittedFromTheText()

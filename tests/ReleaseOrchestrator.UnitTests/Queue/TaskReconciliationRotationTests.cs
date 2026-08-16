@@ -17,8 +17,8 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// <remarks>
 /// This is the regression this file exists for. The pass used to take the first
 /// <c>MaxTasksPerRun</c> tasks ordered by id on every run, so with more open tasks than the cap the
-/// remainder was never swept at all — a dependency edge added in the tracker for one of them would
-/// never arrive — while the log claimed the remainder was waiting for the next pass. Nothing failed
+/// remainder was never swept at all - a dependency edge added in the tracker for one of them would
+/// never arrive - while the log claimed the remainder was waiting for the next pass. Nothing failed
 /// and nothing was logged; it simply did not happen.
 /// </remarks>
 public sealed class TaskReconciliationRotationTests : IAsyncLifetime

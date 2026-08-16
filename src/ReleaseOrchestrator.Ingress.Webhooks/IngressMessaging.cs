@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Ingress.Webhooks;
 /// </summary>
 /// <remarks>
 /// The same shape as the Core process's builder, kept separate because the ingress does not
-/// reference Infrastructure and should not — it is a webhook front door, not part of the domain.
+/// reference Infrastructure and should not - it is a webhook front door, not part of the domain.
 /// The queue name is shared (see <see cref="Application.Contracts.Messages.MessageRouting"/>)
 /// because a drift there fails silently; this string is not, because a wrong connection fails
 /// loudly at startup.

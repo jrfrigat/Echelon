@@ -85,7 +85,7 @@ internal sealed class ArchiveRunner(
     /// <para>
     /// The phase that unblocks the two below. <c>RolloutStep</c> references a merge request and a task
     /// with <c>Restrict</c>, so before this existed a single deploy pinned its task and its merge
-    /// requests in the operational database forever — the archive re-examined and re-skipped them
+    /// requests in the operational database forever - the archive re-examined and re-skipped them
     /// every night, and the rollout tables themselves grew without any bound at all.
     /// </para>
     /// <para>
@@ -94,8 +94,8 @@ internal sealed class ArchiveRunner(
     /// row says how long it has been stuck rather than how long ago it ended.
     /// </para>
     /// <para>
-    /// Steps and events go with it by cascade, which is exactly right — neither means anything without
-    /// its run — and is why this is one delete rather than three in an order that has to be correct.
+    /// Steps and events go with it by cascade, which is exactly right - neither means anything without
+    /// its run - and is why this is one delete rather than three in an order that has to be correct.
     /// </para>
     /// </remarks>
     public async Task PruneRolloutHistoryAsync(DateTime now, CancellationToken ct)
@@ -123,7 +123,7 @@ internal sealed class ArchiveRunner(
     /// <remarks>
     /// <para>
     /// Two rules, because a plan stops mattering for two different reasons. A SUPERSEDED version is
-    /// churn — every ingestion event mints one — and ages out on its own retention. The ACTIVE version
+    /// churn - every ingestion event mints one - and ages out on its own retention. The ACTIVE version
     /// of a closed task is not churn, but it is not actionable either: the task is on its way to the
     /// archive, and keeping its plan would keep the task from getting there, through
     /// <c>PlanTaskNode</c>'s <c>Restrict</c>.
@@ -131,7 +131,7 @@ internal sealed class ArchiveRunner(
     /// <para>
     /// The second rule is the one that could surprise someone: a task closed in the tracker but not
     /// yet deployed everywhere loses its built plan after the archive cutoff. Recalculating rebuilds
-    /// it from the atlas — that is what a plan being a projection means — and the alternative is a
+    /// it from the atlas - that is what a plan being a projection means - and the alternative is a
     /// database that never sheds a row because somebody might still press Launch.
     /// </para>
     /// </remarks>
@@ -288,7 +288,7 @@ internal sealed class ArchiveRunner(
 
             // TaskDependency points into Tasks twice, both Restrict. SQL Server rejects Cascade
             // on both (multiple cascade paths to one table), so the edges have to be removed
-            // explicitly — otherwise any task holding a dependency fails to delete.
+            // explicitly - otherwise any task holding a dependency fails to delete.
             await db.TaskDependencies
                 .Where(d => ids.Contains(d.DependentTaskId) || ids.Contains(d.DependsOnTaskId))
                 .ExecuteDeleteAsync(ct);
@@ -303,7 +303,7 @@ internal sealed class ArchiveRunner(
     /// <summary>
     /// The archive and the operational database are separate SQL Server databases, so the
     /// insert and the delete cannot share a transaction. When the delete fails the rows are
-    /// already archived and the next cycle selects them again — re-inserting the same primary
+    /// already archived and the next cycle selects them again - re-inserting the same primary
     /// keys would throw and wedge archiving for good. Skipping what is already stored also
     /// keeps the first copy, which still holds the dependency edges a later pass could no
     /// longer read.

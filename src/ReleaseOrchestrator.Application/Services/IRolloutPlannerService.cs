@@ -41,7 +41,7 @@ public interface IRolloutPlannerService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The plan in the per-task schema of docs/issues/006-per-task-planning.md §6.</returns>
     /// <remarks>
-    /// A readable, diffable artifact of what the plan is — for review, for attaching to a change
+    /// A readable, diffable artifact of what the plan is - for review, for attaching to a change
     /// record, and for seeing the tree without clicking through it. It is also the input format of
     /// <see cref="ImportPlanAsync"/>: what round-trips is the wave assignment, since everything else
     /// in the document belongs to the atlas.
@@ -55,7 +55,7 @@ public interface IRolloutPlannerService
     /// <param name="document">The plan, in the export schema.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
-    /// The same work <see cref="ImportPlanAsync"/> does, stopped before the write — deliberately the
+    /// The same work <see cref="ImportPlanAsync"/> does, stopped before the write - deliberately the
     /// same code, not a parallel check. A validate that agreed with import only by convention would be
     /// worse than none: it would eventually pass a document import then rejects, or accept one import
     /// silently reorders.
@@ -70,14 +70,14 @@ public interface IRolloutPlannerService
     /// <param name="document">The plan, in the export schema.</param>
     /// <param name="force">
     /// Accept a document whose order breaks a task dependency or hard repository link. It skips the
-    /// REFUSAL only — the plan still records every constraint it breaks.
+    /// REFUSAL only - the plan still records every constraint it breaks.
     /// </param>
     /// <param name="actor">Who imported it.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Nothing about the imported plan is stored as a plan: plan rows are rebuilt on every ingestion
     /// event and would carry the import away with them. What is stored is the deltas, which every
-    /// later rebuild replays — the same mechanism an operator's drag-and-drop uses.
+    /// later rebuild replays - the same mechanism an operator's drag-and-drop uses.
     /// </remarks>
     Task<PlanImportDto> ImportPlanAsync(
         Guid taskId, string document, bool force, ActorRef? actor, CancellationToken ct = default);
@@ -87,7 +87,7 @@ public interface IRolloutPlannerService
     /// </summary>
     /// <param name="taskId">The target task.</param>
     /// <param name="actor">
-    /// Who asked for the rebuild, or <c>null</c> when the planner ran itself — the recalculation
+    /// Who asked for the rebuild, or <c>null</c> when the planner ran itself - the recalculation
     /// consumer rebuilds every active plan on every ingestion event, and that churn has no author.
     /// </param>
     /// <param name="ct">Cancellation token.</param>

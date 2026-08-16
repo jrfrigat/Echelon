@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// </para>
 /// <para>
 /// Choosing a group order adds edges the tracker never declared, between tasks that may have nothing
-/// to do with each other. That can make an otherwise-acyclic graph cyclic — the planner then drops
+/// to do with each other. That can make an otherwise-acyclic graph cyclic - the planner then drops
 /// an edge and records the conflict, as it does for any other cycle. Which is why the default is to
 /// impose nothing.
 /// </para>

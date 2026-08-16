@@ -4,7 +4,7 @@
     The Yandex.Tracker adapter: HTTP client, closed-status dictionary, link normalization and the
     organization id that only this tracker has.
 
-    References the provider contracts and Core, and nothing else of ours — see the GitLab adapter
+    References the provider contracts and Core, and nothing else of ours - see the GitLab adapter
     for why.
   -->
 

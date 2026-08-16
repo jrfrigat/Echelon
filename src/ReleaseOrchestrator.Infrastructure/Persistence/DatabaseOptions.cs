@@ -2,7 +2,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence;
 
 /// <summary>Which relational database the two contexts run against.</summary>
 /// <remarks>
-/// Unlike the coordination backend, this one is a source of truth — so the choice is only about
+/// Unlike the coordination backend, this one is a source of truth - so the choice is only about
 /// which database an operator already runs, never about doing without. Both providers get the same
 /// model; what differs is the handful of things the two databases genuinely do not share, and each
 /// of those is named in <see cref="ProviderSpecificMapping"/> rather than left to a convention.

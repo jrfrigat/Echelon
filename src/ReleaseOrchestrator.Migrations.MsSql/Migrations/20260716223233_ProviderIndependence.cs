@@ -10,14 +10,14 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
     /// </summary>
     /// <remarks>
     /// Hand-edited. The scaffolded version dropped VcsType, TrackerType and OrgId and added the
-    /// new columns with an empty default — data loss, not a rename: every existing connection
+    /// new columns with an empty default - data loss, not a rename: every existing connection
     /// would have come back with ProviderType = '', resolved to no adapter, and lost its
     /// organization id on the way. Each column is therefore added, backfilled, and only then is
     /// the old one dropped.
     ///
     /// Rows holding an enum value this migration does not know are left with an empty
     /// ProviderType on purpose. There is nothing to map them to, and an empty value fails loudly
-    /// at the provider factory — naming the connection and listing the registered providers —
+    /// at the provider factory - naming the connection and listing the registered providers -
     /// which beats guessing at 'gitlab' and quietly pointing a connection at the wrong API.
     /// </remarks>
     public partial class ProviderIndependence : Migration
@@ -64,7 +64,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             // STRING_ESCAPE rather than plain concatenation: an organization id is operator input,
             // and a quote or backslash in it would otherwise produce a settings bag that is not
-            // valid JSON — which the factory rejects, taking the whole connection down with it.
+            // valid JSON - which the factory rejects, taking the whole connection down with it.
             migrationBuilder.Sql("""
                 UPDATE [TrackerConnections]
                 SET [ProviderSettingsJson] = '{"orgId":"' + STRING_ESCAPE([OrgId], 'json') + '"}'

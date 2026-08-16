@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 /// Validates the connection name a webhook route carries before it is used as a configuration key.
 /// </summary>
 /// <remarks>
-/// The token comparison that used to live beside this has moved to the providers — each provider
+/// The token comparison that used to live beside this has moved to the providers - each provider
 /// knows which header carries its secret and how to check it (a shared secret today, an HMAC
 /// tomorrow), and they share the constant-time comparison through
 /// <c>Providers.Abstractions.Ingestion.WebhookSignatures</c>. What stays here is host-only: the

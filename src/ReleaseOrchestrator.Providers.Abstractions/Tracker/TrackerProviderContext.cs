@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 /// <see cref="ProviderSettings"/> is how a provider's own configuration reaches it without
 /// appearing in a shared contract. Yandex.Tracker needs an organization id; Jira will need
 /// something else. Putting <c>orgId</c> in the common context would recreate exactly the leak
-/// this assembly removes — so the adapter parses what it needs, and a missing value is its own
+/// this assembly removes - so the adapter parses what it needs, and a missing value is its own
 /// error to raise.
 /// </remarks>
 public sealed record TrackerProviderContext(

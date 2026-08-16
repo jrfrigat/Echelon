@@ -25,7 +25,7 @@ const offlineAssetsExclude = [/^service-worker\.js$/, /(^|\/)appsettings(\.[^/]+
 
 async function onInstall() {
     // Everything is precached here from the manifest, with each entry pinned to the integrity
-    // hash the build recorded — so there is no need to cache.put() opportunistically on fetch,
+    // hash the build recorded - so there is no need to cache.put() opportunistically on fetch,
     // and no way to cache a response the build did not produce.
     const assetsRequests = self.assetsManifest.assets
         .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))

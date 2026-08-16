@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Pwa.Services;
 /// Tells the API which language to answer in.
 ///
 /// Without this the header the browser attaches on its own wins, which is the browser's language,
-/// not the one picked in the app — so a user on an English browser who switches to Russian would
+/// not the one picked in the app - so a user on an English browser who switches to Russian would
 /// still get English validation errors back. Set per request rather than on the client's default
 /// headers because the culture can change after the client is built.
 /// </summary>

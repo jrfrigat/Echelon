@@ -45,7 +45,7 @@ public sealed class RedisDistributedLease(
         catch (RedisConnectionException ex)
         {
             // Fail closed: no lease means no run. Redis being down is not a reason to have every
-            // replica start deleting rows at once — the pass will happen on the next tick.
+            // replica start deleting rows at once - the pass will happen on the next tick.
             logger.LogWarning(ex, "Cannot reach Redis to take lease {Lease}; skipping this pass", name);
             return null;
         }
@@ -99,7 +99,7 @@ public sealed class RedisDistributedLease(
 
                     if (renewed == 0)
                     {
-                        // Someone else holds it now — this replica stalled past the expiry. Say so:
+                        // Someone else holds it now - this replica stalled past the expiry. Say so:
                         // it means two passes may be running, and the duration is too short.
                         _logger.LogWarning("Lost lease {Key} while still working; another replica may have started it", _key);
                         return;

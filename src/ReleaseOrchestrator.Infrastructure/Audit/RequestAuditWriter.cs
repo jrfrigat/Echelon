@@ -13,13 +13,13 @@ namespace ReleaseOrchestrator.Infrastructure.Audit;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Deliberately NOT leased, which inverts the convention every other background job here follows —
+/// Deliberately NOT leased, which inverts the convention every other background job here follows -
 /// so it is worth saying why. A lease stops replicas duplicating SHARED work. This work is not
 /// shared: each replica's buffer holds only its own requests, and leasing would silence every
 /// replica but one, losing most of the traffic rather than deduplicating it.
 /// </para>
 /// <para>
-/// A failed flush loses that batch and says so. The alternative — retrying indefinitely — turns a
+/// A failed flush loses that batch and says so. The alternative - retrying indefinitely - turns a
 /// database problem into unbounded memory growth in a component whose whole purpose is to be
 /// harmless.
 /// </para>
@@ -161,7 +161,7 @@ public class RequestAuditWriter(
     /// </summary>
     /// <remarks>
     /// Logged on the delta rather than the total, so a one-off burst does not repeat forever. The
-    /// count also reaches the UI through the summary — a warning only visible to whoever reads the
+    /// count also reaches the UI through the summary - a warning only visible to whoever reads the
     /// log is exactly the silent incompleteness this feature is supposed to avoid.
     /// </remarks>
     private void ReportDrops()

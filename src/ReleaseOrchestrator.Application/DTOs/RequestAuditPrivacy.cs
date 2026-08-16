@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Application.DTOs;
 /// <remarks>
 /// <para>
 /// A small type of its own rather than the full options class, because the recorder lives in the web
-/// host and must not gain a dependency on Infrastructure — it is compiled into the webhook host too,
+/// host and must not gain a dependency on Infrastructure - it is compiled into the webhook host too,
 /// which deliberately has no database reach.
 /// </para>
 /// <para>

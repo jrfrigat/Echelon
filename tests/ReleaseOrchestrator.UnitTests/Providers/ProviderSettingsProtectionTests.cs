@@ -261,7 +261,7 @@ public class ProviderSettingsBagTests
         Assert.Equal("pattern", key);
     }
 
-    /// <summary>A blank optional typed value is dropped, not validated — an empty box is "not set".</summary>
+    /// <summary>A blank optional typed value is dropped, not validated - an empty box is "not set".</summary>
     [Fact]
     public void ABlankOptionalTypedValueIsDroppedNotRefused()
     {

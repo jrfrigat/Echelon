@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Pwa.Services.LocalAuth;
 /// <remarks>
 /// Used only when <c>Auth:Provider</c> is <c>Local</c>; AzureAd runs MSAL's own provider instead.
 /// The token's claims (its <c>oid</c> and name) are read straight out of the JWT payload for the
-/// client's own <c>AuthorizeView</c> checks — the server re-validates the signature on every call,
+/// client's own <c>AuthorizeView</c> checks - the server re-validates the signature on every call,
 /// so nothing here is trusted for authorization, only for showing the right UI.
 /// </remarks>
 public sealed class LocalAuthStateProvider(IJSRuntime js) : AuthenticationStateProvider

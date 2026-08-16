@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// <para>
 /// These four strings were hardcoded in the ingress, once per provider, which is what made "add a
 /// provider" a change to the host. Declaring them here moves them to the provider that owns them,
-/// and — just as importantly — lets each provider keep the exact strings it already uses, so this
+/// and - just as importantly - lets each provider keep the exact strings it already uses, so this
 /// refactor changes no route and no config key.
 /// </para>
 /// <para>
@@ -35,7 +35,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// </param>
 /// <param name="SourcePrefix">
 /// The prefix stamped onto every event's <c>Source</c> as <c>"{SourcePrefix}/{connectionName}"</c>.
-/// Half of the dedup inbox key, so a change to it re-processes past events — which is why it is
+/// Half of the dedup inbox key, so a change to it re-processes past events - which is why it is
 /// declared and preserved rather than derived.
 /// </param>
 public sealed record WebhookEndpointDescriptor(

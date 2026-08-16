@@ -217,7 +217,7 @@
     <value>Broken dependencies: {0}</value>
   </data>
   <data name="Plan_Conflicts_Body" xml:space="preserve">
-    <value>This plan does not satisfy every constraint — either the planner could not, or an edit overrode one. Deploying in this order will violate the rules below; review before releasing.</value>
+    <value>This plan does not satisfy every constraint - either the planner could not, or an edit overrode one. Deploying in this order will violate the rules below; review before releasing.</value>
   </data>
   <data name="Vcs_Title" xml:space="preserve">
     <value>VCS Connections</value>
@@ -433,7 +433,7 @@
     <value>Manage readiness for merge request {0}</value>
   </data>
   <data name="Pin_Dialog_Title" xml:space="preserve">
-    <value>Readiness — merge request {0}</value>
+    <value>Readiness - merge request {0}</value>
   </data>
   <data name="Pin_NoEnvironments" xml:space="preserve">
     <value>No environments to pin for.</value>
@@ -1300,7 +1300,7 @@
     <value>Links to task {0}</value>
   </data>
   <data name="LinkPreview_NoMatch" xml:space="preserve">
-    <value>No key matched — this merge request would not link to a task.</value>
+    <value>No key matched - this merge request would not link to a task.</value>
   </data>
   <data name="Vcs_PollNow_Aria" xml:space="preserve">
     <value>Poll {0} now</value>
@@ -1309,7 +1309,7 @@
     <value>Polled '{0}': {1} open merge request(s), {2} branch(es). They are listed under Merge requests.</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
-    <value>Some repositories could not be read — {0}</value>
+    <value>Some repositories could not be read - {0}</value>
   </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Plugins</value>
@@ -1318,7 +1318,7 @@
     <value>Installed plugins</value>
   </data>
   <data name="Plugins_Intro" xml:space="preserve">
-    <value>The connectors and handlers this build has wired in. Each one declares its own key, how its events arrive, and what it does — this page only shows what they declared.</value>
+    <value>The connectors and handlers this build has wired in. Each one declares its own key, how its events arrive, and what it does - this page only shows what they declared.</value>
   </data>
   <data name="Plugins_Ingestion_Push" xml:space="preserve">
     <value>receives webhooks</value>
@@ -1396,7 +1396,7 @@
     <value>This document cannot be edited with the form</value>
   </data>
   <data name="Rules_Visual_Unavailable_Body" xml:space="preserve">
-    <value>It uses something the form does not hold — a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</value>
+    <value>It uses something the form does not hold - a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</value>
   </data>
   <data name="Rules_Visual_Groups" xml:space="preserve">
     <value>Groups</value>

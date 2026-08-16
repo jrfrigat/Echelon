@@ -12,15 +12,15 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// </summary>
 /// <remarks>
 /// A merge request opening or changing status, or a task edit, can change the deploy order of any
-/// task whose plan is currently live. Which tasks are affected is not cheap to know precisely — a
-/// merge request reaches a task through its branch key, a task edit through the dependency graph —
+/// task whose plan is currently live. Which tasks are affected is not cheap to know precisely - a
+/// merge request reaches a task through its branch key, a task edit through the dependency graph -
 /// so every active plan is rebuilt. There are only as many active plans as there are tasks with a
 /// built rollout plan, and a rebuild that finds nothing changed is a couple of queries.
 ///
 /// <para>
 /// The work runs inside the handler, so the broker acknowledges only once the plans are rebuilt: a
 /// failure faults the message and Rebus redelivers it, rather than dropping the recalculation. This
-/// is the point-to-point successor to the old global-plan recalculation the pivot retired — the
+/// is the point-to-point successor to the old global-plan recalculation the pivot retired - the
 /// ingestion consumers still publish one <see cref="ReleasePlanRecalculationRequested"/> per event.
 /// </para>
 /// <para>

@@ -46,7 +46,7 @@ public class Rollout
     /// a machine path.
     /// </summary>
     /// <remarks>
-    /// Separate from the oid because a null oid alone is ambiguous — it is equally true of a
+    /// Separate from the oid because a null oid alone is ambiguous - it is equally true of a
     /// background trigger and of a signed-in operator whose token carried no usable object id. A CI
     /// pipeline's client-credential token in particular resolves an object id like anyone else, and
     /// nothing here validates scopes, so without this a pipeline deploy reads as a person.

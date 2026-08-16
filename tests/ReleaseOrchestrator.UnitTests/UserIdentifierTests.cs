@@ -5,7 +5,7 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests;
 
 /// <summary>
-/// Permissions are keyed on this identifier, so a mismatch here silently grants nothing —
+/// Permissions are keyed on this identifier, so a mismatch here silently grants nothing -
 /// which is exactly what happened while lookups preferred `sub` and admins entered an oid.
 /// </summary>
 public class UserIdentifierTests

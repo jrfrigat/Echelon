@@ -41,7 +41,7 @@ public class ArchivedMergeRequest
     /// </summary>
     /// <remarks>
     /// Copied because archiving hard-deletes the source row. Without it the "merge request opened"
-    /// entry on a task's history is not hidden by archiving, it is destroyed — the only copy of that
+    /// entry on a task's history is not hidden by archiving, it is destroyed - the only copy of that
     /// timestamp goes with the row.
     /// </remarks>
     public DateTime CreatedAt { get; set; }
@@ -50,7 +50,7 @@ public class ArchivedMergeRequest
     public DateTime? MergedAt { get; set; }
 
     /// <summary>
-    /// When the MR was closed without merging. Null for a merged MR — the two outcomes are
+    /// When the MR was closed without merging. Null for a merged MR - the two outcomes are
     /// mutually exclusive, so a report that wants "when did this MR end" reads whichever is set.
     /// </summary>
     public DateTime? ClosedAt { get; set; }

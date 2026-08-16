@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Infrastructure.Providers;
 /// <summary>
 /// Resolves the adapter a tracker connection names and binds it to that connection.
 /// </summary>
-/// <remarks>See <see cref="VcsProviderFactory"/> — the same shape, for the same reasons.</remarks>
+/// <remarks>See <see cref="VcsProviderFactory"/> - the same shape, for the same reasons.</remarks>
 internal sealed class TrackerProviderFactory(
     IServiceProvider services,
     IEnumerable<TrackerProviderRegistration> registrations,

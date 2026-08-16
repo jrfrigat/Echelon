@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 /// </param>
 /// <param name="ResolvedAt">When the tracker says it was resolved, when it says so.</param>
 /// <param name="ParentKey">
-/// The key of this issue's parent in the tracker's hierarchy — an epic over its subtasks — or null
+/// The key of this issue's parent in the tracker's hierarchy - an epic over its subtasks - or null
 /// when the issue is top-level or the tracker has no hierarchy.
 /// <para>
 /// Carries ordering, which is why it is here rather than left as display metadata: a parent is the
@@ -21,7 +21,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Tracker;
 /// </para>
 /// <para>
 /// Positional and without a default on purpose. An adapter that forgets it does not produce a task
-/// with no parent — it produces a plan missing an ordering constraint, which looks exactly like a
+/// with no parent - it produces a plan missing an ordering constraint, which looks exactly like a
 /// correct plan. The compiler naming every construction site is the cheapest way to keep that from
 /// happening quietly.
 /// </para>
@@ -43,14 +43,14 @@ public sealed record TrackerIssue(
 /// </para>
 /// <para>
 /// Deliberately not a general link model. Jira, Yandex.Tracker and Linear all express "blocks" /
-/// "depends on", and it is the only relation that carries ordering — <c>relates</c> exists
+/// "depends on", and it is the only relation that carries ordering - <c>relates</c> exists
 /// everywhere but means nothing, and feeding it to a topological sort invents constraints that
 /// were never stated. Atlassian is explicit that link direction is only interpretable at the UI
 /// level, so resolving which end waits for which is the adapter's job, done before this record
 /// is built.
 /// </para>
 /// </remarks>
-/// <param name="IssueKey">The dependent issue — the one that waits.</param>
+/// <param name="IssueKey">The dependent issue - the one that waits.</param>
 /// <param name="DependsOnKey">The prerequisite issue.</param>
 public sealed record TrackerIssueDependency(
     string IssueKey,

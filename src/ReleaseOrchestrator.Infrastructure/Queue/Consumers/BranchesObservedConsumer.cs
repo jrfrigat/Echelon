@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// </summary>
 /// <remarks>
 /// This is what makes a branch visible to planning. A branch with no merge request is work that has
-/// started and not landed, so the task that owns it is not finished — and the launch guard reads these
+/// started and not landed, so the task that owns it is not finished - and the launch guard reads these
 /// rows to hold back a parent whose child is still in progress. The link uses the same
 /// <see cref="TaskKeyExtractor"/> and the same per-connection rule the merge-request path uses, so a
 /// branch and its eventual merge request can never be attributed to different tasks.
@@ -98,7 +98,7 @@ public class BranchesObservedConsumer(
         }
 
         // Gone from the snapshot means gone from the repository (merged and deleted, or abandoned), and
-        // a branch that no longer exists must stop blocking anything — the one direction this must
+        // a branch that no longer exists must stop blocking anything - the one direction this must
         // never get wrong.
         var observedNames = observedBranches.Select(b => b.Name).ToHashSet(StringComparer.Ordinal);
         var vanished = existing.Where(b => !observedNames.Contains(b.Name)).ToList();

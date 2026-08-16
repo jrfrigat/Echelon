@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 /// <remarks>
 /// The install is asked for its version once here, and the answer decides the capabilities the
 /// resulting provider reports. This is the "is the server new enough" question being settled at
-/// connect time rather than at each call site — the shape Renovate's <c>initPlatform</c> arrived at.
+/// connect time rather than at each call site - the shape Renovate's <c>initPlatform</c> arrived at.
 /// </remarks>
 internal sealed class GitLabProviderAdapter(
     HttpClient http,
@@ -20,7 +20,7 @@ internal sealed class GitLabProviderAdapter(
     /// <remarks>
     /// Every GitLab this product would plausibly meet is newer than this. It is stated anyway
     /// because the alternative is an unconditional <c>true</c>, which is a claim about all
-    /// installs that nothing checks — and an install old enough to matter would then report
+    /// installs that nothing checks - and an install old enough to matter would then report
     /// "no labels" rather than "cannot say", quietly dropping merge requests out of the plan.
     /// </remarks>
     private const int LabelsMinimumMajor = 9;
@@ -41,7 +41,7 @@ internal sealed class GitLabProviderAdapter(
             // would make an unreachable /version endpoint look like "the deploy label was
             // removed" and drop merge requests from the plan.
             SupportsMergeRequestLabels = version is null || version.Value.IsAtLeast(LabelsMinimumMajor, LabelsMinimumMinor),
-            // The branches endpoint predates every GitLab this adapter supports, so it is always on —
+            // The branches endpoint predates every GitLab this adapter supports, so it is always on -
             // and, as with labels, an unknown version must not read as "this repository has no work".
             SupportsBranches = true
         };

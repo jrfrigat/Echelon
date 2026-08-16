@@ -14,13 +14,13 @@ namespace ReleaseOrchestrator.Observability;
 /// </para>
 /// <para>
 /// First, <c>UseSerilogRequestLogging</c> sat downstream of <c>UseExceptionHandler</c>, so a domain
-/// exception passed through the logging middleware — which recorded it as a 500 at Error — before the
+/// exception passed through the logging middleware - which recorded it as a 500 at Error - before the
 /// handler converted it into the 404 or 400 the caller received. Every "task not found" in Seq read
 /// as a server fault. Moving the logging above the handler makes it observe the response that was
 /// actually sent.
 /// </para>
 /// <para>
-/// Second, every level was Information, so a cold PWA load — hundreds of framework and ICU assets —
+/// Second, every level was Information, so a cold PWA load - hundreds of framework and ICU assets -
 /// cost hundreds of Seq events, and a health probe on a timer cost one forever. Static assets and
 /// infrastructure paths now log at Verbose, which is below the configured minimum and therefore
 /// never leaves the process.
@@ -40,7 +40,7 @@ public static class RequestLoggingSetup
     /// <remarks>
     /// Register this ABOVE <c>UseExceptionHandler</c>. Below it, the status recorded here is the one
     /// the exception produced rather than the one the handler wrote, and nothing in the test suite
-    /// would notice — there is no integration host in this repo.
+    /// would notice - there is no integration host in this repo.
     /// </remarks>
     public static IApplicationBuilder UseReleaseOrchestratorRequestLogging(this IApplicationBuilder app)
     {

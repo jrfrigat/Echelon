@@ -54,7 +54,7 @@ public record TimelineCoverageDto(
 /// <param name="ActorKind">The kind of actor, so "no id" and "no person" are distinguishable.</param>
 /// <param name="ActorName">The actor's captured display name, when one was recorded.</param>
 /// <param name="SubjectKey">What it was about: a merge-request key, an environment key, a plan version.</param>
-/// <param name="Detail">Secondary text — an error message, a status transition, a count.</param>
+/// <param name="Detail">Secondary text - an error message, a status transition, a count.</param>
 /// <param name="ClockSource">
 /// Whose clock stamped <paramref name="At"/>: <c>ours</c>, or <c>external</c> when the timestamp came
 /// from the VCS or tracker and may not be comparable with the rest.
@@ -68,7 +68,7 @@ public record TimelineCoverageDto(
 /// <param name="MergeRequestId">The merge request this concerns.</param>
 /// <param name="IsReassigned">
 /// True when this entry is about a merge request that has since been re-linked to another task. The
-/// history is still shown — it happened while the merge request belonged here — but it is marked.
+/// history is still shown - it happened while the merge request belonged here - but it is marked.
 /// </param>
 public record TimelineEntryDto(
     DateTime At,

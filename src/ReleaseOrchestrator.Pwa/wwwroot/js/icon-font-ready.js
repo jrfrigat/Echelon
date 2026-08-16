@@ -4,7 +4,7 @@
 // visibility:hidden reserves layout, so nothing shifts.
 //
 // This lives in a file rather than an inline <script> because the API serves
-// script-src 'self' 'wasm-unsafe-eval' — an inline block would be blocked outright.
+// script-src 'self' 'wasm-unsafe-eval' - an inline block would be blocked outright.
 (function () {
     var reveal = function () { document.documentElement.classList.add('flare-icons-ready'); };
     try {

@@ -63,7 +63,7 @@ public class ApiService(HttpClient http)
         GetAsync<OrderingRulesDocumentDto>("api/planning/rules/from-repository-ordering", ct);
 
     /// <summary>
-    /// Deployable work by task and repository — merge requests and the branches nothing has raised yet.
+    /// Deployable work by task and repository - merge requests and the branches nothing has raised yet.
     /// </summary>
     /// <param name="environmentId">Environment to judge readiness against, or null for none.</param>
     /// <param name="state">Optional state filter.</param>
@@ -85,7 +85,7 @@ public class ApiService(HttpClient http)
     public Task<List<string>> GetMergeRequestLabelsAsync(CancellationToken ct = default) =>
         GetAsync<List<string>>("api/merge-requests/labels", ct);
 
-    /// <summary>Pins a status by hand — one of the two ways an MR is marked deployable.</summary>
+    /// <summary>Pins a status by hand - one of the two ways an MR is marked deployable.</summary>
     public Task SetMergeRequestStatusAsync(Guid id, string status, CancellationToken ct = default) =>
         SendAsync(() => http.PatchAsJsonAsync($"api/merge-requests/{id}/status", new { Status = status }, ct), ct);
 
@@ -97,7 +97,7 @@ public class ApiService(HttpClient http)
     /// <remarks>
     /// The connection form is built from this rather than from a list of provider names compiled
     /// into the PWA. That list was previously a literal <c>["GitLab"]</c> next to a fixed set of
-    /// fields, so a second provider meant editing the page — and a provider needing its own field
+    /// fields, so a second provider meant editing the page - and a provider needing its own field
     /// had nowhere to put it.
     /// </remarks>
     public Task<List<ProviderTypeDto>> GetVcsProviderTypesAsync(CancellationToken ct = default) =>
@@ -126,7 +126,7 @@ public class ApiService(HttpClient http)
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
     /// <param name="settings">
-    /// Provider-specific settings. An omitted secret keeps the stored one — the same convention as
+    /// Provider-specific settings. An omitted secret keeps the stored one - the same convention as
     /// the token, and why this sends only the keys the operator actually filled in.
     /// </param>
     public Task UpdateVcsConnectionAsync(
@@ -214,7 +214,7 @@ public class ApiService(HttpClient http)
     public Task<PagedResult<TaskListItemDto>> GetTasksAsync(int page = 1, CancellationToken ct = default) =>
         GetAsync<PagedResult<TaskListItemDto>>($"api/tasks?page={page}&pageSize=50", ct);
 
-    /// <summary>The task itself — its parent and subtasks — which exists whether or not a plan does.</summary>
+    /// <summary>The task itself - its parent and subtasks - which exists whether or not a plan does.</summary>
     public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
         GetOrNullAsync<TaskDetailDto>($"api/tasks/{taskId}", ct);
 
@@ -343,7 +343,7 @@ public class ApiService(HttpClient http)
     /// <summary>The merge requests forced into or out of a task's rollout.</summary>
     /// <remarks>
     /// Read separately from the plan, because an excluded merge request is by definition absent from
-    /// it — this is the only way back for a decision that would otherwise be one-way.
+    /// it - this is the only way back for a decision that would otherwise be one-way.
     /// </remarks>
     public Task<List<PlanMembershipDto>> GetPlanMembershipAsync(Guid taskId, CancellationToken ct = default) =>
         GetAsync<List<PlanMembershipDto>>($"api/planning/tasks/{taskId}/membership", ct);
@@ -481,7 +481,7 @@ public class ApiService(HttpClient http)
         }
         catch
         {
-            // Not JSON, or an unexpected shape — fall through to the generic message.
+            // Not JSON, or an unexpected shape - fall through to the generic message.
         }
 
         return response.StatusCode switch

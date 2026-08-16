@@ -10,19 +10,19 @@ dependency injection**, not dynamic discovery or plugins.
 
 ### Why compile-time DI?
 
-- **Fail-fast** — an unknown provider type is caught when the API validates the operator's input, not at runtime.
-- **No reflection** — no scanning for attributes, no assembly loading.
-- **Clear dependencies** — the composition root lists every provider it registers.
-- **Pinned versions** — provider package versions live in `Directory.Packages.props`, not resolved at runtime.
+- **Fail-fast** - an unknown provider type is caught when the API validates the operator's input, not at runtime.
+- **No reflection** - no scanning for attributes, no assembly loading.
+- **Clear dependencies** - the composition root lists every provider it registers.
+- **Pinned versions** - provider package versions live in `Directory.Packages.props`, not resolved at runtime.
 
 ### The seam
 
 A provider is split into two ports so that binding to a connection can do I/O (detecting a
 self-hosted server's version) and still hand callers a ready-to-use object:
 
-- **`IVcsProviderAdapter` / `ITrackerProviderAdapter`** — keyed by the provider type stored on the
+- **`IVcsProviderAdapter` / `ITrackerProviderAdapter`** - keyed by the provider type stored on the
   connection. `ConnectAsync(context, ct)` binds to one connection and returns a provider.
-- **`IVcsProvider` / `ITrackerProvider`** — already bound to a connection; no method takes an API URL
+- **`IVcsProvider` / `ITrackerProvider`** - already bound to a connection; no method takes an API URL
   or token, because the instance already knows them.
 
 Keyed DI can resolve by key but cannot *enumerate* keys, so each provider also registers a **marker
@@ -34,7 +34,7 @@ writing it to the database.
 
 A connection carries provider-specific settings as an opaque bag (`ProviderSettingsJson` on the
 entity). The adapter declares what those settings are through `SettingsSchema`, and the admin form is
-rendered from that schema — nothing in the UI names a provider or a field.
+rendered from that schema - nothing in the UI names a provider or a field.
 
 ```csharp
 public enum ProviderSettingKind { Text = 0, Int = 1, Enum = 2, Regex = 3 }
@@ -86,7 +86,7 @@ public const string DefaultPattern = @"(?<![A-Za-z0-9])([A-Z][A-Z0-9]*-\d+)(?![A
 
 A VCS adapter adds `TaskLinkSettings.Schema` to its `SettingsSchema`, and the ingestion builds the
 rule with `TaskLinkSettings.RuleFrom(settings)` and applies it through
-`Core.Parsing.TaskKeyExtractor.Extract(source, pattern, branch, title, labels)` — one pure, tested,
+`Core.Parsing.TaskKeyExtractor.Extract(source, pattern, branch, title, labels)` - one pure, tested,
 single copy of the rule. The connection form previews the extracted key live.
 
 ## Adding a VCS provider
@@ -126,11 +126,11 @@ internal sealed class MyVcsProvider(HttpClient http, VcsProviderContext context,
 }
 ```
 
-The port is deliberately small — these are the calls the planner makes today. Normalize the vendor's
+The port is deliberately small - these are the calls the planner makes today. Normalize the vendor's
 state strings to `MergeRequestStatus`, and populate `VcsMergeRequest.Labels` /
 `VcsMergeRequest.PipelineStatus` so the readiness gate can read them.
 
-### 2. Register — push and/or poll are distinct types
+### 2. Register - push and/or poll are distinct types
 
 Push versus poll is a property of the provider *type*, not a per-connection toggle. A VCS that both
 pushes and can be polled registers two types, each with its `IngestionMode`:
@@ -167,8 +167,8 @@ new ProviderSettingSchema(VcsPollSettings.IntervalKey, "Poll interval (s)",
 
 ### 3. Own the webhook (push types only)
 
-A push provider owns everything vendor-specific about a delivery — payload shape, which header carries
-the secret, how a state string maps to a status — behind `IWebhookParser`. The host keeps only the
+A push provider owns everything vendor-specific about a delivery - payload shape, which header carries
+the secret, how a state string maps to a status - behind `IWebhookParser`. The host keeps only the
 route, secret resolution, and putting the resulting events on the bus.
 
 ```csharp
@@ -176,7 +176,7 @@ internal sealed class MyVcsWebhookParser : IWebhookParser
 {
     public WebhookEndpointDescriptor Descriptor => /* endpoint name + which header carries the secret */;
 
-    // Must fail closed and run in constant time — see WebhookSignatures.
+    // Must fail closed and run in constant time - see WebhookSignatures.
     public bool Authenticate(WebhookRequest request, string? secret) => /* verify */;
 
     // Empty is a normal answer (an event this provider does not model); throw
@@ -279,7 +279,7 @@ services.AddSingleton(new TrackerProviderRegistration(ProviderType));
 
 `VcsCapabilities` / `TrackerCapabilities` answer "what can *this connection* do", built once at
 `ConnectAsync` and read-only after. `VcsCapabilities.SupportsMergeRequestLabels` distinguishes an
-empty label set that means "no labels" from one that means "this install cannot report labels" — the
+empty label set that means "no labels" from one that means "this install cannot report labels" - the
 readiness gate must never read "cannot say" as "the label was removed". `ServerVersion` is detected
 once and cached; `null` means "unknown", never "old", and compares numerically, never as text
 ("16.11" is newer than "16.9").

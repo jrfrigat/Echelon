@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Application.DTOs;
 /// <param name="TargetBranch">Branch being merged into.</param>
 /// <param name="RepositoryId">The repository it belongs to.</param>
 /// <param name="TaskId">
-/// The task it was linked to, or null when no task is known yet — routinely the case, since a merge
+/// The task it was linked to, or null when no task is known yet - routinely the case, since a merge
 /// request often names a task that has not been imported.
 /// </param>
 /// <param name="Status">Where it stands, normalized across providers.</param>

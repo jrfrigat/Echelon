@@ -82,7 +82,7 @@ public sealed class GitLabVersionDetector(ILogger<GitLabVersionDetector> logger)
         catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
         {
             // Deliberately not rethrown: see the remarks on DetectAsync. A cancelled request is
-            // not caught here — that is the caller giving up, not the server being unreachable.
+            // not caught here - that is the caller giving up, not the server being unreachable.
             logger.LogWarning(
                 ex, "Could not read the version of the GitLab at {ApiUrl}; capabilities fall back to the "
                 + "conservative defaults.", apiUrl);

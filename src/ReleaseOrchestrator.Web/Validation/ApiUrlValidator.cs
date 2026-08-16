@@ -79,7 +79,7 @@ public static class ApiUrlValidator
             127 => true,                                  // 127.0.0.0/8
             172 => b[1] >= 16 && b[1] <= 31,              // 172.16.0.0/12
             192 => b[1] == 168,                           // 192.168.0.0/16
-            169 => b[1] == 254,                           // 169.254.0.0/16 — cloud metadata
+            169 => b[1] == 254,                           // 169.254.0.0/16 - cloud metadata
             0 => true,
             _ => false
         };

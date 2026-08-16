@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 /// its 365-day TTL notwithstanding). Surviving "perm:0:*" entries then became authoritative again
 /// and handed back permissions that had just been revoked. A content hash recomputes to the same
 /// value after an eviction and to a new one after a change, so losing the key costs three small
-/// reads and never correctness — the database, not Redis, is the source of truth.
+/// reads and never correctness - the database, not Redis, is the source of truth.
 /// </remarks>
 public static class PermissionVersionStore
 {

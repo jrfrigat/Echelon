@@ -34,7 +34,7 @@
             </form>
 
             @* Outside the form on purpose: a chip renders as a button, and a button inside a form
-               with no explicit type submits it — so clicking a signal to add it would have created
+               with no explicit type submits it - so clicking a signal to add it would have created
                the rule instead. It edits the field above rather than being a control of the form.
 
                The hint moved out of HelperText and under the row too: as a per-field helper it was
@@ -96,7 +96,7 @@
 <FlareDialog Visible="_showEdit" Title="@UiStrings.RR_Dialog_Edit" VisibleChanged="@(v => _showEdit = v)">
     <ChildContent>
         @* A form so Enter saves; the dialog's Save button lives in a separate fragment, so the hidden
-           submit is what Enter actually triggers. The picker stays outside it — its chips are buttons,
+           submit is what Enter actually triggers. The picker stays outside it - its chips are buttons,
            and a button in a form with no explicit type submits it, so clicking a signal would save. *@
         <form @onsubmit="SaveEdit" @onsubmit:preventDefault>
             <FlareStack Gap="FlareSpacing.Medium">
@@ -145,7 +145,7 @@
     async Task Create()
     {
         // Enter and the button are the same path now, and a keypress does not consult the button's
-        // disabled state — so both the guard and the emptiness check have to be here.
+        // disabled state - so both the guard and the emptiness check have to be here.
         if (_busy || string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_signals)) return;
 
         _busy = true;

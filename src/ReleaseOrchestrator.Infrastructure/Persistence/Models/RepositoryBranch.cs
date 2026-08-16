@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore;
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>
-/// A branch observed in a repository, and the task it names — the evidence that work for a task has
+/// A branch observed in a repository, and the task it names - the evidence that work for a task has
 /// started even when no merge request has been raised for it.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A plan is built from merge requests, so before this a task whose only artefact was a branch looked
-/// finished: nothing to deploy, nothing to wait for. That is exactly backwards — a branch with no
+/// finished: nothing to deploy, nothing to wait for. That is exactly backwards - a branch with no
 /// merge request is work in progress, and rolling out its parent while it is unlanded ships an
 /// incomplete change. This row is what lets the launch guard see that work.
 /// </para>
@@ -44,7 +44,7 @@ public class RepositoryBranch
 
     /// <summary>
     /// The task key the branch names, per the connection's linking rule, or null when it names none.
-    /// A branch that names no task blocks nothing — it cannot be attributed to any task's work.
+    /// A branch that names no task blocks nothing - it cannot be attributed to any task's work.
     /// </summary>
     [MaxLength(100)]
     public string? TaskExternalId { get; set; }

@@ -343,7 +343,7 @@ else
     /// </summary>
     /// <remarks>
     /// Recalculated here explicitly. The endpoint also asks for a rebuild, but that goes through the
-    /// queue and lands whenever it lands — and the plan is read from storage now, so without this the
+    /// queue and lands whenever it lands - and the plan is read from storage now, so without this the
     /// operator would press exclude and watch nothing happen.
     /// </remarks>
     async Task SetMembership(Guid mergeRequestId, string state)
@@ -365,7 +365,7 @@ else
 
     /// <summary>
     /// Keyed on the route parameter rather than on first render: the parent and subtask chips
-    /// navigate to another task, and Blazor reuses this component for that — OnInitializedAsync
+    /// navigate to another task, and Blazor reuses this component for that - OnInitializedAsync
     /// would not run again, leaving the previous task's plan on screen under the new URL.
     /// </summary>
     protected override async Task OnParametersSetAsync()
@@ -441,7 +441,7 @@ else
 
     void Back() => Nav.NavigateTo("/");
 
-    /// <summary>Opens another task — the parent, or one of the subtasks.</summary>
+    /// <summary>Opens another task - the parent, or one of the subtasks.</summary>
     void Open(Guid taskId) => Nav.NavigateTo($"/tasks/{taskId}");
 
     // Mirrors the server-side MergeRequestStatus enum, which the PWA does not reference.

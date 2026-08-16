@@ -15,8 +15,8 @@ namespace ReleaseOrchestrator.Infrastructure.Audit;
 /// <remarks>
 /// <para>
 /// Each source is queried separately and the results merged in memory. Not a single UNION query on
-/// purpose: the shapes differ, and the three providers in play — SQL Server, PostgreSQL and the
-/// SQLite the tests run on — each render a heterogeneous UNION differently, which would make the
+/// purpose: the shapes differ, and the three providers in play - SQL Server, PostgreSQL and the
+/// SQLite the tests run on - each render a heterogeneous UNION differently, which would make the
 /// tests prove something other than what production does.
 /// </para>
 /// <para>
@@ -293,7 +293,7 @@ public class TaskTimelineService(AppDbContext db, ArchiveDbContext archiveDb) : 
     /// <para>
     /// A version an operator asked for is never collapsed, even into an identical neighbour: "I
     /// pressed Recalculate and it changed nothing" is an answer somebody is looking for. A null hash
-    /// (a version built before the column existed) never collapses either — treating unknown as a
+    /// (a version built before the column existed) never collapses either - treating unknown as a
     /// value would group versions that may well have differed.
     /// </para>
     /// </remarks>

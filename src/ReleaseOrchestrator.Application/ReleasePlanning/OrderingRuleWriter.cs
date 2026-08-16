@@ -12,13 +12,13 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// Exists so the rules can be edited by clicking rather than typing. The visual editor does NOT
 /// become a second source of truth: it builds a model, this renders the document, and the document is
 /// what gets stored and what the planner reads. An editor that wrote to its own storage would put the
-/// installation's deploy order in two places that could disagree — which is the failure the whole
+/// installation's deploy order in two places that could disagree - which is the failure the whole
 /// document design exists to prevent.
 /// </para>
 /// <para>
 /// Only what is set is written. An empty group axis, a default type, an unset wait policy: none of
 /// them appear. A generated document should read like one a person would write, or nobody will edit
-/// it by hand again — and hand editing has to stay possible, because the language expresses things
+/// it by hand again - and hand editing has to stay possible, because the language expresses things
 /// (nested excludes, deep glob patterns) no reasonable form ever will.
 /// </para>
 /// <para>

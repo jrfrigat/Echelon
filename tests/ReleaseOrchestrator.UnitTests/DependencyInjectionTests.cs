@@ -13,8 +13,8 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests;
 
 /// <summary>
-/// Smoke tests for the composition root. Every dependency here is registered lazily —
-/// no database, broker or cache is contacted — so a constructor that asks for something
+/// Smoke tests for the composition root. Every dependency here is registered lazily -
+/// no database, broker or cache is contacted - so a constructor that asks for something
 /// nobody registered is caught in seconds instead of at the first webhook in production.
 /// </summary>
 public class DependencyInjectionTests
@@ -70,7 +70,7 @@ public class DependencyInjectionTests
     /// Worth its own test rather than trusting the coordination unit tests: Redis was a required
     /// setting read at the top of AddInfrastructure, so "runs without Redis" is a claim about
     /// every registration downstream of it, not only about which cache is bound. ValidateOnBuild
-    /// is what makes it a real check — it resolves every constructor rather than waiting for the
+    /// is what makes it a real check - it resolves every constructor rather than waiting for the
     /// first request to find one that still wants a multiplexer.
     /// </remarks>
     [Fact]
@@ -103,7 +103,7 @@ public class DependencyInjectionTests
     /// </summary>
     /// <remarks>
     /// It inspects the registration rather than resolving it, on purpose. Resolving the handler
-    /// pulls in the bus, and resolving the bus opens a real RabbitMQ connection — which, with the
+    /// pulls in the bus, and resolving the bus opens a real RabbitMQ connection - which, with the
     /// throwaway credentials this test uses, hangs on a retry loop before failing. The registration
     /// is what proves the handler is wired; the connection is not this test's concern.
     /// </remarks>
@@ -125,7 +125,7 @@ public class DependencyInjectionTests
     }
 
     /// <summary>
-    /// The provider factories are how anything reaches an external API now — the typed clients
+    /// The provider factories are how anything reaches an external API now - the typed clients
     /// they replaced were resolved directly, and were bound to concrete types nobody asked for,
     /// which left their timeout silently unapplied.
     /// </summary>
@@ -146,7 +146,7 @@ public class DependencyInjectionTests
     /// <remarks>
     /// Keyed services cannot be enumerated by key, so an adapter that is registered but not
     /// declared would resolve and still be invisible to the API's validation and to the
-    /// factory's error message — a gap nothing else would catch, since both paths would simply
+    /// factory's error message - a gap nothing else would catch, since both paths would simply
     /// report the provider as unknown.
     /// </remarks>
     [Theory]
@@ -179,7 +179,7 @@ public class DependencyInjectionTests
 
     /// <summary>
     /// An unknown provider type must fail by naming the alternatives, and must do so before the
-    /// connection's token is decrypted — the type is wrong, not the credentials.
+    /// connection's token is decrypted - the type is wrong, not the credentials.
     /// </summary>
     [Fact]
     public async Task UnknownVcsProviderFailsFastListingTheRegisteredOnes()
@@ -223,7 +223,7 @@ public class DependencyInjectionTests
             EncryptedAccessToken: []);
 
         // Only the lookup is under test. Binding goes on to fail on the empty token, which no
-        // data-protection stack reachable from a unit test can decrypt — so the assertion is the
+        // data-protection stack reachable from a unit test can decrypt - so the assertion is the
         // narrow one that can be made honestly: whatever went wrong, it was not "unknown
         // provider". Asserting "throws something" would pass on the very failure this rules out.
         var exception = await Record.ExceptionAsync(

@@ -41,7 +41,7 @@ public class TrackerConnection
     /// needs none.
     /// </summary>
     /// <remarks>
-    /// This column used to be <c>OrgId</c> — an organization identifier that only Yandex.Tracker
+    /// This column used to be <c>OrgId</c> - an organization identifier that only Yandex.Tracker
     /// has. A named column for one vendor's concept means the domain describes that vendor rather
     /// than "a tracker", and the next provider needing its own field would have added a second
     /// such column. The adapter parses this into its own typed options and validates what it

@@ -160,7 +160,7 @@ public class TrackerConnectionsController(
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
             return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
 
-        // The provider type is the stored one — this endpoint cannot change it. A connection whose
+        // The provider type is the stored one - this endpoint cannot change it. A connection whose
         // provider is no longer registered is refused rather than saved against an empty schema,
         // which would silently discard settings the absent adapter still needs.
         if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
@@ -181,7 +181,7 @@ public class TrackerConnectionsController(
         entity.ApiUrl = req.ApiUrl;
         entity.ProviderSettingsJson = settingsJson;
 
-        // Blank keeps the stored token — see the UI's "leave blank to keep current".
+        // Blank keeps the stored token - see the UI's "leave blank to keep current".
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
             entity.EncryptedAccessToken = protector.Protect(req.AccessToken);
 
@@ -215,7 +215,7 @@ public class TrackerConnectionsController(
 /// <param name="AccessToken">The credential, stored encrypted and never returned.</param>
 /// <param name="Settings">
 /// Provider-specific settings, keyed as the chosen provider's schema declares them. Validated
-/// against that schema — an undeclared key is refused rather than stored and ignored.
+/// against that schema - an undeclared key is refused rather than stored and ignored.
 /// </param>
 public record CreateTrackerConnectionRequest(
     [Required, MaxLength(200)] string Name,
@@ -229,7 +229,7 @@ public record CreateTrackerConnectionRequest(
 /// <param name="ApiUrl">The tracker's API root. Must resolve to an allowed host.</param>
 /// <param name="Settings">
 /// Provider-specific settings. A blank value clears the setting, except for one the schema marks
-/// secret, where blank keeps what is stored — the form cannot show a secret back, so an empty box
+/// secret, where blank keeps what is stored - the form cannot show a secret back, so an empty box
 /// there means "untouched", the same convention <paramref name="AccessToken"/> uses.
 /// </param>
 /// <param name="AccessToken">Blank keeps the stored token.</param>

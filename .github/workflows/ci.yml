@@ -66,7 +66,7 @@ jobs:
       # a warning locally (see Directory.Build.props). CI has network, so this is where it must
       # actually bite.
       #
-      # `dotnet list package --vulnerable` exits 0 even when it finds something — the flag reports,
+      # `dotnet list package --vulnerable` exits 0 even when it finds something - the flag reports,
       # it does not gate. The output has to be inspected, or the step passes while shipping a known
       # CVE. This is exactly how System.Security.Cryptography.Xml 9.0.5 (two high-severity
       # advisories, reached through DataProtection, which encrypts the VCS tokens) went unnoticed.
@@ -77,7 +77,7 @@ jobs:
           dotnet list ReleaseOrchestrator.slnx package --vulnerable --include-transitive \
             | tee audit.txt
           if grep -qiE '\b(Critical|High|Moderate|Low)\b' audit.txt; then
-            echo "::error::Vulnerable packages found — see the table above."
+            echo "::error::Vulnerable packages found - see the table above."
             exit 1
           fi
           echo "No vulnerable packages."
@@ -98,7 +98,7 @@ jobs:
         run: dotnet tool install --global dotnet-ef
 
       # Editing an entity without adding a migration compiles, tests green, and then fails at
-      # deployment against a schema that does not match — or worse, does not fail, and the column
+      # deployment against a schema that does not match - or worse, does not fail, and the column
       # is quietly missing. No database needed: this compares the model to the snapshot.
       #
       # Both providers, because a migration is per-provider: adding a column and remembering only

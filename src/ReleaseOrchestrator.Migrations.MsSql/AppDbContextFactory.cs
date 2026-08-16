@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql;
 /// <summary>
 /// Design-time connection for `dotnet ef`, taken from the environment. This used to be a
 /// hard-coded localhost string carrying a shared dev password, so the tooling could not be
-/// pointed at CI or staging without editing source — and the password shipped in git.
+/// pointed at CI or staging without editing source - and the password shipped in git.
 ///
 /// `migrations add` never opens a connection, so the LocalDB fallback suffices for authoring.
 /// `database update` does connect: set the variable then.
@@ -36,7 +36,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
 /// <summary>
 /// The archive database gets real migrations too. It was created with EnsureCreated, which
-/// bypasses the migrations history entirely and leaves the schema with no way to evolve —
+/// bypasses the migrations history entirely and leaves the schema with no way to evolve -
 /// unworkable for a store the README expects to hold two years of history.
 /// </summary>
 public class ArchiveDbContextFactory : IDesignTimeDbContextFactory<ArchiveDbContext>

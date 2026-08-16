@@ -7,10 +7,10 @@ namespace ReleaseOrchestrator.Core.Parsing;
 /// </summary>
 /// <remarks>
 /// What remains here operates only on values the domain owns. Translating a provider's raw state
-/// string — GitLab's <c>opened</c>/<c>merged</c>/<c>closed</c> — used to live here too, which put
+/// string - GitLab's <c>opened</c>/<c>merged</c>/<c>closed</c> - used to live here too, which put
 /// one vendor's vocabulary in the domain; that mapping now belongs to each VCS adapter, which hands
 /// back a <see cref="MergeRequestStatus"/> already resolved. A coarse "ready-for-deploy label"
-/// promotion lived here as well; it is gone — deploy readiness is a per-environment rule over signals
+/// promotion lived here as well; it is gone - deploy readiness is a per-environment rule over signals
 /// (<see cref="ReadinessSignals"/>, <see cref="ReadinessResolver"/>), not a single label promoting a
 /// merge request to a status.
 /// </remarks>

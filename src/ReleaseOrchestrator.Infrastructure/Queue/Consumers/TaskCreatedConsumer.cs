@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// </summary>
 /// <remarks>
 /// The observation carries the title and status but not the issue's links, and the links are the
-/// only thing that orders a plan — so this always follows up with a <see cref="TaskSyncRequested"/>
+/// only thing that orders a plan - so this always follows up with a <see cref="TaskSyncRequested"/>
 /// rather than treating the event as complete on its own.
 /// </remarks>
 public class TaskCreatedConsumer(
@@ -67,7 +67,7 @@ public class TaskCreatedConsumer(
         await db.SaveChangesAsync(ct);
 
         // The webhook carries the title and status but not the issue's links, and the links are
-        // the only thing that orders the plan — so they have to be pulled.
+        // the only thing that orders the plan - so they have to be pulled.
         await bus.Send(
             new TaskSyncRequested(msg.TrackerConnectionName, msg.ExternalId, "Task created"));
     }

@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers.GitLab;
 /// <remarks>
 /// The date cases are the reason this file exists. GitLab stamps an offset
 /// (<c>2026-07-17T10:00:00.000+03:00</c>), and binding that to a <see cref="DateTime"/> yields
-/// <see cref="DateTimeKind.Local"/> — which SQL Server stores without complaint at the wrong instant
+/// <see cref="DateTimeKind.Local"/> - which SQL Server stores without complaint at the wrong instant
 /// whenever the host is not on UTC, and which Npgsql refuses outright because it maps
 /// <see cref="DateTime"/> to <c>timestamptz</c> and writes only <c>Kind=Utc</c>. So the defect is
 /// invisible until the second database runs, and no existing test could have seen it: the adapter

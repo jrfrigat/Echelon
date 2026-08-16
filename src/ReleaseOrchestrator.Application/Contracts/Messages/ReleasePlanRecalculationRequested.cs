@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 /// </summary>
 /// <remarks>
 /// Sent by any ingestion path that changed something a plan is derived from, rather than by each
-/// path working out which plans it affected — a merge request moving can reorder the plan of any
+/// path working out which plans it affected - a merge request moving can reorder the plan of any
 /// task whose closure reaches it, and that is not knowable from the event. Deliberately not
 /// deduplicated: two events that each changed the atlas both need the rebuild.
 /// </remarks>

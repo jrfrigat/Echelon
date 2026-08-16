@@ -28,13 +28,13 @@ public class TaskReconciliationOptions
 /// Periodically asks for open tasks to be re-read from their tracker.
 ///
 /// Dependency links are what order the plan, and trackers do not raise an event when a link is
-/// added or removed — a status webhook only says the status changed. So an edge added in the
+/// added or removed - a status webhook only says the status changed. So an edge added in the
 /// tracker would never reach us until something unrelated happened to touch that task. Event
 /// handling covers the common path; this covers the rest.
 /// </summary>
 /// <remarks>
 /// Registered in every replica but gated on a lease, so one pass runs per interval across the
-/// deployment rather than one per replica — the tracker's API is the scarce resource here, and N
+/// deployment rather than one per replica - the tracker's API is the scarce resource here, and N
 /// replicas asking it about the same tasks N times bought nothing.
 /// </remarks>
 public class TaskReconciliationService(

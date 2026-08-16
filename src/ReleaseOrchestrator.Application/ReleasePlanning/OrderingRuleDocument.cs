@@ -31,7 +31,7 @@ public sealed record OrderingRuleParseResult(OrderingRules? Rules, IReadOnlyList
 /// <para>
 /// Scalars are read as their literal text and converted here, which is deliberate. YAML's own
 /// implicit typing is where <c>no</c> becomes <c>false</c> and <c>NO</c> becomes a boolean while
-/// <c>No</c> may not — the "Norway problem". Reading the text and accepting only <c>true</c>/
+/// <c>No</c> may not - the "Norway problem". Reading the text and accepting only <c>true</c>/
 /// <c>false</c> means an ambiguous value is rejected with a message instead of silently becoming
 /// something the author did not write.
 /// </para>
@@ -386,7 +386,7 @@ public static class OrderingRuleDocument
     /// </summary>
     /// <remarks>
     /// Deliberately narrower than YAML's implicit typing, which also reads <c>yes</c>, <c>on</c> and
-    /// — famously — <c>no</c> as booleans, with the exact set depending on the YAML version. On a
+    /// - famously - <c>no</c> as booleans, with the exact set depending on the YAML version. On a
     /// switch that decides whether a rollout waits for its subtasks, an ambiguous spelling is better
     /// refused than resolved by a rule nobody remembers.
     /// </remarks>

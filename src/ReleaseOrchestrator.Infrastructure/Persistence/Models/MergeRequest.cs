@@ -53,7 +53,7 @@ public class MergeRequest
     public string? TaskExternalId { get; set; }
 
     /// <summary>
-    /// Where it stands. Stored as text — see <see cref="AppDbContext.OnModelCreating"/>, which is
+    /// Where it stands. Stored as text - see <see cref="AppDbContext.OnModelCreating"/>, which is
     /// also the only mapping here that no attribute can express.
     /// </summary>
     public MergeRequestStatus Status { get; set; }
@@ -87,7 +87,7 @@ public class MergeRequest
     /// them. Kept as one canonical string rather than a child table on purpose: the gate loads the
     /// merge request and checks its labels in memory (<see cref="Core.Parsing.ReadinessResolver"/>),
     /// nothing needs a per-label SQL query, and a plain column is copied by archiving and pruned by
-    /// deletion for free — a child table would need a cascade the archive's direct delete does not run.
+    /// deletion for free - a child table would need a cascade the archive's direct delete does not run.
     /// </para>
     /// <para>
     /// Overwritten in place on each observation, so the transitions live in
@@ -105,8 +105,8 @@ public class MergeRequest
     /// </summary>
     /// <remarks>
     /// The other readiness signal a rule can require (<c>pipeline:success</c>). Stored like
-    /// <see cref="Labels"/> and for the same reason — the gate reads it at launch, long after the
-    /// observation — and populated only by the API-reading paths (reconcile and poll), since a
+    /// <see cref="Labels"/> and for the same reason - the gate reads it at launch, long after the
+    /// observation - and populated only by the API-reading paths (reconcile and poll), since a
     /// merge-request webhook does not carry pipeline status; null there is "no information", never a
     /// reason to clear a result already known. See <see cref="Core.Parsing.ReadinessSignals"/>.
     /// </remarks>

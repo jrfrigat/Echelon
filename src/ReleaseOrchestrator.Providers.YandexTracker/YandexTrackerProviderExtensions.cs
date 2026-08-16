@@ -21,7 +21,7 @@ public static class YandexTrackerProviderExtensions
     /// Yandex.Tracker is two provider types, not one with a push/poll toggle: <see cref="WebhookProviderType"/>
     /// receives task webhooks (and is reconciled), while <see cref="PollProviderType"/> receives no webhook
     /// and is only re-read by the reconciliation pass. Both share one API read adapter and one settings
-    /// schema — only ingestion differs.
+    /// schema - only ingestion differs.
     /// </remarks>
     public const string WebhookProviderType = "yandextracker-webhook";
 

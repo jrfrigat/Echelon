@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 /// </summary>
 /// <remarks>
 /// <para>
-/// One named purpose, <c>ConnectionTokens.v1</c>, shared by every caller — a token encrypted under
+/// One named purpose, <c>ConnectionTokens.v1</c>, shared by every caller - a token encrypted under
 /// one purpose cannot be decrypted under another, so changing the string here makes every stored
 /// credential unreadable. The <c>.v1</c> suffix exists so a future rotation can be a new purpose
 /// alongside this one rather than a silent break.
@@ -32,7 +32,7 @@ public class TokenProtector(IDataProtectionProvider provider)
     /// <param name="ciphertext">What <see cref="Protect"/> produced.</param>
     /// <returns>The credential.</returns>
     /// <exception cref="System.Security.Cryptography.CryptographicException">
-    /// The payload was written under a different purpose or a key ring this process cannot read —
+    /// The payload was written under a different purpose or a key ring this process cannot read -
     /// in practice, a key ring that was not persisted or not shared between replicas.
     /// </exception>
     public string Unprotect(byte[] ciphertext) =>

@@ -12,8 +12,8 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.Queue;
 
 /// <summary>
-/// The front door: every merge request enters the system here, and what this handler decides —
-/// deployable or not, linked to a task or not — is what the planner later orders.
+/// The front door: every merge request enters the system here, and what this handler decides -
+/// deployable or not, linked to a task or not - is what the planner later orders.
 /// </summary>
 /// <remarks>
 /// MergeRequestStatusResolverTests already cover the label rule itself. These cover what the
@@ -134,7 +134,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     [Fact]
     public async Task AnUnknownRepositoryIsIgnoredRatherThanFaulted()
     {
-        // Redelivering will not conjure a repository, so this must not throw — but it must also
+        // Redelivering will not conjure a repository, so this must not throw - but it must also
         // not invent one.
         var exception = await Record.ExceptionAsync(() => OpenAsync(repositoryExternalId: "group/never-configured"));
 
@@ -246,7 +246,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// A merge is final in GitLab: it cannot be reopened. So an "opened" delivery for a merge request
-    /// we already hold as Merged is a stale, out-of-order event from before the merge, not a reopen —
+    /// we already hold as Merged is a stale, out-of-order event from before the merge, not a reopen -
     /// honouring it would resurrect a deployed MR back into the plan. It must be ignored.
     /// </summary>
     [Fact]
@@ -340,7 +340,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     /// <summary>
     /// Issue keys are a per-tracker namespace: two trackers can both hold PROJ-1. Linking to
     /// whichever row came back first would order the deploy by a dependency from an unrelated
-    /// system — a missing link costs ordering, a wrong link corrupts it.
+    /// system - a missing link costs ordering, a wrong link corrupts it.
     /// </summary>
     [Fact]
     public async Task AnAmbiguousKeyLinksNothingRatherThanGuessing()
@@ -354,7 +354,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         };
         _db.TrackerConnections.Add(other);
 
-        // No tracker on the repository, so the key can only be matched globally — and it is not unique.
+        // No tracker on the repository, so the key can only be matched globally - and it is not unique.
         AddRepository(trackerConnectionId: null);
         AddTask("TASK-1", _tracker.Id);
         AddTask("TASK-1", other.Id);
@@ -393,7 +393,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
     /// <summary>
     /// Requested unconditionally, including when the merge request already existed. Returning early
     /// on "exists" meant a redelivery after a crash stored the MR but never replanned it, and a
-    /// label change never reached the plan at all — the plan silently lagging the data.
+    /// label change never reached the plan at all - the plan silently lagging the data.
     /// </summary>
     [Fact]
     public async Task EveryEventAsksForAReplanIncludingOnesThatChangedNothing()
@@ -413,7 +413,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         _db.MergeRequestLabelChanges.AsNoTracking().OrderBy(c => c.At).ToListAsync(Ct);
 
     /// <summary>
-    /// The full label set is stored in canonical form — lower-cased, de-duplicated, sorted — which is
+    /// The full label set is stored in canonical form - lower-cased, de-duplicated, sorted - which is
     /// the form the readiness gate compares against, and a change is journalled from empty.
     /// </summary>
     [Fact]
@@ -440,7 +440,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         await OpenAsync(labels: ["qa"]);
-        // Different spelling, same canonical set — must still be a no-op.
+        // Different spelling, same canonical set - must still be a no-op.
         await OpenAsync(labels: ["QA"]);
 
         Assert.Single(await LabelRowsAsync());
@@ -479,7 +479,7 @@ public sealed class MrOpenedConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// A stale opened event for an already-merged merge request does not rewrite its labels, exactly
-    /// as it does not rewrite its status — both live behind the same guard.
+    /// as it does not rewrite its status - both live behind the same guard.
     /// </summary>
     [Fact]
     public async Task AStaleOpenedEventDoesNotRewriteMergedLabels()

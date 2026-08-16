@@ -10,13 +10,13 @@ namespace ReleaseOrchestrator.Core.Parsing;
 /// <para>
 /// Pure, and in Core with the other parsing rules, for the same reason as <see cref="LabelSet"/>: the
 /// rule that decides which task a merge request belongs to must be exercisable without a database, and
-/// it must be the single copy. Two copies of the old branch parser once disagreed — one did not
-/// understand <c>S3-42</c>, the other <c>X-1</c> — so the same merge request linked to different tasks
+/// it must be the single copy. Two copies of the old branch parser once disagreed - one did not
+/// understand <c>S3-42</c>, the other <c>X-1</c> - so the same merge request linked to different tasks
 /// by which path imported it. This replaces that provider-owned dialect with one configurable rule.
 /// </para>
 /// <para>
 /// The pattern is a regex the operator sets; its first capture group is the key, or the whole match
-/// when it has no group. An unparsable or non-matching pattern links nothing rather than throwing —
+/// when it has no group. An unparsable or non-matching pattern links nothing rather than throwing -
 /// the pattern is validated when the connection is saved, so this guards only the hot path.
 /// </para>
 /// </remarks>

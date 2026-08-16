@@ -9,7 +9,7 @@ RUN apt-get update \
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src
 # Central Package Management: the versions live in Directory.Packages.props at the repo root, so the
-# build context is the root (not src/), and these must be restored before any csproj — without them
+# build context is the root (not src/), and these must be restored before any csproj - without them
 # every PackageReference is version-less and restore fails. global.json pins the SDK to match.
 COPY Directory.Build.props Directory.Packages.props global.json ./
 COPY src/ ./

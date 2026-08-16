@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Pwa.Services;
 /// <summary>
 /// Owns the UI culture: resolves it at startup, switches it on demand and remembers the choice.
 ///
-/// Blazor WebAssembly has no request to carry a culture, so nothing sets one for us — the culture
+/// Blazor WebAssembly has no request to carry a culture, so nothing sets one for us - the culture
 /// is process-wide state this service assigns before the first render. The saved choice lives in
 /// localStorage rather than a cookie: an installed PWA has to come back up in the user's language
 /// with no server round-trip.
@@ -31,7 +31,7 @@ public sealed class LanguageService(IJSRuntime js)
 
     /// <summary>
     /// Applies the culture the user last chose, else the browser's, else English. Must run before
-    /// the first render — switching after one leaves already-painted strings in the old language.
+    /// the first render - switching after one leaves already-painted strings in the old language.
     /// </summary>
     public async Task InitializeCultureAsync()
     {

@@ -4,7 +4,7 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 
 /// <summary>
 /// The ordering rule document, as a model. One-to-one with the YAML in
-/// docs/issues/012-ordering-rules.md — the text is a thin mapping onto this, and this is what
+/// docs/issues/012-ordering-rules.md - the text is a thin mapping onto this, and this is what
 /// decides what the document means.
 /// </summary>
 /// <param name="Version">Schema version; only <c>1</c> exists.</param>
@@ -52,13 +52,13 @@ public sealed record TaskPolicyOverride(
 /// A selector over discovered work. Axes combine with AND; values within an axis with OR.
 /// </summary>
 /// <remarks>
-/// Selectors rather than a list of units because the units are not authored — tasks, merge requests
+/// Selectors rather than a list of units because the units are not authored - tasks, merge requests
 /// and branches arrive from connectors and change on every ingestion event, so anything enumerated in
 /// a document is stale by the next webhook.
 /// </remarks>
 /// <param name="Connectors">Connection names; glob.</param>
 /// <param name="Repositories">Repository external ids such as <c>group/project</c>; glob.</param>
-/// <param name="Branches">Branch names — a merge request's source branch; glob.</param>
+/// <param name="Branches">Branch names - a merge request's source branch; glob.</param>
 /// <param name="TaskKeys">Task keys; glob.</param>
 /// <param name="Labels">Labels a merge request carries; exact, since a label is an identifier.</param>
 /// <param name="Exclude">A nested selector subtracted from this one, or null.</param>
@@ -70,7 +70,7 @@ public sealed record WorkSelector(
     IReadOnlyList<string> Labels,
     WorkSelector? Exclude = null)
 {
-    /// <summary>A selector with no axes set. Matches everything — used only as a base to build on.</summary>
+    /// <summary>A selector with no axes set. Matches everything - used only as a base to build on.</summary>
     public static WorkSelector Any { get; } = new([], [], [], [], []);
 
     /// <summary>True when no axis is set, which is what makes a selector match everything.</summary>

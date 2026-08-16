@@ -13,8 +13,8 @@ namespace ReleaseOrchestrator.Web.HealthChecks;
 /// </summary>
 /// <remarks>
 /// Reachable is not the same as usable, and this used to check only the first. An instance pointed
-/// at a database with no schema — a fresh deployment that did not migrate, or one upgraded ahead of
-/// its database — connected fine, reported itself ready, took traffic, and answered every data
+/// at a database with no schema - a fresh deployment that did not migrate, or one upgraded ahead of
+/// its database - connected fine, reported itself ready, took traffic, and answered every data
 /// request with a 500. Verified against a live PostgreSQL: the app came up Healthy on an empty
 /// database. Pending migrations are therefore part of the readiness answer.
 /// </remarks>
@@ -76,7 +76,7 @@ public class ArchiveDatabaseHealthCheck(ArchiveDbContext db) : IHealthCheck
 /// Named for the port rather than for Redis: the backend is configuration
 /// (<c>Coordination:Provider</c>), and a check called "redis" would be a lie on a single-instance
 /// deployment that has no Redis. Under <c>memory</c> it is a process-local dictionary and this
-/// passes trivially — which is the honest answer, since a cache inside the process is reachable
+/// passes trivially - which is the honest answer, since a cache inside the process is reachable
 /// exactly when the process is.
 /// </remarks>
 public class CoordinationHealthCheck(IDistributedCache cache) : IHealthCheck

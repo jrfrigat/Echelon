@@ -139,7 +139,7 @@
     <value>MR is already {0}; its status is final.</value>
   </data>
   <data name="Mr_StatusRetired" xml:space="preserve">
-    <value>'{0}' is a retired status and no longer means anything. Whether a merge request may deploy is decided by the target environment's readiness rule — pin it ready for that environment instead.</value>
+    <value>'{0}' is a retired status and no longer means anything. Whether a merge request may deploy is decided by the target environment's readiness rule - pin it ready for that environment instead.</value>
   </data>
   <data name="Mr_NotFound" xml:space="preserve">
     <value>Merge request {0} not found.</value>
@@ -151,7 +151,7 @@
     <value>Group '{0}' already holds '{1}'.</value>
   </data>
   <data name="Perm_UserIdMustBeOid" xml:space="preserve">
-    <value>userId must be the Entra ID object id (oid) — a GUID.</value>
+    <value>userId must be the Entra ID object id (oid) - a GUID.</value>
   </data>
   <data name="Perm_UserAlreadyHolds" xml:space="preserve">
     <value>User '{0}' already holds '{1}'.</value>

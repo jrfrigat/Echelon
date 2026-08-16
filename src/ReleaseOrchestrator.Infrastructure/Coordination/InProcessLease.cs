@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Infrastructure.Coordination;
 /// <para>
 /// Not a stub. <see cref="IDistributedLease"/> exists so that background work registered in every
 /// replica runs once per pass rather than N times; with one replica, "once across every replica"
-/// and "once in this process" are the same statement, and this implements it exactly — including
+/// and "once in this process" are the same statement, and this implements it exactly - including
 /// the part that matters, which is refusing a second caller while the first still holds it.
 /// </para>
 /// <para>

@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Tracker;
 /// Reads tasks and their dependency links from a tracker into the local model.
 ///
 /// This is the only source of TaskDependency rows, and therefore of every task edge in the
-/// release plan. It used to be unreachable — registered in DI and injected nowhere — so the
+/// release plan. It used to be unreachable - registered in DI and injected nowhere - so the
 /// table stayed empty and plans were ordered by stack links alone.
 /// </summary>
 /// <remarks>
@@ -53,13 +53,13 @@ public class TrackerService(
     /// <summary>
     /// Points the task at its parent, or clears the link when the tracker no longer reports one.
     /// </summary>
-    /// <returns>True when the parent actually changed — the caller only replans then.</returns>
+    /// <returns>True when the parent actually changed - the caller only replans then.</returns>
     /// <remarks>
     /// Deliberately here and not in <see cref="UpsertTaskAsync"/>. Resolving a parent may fetch it,
     /// and fetching goes through the same upsert: setting the parent there would make every fetch
     /// resolve its own parent in turn, walking the hierarchy to its root on every sync and never
     /// terminating at all if a tracker reports a cycle. The fetch stays shallow, exactly as it does
-    /// for prerequisites — a fetched parent gets its own parent when it is itself synced.
+    /// for prerequisites - a fetched parent gets its own parent when it is itself synced.
     ///
     /// A hierarchy cycle a tracker does report is not fatal downstream: the closure builder expands
     /// each task once and the planner breaks cycles and records the conflict, so it degrades to a
@@ -99,7 +99,7 @@ public class TrackerService(
     {
         // The "can this provider do it at all" question, answered by the type system rather than
         // by making the call and reading the failure. A tracker with no link model returns no
-        // edges, which is indistinguishable from an issue that has none — so the difference has
+        // edges, which is indistinguishable from an issue that has none - so the difference has
         // to be visible before the call, not after.
         if (provider is not ITrackerDependencySource source)
         {
@@ -114,8 +114,8 @@ public class TrackerService(
 
     /// <param name="origin">
     /// How this task came to be stored, recorded on insert. Required rather than defaulted: the two
-    /// callers mean genuinely different things — one is a task being synced in its own right, the
-    /// other is a task pulled in only because something else referenced it — and a default would let
+    /// callers mean genuinely different things - one is a task being synced in its own right, the
+    /// other is a task pulled in only because something else referenced it - and a default would let
     /// the second silently inherit the first's story.
     /// </param>
     private async Task<TaskItem> UpsertTaskAsync(
@@ -141,7 +141,7 @@ public class TrackerService(
         task.Status = info.StatusKey;
         // Derived from the status rather than trusted from ResolvedAt: a tracker can report a
         // resolution time for a status we do not treat as closed, and archiving keys off this.
-        // The provider owns which statuses are closed — the set is its vocabulary, not ours.
+        // The provider owns which statuses are closed - the set is its vocabulary, not ours.
         task.ClosedAt = provider.IsClosedStatus(info.StatusKey)
             ? info.ResolvedAt ?? clock.GetUtcNow().UtcDateTime
             : null;
@@ -151,7 +151,7 @@ public class TrackerService(
         return task;
     }
 
-    /// <returns>True when the set of edges actually changed — the caller only replans then.</returns>
+    /// <returns>True when the set of edges actually changed - the caller only replans then.</returns>
     private async Task<bool> ReplaceDependenciesAsync(
         TrackerConnection conn,
         ITrackerProvider provider,
@@ -177,7 +177,7 @@ public class TrackerService(
 
         // Diff instead of delete-all-then-reinsert: rewriting every row on every sync churns the
         // table and, on a failure between the two steps, leaves the task with no dependencies at
-        // all — silently dropping ordering constraints that do exist.
+        // all - silently dropping ordering constraints that do exist.
         var toRemove = existing.Where(d => !wantedIds.Contains(d.DependsOnTaskId)).ToList();
         var toAdd = wantedIds.Where(id => !existingIds.Contains(id)).ToList();
 
@@ -199,15 +199,15 @@ public class TrackerService(
     }
 
     /// <summary>
-    /// Finds a referenced task — a prerequisite or a parent — fetching it from the tracker if it is
+    /// Finds a referenced task - a prerequisite or a parent - fetching it from the tracker if it is
     /// not stored yet.
     ///
-    /// Skipping an unknown reference — as this used to — loses the edge permanently: nothing
+    /// Skipping an unknown reference - as this used to - loses the edge permanently: nothing
     /// revisits the referring task once the other appears, so the plan silently omits a
     /// constraint that the tracker states. Sync order is not something we control, so a task
     /// referencing one we have not imported yet is ordinary, not exceptional.
     ///
-    /// The fetch is deliberately shallow — the fetched task's own links and parent are left to its
+    /// The fetch is deliberately shallow - the fetched task's own links and parent are left to its
     /// own sync, which bounds this at one extra call per edge instead of walking the graph.
     /// </summary>
     private async Task<Guid?> ResolveOrFetchTaskAsync(TrackerConnection conn, ITrackerProvider provider, string key, CancellationToken ct)

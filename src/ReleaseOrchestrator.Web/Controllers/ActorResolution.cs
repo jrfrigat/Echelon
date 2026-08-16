@@ -36,7 +36,7 @@ public static class ActorResolution
     /// </returns>
     /// <remarks>
     /// The service check runs first, and it is not cosmetic. Nothing in this service validates
-    /// scopes — there is no <c>RequiredScope</c> and no token-validated hook anywhere — and an app
+    /// scopes - there is no <c>RequiredScope</c> and no token-validated hook anywhere - and an app
     /// registration can be granted a permission through the user-override endpoint like any user.
     /// Without this branch a CI pipeline's client-credential token resolves an object id like
     /// anyone else and a deploy to production is attributed to a person who was asleep.

@@ -10,7 +10,7 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 /// <remarks>
 /// A thin wrapper over the shared <see cref="GitLabProviderAdapter"/>: the API behaviour is identical
 /// to the poll type, so only the provider type and the settings differ. This type declares no extra
-/// settings — the webhook shared secret is configuration of the ingress host, not of the connection.
+/// settings - the webhook shared secret is configuration of the ingress host, not of the connection.
 /// </remarks>
 internal sealed class GitLabWebhookProviderAdapter(GitLabProviderAdapter inner) : IVcsProviderAdapter
 {
@@ -29,7 +29,7 @@ internal sealed class GitLabWebhookProviderAdapter(GitLabProviderAdapter inner) 
 /// </summary>
 /// <remarks>
 /// The sibling of <see cref="GitLabWebhookProviderAdapter"/> over the same shared connect logic. It
-/// declares the one setting polling needs — the interval — under the neutral
+/// declares the one setting polling needs - the interval - under the neutral
 /// <see cref="VcsPollSettings.IntervalKey"/>, so the poller reads it without knowing this is GitLab.
 /// </remarks>
 internal sealed class GitLabPollProviderAdapter(GitLabProviderAdapter inner) : IVcsProviderAdapter

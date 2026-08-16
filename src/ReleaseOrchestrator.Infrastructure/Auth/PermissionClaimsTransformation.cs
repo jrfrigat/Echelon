@@ -10,7 +10,7 @@ using ReleaseOrchestrator.Infrastructure.Persistence;
 namespace ReleaseOrchestrator.Infrastructure.Auth;
 
 /// <summary>
-/// Turns the stored grants — the caller's group mappings plus their personal overrides — into the
+/// Turns the stored grants - the caller's group mappings plus their personal overrides - into the
 /// <c>permission</c> claims <see cref="PermissionAuthorizationHandler"/> checks.
 /// </summary>
 /// <remarks>
@@ -63,7 +63,7 @@ public class PermissionClaimsTransformation(
     private async Task<IReadOnlyList<string>> ResolvePermissionsAsync(ClaimsPrincipal principal)
     {
         // Fail closed. An unresolvable subject used to fall back to "", collapsing the key to
-        // "perm:{version}:" — one entry shared by everybody in that state. The entry holds the
+        // "perm:{version}:" - one entry shared by everybody in that state. The entry holds the
         // permissions computed from the first such caller's groups, so an admin-group member
         // populated it and every subject without an object id inherited their rights until it aged out.
         if (!UserIdentifier.TryResolve(principal, out var userId))
@@ -74,7 +74,7 @@ public class PermissionClaimsTransformation(
         }
 
         // Bootstrap escape hatch. Permissions live in the database and are granted through
-        // config.edit — which nobody can hold on a fresh install, because granting it needs
+        // config.edit - which nobody can hold on a fresh install, because granting it needs
         // config.edit. Without this the deployment is unusable and the only way in is hand-
         // editing the database. It is not a privilege boundary: whoever sets this variable
         // already owns the connection string.
@@ -82,7 +82,7 @@ public class PermissionClaimsTransformation(
         {
             logger.LogWarning(
                 "User {UserId} is granted every permission by Authorization:BootstrapAdminObjectIds. "
-                + "This is a bootstrap-only setting — grant the permissions properly and remove it.",
+                + "This is a bootstrap-only setting - grant the permissions properly and remove it.",
                 userId);
             return [Permissions.ConfigEdit, Permissions.ReleasePlanApprove, Permissions.ReleasePlanView, Permissions.ReleaseExecute];
         }
@@ -95,8 +95,8 @@ public class PermissionClaimsTransformation(
 
             // Groups are an input to the result, so they belong in the key. Keyed on the user alone,
             // a result computed from one set of groups was replayed for the same user presenting a
-            // different set — a token issued without the groups claim, a groups overage, or plain
-            // membership churn — for the rest of the TTL.
+            // different set - a token issued without the groups claim, a groups overage, or plain
+            // membership churn - for the rest of the TTL.
             var cacheKey = $"perm:{version}:{userId}:{StableHash.Of(groupSids)}";
 
             var cached = await cache.GetStringAsync(cacheKey);

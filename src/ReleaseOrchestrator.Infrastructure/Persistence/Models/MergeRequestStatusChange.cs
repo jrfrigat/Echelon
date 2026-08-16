@@ -5,13 +5,13 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>
 /// One recorded transition of a merge request's status: what it was, what it became, what caused it,
-/// and who — when anybody did.
+/// and who - when anybody did.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The one part of a task's history that cannot be derived. <see cref="MergeRequest.Status"/> is
-/// overwritten in place, so the promotion to <c>ReadyForDeploy</c> — the moment a merge request
-/// became deployable — leaves no trace: no column, no timestamp, nothing to read afterwards.
+/// overwritten in place, so the promotion to <c>ReadyForDeploy</c> - the moment a merge request
+/// became deployable - leaves no trace: no column, no timestamp, nothing to read afterwards.
 /// (Plan membership is a separate, coarser thing: the plan holds every non-closed merge request the
 /// task owns, and the per-environment readiness gate decides at launch which may deploy.)
 /// <c>CreatedAt</c>, <c>MergedAt</c> and <c>ClosedAt</c> cover three moments; everything between them
@@ -22,7 +22,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// force a choice between two bad outcomes: cascade, and archiving a merge request destroys the
 /// history of what happened to it; or restrict, and the archive's <c>ExecuteDeleteAsync</c>
 /// FK-violates and wedges the whole batch, which is exactly the failure the existing archive gates
-/// exist to prevent. Independence in both directions is the point — the journal is pruned on its own
+/// exist to prevent. Independence in both directions is the point - the journal is pruned on its own
 /// schedule and neither operation can break the other.
 /// </para>
 /// <para>

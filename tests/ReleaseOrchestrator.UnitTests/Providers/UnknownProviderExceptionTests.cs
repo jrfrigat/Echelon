@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers;
 
 /// <summary>
 /// The message is the feature. A provider type is stored per connection, so this fires on a row
-/// an operator typed, possibly long after deployment — and "provider 'gitab' is not registered"
+/// an operator typed, possibly long after deployment - and "provider 'gitab' is not registered"
 /// is only actionable next to the list of what would have worked. Renovate's setPlatformApi
 /// throws the same shape for the same reason.
 /// </summary>

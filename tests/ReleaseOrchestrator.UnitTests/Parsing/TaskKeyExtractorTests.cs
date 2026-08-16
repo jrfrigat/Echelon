@@ -31,11 +31,11 @@ public class TaskKeyExtractorTests
     /// </summary>
     /// <remarks>
     /// Yandex Tracker projects are routinely keyed in Cyrillic, so this is the common case for a
-    /// Russian-language installation rather than an edge one — and a Latin-only pattern does not fail
+    /// Russian-language installation rather than an edge one - and a Latin-only pattern does not fail
     /// on those keys, it links nothing at all: no task, so no plan, no rollout, and no message saying
     /// why. Roughly six in ten merge requests were affected on the first repository this met.
     ///
-    /// The names below are invented; what is copied from reality is their SHAPE — an author segment,
+    /// The names below are invented; what is copied from reality is their SHAPE - an author segment,
     /// a two- or four-letter project code, zero-padded numbers, and the trailing suffixes people add
     /// when they branch twice for one task.
     /// </remarks>

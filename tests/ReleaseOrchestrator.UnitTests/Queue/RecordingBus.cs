@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// An <see cref="IBus"/> that records what a handler sends, and does nothing else.
 /// </summary>
 /// <remarks>
-/// The handlers are plain classes now — <c>Handle(message)</c> with an injected <see cref="IBus"/> —
+/// The handlers are plain classes now - <c>Handle(message)</c> with an injected <see cref="IBus"/> -
 /// so a test drives one by calling it directly and reading back what it forwarded, with no broker
 /// and no pipeline. This records <see cref="Send"/> and <see cref="Publish"/>, which is all the
 /// handlers use; every other bus operation throws, so a handler reaching for one that these tests

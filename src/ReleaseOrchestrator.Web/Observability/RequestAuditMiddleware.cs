@@ -31,7 +31,7 @@ namespace ReleaseOrchestrator.Observability;
 ///   <item>
 ///     The transport peer is captured on the way in, before <c>X-Forwarded-For</c> has rewritten the
 ///     connection's address. That header is accepted from any caller in this deployment, so the
-///     rewritten value is whatever the client claimed — the peer address is the only one that is not.
+///     rewritten value is whatever the client claimed - the peer address is the only one that is not.
 ///   </item>
 ///   <item>
 ///     Being upstream of the exception handler means the status read on the way out is the one the
@@ -40,7 +40,7 @@ namespace ReleaseOrchestrator.Observability;
 ///   </item>
 ///   <item>
 ///     Authentication runs downstream and mutates the same context, so the principal is populated by
-///     the time this reads it on the way out — which is why the user is read AFTER the pipeline
+///     the time this reads it on the way out - which is why the user is read AFTER the pipeline
 ///     returns and not before. A reviewer tidying that up would silently blank every user id.
 ///   </item>
 /// </list>
@@ -90,7 +90,7 @@ public static class RequestAuditMiddleware
             // until end-to-end testing caught it.
             var originalPath = context.Request.Path;
 
-            // The injected clock where one is registered — both hosts register it — falling back to
+            // The injected clock where one is registered - both hosts register it - falling back to
             // the system clock rather than failing: this middleware must never be the reason a
             // request does not serve. Only the recorded StartedAt uses it; the duration below is a
             // Stopwatch, which is monotonic and must not be replaced by clock arithmetic.

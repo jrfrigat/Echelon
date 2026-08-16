@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.UnitTests.Parsing;
 
 /// <summary>
 /// The signal set a merge request carries, which a readiness rule is matched against. One token per
-/// label, one for the status, one for a pipeline result when known — canonical so the comparison the
+/// label, one for the status, one for a pipeline result when known - canonical so the comparison the
 /// gate does is a byte match.
 /// </summary>
 public class ReadinessSignalsTests

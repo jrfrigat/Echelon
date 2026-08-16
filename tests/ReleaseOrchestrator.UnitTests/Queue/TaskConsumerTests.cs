@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// Both handlers forward TaskSyncRequested unconditionally, and that is the point rather than
 /// noise: a tracker webhook carries the title and status but never the issue's links, and the
 /// links are the only thing task dependencies are made of. Drop the request and the plan is
-/// ordered by stack links alone — which is what the service did for its whole life. The two
+/// ordered by stack links alone - which is what the service did for its whole life. The two
 /// handlers share one <see cref="RecordingBus"/>, so a test reads back whatever either forwarded.
 /// </remarks>
 public sealed class TaskConsumerTests : IAsyncLifetime
@@ -151,7 +151,7 @@ public sealed class TaskConsumerTests : IAsyncLifetime
     /// <summary>
     /// Which statuses mean "closed" is the adapter's to know, and it is asked rather than told.
     /// The ingress and this handler used to keep their own lists, which disagreed about
-    /// "resolved" — so a resolved task was closed by one path and open to the other, and stayed
+    /// "resolved" - so a resolved task was closed by one path and open to the other, and stayed
     /// closed-but-unarchivable forever.
     /// </summary>
     [Fact]
@@ -197,7 +197,7 @@ public sealed class TaskConsumerTests : IAsyncLifetime
     /// <remarks>
     /// A theory over which tracker is targeted, and that is the whole design of it. Asserting a
     /// single direction passes whenever the unscoped query happens to return the right row first,
-    /// which is decided by insertion order rather than by the code under test — the first version
+    /// which is decided by insertion order rather than by the code under test - the first version
     /// of this test asserted exactly that and survived deleting the scope. Run both ways, an
     /// unscoped query returns the same row twice and one of the two directions has to fail.
     /// </remarks>

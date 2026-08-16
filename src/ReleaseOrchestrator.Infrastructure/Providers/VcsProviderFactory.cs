@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Infrastructure.Providers;
 /// <remarks>
 /// <para>
 /// The keyed lookup is hidden in here on purpose. The key is <c>VcsConnection.ProviderType</c>,
-/// which is a database column, so it is not known until a row is read — <c>[FromKeyedServices]</c>
+/// which is a database column, so it is not known until a row is read - <c>[FromKeyedServices]</c>
 /// cannot express that, since its key is baked in at compile time. A <c>GetRequiredKeyedService</c>
 /// behind a factory is the shape that fits a runtime key.
 /// </para>
@@ -51,7 +51,7 @@ internal sealed class VcsProviderFactory(
         var key = ProviderKey.Normalize(connection.ProviderType);
 
         // Checked before the resolve so the error names the alternatives. GetRequiredKeyedService
-        // would throw too, but its message says only that a service is missing — useless to an
+        // would throw too, but its message says only that a service is missing - useless to an
         // operator who mistyped a provider name into a connection form.
         if (!_available.Contains(key))
             throw new UnknownProviderException("VCS", connection.ProviderType, _available);

@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.UnitTests;
 /// These builders used to construct entity graphs and wire both ends of every navigation by hand,
 /// because the algorithm read <c>MergeRequest.Task.Dependencies</c> and the test had to imitate
 /// EF's fixup to reach it. The algorithm now takes what it needs and nothing else, so a test
-/// merge request is a few fields — and no longer states, in its own setup, a claim about how EF
+/// merge request is a few fields - and no longer states, in its own setup, a claim about how EF
 /// behaves that it never actually verified. Repository ordering is the mechanism that replaced
 /// stacks; the Hard/Soft cycle-breaking rules it inherits are what these exercise.
 /// </remarks>
@@ -111,7 +111,7 @@ public class ReleasePlanGraphTests
     /// </summary>
     /// <remarks>
     /// The parent is listed first in the input on purpose. Input order is what breaks ties inside a
-    /// stage, so a hierarchy edge that went missing — or pointed the other way — would leave the
+    /// stage, so a hierarchy edge that went missing - or pointed the other way - would leave the
     /// parent in the earlier stage and fail here. Given the child first, the assertion would pass on
     /// tie-break luck whether the edge existed or not.
     /// </remarks>

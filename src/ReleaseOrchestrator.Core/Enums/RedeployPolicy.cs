@@ -22,7 +22,7 @@ public enum RedeployPolicy
     Once = 2,
 
     /// <summary>
-    /// May be deployed repeatedly — a test environment where the same branch is pushed over and over.
+    /// May be deployed repeatedly - a test environment where the same branch is pushed over and over.
     /// </summary>
     /// <remarks>
     /// This alone does not cause a redeploy. The launch must also ask for one explicitly; this only

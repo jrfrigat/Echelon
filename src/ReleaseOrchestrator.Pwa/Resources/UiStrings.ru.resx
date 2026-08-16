@@ -217,7 +217,7 @@
     <value>Нарушенные зависимости: {0}</value>
   </data>
   <data name="Plan_Conflicts_Body" xml:space="preserve">
-    <value>План учитывает не все ограничения — либо планировщик не смог, либо их переопределили при правке. Развёртывание в этом порядке нарушит правила ниже — проверьте план перед релизом.</value>
+    <value>План учитывает не все ограничения - либо планировщик не смог, либо их переопределили при правке. Развёртывание в этом порядке нарушит правила ниже - проверьте план перед релизом.</value>
   </data>
   <data name="Vcs_Title" xml:space="preserve">
     <value>Подключения к VCS</value>
@@ -232,7 +232,7 @@
     <value>Новое подключение к VCS</value>
   </data>
   <data name="Vcs_Delete_What" xml:space="preserve">
-    <value>подключение к VCS «{0}»</value>
+    <value>подключение к VCS "{0}"</value>
   </data>
   <data name="Tracker_Title" xml:space="preserve">
     <value>Подключения к трекеру</value>
@@ -253,7 +253,7 @@
     <value>Новое подключение к трекеру</value>
   </data>
   <data name="Tracker_Delete_What" xml:space="preserve">
-    <value>подключение к трекеру «{0}»</value>
+    <value>подключение к трекеру "{0}"</value>
   </data>
   <data name="Repos_Title" xml:space="preserve">
     <value>Репозитории</value>
@@ -274,7 +274,7 @@
     <value>Репозиторий создан.</value>
   </data>
   <data name="Repos_Delete_What" xml:space="preserve">
-    <value>репозиторий «{0}»</value>
+    <value>репозиторий "{0}"</value>
   </data>
   <data name="Perms_Title" xml:space="preserve">
     <value>Права доступа</value>
@@ -310,7 +310,7 @@
     <value>Удаление сопоставления</value>
   </data>
   <data name="Perms_Remove_Message" xml:space="preserve">
-    <value>Убрать право «{0}» у группы {1}? Это действие необратимо.</value>
+    <value>Убрать право "{0}" у группы {1}? Это действие необратимо.</value>
   </data>
   <data name="Perms_MappingAdded" xml:space="preserve">
     <value>Сопоставление добавлено.</value>
@@ -433,7 +433,7 @@
     <value>Управление готовностью MR {0}</value>
   </data>
   <data name="Pin_Dialog_Title" xml:space="preserve">
-    <value>Готовность — MR {0}</value>
+    <value>Готовность - MR {0}</value>
   </data>
   <data name="Pin_NoEnvironments" xml:space="preserve">
     <value>Нет контуров для закрепления.</value>
@@ -481,7 +481,7 @@
     <value>Что выкатывать</value>
   </data>
   <data name="Work_Intro" xml:space="preserve">
-    <value>Работа, о которой сообщил коннектор, по задачам и репозиториям. Ветка, по которой ещё не завели merge request, — это New; как только его завели, статус берёт на себя он. Выберите окружение, чтобы увидеть, как каждая строка стоит относительно правила, которое применит гейт запуска этого окружения.</value>
+    <value>Работа, о которой сообщил коннектор, по задачам и репозиториям. Ветка, по которой ещё не завели merge request, - это New; как только его завели, статус берёт на себя он. Выберите окружение, чтобы увидеть, как каждая строка стоит относительно правила, которое применит гейт запуска этого окружения.</value>
   </data>
   <data name="Work_Total" xml:space="preserve">
     <value>всего {0}</value>
@@ -805,7 +805,7 @@
     <value>Удалить цель выкатки</value>
   </data>
   <data name="Deploy_Delete_Message" xml:space="preserve">
-    <value>Удалить, как «{0}» выкатывается на «{1}»?</value>
+    <value>Удалить, как "{0}" выкатывается на "{1}"?</value>
   </data>
   <data name="Deploy_Redeploy_Once" xml:space="preserve">
     <value>Один раз</value>
@@ -1273,7 +1273,7 @@
     <value>Удалить правило готовности?</value>
   </data>
   <data name="RR_Delete_Message" xml:space="preserve">
-    <value>Удалить правило готовности «{0}»? Оно не должно быть назначено ни окружению, ни target.</value>
+    <value>Удалить правило готовности "{0}"? Оно не должно быть назначено ни окружению, ни target.</value>
   </data>
   <data name="Deploy_Col_Readiness" xml:space="preserve">
     <value>Готовность</value>
@@ -1300,16 +1300,16 @@
     <value>Свяжется с задачей {0}</value>
   </data>
   <data name="LinkPreview_NoMatch" xml:space="preserve">
-    <value>Ключ не найден — этот merge request не свяжется с задачей.</value>
+    <value>Ключ не найден - этот merge request не свяжется с задачей.</value>
   </data>
   <data name="Vcs_PollNow_Aria" xml:space="preserve">
     <value>Опросить {0} сейчас</value>
   </data>
   <data name="Vcs_Polled" xml:space="preserve">
-    <value>Опрошено «{0}»: {1} открытых merge request'ов, веток — {2}. Они перечислены в разделе «Merge request'ы».</value>
+    <value>Опрошено "{0}": {1} открытых merge request'ов, веток - {2}. Они перечислены в разделе "Merge request'ы".</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
-    <value>Некоторые репозитории не удалось прочитать — {0}</value>
+    <value>Некоторые репозитории не удалось прочитать - {0}</value>
   </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Плагины</value>
@@ -1318,7 +1318,7 @@
     <value>Установленные плагины</value>
   </data>
   <data name="Plugins_Intro" xml:space="preserve">
-    <value>Коннекторы и обработчики, включённые в эту сборку. Каждый сам объявляет свой ключ, способ получения событий и назначение — страница лишь показывает объявленное.</value>
+    <value>Коннекторы и обработчики, включённые в эту сборку. Каждый сам объявляет свой ключ, способ получения событий и назначение - страница лишь показывает объявленное.</value>
   </data>
   <data name="Plugins_Ingestion_Push" xml:space="preserve">
     <value>принимает вебхуки</value>
@@ -1381,7 +1381,7 @@
     <value>Эти правила только для чтения</value>
   </data>
   <data name="Rules_Owns_Body" xml:space="preserve">
-    <value>Порядок выкатки задаёт документ выше. Правьте там — либо очистите и сохраните его, чтобы вернуться к правке правил здесь.</value>
+    <value>Порядок выкатки задаёт документ выше. Правьте там - либо очистите и сохраните его, чтобы вернуться к правке правил здесь.</value>
   </data>
   <data name="Rules_Owns_ReadOnly" xml:space="preserve">
     <value>Добавление правил здесь отключено, пока порядок задаёт документ.</value>
@@ -1402,7 +1402,7 @@
     <value>Группы</value>
   </data>
   <data name="Rules_Visual_Groups_Hint" xml:space="preserve">
-    <value>Группа — это имя для набора работы. В шаблонах можно * и ?; несколько значений в поле — это варианты.</value>
+    <value>Группа - это имя для набора работы. В шаблонах можно * и ?; несколько значений в поле - это варианты.</value>
   </data>
   <data name="Rules_Visual_GroupName" xml:space="preserve">
     <value>Имя группы</value>

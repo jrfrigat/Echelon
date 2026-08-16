@@ -23,7 +23,7 @@ public class PlanTaskNode
     public Guid TaskId { get; set; }
 
     /// <summary>
-    /// The closure tasks this one waits on, as a JSON array of ids — the wait graph as it stood when
+    /// The closure tasks this one waits on, as a JSON array of ids - the wait graph as it stood when
     /// the plan was built. Null on a plan stored before it was recorded.
     /// </summary>
     /// <remarks>
@@ -32,7 +32,7 @@ public class PlanTaskNode
     /// link in the tracker). Recomputing it on read labelled the current answer with an old version.
     ///
     /// JSON rather than a join table on purpose. A join table would need a foreign key to
-    /// <c>TaskItem</c>, and every such key is another <c>Restrict</c> pinning a task in place — the
+    /// <c>TaskItem</c>, and every such key is another <c>Restrict</c> pinning a task in place - the
     /// archive is already blocked by exactly that (011 §1.3), and a snapshot column is not worth
     /// widening it.
     /// </remarks>

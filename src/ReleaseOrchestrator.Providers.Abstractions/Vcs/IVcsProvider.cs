@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// <remarks>
 /// <para>
 /// No method takes an API URL, a token or an organization identifier: the instance was built for
-/// a connection and already knows them. That is the whole point of the port — the caller states
+/// a connection and already knows them. That is the whole point of the port - the caller states
 /// what it wants, not how the provider is configured.
 /// </para>
 /// <para>
@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </remarks>
 public interface IVcsProvider
 {
-    /// <summary>What this particular connection can do — see <see cref="VcsCapabilities"/>.</summary>
+    /// <summary>What this particular connection can do - see <see cref="VcsCapabilities"/>.</summary>
     VcsCapabilities Capabilities { get; }
 
     /// <summary>Reads one merge request.</summary>

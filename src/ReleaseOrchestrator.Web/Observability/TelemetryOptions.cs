@@ -31,7 +31,7 @@ public sealed record TelemetryOptions
     /// <returns>
     /// <c>null</c> when telemetry is off or unusable. Telemetry is opt-in on purpose: without a
     /// collector there is nowhere to export to, and observability must never be the reason a
-    /// release-orchestration host fails to start. A malformed endpoint is treated the same way —
+    /// release-orchestration host fails to start. A malformed endpoint is treated the same way -
     /// it disables export rather than throwing, because the value arrives from the environment
     /// and a typo in a compose file should not take the service down.
     /// </returns>

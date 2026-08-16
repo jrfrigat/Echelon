@@ -58,7 +58,7 @@ public static class WebhookEndpoints
 
         // A malformed name is answered exactly as a wrong token is: 401, no body. Unknown-connection
         // (a well-formed name with no configured secret) reaches Authenticate and fails closed there,
-        // to the same 401 — so neither the connection list nor the secret can be probed by the
+        // to the same 401 - so neither the connection list nor the secret can be probed by the
         // difference in response.
         var name = WebhookConnectionName.Sanitize(connectionName);
         if (name is null)

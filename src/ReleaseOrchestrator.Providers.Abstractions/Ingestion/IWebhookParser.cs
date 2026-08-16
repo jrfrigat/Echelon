@@ -7,14 +7,14 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// <remarks>
 /// <para>
 /// This is the seam that lets a provider own its webhook. Everything provider-specific about a
-/// delivery — the payload shape, which header carries the secret, which header carries the delivery
-/// id, how a state string maps to a status, where labels live in the JSON — lives behind this port,
+/// delivery - the payload shape, which header carries the secret, which header carries the delivery
+/// id, how a state string maps to a status, where labels live in the JSON - lives behind this port,
 /// in the provider's own assembly. The host keeps only what is the same for every provider: the
 /// route, resolving the connection's secret, and sending the resulting events onto the bus.
 /// </para>
 /// <para>
 /// Registered as a keyed service under <see cref="WebhookEndpointDescriptor.ProviderType"/>, and
-/// enumerated through <see cref="WebhookParserRegistration"/> — the same keyed-DI-plus-marker
+/// enumerated through <see cref="WebhookParserRegistration"/> - the same keyed-DI-plus-marker
 /// pattern the provider factories already use, because keyed DI can resolve by key but cannot list
 /// the keys that exist.
 /// </para>
@@ -31,13 +31,13 @@ public interface IWebhookParser
     /// <param name="secret">
     /// The secret configured for <see cref="WebhookRequest.ConnectionName"/>, or null when none is
     /// configured. Resolving it is the host's job (it owns configuration); verifying it is the
-    /// provider's, because verification is provider-specific — a shared-secret header today, an
+    /// provider's, because verification is provider-specific - a shared-secret header today, an
     /// HMAC over the body for a git host tomorrow.
     /// </param>
     /// <returns>
     /// True when the delivery may be processed. Must fail closed: a null or empty secret, or a
     /// missing credential on the request, is not authentic. Must run in constant time with respect
-    /// to the secret — see <see cref="WebhookSignatures"/>.
+    /// to the secret - see <see cref="WebhookSignatures"/>.
     /// </returns>
     bool Authenticate(WebhookRequest request, string? secret);
 
@@ -51,7 +51,7 @@ public interface IWebhookParser
     /// answers the sender 200 so it is not retried.
     /// </returns>
     /// <exception cref="WebhookPayloadException">
-    /// The payload is malformed in a way the provider cannot make sense of — a required field is
+    /// The payload is malformed in a way the provider cannot make sense of - a required field is
     /// absent, the body is not the provider's JSON. The host turns this into a 400, distinct from
     /// the "understood but nothing to do" empty result.
     /// </exception>

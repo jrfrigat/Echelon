@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.UnitTests.Tracker;
 /// <summary>
 /// TrackerService produces every TaskDependency row, and therefore every task edge in the release
 /// plan. Nothing called it for the whole life of the project, so the table stayed empty and plans
-/// were ordered by stack links alone — the algorithm was correct and the data never arrived.
+/// were ordered by stack links alone - the algorithm was correct and the data never arrived.
 /// These are the tests that would have caught that.
 /// </summary>
 public sealed class TrackerServiceTests : IAsyncLifetime
@@ -81,7 +81,7 @@ public sealed class TrackerServiceTests : IAsyncLifetime
 
     /// <summary>
     /// Sync order is not something we control, so a task referencing one we have not imported is
-    /// ordinary. Skipping it — as the original `if (depTask is null) continue` did — loses the edge
+    /// ordinary. Skipping it - as the original `if (depTask is null) continue` did - loses the edge
     /// for good, because nothing revisits the dependent once the prerequisite appears.
     /// </summary>
     [Fact]
@@ -198,7 +198,7 @@ public sealed class TrackerServiceTests : IAsyncLifetime
 
     /// <summary>
     /// A closed status with no resolution time still has to get one, or the task is closed and
-    /// never archivable — which is exactly what happened to "resolved" tasks.
+    /// never archivable - which is exactly what happened to "resolved" tasks.
     /// </summary>
     [Fact]
     public async Task ClosedStatusWithoutAResolutionTimeFallsBackToNow()
@@ -256,7 +256,7 @@ public sealed class TrackerServiceTests : IAsyncLifetime
 
     /// <summary>
     /// The parent is fetched shallowly. Resolving its parent too would walk the hierarchy to its root
-    /// on every sync — and never terminate at all if a tracker reported a cycle.
+    /// on every sync - and never terminate at all if a tracker reported a cycle.
     /// </summary>
     [Fact]
     public async Task DoesNotWalkTheParentsOwnParent()

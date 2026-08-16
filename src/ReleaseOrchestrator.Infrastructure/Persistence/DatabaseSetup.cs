@@ -34,8 +34,8 @@ public static class DatabaseSetup
         services.AddDbContext<AppDbContext>(opt =>
             Configure(opt, provider, connectionString, migrationsAssembly));
 
-        // The archive has no migrations of its own history to name — its schema is created by the
-        // same assembly — but it needs the same provider and the same retry policy.
+        // The archive has no migrations of its own history to name - its schema is created by the
+        // same assembly - but it needs the same provider and the same retry policy.
         services.AddDbContext<ArchiveDbContext>(opt =>
             Configure(opt, provider, archiveConnectionString, migrationsAssembly));
 

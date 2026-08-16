@@ -123,7 +123,7 @@ public class RolloutServiceTests : PlannerTestBase
 
     /// <summary>
     /// A branch naming a task in the plan, unmerged and with no merge request to carry it, is work in
-    /// progress the plan knows nothing about — launching would ship an incomplete change.
+    /// progress the plan knows nothing about - launching would ship an incomplete change.
     /// </summary>
     [Fact]
     public async Task Launch_Fails_WhenATaskHasAnUnlandedBranchWithNoMergeRequest()
@@ -156,7 +156,7 @@ public class RolloutServiceTests : PlannerTestBase
 
     /// <summary>
     /// The branch a merge request is *about* must not block: at launch every merge request in the plan
-    /// has an unmerged source branch — that is what the rollout is going to merge. Blocking on those
+    /// has an unmerged source branch - that is what the rollout is going to merge. Blocking on those
     /// would block every launch there has ever been.
     /// </summary>
     [Fact]
@@ -255,7 +255,7 @@ public class RolloutServiceTests : PlannerTestBase
     /// <summary>
     /// A recalculation between two launches must not start a second concurrent run. The idempotency
     /// key embeds the plan version, which recalculation rotates on every ingestion event, so a second
-    /// launch gets a fresh key — and a liveness check on the key alone would treat it as a brand-new
+    /// launch gets a fresh key - and a liveness check on the key alone would treat it as a brand-new
     /// run. Liveness is per (task, environment): the still-running first rollout blocks it.
     /// </summary>
     [Fact]
@@ -342,7 +342,7 @@ public class RolloutServiceTests : PlannerTestBase
     /// <summary>
     /// A target that supplies the key but has no settings does NOT inherit the repository's settings.
     /// Those were saved for the repository's own (different) strategy, and freezing them onto a step
-    /// whose key is the target's would hand the strategy another strategy's settings — and decrypt its
+    /// whose key is the target's would hand the strategy another strategy's settings - and decrypt its
     /// secrets under the wrong schema at dispatch. The key's source and the settings' source must match.
     /// </summary>
     [Fact]
@@ -411,7 +411,7 @@ public class RolloutServiceTests : PlannerTestBase
     // ---- the readiness gate (E5) ----------------------------------------------
 
     /// <summary>
-    /// A gated environment refuses a merge request that does not carry its label, and names it — so a
+    /// A gated environment refuses a merge request that does not carry its label, and names it - so a
     /// production gate holds back work that has not been approved for production.
     /// </summary>
     [Fact]
@@ -451,7 +451,7 @@ public class RolloutServiceTests : PlannerTestBase
     }
 
     /// <summary>
-    /// A pin admits a merge request whose labels would fail the gate — the escape hatch for a merged
+    /// A pin admits a merge request whose labels would fail the gate - the escape hatch for a merged
     /// merge request whose approval could not be observed from labels.
     /// </summary>
     [Fact]
@@ -491,7 +491,7 @@ public class RolloutServiceTests : PlannerTestBase
 
     /// <summary>
     /// A repository's own readiness rule for an environment applies even when the environment itself is
-    /// ungated — the per-repository override the operator asked for: a stricter repository gates while
+    /// ungated - the per-repository override the operator asked for: a stricter repository gates while
     /// the rest of the environment does not.
     /// </summary>
     [Fact]

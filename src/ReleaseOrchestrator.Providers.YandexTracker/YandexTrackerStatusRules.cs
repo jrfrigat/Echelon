@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// <para>
 /// One owner per tracker, deliberately: the ingress and the sync consumer once kept separate
 /// lists that disagreed about <c>resolved</c>, so a resolved task was closed enough to trigger a
-/// replan but never got a <c>ClosedAt</c> — leaving it permanently ineligible for archiving.
+/// replan but never got a <c>ClosedAt</c> - leaving it permanently ineligible for archiving.
 /// </para>
 /// </remarks>
 public static class YandexTrackerStatusRules
@@ -21,7 +21,7 @@ public static class YandexTrackerStatusRules
         new(StringComparer.OrdinalIgnoreCase) { "closed", "cancelled", "rejected", "resolved" };
 
     /// <summary>
-    /// The statuses treated as closed when a connection configures none — the default a fresh
+    /// The statuses treated as closed when a connection configures none - the default a fresh
     /// connection starts from and the form pre-fills. A connection can override it (some workflows
     /// call the terminal state <c>done</c> or <c>deployed</c>); see <c>YandexTrackerOptions</c>.
     /// </summary>

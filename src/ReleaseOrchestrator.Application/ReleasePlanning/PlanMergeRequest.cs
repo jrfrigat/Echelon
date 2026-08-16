@@ -17,7 +17,7 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// <para>
 /// Carried separately from <see cref="DependsOnTaskIds"/> rather than merged into it, for one
 /// unglamorous reason: the two come from different navigations, and EF cannot translate a projection
-/// that concatenates two collection subqueries — it throws at query time, which is how this arrived
+/// that concatenates two collection subqueries - it throws at query time, which is how this arrived
 /// here. Separate is also what makes the hierarchy's direction assertable without a database, and
 /// the direction is the part that silently inverts.
 /// </para>
@@ -26,8 +26,8 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// <param name="RepositoryDependsOn">Repositories this one's repository deploys after, and how firmly.</param>
 /// <remarks>
 /// The planner used to take the <c>MergeRequest</c> entity and read its navigations, which meant
-/// the data it needed was stated in a comment — "callers must load Task.Dependencies and
-/// Repository.DependsOn" — and enforced by nothing. Miss an <c>Include</c> and the navigation is
+/// the data it needed was stated in a comment - "callers must load Task.Dependencies and
+/// Repository.DependsOn" - and enforced by nothing. Miss an <c>Include</c> and the navigation is
 /// not an error, it is empty: no exception, no warning, an ordering built from half the
 /// constraints that looks exactly like a correct one.
 ///
@@ -43,7 +43,7 @@ public record PlanMergeRequest(
     IReadOnlyList<PlanRepositoryLink> RepositoryDependsOn)
 {
     /// <summary>
-    /// Every task this one deploys after, whatever the reason — declared dependencies and the
+    /// Every task this one deploys after, whatever the reason - declared dependencies and the
     /// hierarchy's children alike.
     /// </summary>
     /// <remarks>
@@ -62,7 +62,7 @@ public record PlanMergeRequest(
     /// Both the closure and the edges between merge requests have to come from the same resolved
     /// adjacency, or the policy holds for one and not the other. It did not, and the failure was
     /// silent in the worst way: turning off a wait, or asking for subtasks-before-linked, changed
-    /// which tasks the plan covered and left the deploy order exactly as it was — because these two
+    /// which tasks the plan covered and left the deploy order exactly as it was - because these two
     /// lists were still read straight off the tracker's navigations further down.
     ///
     /// Collapsed into <see cref="DependsOnTaskIds"/> because the split exists only to get two

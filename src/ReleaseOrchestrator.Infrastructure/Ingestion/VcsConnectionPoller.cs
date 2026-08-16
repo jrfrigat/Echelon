@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Infrastructure.Ingestion;
 /// </summary>
 /// <remarks>
 /// Shared by the scheduled poller (<see cref="VcsPollingCoordinator"/>) and the manual "poll now"
-/// endpoint, so the two cannot drift on how a polled merge request becomes an event — the deterministic
+/// endpoint, so the two cannot drift on how a polled merge request becomes an event - the deterministic
 /// <see cref="PollingEventId"/> means a manual poll of an unchanged merge request is deduplicated exactly
 /// like a scheduled one.
 /// </remarks>
@@ -108,10 +108,10 @@ public sealed class VcsConnectionPoller(
     }
 
     // A 404 from the provider is the common misconfiguration, and "Not Found" alone does not say what to
-    // fix — name the likely cause instead of echoing the transport error.
+    // fix - name the likely cause instead of echoing the transport error.
     private static string Describe(Exception ex) =>
         ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound }
-            ? "not found — check the repository's external id (GitLab wants the full path, e.g. group/project) and the token's access"
+            ? "not found - check the repository's external id (GitLab wants the full path, e.g. group/project) and the token's access"
             : ex.Message;
 }
 

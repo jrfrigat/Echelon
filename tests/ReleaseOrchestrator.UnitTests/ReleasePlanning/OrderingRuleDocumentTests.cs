@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// Reading an ordering-rule document, and refusing to read a wrong one quietly.
 /// </summary>
 /// <remarks>
-/// The document decides deploy order, so the expensive failure is not a rejected file — it is an
+/// The document decides deploy order, so the expensive failure is not a rejected file - it is an
 /// accepted one that means something other than what was written. Most of these are about that:
 /// unknown keys, undefined groups and ambiguous values are errors, never skipped.
 /// </remarks>

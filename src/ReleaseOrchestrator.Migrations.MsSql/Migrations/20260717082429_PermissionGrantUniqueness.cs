@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
     /// never been applied anywhere, so no duplicate grant exists for the unique indexes to
     /// choke on.
     ///
-    /// If it ever does meet one — restored from a backup that predates this — the index creation
+    /// If it ever does meet one - restored from a backup that predates this - the index creation
     /// fails loudly rather than dropping a row, which is the right way round: two grants of the
     /// same claim need a human to decide, not a migration.
     /// </remarks>

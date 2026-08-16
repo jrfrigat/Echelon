@@ -32,8 +32,8 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <remarks>
     /// Sent rather than done here: rebuilding every active plan inside a PUT is unbounded work behind
     /// a request. It was previously left to the next ingestion event, which was defensible only while
-    /// the plan screen recomputed on read and therefore looked up to date. It no longer does — a plan
-    /// version now means what it says — so a settings change nobody rebuilt is a change nobody sees.
+    /// the plan screen recomputed on read and therefore looked up to date. It no longer does - a plan
+    /// version now means what it says - so a settings change nobody rebuilt is a change nobody sees.
     /// This is the same trigger repository ordering has always used, for the same reason.
     /// </remarks>
     private Task RequestRecalculationAsync(string reason) =>
@@ -131,7 +131,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// </summary>
     /// <remarks>
     /// A group per repository rather than anything cleverer. The point is a faithful translation the
-    /// operator can read line by line against the screen they are replacing — inferring groups would
+    /// operator can read line by line against the screen they are replacing - inferring groups would
     /// produce a shorter document that is harder to check, at the moment checking matters most. It is
     /// theirs to simplify afterwards.
     /// </remarks>
@@ -185,8 +185,8 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Whether it is valid, the problems found, and what each group currently selects.</returns>
     /// <remarks>
-    /// The group counts are the useful half. A document can be perfectly valid and select nothing —
-    /// a glob with a typo in it is still well-formed — and that is invisible until a deploy comes out
+    /// The group counts are the useful half. A document can be perfectly valid and select nothing -
+    /// a glob with a typo in it is still well-formed - and that is invisible until a deploy comes out
     /// in the wrong order. Reporting what each group matched right now turns that into something an
     /// operator sees before saving.
     /// </remarks>
@@ -231,7 +231,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <returns>The parsed document, or an empty model when none is stored or it cannot be read.</returns>
     /// <remarks>
     /// Parsed on the server, deliberately. The client could not do it without shipping a YAML reader
-    /// into the browser, and then two readers would decide what a document means — the exact
+    /// into the browser, and then two readers would decide what a document means - the exact
     /// divergence the single-document design exists to prevent. This one is the planner's.
     ///
     /// An unreadable document answers <c>Editable: false</c> rather than an error: the text editor
@@ -333,7 +333,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <remarks>
     /// The wait policy and the per-task overrides are carried in the document but not offered by the
     /// form: they are edited on their own screens, and duplicating them here would give an operator
-    /// two places to set one thing. The renderer therefore writes them empty — which is why saving
+    /// two places to set one thing. The renderer therefore writes them empty - which is why saving
     /// from the editor is refused while a document defines them (see the page).
     /// </remarks>
     private static OrderingRulesModelDto ToModel(OrderingRules rules) =>
@@ -475,7 +475,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Resolved to display keys here rather than returned as bare ids. An excluded merge request is
-    /// absent from the plan by construction, so this endpoint is the only place it can be seen — and
+    /// absent from the plan by construction, so this endpoint is the only place it can be seen - and
     /// a list of GUIDs would make the decision effectively irreversible.
     /// </remarks>
     [HttpGet("tasks/{taskId:guid}/membership")]
@@ -591,7 +591,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <summary>Replaces the explicit sequence over a task's prerequisites.</summary>
     /// <remarks>
     /// Replaced wholesale rather than diffed: the sequence is positional, and a partial update would
-    /// have to renumber around the rows it kept — against a unique index on (task, position), which
+    /// have to renumber around the rows it kept - against a unique index on (task, position), which
     /// would collide mid-update. Deleting first keeps it a single coherent write.
     /// </remarks>
     private async Task ReplacePrerequisiteOrderAsync(Guid taskId, IReadOnlyList<Guid> sequence, CancellationToken ct)
@@ -614,13 +614,13 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// </summary>
     /// <remarks>
     /// The client sends a sequence, not edges: an operator reorders a list, and turning that into
-    /// "A before B" pairs is this service's job, not the browser's. Chained consecutively — "after" is
+    /// "A before B" pairs is this service's job, not the browser's. Chained consecutively - "after" is
     /// transitive through the graph, so the pairs are enough and a full cross product would only add
     /// edges that say the same thing.
     ///
     /// Note these are ADDED edges, so they constrain rather than replace: a derived constraint the
     /// sequence contradicts stays, the graph becomes cyclic, and the planner drops an edge and records
-    /// the conflict. That is the intended outcome — an operator may reorder against the derivation,
+    /// the conflict. That is the intended outcome - an operator may reorder against the derivation,
     /// but never silently.
     /// </remarks>
     private async Task ReplaceMergeRequestOrderAsync(Guid taskId, IReadOnlyList<Guid> sequence, CancellationToken ct)
@@ -671,16 +671,16 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     /// <summary>Reads a set of "A before B" edges back as one sequence.</summary>
     /// <remarks>
     /// <para>
-    /// A topological read, not a walk down a chain. What this screen WRITES is a chain — an operator
-    /// drags a list into an order — but an imported plan writes a wave assignment, which pins several
+    /// A topological read, not a walk down a chain. What this screen WRITES is a chain - an operator
+    /// drags a list into an order - but an imported plan writes a wave assignment, which pins several
     /// merge requests to the same predecessor. The chain walk could not represent that, and its
     /// <c>ToDictionary(e => e.From)</c> did worse than misread it: two edges out of one merge request
     /// threw, so opening the planning screen of any imported task answered 500.
     /// </para>
     /// <para>
     /// Reading a partial order as a sequence loses the parallelism, which is honest for a control that
-    /// only offers a sequence. Saving from that control then flattens the import into a strict order —
-    /// deliberately, because the operator just stated one — and the import can be posted again.
+    /// only offers a sequence. Saving from that control then flattens the import into a strict order -
+    /// deliberately, because the operator just stated one - and the import can be posted again.
     /// </para>
     /// <para>
     /// Kahn's algorithm, keyed on nothing but the edges. A cycle (which the planner would have broken
@@ -719,7 +719,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
 
 /// <summary>The ordering-rule document, as text.</summary>
 /// <param name="Document">
-/// The rules, as YAML. A document written as JSON is also accepted, since JSON is valid YAML — which
+/// The rules, as YAML. A document written as JSON is also accepted, since JSON is valid YAML - which
 /// is what keeps anything stored before the YAML reader existed readable. Empty means no rules.
 /// </param>
 public record OrderingRulesDocumentDto(string Document);
@@ -727,7 +727,7 @@ public record OrderingRulesDocumentDto(string Document);
 /// <summary>What checking a document found.</summary>
 /// <param name="IsValid">Whether it would be accepted.</param>
 /// <param name="Problems">Everything wrong with it; empty when valid.</param>
-/// <param name="Groups">What each group selects right now — a valid rule can still match nothing.</param>
+/// <param name="Groups">What each group selects right now - a valid rule can still match nothing.</param>
 public record OrderingRulesValidationDto(
     bool IsValid, IReadOnlyList<string> Problems, IReadOnlyList<OrderingRuleGroupMatchDto> Groups);
 
@@ -763,7 +763,7 @@ public record TaskPlanningDto(
 /// <param name="MrExternalId">Its provider id, for display.</param>
 /// <param name="RepositoryName">Its repository, for display.</param>
 /// <param name="SourceBranch">Its branch, for display.</param>
-/// <param name="MrStatus">Its current status — an excluded merge request may since have been merged.</param>
+/// <param name="MrStatus">Its current status - an excluded merge request may since have been merged.</param>
 /// <param name="State">"Included" or "Excluded".</param>
 public record PlanMembershipDto(
     Guid MergeRequestId,
@@ -801,7 +801,7 @@ public record OrderingRuleOrderDto(
 
 /// <summary>The ordering rules as a structure the visual editor can hold.</summary>
 /// <param name="Editable">
-/// False when the stored document says something the form cannot express — a wait policy, a per-task
+/// False when the stored document says something the form cannot express - a wait policy, a per-task
 /// override, a nested exclude. Saving from the form would drop it, so the form refuses to own it and
 /// the text editor stays the way in.
 /// </param>

@@ -12,7 +12,7 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.Queue;
 
 /// <summary>
-/// TaskSyncConsumer is what finally calls TrackerService — the call that never existed — and what
+/// TaskSyncConsumer is what finally calls TrackerService - the call that never existed - and what
 /// attaches merge requests that arrived before their task. Both are claims the documentation makes
 /// and nothing checked.
 /// </summary>
@@ -141,7 +141,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
     /// <summary>
     /// Webhook order is not guaranteed and a merge request commonly arrives before its task. Once
     /// its own event is handled nothing revisits it, so without this the merge request stays
-    /// unlinked for good — and an unlinked merge request carries no task edges into the plan.
+    /// unlinked for good - and an unlinked merge request carries no task edges into the plan.
     /// </summary>
     [Fact]
     public async Task AMergeRequestThatArrivedBeforeItsTaskIsLinkedWhenTheTaskShowsUp()
@@ -184,7 +184,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A repository with no tracker at all must not be swept in either — TrackerConnectionId is
+    /// A repository with no tracker at all must not be swept in either - TrackerConnectionId is
     /// nullable, and NULL is not a match.
     /// </summary>
     [Fact]
@@ -218,7 +218,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// Linking a merge request changes the plan's input even when no dependency edge moved, so the
-    /// replan has to be asked for on either trigger — not only on the tracker reporting a change.
+    /// replan has to be asked for on either trigger - not only on the tracker reporting a change.
     /// </summary>
     [Fact]
     public async Task LinkingAMergeRequestAsksForARecalculationEvenWhenNoEdgeChanged()
@@ -263,7 +263,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A misconfigured connection name is not retryable — redelivering it forever only fills the
+    /// A misconfigured connection name is not retryable - redelivering it forever only fills the
     /// queue. It returns rather than throwing, and the tracker is not called at all, since there is
     /// no connection to call it on.
     /// </summary>

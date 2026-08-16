@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// <remarks>
 /// <para>
 /// <see cref="OrgId"/> is the reason this type exists. It used to sit in the shared tracker port
-/// — <c>GetIssueAsync(apiUrl, orgId, token, issueKey, ct)</c> — and on the shared entity as a
+/// - <c>GetIssueAsync(apiUrl, orgId, token, issueKey, ct)</c> - and on the shared entity as a
 /// column. An organization id is a Yandex.Tracker concept; Jira has no equivalent. A contract
 /// that names it does not describe "a tracker", it describes this one, and every other adapter
 /// would have had to accept a parameter it has no use for.

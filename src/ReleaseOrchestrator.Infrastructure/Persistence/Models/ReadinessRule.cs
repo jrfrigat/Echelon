@@ -15,14 +15,14 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// This replaced the readiness that lived inline on the environment (a label set plus a mode). Inline,
 /// every environment restated the same policy and a repository could not deviate; as a named entity,
 /// "prod-strict" is written once and pointed at from wherever it applies. What a rule matches against
-/// is signals — <c>label:*</c>, <c>mr-status:*</c>, <c>pipeline:*</c> — not labels alone, so a project
+/// is signals - <c>label:*</c>, <c>mr-status:*</c>, <c>pipeline:*</c> - not labels alone, so a project
 /// that gates on a pipeline result or a merge state expresses it in the same rule language.
 /// </para>
 /// <para>
 /// <see cref="RequiredSignals"/> is one canonical string, like <see cref="MergeRequest.Labels"/>, for
 /// the same reasons: the gate loads the rule and compares in memory, and a plain column needs no child
 /// table or cascade. <see cref="Mode"/> is only <see cref="ReadyRule.AnyOf"/> or
-/// <see cref="ReadyRule.AllOf"/> — a named rule with no gate would be a rule that is not one; "no gate"
+/// <see cref="ReadyRule.AllOf"/> - a named rule with no gate would be a rule that is not one; "no gate"
 /// is the absence of an assigned rule, not a rule you can name.
 /// </para>
 /// </remarks>
@@ -42,7 +42,7 @@ public class ReadinessRule
 
     /// <summary>
     /// The signals a merge request must carry to satisfy this rule, canonical (comma-joined). Each is a
-    /// <c>kind:value</c> token — <c>label:ready-for-prod</c>, <c>pipeline:success</c>. Empty admits
+    /// <c>kind:value</c> token - <c>label:ready-for-prod</c>, <c>pipeline:success</c>. Empty admits
     /// nothing, which the resolver guards, so a rule cannot be saved into "matches everything".
     /// </summary>
     [Required, MaxLength(2000)]

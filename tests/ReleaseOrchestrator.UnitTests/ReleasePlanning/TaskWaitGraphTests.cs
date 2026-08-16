@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// </summary>
 /// <remarks>
 /// The planner used to merge declared dependencies and the task hierarchy unconditionally, so
-/// "a parent waits for its subtasks" was an assumption with no way to decline it — right for a parent
+/// "a parent waits for its subtasks" was an assumption with no way to decline it - right for a parent
 /// that is an umbrella over its children's work, wrong for one that merely files unrelated tickets.
 /// A survey of trackers had already found that only <c>depends on</c> is an ordering every one agrees
 /// on. These pin the policy that replaced the assumption.
@@ -145,7 +145,7 @@ public class TaskWaitGraphTests
     public void AManualEntryThePolicyExcludedIsIgnored()
     {
         // A stale sequence naming a subtask must not resurrect it once subtasks stopped being waited
-        // on — the sequence orders the prerequisites that exist, it does not create them.
+        // on - the sequence orders the prerequisites that exist, it does not create them.
         var graph = Build(
             TaskWaitPolicy.Default with { WaitForSubtasks = false },
             Task(Parent, subtasks: [SubA], linked: [LinkA, LinkB], manualOrder: [SubA, LinkA, LinkB]));

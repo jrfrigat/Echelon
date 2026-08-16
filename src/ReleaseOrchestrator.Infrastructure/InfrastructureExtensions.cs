@@ -37,7 +37,7 @@ public static class InfrastructureExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
         // Each sub-setup validates its own required settings synchronously, right here, rather than
-        // inside a transport or provider lambda that runs lazily — a missing value has to fail the
+        // inside a transport or provider lambda that runs lazily - a missing value has to fail the
         // deployment at startup, not at the first request when it already looked healthy.
 
         // Both contexts, against whichever database is configured. Connection strings and the
@@ -57,14 +57,14 @@ public static class InfrastructureExtensions
         services.AddScoped<ITrackerService, TrackerService>();
 
         // The factories map a connection's provider type to an adapter. They resolve keyed
-        // services, so they stay satisfiable even with no adapter registered — an unknown
+        // services, so they stay satisfiable even with no adapter registered - an unknown
         // provider type is reported by the factory, naming the ones that exist, rather than by
         // container validation.
         services.AddScoped<IVcsProviderFactory, VcsProviderFactory>();
         services.AddScoped<ITrackerProviderFactory, TrackerProviderFactory>();
         services.AddScoped<IDeployStrategyFactory, DeployStrategyFactory>();
 
-        // The registry, in full. Adding a provider is a project plus a line here — no dynamic
+        // The registry, in full. Adding a provider is a project plus a line here - no dynamic
         // loading, no discovery by reflection: see the note in this project's .csproj.
         services.AddGitLabProvider();
         services.AddGitLabDeployStrategies();

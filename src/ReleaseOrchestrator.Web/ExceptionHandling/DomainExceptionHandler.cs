@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.Web.ExceptionHandling;
 /// <summary>
 /// Maps domain failures to the status codes the controllers already advertise.
 /// Without this every "not found" and every malformed YAML surfaced as a 500, and in
-/// Development the full stack trace — table names included — went to the client.
+/// Development the full stack trace - table names included - went to the client.
 /// </summary>
 public class DomainExceptionHandler(
     ILogger<DomainExceptionHandler> logger,

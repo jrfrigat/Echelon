@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// agree on it without the poller knowing which provider it is talking to.
 /// </summary>
 /// <remarks>
-/// A poll interval is not a VCS concept — it is how often <em>this service</em> asks — so it lives
+/// A poll interval is not a VCS concept - it is how often <em>this service</em> asks - so it lives
 /// here as a neutral, well-known key rather than in any one adapter. A poll-mode provider declares a
 /// setting under <see cref="IntervalKey"/>, and the poller reads that key from whatever connection it
 /// sweeps. That is what keeps splitting <c>gitlab</c> into a webhook type and a poll type from
@@ -22,7 +22,7 @@ public static class VcsPollSettings
     /// <summary>The shortest interval an operator may configure, so a typo cannot hammer the API.</summary>
     public const int MinIntervalSeconds = 30;
 
-    /// <summary>The longest interval worth offering — a day.</summary>
+    /// <summary>The longest interval worth offering - a day.</summary>
     public const int MaxIntervalSeconds = 86_400;
 
     /// <summary>Reads the interval from a connection's settings, falling back to the default.</summary>

@@ -6,8 +6,8 @@ namespace ReleaseOrchestrator.Core.Enums;
 /// <remarks>
 /// <para>
 /// One field, so "there is a rule" and "there is no gate" are mutually exclusive by construction. A
-/// separate boolean beside a label set would allow the vacuous combination — gate enabled, no labels
-/// configured — whose only sensible reading is "nothing qualifies" but whose likely implementation is
+/// separate boolean beside a label set would allow the vacuous combination - gate enabled, no labels
+/// configured - whose only sensible reading is "nothing qualifies" but whose likely implementation is
 /// "everything qualifies".
 /// </para>
 /// <para>
@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Core.Enums;
 public enum ReadyRule
 {
     /// <summary>
-    /// Anything not closed may deploy here. A deliberate, recorded decision — never a default.
+    /// Anything not closed may deploy here. A deliberate, recorded decision - never a default.
     /// </summary>
     /// <remarks>
     /// Reasonable for a scratch environment. Choosing it is an approval decision rather than a

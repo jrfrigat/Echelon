@@ -17,7 +17,7 @@ namespace ReleaseOrchestrator.UnitTests.Readiness;
 /// for any merge request that is not ready for its environment, in
 /// <c>RolloutService.GuardReadinessAsync</c>, covered by the launch-gate tests in
 /// <c>RolloutServiceTests</c> (blocked when unready, admitted by a label, admitted or held by a pin).
-/// That closes a gap this file was written against — an earlier test was NAMED for a guarantee it did
+/// That closes a gap this file was written against - an earlier test was NAMED for a guarantee it did
 /// not check (<c>MissingLabelKeepsTheMrOutOfThePlan</c> asserted only that a resolver returned a
 /// status), and for a while nothing checked the guarantee itself.
 /// </remarks>
@@ -57,7 +57,7 @@ public class ReadinessResolverTests
     /// A gate that is switched on with nothing configured admits NOTHING.
     /// </summary>
     /// <remarks>
-    /// The natural implementation of AllOf — <c>ruleLabels.All(...)</c> — returns true for an empty
+    /// The natural implementation of AllOf - <c>ruleLabels.All(...)</c> - returns true for an empty
     /// rule set, so an environment whose gate was enabled but never configured would admit every
     /// merge request in the system while appearing, in the admin UI, to be gated. That is the exact
     /// shape of an accident nobody would detect until after a deploy.
@@ -104,7 +104,7 @@ public class ReadinessResolverTests
 }
 
 /// <summary>
-/// Covers the combination of a person's pin with the label rule — the escape hatch that keeps a
+/// Covers the combination of a person's pin with the label rule - the escape hatch that keeps a
 /// merged merge request from wedging a production gate, and the hold that keeps one out.
 /// </summary>
 public class ReadinessEvaluatorTests
@@ -181,7 +181,7 @@ public class LabelSetTests
     /// <summary>
     /// A label containing the join delimiter is dropped, not stored: it would otherwise be torn into
     /// separate tokens when the canonical set is split at the readiness gate and could match a rule
-    /// label it never carried — a false admit into a gated environment.
+    /// label it never carried - a false admit into a gated environment.
     /// </summary>
     [Fact]
     public void NormalizeDropsALabelContainingTheDelimiter()
@@ -203,7 +203,7 @@ public class LabelSetTests
 
     /// <summary>
     /// A set returning to a previous value is a real change, and the canonical form must reflect
-    /// that — approve, revoke, approve again has to be observable.
+    /// that - approve, revoke, approve again has to be observable.
     /// </summary>
     [Fact]
     public void CanonicalDistinguishesAddingAndRemovingALabel()

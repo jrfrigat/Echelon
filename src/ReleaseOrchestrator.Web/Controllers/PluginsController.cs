@@ -8,8 +8,8 @@ using ReleaseOrchestrator.Providers.Abstractions.Deploy;
 namespace ReleaseOrchestrator.Web.Controllers;
 
 /// <summary>
-/// The plugins this build has installed — VCS and tracker connectors, deploy strategies and action
-/// handlers — so an operator can see at a glance what the deployment can talk to and what each does.
+/// The plugins this build has installed - VCS and tracker connectors, deploy strategies and action
+/// handlers - so an operator can see at a glance what the deployment can talk to and what each does.
 /// </summary>
 /// <remarks>
 /// Read straight from the marker registrations the composition root added, so the list is exactly what
@@ -31,7 +31,7 @@ public class PluginsController(
     /// <remarks>
     /// Trackers report their ingestion just as VCS connectors do. They used to be sent as null here
     /// while declaring one all the same, so <c>yandextracker-poll</c> looked like it had no mode
-    /// while <c>gitlab-poll</c> showed one — a difference in this projection, not in the plugins.
+    /// while <c>gitlab-poll</c> showed one - a difference in this projection, not in the plugins.
     /// </remarks>
     [HttpGet]
     public IActionResult List() => Ok(
@@ -50,7 +50,7 @@ public class PluginsController(
     /// which have no ingestion at all.
     /// </param>
     /// <remarks>
-    /// This is the connector's <em>own</em> declaration, echoed — not a classification this service
+    /// This is the connector's <em>own</em> declaration, echoed - not a classification this service
     /// makes. Each adapter registers itself with the mode it works in (GitLab registers
     /// <c>gitlab-webhook</c> as Push and <c>gitlab-poll</c> as Poll, in its own extension method), and
     /// the poller then sweeps whichever connections declared Poll. Nothing here inspects a plugin to

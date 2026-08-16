@@ -107,7 +107,7 @@ internal sealed class GitLabProvider(
         [property: JsonPropertyName("state")] string? State,
         [property: JsonPropertyName("title")] string? Title,
         // DateTimeOffset, not DateTime: GitLab stamps an offset ("...+03:00"), and deserialising that
-        // into a DateTime yields Kind=Local — which SQL Server stores without complaint, at the wrong
+        // into a DateTime yields Kind=Local - which SQL Server stores without complaint, at the wrong
         // instant whenever the host is not on UTC, and which PostgreSQL refuses outright, since it maps
         // DateTime to timestamptz and Npgsql writes only Kind=Utc. So the bug is invisible until the
         // second database runs. Parse the offset, hand back UtcDateTime; the tracker adapter does the same.

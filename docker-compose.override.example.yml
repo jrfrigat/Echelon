@@ -6,12 +6,12 @@
 #   docker compose up -d --build
 #
 # docker-compose.override.yml is git-ignored (it holds a real password); this .example is tracked
-# and holds placeholders. A .env is still required for the other secrets — copy .env.example to
+# and holds placeholders. A .env is still required for the other secrets - copy .env.example to
 # .env. In this mode MSSQL_SA_PASSWORD is only there to satisfy the base file's interpolation; the
 # mssql container is not started, so any non-empty value will do.
 #
 # Authentication: a Linux container has no Windows identity, so Trusted_Connection (Windows auth)
-# does NOT work here — use a SQL login (User Id / Password). If SQL logins are not enabled yet,
+# does NOT work here - use a SQL login (User Id / Password). If SQL logins are not enabled yet,
 # enable "SQL Server and Windows Authentication mode" and make sure the server accepts TCP on 1433.
 services:
   core:
@@ -23,9 +23,9 @@ services:
 
       # ---- Authentication ---------------------------------------------------------------------
       # Auth__Provider selects the scheme, fixed at deploy time (not runtime):
-      #   AzureAd  the default — Microsoft Entra ID. Set AD__TenantId / AD__ClientId / AD__Audience.
+      #   AzureAd  the default - Microsoft Entra ID. Set AD__TenantId / AD__ClientId / AD__Audience.
       #   Oidc     any OpenID Connect provider. Set Auth__Oidc__Authority (and __Audience).
-      #   Local    no external IdP — the service issues its own tokens at /auth/login. The admin
+      #   Local    no external IdP - the service issues its own tokens at /auth/login. The admin
       #            below is granted every permission, so it can be used to test without Azure AD.
       Auth__Provider: Local
       Auth__Local__Username: admin
@@ -54,7 +54,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     # The PWA (Blazor) is baked with Auth:Provider=AzureAd. Point it at the provider you chose above
-    # without rebuilding by mounting a small appsettings over its own — see pwa-appsettings.json.
+    # without rebuilding by mounting a small appsettings over its own - see pwa-appsettings.json.
     # For Local:  { "Auth": { "Provider": "Local" } }
     volumes:
       - ./pwa-appsettings.json:/app/wwwroot/appsettings.json:ro
@@ -65,7 +65,7 @@ services:
         condition: service_healthy
         required: false
 
-  # Declared with a profile nothing enables, so it does not start — the host's SQL Server is used
+  # Declared with a profile nothing enables, so it does not start - the host's SQL Server is used
   # instead. Kept in the model so `docker compose config` still describes the full stack.
   mssql:
     profiles: ["never"]

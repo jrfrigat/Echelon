@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 /// <remarks>
 /// <para>
 /// The distinction is the whole point. 500 says "this server is broken" and senders treat it as
-/// permanent — GitLab does not re-deliver, so the event is gone for good. 503 says "temporarily
+/// permanent - GitLab does not re-deliver, so the event is gone for good. 503 says "temporarily
 /// unavailable, come back", which is both the honest description of a downed broker and the only
 /// answer that leaves the event recoverable, whether by the sender's retry or by an operator
 /// re-sending from the hook log.
@@ -22,7 +22,7 @@ namespace ReleaseOrchestrator.Ingress.Webhooks.ExceptionHandling;
 /// Limitations now records that rather than promising one. Buffering acknowledges the webhook with
 /// 200 while the event exists only in RAM, so the sender
 /// marks it delivered and a pod restart loses it with nobody the wiser. That trades a loud,
-/// recoverable failure for a silent, permanent one — the exact defect this handler fixes. Not
+/// recoverable failure for a silent, permanent one - the exact defect this handler fixes. Not
 /// losing events across a broker outage needs a persistent outbox, which is its own task.
 /// </para>
 /// </remarks>

@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Application.Services;
 /// </para>
 /// <para>
 /// The implementation buffers and never blocks. When the buffer is full it drops, counts the drop,
-/// and reports the count — an audit that slows the service down to stay complete has the trade
+/// and reports the count - an audit that slows the service down to stay complete has the trade
 /// backwards.
 /// </para>
 /// </remarks>

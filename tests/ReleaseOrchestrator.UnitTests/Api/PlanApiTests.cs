@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.UnitTests.Api;
 /// </summary>
 /// <remarks>
 /// These endpoints had no test above the service layer. The services were covered, so what was
-/// unverified was exactly the part every caller depends on — that the route exists, that the policy
+/// unverified was exactly the part every caller depends on - that the route exists, that the policy
 /// is the right one, that a refusal is a 422 and not a 500, and that the JSON says what the client
 /// reads. Verified by hand against a running instance once; this is the version that survives.
 /// </remarks>
@@ -112,7 +112,7 @@ public class PlanApiTests : IAsyncLifetime
         Assert.All(items, i => Assert.True(i.GetProperty("wave").GetInt32() >= 1));
     }
 
-    /// <summary>The version is an ordinal now, so a second build has to say 2 — over the wire, not just in the row.</summary>
+    /// <summary>The version is an ordinal now, so a second build has to say 2 - over the wire, not just in the row.</summary>
     [Fact]
     public async Task RecalculatingAgainIncrementsTheVersion()
     {
@@ -148,7 +148,7 @@ public class PlanApiTests : IAsyncLifetime
 
     // ---- validate and import ---------------------------------------------------------------
 
-    /// <summary>An exported plan validates and imports over HTTP — the round trip, end to end.</summary>
+    /// <summary>An exported plan validates and imports over HTTP - the round trip, end to end.</summary>
     [Fact]
     public async Task ExportedPlanValidatesAndImports()
     {

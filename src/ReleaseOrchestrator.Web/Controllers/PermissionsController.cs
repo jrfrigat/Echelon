@@ -82,8 +82,8 @@ public class PermissionsController(
         }
         catch (DbUpdateException)
         {
-            // Lost the race with a concurrent grant. The check above is advisory — the unique index
-            // is the guarantee — so the answer is the one the check would have given, not a 500.
+            // Lost the race with a concurrent grant. The check above is advisory - the unique index
+            // is the guarantee - so the answer is the one the check would have given, not a 500.
             // Anything else that broke the write is not ours to swallow.
             db.ChangeTracker.Clear();
             if (!await db.GroupPermissionMappings.AnyAsync(
@@ -144,7 +144,7 @@ public class PermissionsController(
     public async Task<IActionResult> AddUserOverride([FromBody] AddUserOverrideRequest req, CancellationToken ct)
     {
         // PermissionClaimsTransformation matches overrides on the object id from the token, so
-        // anything else an administrator might reach for — a UPN, an email, a display name — would
+        // anything else an administrator might reach for - a UPN, an email, a display name - would
         // store a row that quietly never applies.
         if (!UserIdentifier.TryNormalize(req.UserId, out var userId))
             return BadRequest(new { error = localizer["Perm_UserIdMustBeOid"].Value });

@@ -19,7 +19,7 @@ public static class GitLabProviderExtensions
     /// GitLab is two provider types, not one with a push/poll toggle: <see cref="WebhookProviderType"/>
     /// pushes events to the ingress and declares no extra settings, while
     /// <see cref="PollProviderType"/> is polled and declares its interval. Both share one API adapter
-    /// and one set of deploy strategies — only ingestion differs.
+    /// and one set of deploy strategies - only ingestion differs.
     /// </remarks>
     public const string WebhookProviderType = "gitlab-webhook";
 
@@ -40,7 +40,7 @@ public static class GitLabProviderExtensions
     /// <para>
     /// The matching <see cref="VcsProviderRegistration"/> is what makes the adapter discoverable
     /// rather than merely resolvable: keyed DI cannot enumerate its keys, so without it nothing
-    /// could list the providers that exist — neither the factory's error message nor the API's
+    /// could list the providers that exist - neither the factory's error message nor the API's
     /// validation of an operator's input.
     /// </para>
     /// </remarks>

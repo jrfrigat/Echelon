@@ -10,8 +10,8 @@ namespace ReleaseOrchestrator.Application.Auditing;
 /// nothing reports; a typo here does not compile.
 /// </para>
 /// <para>
-/// The entity's own documentation used to advertise kinds — <c>Paused</c>, <c>Cancelled</c>,
-/// <c>StepSucceeded</c> — that no code ever wrote. Anything named here must have a write site, and
+/// The entity's own documentation used to advertise kinds - <c>Paused</c>, <c>Cancelled</c>,
+/// <c>StepSucceeded</c> - that no code ever wrote. Anything named here must have a write site, and
 /// anything written must be named here.
 /// </para>
 /// </remarks>
@@ -26,7 +26,7 @@ public static class RolloutEventKinds
     /// <remarks>
     /// Recorded because the request succeeds silently. Two operators pressing Launch a minute apart
     /// both get HTTP 200, the second one changes nothing, and without this the audit names only the
-    /// first — on a production deploy the second may well be the person who actually drove it.
+    /// first - on a production deploy the second may well be the person who actually drove it.
     /// </remarks>
     public const string LaunchCoalesced = "LaunchCoalesced";
 
@@ -66,7 +66,7 @@ public static class RolloutEventKinds
     /// An operator declared a step done without deploying it.
     /// </summary>
     /// <remarks>
-    /// The most consequential manual action in the system — it marks the merge request deployed in
+    /// The most consequential manual action in the system - it marks the merge request deployed in
     /// that environment, which the readiness gate then trusts for every later rollout.
     /// </remarks>
     public const string StepSkipped = "StepSkipped";
@@ -77,7 +77,7 @@ public static class RolloutEventKinds
     /// <remarks>
     /// Recorded so the write-back is visible as something the system did. The tracker will echo it
     /// back as an inbound webhook; the timeline shows both as the separate facts they are and does
-    /// not claim the first caused the second — nothing correlates them, and Yandex deliveries carry
+    /// not claim the first caused the second - nothing correlates them, and Yandex deliveries carry
     /// no event id to deduplicate on.
     /// </remarks>
     public const string TrackerStatusPushed = "TrackerStatusPushed";

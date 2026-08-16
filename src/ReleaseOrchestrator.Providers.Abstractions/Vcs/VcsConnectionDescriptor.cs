@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// <param name="Name">Operator-facing name. Appears in the errors this connection causes.</param>
 /// <param name="ProviderType">Which adapter serves it; matched in canonical form.</param>
 /// <param name="ApiUrl">Base address of the provider's API.</param>
-/// <param name="EncryptedAccessToken">Opaque here — only the factory can decrypt it.</param>
+/// <param name="EncryptedAccessToken">Opaque here - only the factory can decrypt it.</param>
 /// <remarks>
 /// The factory used to take the <c>VcsConnection</c> entity, which put a persistence type in the
 /// provider contract: an adapter package could not be referenced without also referencing the

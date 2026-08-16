@@ -4,7 +4,7 @@ namespace ReleaseOrchestrator.Core.Parsing;
 
 /// <summary>The outcome of a readiness decision, and where it came from.</summary>
 /// <param name="IsReady">Whether the merge request may deploy to the environment.</param>
-/// <param name="Source">What decided it — a person's pin, or the labels against the rule.</param>
+/// <param name="Source">What decided it - a person's pin, or the labels against the rule.</param>
 public readonly record struct ReadinessDecision(bool IsReady, ReadinessSource Source);
 
 /// <summary>
@@ -21,7 +21,7 @@ public readonly record struct ReadinessDecision(bool IsReady, ReadinessSource So
 /// </para>
 /// <para>
 /// A pin wins outright, in whichever direction it points. It is the escape hatch a label gate needs
-/// because labels cannot always be acquired — a merged merge request has left the poller's
+/// because labels cannot always be acquired - a merged merge request has left the poller's
 /// open-request listing, so an approval that arrives after the merge may never be observable from
 /// labels at all. Without letting a person override, the first production rule would wedge every task
 /// holding such a merge request. And because a pin can also deny, it doubles as a hold: a person can

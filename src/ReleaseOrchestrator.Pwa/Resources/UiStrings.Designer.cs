@@ -398,7 +398,7 @@ namespace ReleaseOrchestrator.Pwa.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The planner could not satisfy every constraint and ordered the stages anyway. Deploying in this order will violate the rules below — review before releasing..
+        ///   Looks up a localized string similar to The planner could not satisfy every constraint and ordered the stages anyway. Deploying in this order will violate the rules below - review before releasing..
         /// </summary>
         public static string Plan_Conflicts_Body {
             get {
@@ -3549,7 +3549,7 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
-        /// <summary>Looks up a localized string similar to No key matched — this merge request would not link to a task.</summary>
+        /// <summary>Looks up a localized string similar to No key matched - this merge request would not link to a task.</summary>
         public static string LinkPreview_NoMatch {
             get {
                 return ResourceManager.GetString("LinkPreview_NoMatch", resourceCulture);
@@ -3570,7 +3570,7 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
-        /// <summary>Looks up a localized string similar to Some repositories could not be read — {0}.</summary>
+        /// <summary>Looks up a localized string similar to Some repositories could not be read - {0}.</summary>
         public static string Vcs_Poll_Failures {
             get {
                 return ResourceManager.GetString("Vcs_Poll_Failures", resourceCulture);
@@ -3661,7 +3661,7 @@ namespace ReleaseOrchestrator.Pwa.Resources {
             }
         }
 
-        /// <summary>Looks up a localized string similar to It uses something the form does not hold — a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</summary>
+        /// <summary>Looks up a localized string similar to It uses something the form does not hold - a wait policy, a per-task exception, or a nested exclude. Editing it here would drop that, so use the text below.</summary>
         public static string Rules_Visual_Unavailable_Body {
             get {
                 return ResourceManager.GetString("Rules_Visual_Unavailable_Body", resourceCulture);

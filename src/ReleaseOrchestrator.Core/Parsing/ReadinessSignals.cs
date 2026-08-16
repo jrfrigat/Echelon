@@ -4,8 +4,8 @@ namespace ReleaseOrchestrator.Core.Parsing;
 
 /// <summary>
 /// The normalized readiness signals a merge request carries, and the readiness a rule is written
-/// against. A signal is a <c>kind:value</c> token — <c>label:ready-for-prod</c>, <c>mr-status:merged</c>,
-/// <c>pipeline:success</c> — so one rule language spans every way a project decides a merge request is
+/// against. A signal is a <c>kind:value</c> token - <c>label:ready-for-prod</c>, <c>mr-status:merged</c>,
+/// <c>pipeline:success</c> - so one rule language spans every way a project decides a merge request is
 /// ready, rather than readiness being a single hardcoded label.
 /// </summary>
 /// <remarks>
@@ -44,7 +44,7 @@ public static class ReadinessSignals
     /// <param name="labels">The merge request's labels, in any form.</param>
     /// <param name="status">The merge request's normalized status.</param>
     /// <param name="pipelineResult">The latest pipeline result, or null when none is known.</param>
-    /// <returns>The canonical signal set — trimmed, lower-cased, de-duplicated, sorted.</returns>
+    /// <returns>The canonical signal set - trimmed, lower-cased, de-duplicated, sorted.</returns>
     public static IReadOnlyList<string> For(
         IEnumerable<string?>? labels,
         MergeRequestStatus status,

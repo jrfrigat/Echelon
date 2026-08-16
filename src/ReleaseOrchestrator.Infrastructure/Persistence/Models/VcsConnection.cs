@@ -22,7 +22,7 @@ public class VcsConnection
     /// </summary>
     /// <remarks>
     /// A string, not an enum. As an enum, every new provider was a change to the domain plus a
-    /// data migration — for a value the domain never branches on, since the type is meaningful
+    /// data migration - for a value the domain never branches on, since the type is meaningful
     /// only to the factory that resolves an adapter for it. Compared through
     /// <c>ProviderKey.Normalize</c>, never with <c>==</c> against a literal.
     /// </remarks>

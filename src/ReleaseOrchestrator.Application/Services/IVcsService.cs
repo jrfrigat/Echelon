@@ -6,7 +6,7 @@ namespace ReleaseOrchestrator.Application.Services;
 /// Reads merge requests from whichever VCS a repository's connection names.
 /// </summary>
 /// <remarks>
-/// The webhook path is the primary source; this port exists to reconcile what webhooks missed —
+/// The webhook path is the primary source; this port exists to reconcile what webhooks missed -
 /// failed deliveries, downtime, a label removal nobody observed. Both paths resolve state through
 /// the same rules on purpose: they once kept separate mappings, and the same merge request ended up
 /// with a different status depending on which path imported it.
@@ -22,7 +22,7 @@ public interface IVcsService
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Creates the row when the merge request is not stored yet. A merge request the provider no
-    /// longer has is left alone rather than deleted — absence from one read is not proof it is gone.
+    /// longer has is left alone rather than deleted - absence from one read is not proof it is gone.
     /// </remarks>
     Task SyncMergeRequestAsync(Guid repositoryId, string externalMrId, CancellationToken ct = default);
 

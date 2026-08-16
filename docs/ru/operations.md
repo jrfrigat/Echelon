@@ -1,4 +1,4 @@
-# Release Orchestrator — Эксплуатация и развёртывание
+# Release Orchestrator - Эксплуатация и развёртывание
 
 > [English version ->](../en/operations.md) - [← Вернуться к документации](../README.md)
 
@@ -152,7 +152,7 @@ curl http://localhost:5000/health
 Проверяет три вещи: рабочую БД, архивную БД и координационный кэш.
 
 Брокер намеренно **не** проверяется. При недоступности RabbitMQ ingress отвечает 503, который
-отправители ретраят, поэтому простой брокера — не повод выводить API из ротации.
+отправители ретраят, поэтому простой брокера - не повод выводить API из ротации.
 
 Архивная БД сообщает **Degraded**, а не Unhealthy: архивация фоновая, и вывести из ротации из-за
 неё было бы хуже самого сбоя.
@@ -207,23 +207,23 @@ curl http://localhost:5000/health/ready
 
 Ищите эти в логах:
 
-- **"Database connection failed"** — Проверьте доступность SQL Server
-- **"RabbitMQ connection failed"** — Проверьте RabbitMQ, network, credentials
-- **"Release plan recalculation failed"** — Проверьте логи для graph algorithm issues
-- **"Archive batch failed"** — Проверьте foreign key constraints, disk space
-- **"Permissions cache error"** — Проверьте Redis availability
+- **"Database connection failed"** - Проверьте доступность SQL Server
+- **"RabbitMQ connection failed"** - Проверьте RabbitMQ, network, credentials
+- **"Release plan recalculation failed"** - Проверьте логи для graph algorithm issues
+- **"Archive batch failed"** - Проверьте foreign key constraints, disk space
+- **"Permissions cache error"** - Проверьте Redis availability
 
 ### Метрики через Prometheus
 
-Оба хоста отдают метрики на `/metrics` в текстовом формате Prometheus — включено по умолчанию и не
+Оба хоста отдают метрики на `/metrics` в текстовом формате Prometheus - включено по умолчанию и не
 требует коллектора, Prometheus скрейпит их напрямую. Что экспортируется:
 
-- **ASP.NET Core** — частота, длительность и число активных запросов (API Core, вебхуки Ingress)
-- **.NET runtime** — GC, куча, thread pool, число исключений, CPU и working set
-- **HTTP-клиент** — исходящие вызовы к GitLab и трекеру
-- **Rebus** — тайминги отправки, приёма и обработки сообщений
+- **ASP.NET Core** - частота, длительность и число активных запросов (API Core, вебхуки Ingress)
+- **.NET runtime** - GC, куча, thread pool, число исключений, CPU и working set
+- **HTTP-клиент** - исходящие вызовы к GitLab и трекеру
+- **Rebus** - тайминги отправки, приёма и обработки сообщений
 
-Отключить endpoint — `Prometheus__Enabled=false`. Он анонимный и вне rate-лимитера, как health-пробы:
+Отключить endpoint - `Prometheus__Enabled=false`. Он анонимный и вне rate-лимитера, как health-пробы:
 scrape доходит до процесса независимо от аутентификации и не тратит бюджет запросов API.
 
 Готовый стек лежит рядом с compose-файлами:
@@ -234,7 +234,7 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 # Grafana на http://localhost:3000 (Prometheus подключён как источник данных по умолчанию)
 ```
 
-Цели скрейпа — в `observability/prometheus.yml`.
+Цели скрейпа - в `observability/prometheus.yml`.
 
 ### Traces через OpenTelemetry
 
@@ -250,11 +250,11 @@ dotnet run --project src/ReleaseOrchestrator.Web
 Traces захватывают:
 - Webhook ingestion (Ingress)
 - Отправку и обработку сообщений (Rebus проносит W3C trace context через RabbitMQ, поэтому путь
-  Ingress → queue → Core остаётся одним trace)
+  Ingress -> queue -> Core остаётся одним trace)
 - Database operations (EF Core)
 - Release plan calculations
 
-**Ограничение:** Prometheus хранит только метрики. Без OTLP-коллектора нет distributed tracing —
+**Ограничение:** Prometheus хранит только метрики. Без OTLP-коллектора нет distributed tracing -
 счётчик Prometheus скажет, *что* обработка вебхуков замедлилась, но не *какой* span.
 
 ---
@@ -271,7 +271,7 @@ Traces захватывают:
 - **Redis:** Shared cache (Redis Cluster если масштабирование beyond single instance)
 - **Archive service:** Запускается в каждом поде (идемпотентно, no coordination needed)
 
-**Concurrency note:** Archive service регистрируется в каждом поде, но гейтится распределённой арендой — за ночь цикл проходит один раз на весь деплой, а не по разу на под. Это взаимное исключение, а не консенсус: корректность по-прежнему держится на идемпотентной вставке и ретрае, а при недоступности хранилища аренды цикл пропускается (fail-closed), а не выполняется всеми. То же верно для координатора выкаток, поллеров и реконсиляции задач.
+**Concurrency note:** Archive service регистрируется в каждом поде, но гейтится распределённой арендой - за ночь цикл проходит один раз на весь деплой, а не по разу на под. Это взаимное исключение, а не консенсус: корректность по-прежнему держится на идемпотентной вставке и ретрае, а при недоступности хранилища аренды цикл пропускается (fail-closed), а не выполняется всеми. То же верно для координатора выкаток, поллеров и реконсиляции задач.
 
 ### Database Connection Pooling
 
@@ -331,7 +331,7 @@ Archive DB растёт ~3.6М rows/year при 10K tasks/day throughput. Пос
 |---|---|---|---|
 | **Archival** | Hourly (configurable) | Automatic (Archive service) | Перемещает closed tasks/MRs >90 дней |
 | **Task sync** | Every 30 minutes (configurable) | Automatic (Task Reconciliation) | Загружает open task dependencies |
-| **Permission cache invalidation** | On-demand | Automatic (permission changes) | Нет TTL — invalidate на change only |
+| **Permission cache invalidation** | On-demand | Automatic (permission changes) | Нет TTL - invalidate на change only |
 | **Health check** | Continuous | Kubernetes/monitoring | `/health` и `/health/ready` |
 
 ---
@@ -347,10 +347,10 @@ Archive DB растёт ~3.6М rows/year при 10K tasks/day throughput. Пос
 
 ### Распределённая аренда для Archive (не leader election)
 
-Archive service запускается в каждом поде, но гейтится распределённой арендой на Redis. За раз только один под может держать аренду и запускать архивацию. Это **не алгоритм консенсуса**, а механизм взаимного исключения: один Redis — единственная точка отказа. Однако это приемлемо, так как архивация идемпотентна. Рекомендация:
+Archive service запускается в каждом поде, но гейтится распределённой арендой на Redis. За раз только один под может держать аренду и запускать архивацию. Это **не алгоритм консенсуса**, а механизм взаимного исключения: один Redis - единственная точка отказа. Однако это приемлемо, так как архивация идемпотентна. Рекомендация:
 
 - Убедитесь Redis доступен и здоров (часть `/health/ready`)
-- Если Redis недоступен, архивация пропускается (fail-closed) — планы не архивируются до восстановления
+- Если Redis недоступен, архивация пропускается (fail-closed) - планы не архивируются до восстановления
 - Мониторьте excessive locking на archive tables (признак длительных циклов архивации)
 - Если performance деградирует из-за lock contention, рассмотрите более длительный Lease Duration в коде
 
@@ -358,8 +358,8 @@ Archive service запускается в каждом поде, но гейти
 
 `RepositoryBranches.Name` и `Repositories.ExternalId` принудительно переводятся миграцией в
 `Latin1_General_100_BIN2`: обе колонки лежат под уникальным индексом и хранят идентификаторы,
-регистр которых значим у источника — имена веток Git и пути проектов GitLab. При обычном
-регистронезависимом умолчании инстанса `feature/Login` и `feature/login` — один дублирующийся ключ,
+регистр которых значим у источника - имена веток Git и пути проектов GitLab. При обычном
+регистронезависимом умолчании инстанса `feature/Login` и `feature/login` - один дублирующийся ключ,
 и вставка падает внутри консьюмера, который затем переотправляется и падает бесконечно.
 
 Миграция это закрывает. Следить нужно за базой, созданной или восстановленной **в обход** миграций:
@@ -383,13 +383,13 @@ Async paths имеют poor visibility. Рекомендация:
 
 Обе БД поддержаны на равных: одна модель, один набор тестов и по сборке миграций на каждую
 (`ReleaseOrchestrator.Migrations.MsSql`, `...Migrations.Postgres`). Три места, где они действительно
-расходятся, изолированы в `ProviderSpecificMapping` — токен конкурентности (`rowversion` против
-системной колонки `xmin`), диалект фильтрованного индекса и регистрозависимая коллация выше, — и
+расходятся, изолированы в `ProviderSpecificMapping` - токен конкурентности (`rowversion` против
+системной колонки `xmin`), диалект фильтрованного индекса и регистрозависимая коллация выше, - и
 каждое закреплено тестом, который строит обе модели офлайн.
 
 Честная оговорка не про поддержку, а про обкатку: **сервер PostgreSQL для этого приложения не
-запускался ни разу**, то есть его миграции не накатывались ни на что. Миграции SQL Server —
-накатывались, начисто, на живой инстанс 2022. Сборка модели и генерация SQL — сильнейшая проверка,
+запускался ни разу**, то есть его миграции не накатывались ни на что. Миграции SQL Server -
+накатывались, начисто, на живой инстанс 2022. Сборка модели и генерация SQL - сильнейшая проверка,
 возможная без сервера, но не замена ему.
 
 ---
@@ -467,8 +467,8 @@ WITH RECOVERY;
 - **Fix:** Restart RabbitMQ, check firewall rules, масштабируйте если queue depth high
 
 **Issue:** План не обновляется после создания MR
-- **Cause:** Task не linked, либо не отработал пересчёт. Обратите внимание: «готового» статуса для
-  попадания в план MR *не* требуется — готовность проверяется по окружению на запуске, а не при
+- **Cause:** Task не linked, либо не отработал пересчёт. Обратите внимание: "готового" статуса для
+  попадания в план MR *не* требуется - готовность проверяется по окружению на запуске, а не при
   планировании, поэтому неготовый MR всё равно виден в своём плане
 - **Check:** `/health/ready` (должно быть 200), check logs для sync errors
 - **Fix:** Manually check branch name (должно include task key), verify label config

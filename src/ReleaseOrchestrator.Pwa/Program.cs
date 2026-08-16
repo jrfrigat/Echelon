@@ -27,7 +27,7 @@ builder.Services.AddFlare(opts =>
 
 // The auth provider is fixed at deploy time by Auth:Provider (read from wwwroot/appsettings.json),
 // mirroring the server. Local runs a self-contained login; anything else uses MSAL (Entra ID).
-// OIDC on the client is a follow-up — it needs its own AuthenticationService.js, which cannot share
+// OIDC on the client is a follow-up - it needs its own AuthenticationService.js, which cannot share
 // index.html with MSAL's.
 var isLocalAuth = string.Equals(builder.Configuration["Auth:Provider"], "Local", StringComparison.OrdinalIgnoreCase);
 
@@ -38,7 +38,7 @@ if (isLocalAuth)
     builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<LocalAuthStateProvider>());
     builder.Services.AddScoped<LocalAuthService>();
     builder.Services.AddScoped<LocalAuthMessageHandler>();
-    // A bare client for the anonymous POST /auth/login — no bearer handler on this one.
+    // A bare client for the anonymous POST /auth/login - no bearer handler on this one.
     builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 }
 else

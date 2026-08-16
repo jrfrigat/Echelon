@@ -18,8 +18,8 @@ namespace ReleaseOrchestrator.Infrastructure.Queue;
 /// <remarks>
 /// One input queue for the whole process, which is the Rebus model and fits a modular monolith:
 /// every handler in the process reads from it, rather than a queue per handler. All six message
-/// types live in one assembly and are routed to that queue, so a caller anywhere — the ingress, a
-/// controller, a handler forwarding to the next step — reaches it with <c>bus.Send</c> and never
+/// types live in one assembly and are routed to that queue, so a caller anywhere - the ingress, a
+/// controller, a handler forwarding to the next step - reaches it with <c>bus.Send</c> and never
 /// has to name a destination.
 ///
 /// <para>
@@ -67,17 +67,17 @@ public static class MessagingSetup
                         PipelineRelativePosition.Before,
                         typeof(DispatchIncomingMessageStep)));
 
-                // Five delivery attempts, then the error queue — the message is parked, never lost,
+                // Five delivery attempts, then the error queue - the message is parked, never lost,
                 // for an operator to inspect or replay. This is where MassTransit's two retry tiers
                 // collapse into one, and the departures are deliberate:
                 //
                 //   - No exponential backoff. Immediate retries are immediate here. The realistic
-                //     race — a status webhook processed before its opened webhook, when both are
-                //     already queued and two workers take them out of order — resolves in
+                //     race - a status webhook processed before its opened webhook, when both are
+                //     already queued and two workers take them out of order - resolves in
                 //     milliseconds, so a backoff would only slow the good case.
                 //   - No separate delayed-redelivery tier. MassTransit configured one (1/5/15 min),
                 //     but on RabbitMQ that tier needs the delayed-message-exchange plugin, which is
-                //     not installed on the broker this runs against — so it was never functional
+                //     not installed on the broker this runs against - so it was never functional
                 //     here. Matching it faithfully in Rebus would mean a durable timeout store
                 //     (Rebus.SqlServer / Rebus.PostgreSql, both providers), which is real surface
                 //     for an edge two backstops already cover: a TaskSyncRequested that dead-letters
@@ -87,8 +87,8 @@ public static class MessagingSetup
                 //     Revisit with a timeout store if out-of-order webhooks separated by minutes
                 //     turn out to be common rather than pathological.
                 //   - No kill switch. Rebus has no circuit breaker, and at one replica with
-                //     idempotent handlers the failure it guards against — the whole pool hammering a
-                //     downed dependency — is a single worker set retrying, which the attempt cap and
+                //     idempotent handlers the failure it guards against - the whole pool hammering a
+                //     downed dependency - is a single worker set retrying, which the attempt cap and
                 //     the error queue already bound. Worth revisiting if this ever scales out.
                 o.RetryStrategy(maxDeliveryAttempts: 5);
                 o.SetNumberOfWorkers(config.GetValue("Queue:Workers", 4));
@@ -104,8 +104,8 @@ public static class MessagingSetup
     /// <remarks>
     /// The parts (Host/Username/Password) are what docker-compose.yml already sets, so composing
     /// them here keeps those settings working unchanged. A full <c>Queue:ConnectionString</c> wins
-    /// when present, for a deployment that would rather hand over one URI — TLS, a vhost, cluster
-    /// hosts — than have this assemble it.
+    /// when present, for a deployment that would rather hand over one URI - TLS, a vhost, cluster
+    /// hosts - than have this assemble it.
     /// </remarks>
     internal static string RabbitMqConnectionString(IConfiguration config)
     {
@@ -119,7 +119,7 @@ public static class MessagingSetup
         var vhost = config["Queue:VirtualHost"] ?? "/";
 
         // Escaped, so a password with a reserved character does not corrupt the URI. The vhost is a
-        // path segment, and "/" — RabbitMQ's default vhost — must reach the server as "%2f", not as
+        // path segment, and "/" - RabbitMQ's default vhost - must reach the server as "%2f", not as
         // a bare slash that would read as an empty vhost name.
         return $"amqp://{Uri.EscapeDataString(user)}:{Uri.EscapeDataString(password)}@{host}:{port}/{Uri.EscapeDataString(vhost)}";
     }

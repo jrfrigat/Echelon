@@ -58,7 +58,7 @@ public class PlanImportTests : PlannerTestBase
     }
 
     /// <summary>
-    /// Import, hand edit and recalculate must produce the same plan — the invariant of 006 §1.
+    /// Import, hand edit and recalculate must produce the same plan - the invariant of 006 §1.
     /// </summary>
     /// <remarks>
     /// Stated as: reorder by importing a document, then recalculate as an ingestion event would, and
@@ -98,7 +98,7 @@ public class PlanImportTests : PlannerTestBase
     }
 
     /// <summary>
-    /// An order that breaks a task dependency is refused, and accepted under force — but the plan
+    /// An order that breaks a task dependency is refused, and accepted under force - but the plan
     /// records the breach either way. A plan may deploy against a constraint; it may never look clean
     /// while doing so.
     /// </summary>

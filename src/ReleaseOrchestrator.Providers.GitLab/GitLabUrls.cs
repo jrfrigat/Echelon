@@ -4,7 +4,7 @@ namespace ReleaseOrchestrator.Providers.GitLab;
 /// <remarks>
 /// One place so the <c>/api/v4</c> prefix and the escaping rules are stated once. A project is
 /// addressed by its URL-encoded <c>path_with_namespace</c>, so the slashes inside it must survive
-/// as <c>%2F</c> — building these by interpolation at each call site is how a path with a subgroup
+/// as <c>%2F</c> - building these by interpolation at each call site is how a path with a subgroup
 /// silently turns into a 404.
 /// </remarks>
 internal static class GitLabUrls

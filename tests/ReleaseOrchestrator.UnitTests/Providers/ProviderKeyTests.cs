@@ -4,7 +4,7 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.Providers;
 
 /// <summary>
-/// The provider key replaced an enum, which means the compiler no longer rejects a bad value —
+/// The provider key replaced an enum, which means the compiler no longer rejects a bad value -
 /// so normalization is what stops "GitLab", "gitlab" and " gitlab " from being three providers.
 /// The PWA still sends "GitLab" and the database now stores "gitlab".
 /// </summary>

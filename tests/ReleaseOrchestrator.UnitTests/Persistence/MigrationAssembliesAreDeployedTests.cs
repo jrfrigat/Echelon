@@ -12,14 +12,14 @@ namespace ReleaseOrchestrator.UnitTests.Persistence;
 /// <para>
 /// The database provider is chosen at runtime from configuration, and the migrations assembly is
 /// named as a STRING (<see cref="DatabaseProviders.MigrationsAssembly"/>) that EF loads by name. So a
-/// host that forgets to reference one compiles, starts, serves — and then dies the moment it is
+/// host that forgets to reference one compiles, starts, serves - and then dies the moment it is
 /// pointed at that provider with startup migration on.
 /// </para>
 /// <para>
 /// Which is what happened: only the SQL Server assembly was referenced, so a PostgreSQL deployment
 /// (docker-compose sets <c>Database__MigrateOnStartup=true</c>) failed at startup with
 /// <c>FileNotFoundException: ReleaseOrchestrator.Migrations.Postgres</c>. Found by running the
-/// application, because nothing else could see it — not the compiler, not the model tests, not a
+/// application, because nothing else could see it - not the compiler, not the model tests, not a
 /// migration applied through the CLI, which loads the assembly from its own project.
 /// </para>
 /// <para>

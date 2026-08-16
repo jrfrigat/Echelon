@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions;
 /// <remarks>
 /// Deliberately a short, closed set. It grew from "everything is a string" once real settings
 /// needed a number (a poll interval), a choice (which field a task key is read from) and a pattern
-/// (the regex that reads it) — three things a plain text box cannot check before storage. It is not
+/// (the regex that reads it) - three things a plain text box cannot check before storage. It is not
 /// a general type system: a new kind is added only when a provider actually needs one.
 /// </remarks>
 public enum ProviderSettingKind
@@ -32,15 +32,15 @@ public enum ProviderSettingKind
 /// <remarks>
 /// This exists so that provider vocabulary stops leaking upward. Yandex.Tracker needs an
 /// organization id; GitLab needs nothing. Before this, that single fact was spelled out in the
-/// entity, the API contract and the admin form — so "add a provider" meant editing all three, and
+/// entity, the API contract and the admin form - so "add a provider" meant editing all three, and
 /// the one provider that needed a setting decided the shape for every provider that did not.
 ///
-/// Still deliberately narrow — a key, a label, a kind and a few constraints — not a general schema
+/// Still deliberately narrow - a key, a label, a kind and a few constraints - not a general schema
 /// language. The <see cref="Kind"/> exists because storing a number or a pattern as an unchecked
 /// string means the mistake surfaces on first use, far from the form where it was made; validating
 /// against the declared kind reports it at the point of entry instead.
 /// </remarks>
-/// <param name="Key">Key inside the connection's settings bag. Stable — it is persisted.</param>
+/// <param name="Key">Key inside the connection's settings bag. Stable - it is persisted.</param>
 /// <param name="Label">Short human label for the field. Rendered as-is.</param>
 /// <param name="Description">What the value is and where to find it. Shown as a hint.</param>
 /// <param name="Required">
@@ -49,7 +49,7 @@ public enum ProviderSettingKind
 /// </param>
 /// <param name="Secret">
 /// When true, the value is write-only: never returned by the API, and masked in the UI. Orthogonal
-/// to <see cref="Kind"/> — a secret is always a masked text field regardless of kind.
+/// to <see cref="Kind"/> - a secret is always a masked text field regardless of kind.
 /// </param>
 /// <param name="Kind">How the value is typed and rendered; <see cref="ProviderSettingKind.Text"/> by default.</param>
 /// <param name="Options">

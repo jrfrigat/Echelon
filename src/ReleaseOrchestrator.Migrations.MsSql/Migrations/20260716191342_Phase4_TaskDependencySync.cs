@@ -41,7 +41,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             // Repositories become unique per (connection, external id) below. Webhook routing
             // already resolved them with FirstOrDefault, so a duplicate silently diverted merge
-            // requests to whichever row came back first — collapse them onto the oldest.
+            // requests to whichever row came back first - collapse them onto the oldest.
             migrationBuilder.Sql("""
                 WITH ranked AS (
                     SELECT [Id],

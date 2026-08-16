@@ -2,7 +2,7 @@ namespace ReleaseOrchestrator.Web.Resources;
 
 /// <summary>
 /// Marker for <c>IStringLocalizer&lt;ApiStrings&gt;</c>: names the resource set carrying the API's
-/// user-facing messages. Deliberately has no members — the strings live in the .resx pair beside
+/// user-facing messages. Deliberately has no members - the strings live in the .resx pair beside
 /// this file and are looked up by key.
 /// </summary>
 /// <remarks>
@@ -11,12 +11,12 @@ namespace ReleaseOrchestrator.Web.Resources;
 /// <list type="bullet">
 /// <item>
 /// EmbeddedResourceUseDependentUponConvention names ApiStrings.resx after the namespace of the
-/// same-named source file next to it — this one — giving
+/// same-named source file next to it - this one - giving
 /// <c>ReleaseOrchestrator.Web.Resources.ApiStrings</c>.
 /// </item>
 /// <item>
 /// ResourceManagerStringLocalizerFactory, with no ResourcesPath configured, looks up a type's
-/// full name — also <c>ReleaseOrchestrator.Web.Resources.ApiStrings</c>.
+/// full name - also <c>ReleaseOrchestrator.Web.Resources.ApiStrings</c>.
 /// </item>
 /// </list>
 /// They agree only because both sides read the same namespace. Move this type, rename the folder,

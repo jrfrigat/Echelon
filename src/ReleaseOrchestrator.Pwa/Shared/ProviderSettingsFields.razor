@@ -60,7 +60,7 @@
     /// True when a setting the schema marks required is still blank, for the host's save button.
     /// </summary>
     /// <remarks>
-    /// Advisory only — the server enforces the same rule and is what actually protects the data.
+    /// Advisory only - the server enforces the same rule and is what actually protects the data.
     /// Disabling the button is so the operator learns it before a round trip, not instead of one.
     /// </remarks>
     public static bool MissingRequired(
@@ -74,7 +74,7 @@
 
     /// <summary>
     /// A fresh value map for a schema, with every declared key present and seeded with its default
-    /// (blank when it has none). A secret never gets a default — its box stays empty.
+    /// (blank when it has none). A secret never gets a default - its box stays empty.
     /// </summary>
     public static Dictionary<string, string> Blank(IEnumerable<ProviderSettingDto>? schema) =>
         schema?.ToDictionary(s => s.Key, s => s.Secret ? "" : s.Default ?? "", StringComparer.Ordinal)
@@ -102,7 +102,7 @@
     /// <remarks>
     /// Blanks are dropped rather than sent as empty strings so that an untouched secret arrives as
     /// an absent key, which the server keeps. A non-secret the operator actually cleared also
-    /// arrives absent — and absent is how the server stores "not set", so clearing still works.
+    /// arrives absent - and absent is how the server stores "not set", so clearing still works.
     /// </remarks>
     public static Dictionary<string, string?> ForSubmit(IReadOnlyDictionary<string, string> values) =>
         values.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
@@ -122,7 +122,7 @@
 
         var range = (setting.Min, setting.Max) switch
         {
-            ({ } min, { } max) => $"{min}–{max}",
+            ({ } min, { } max) => $"{min}-{max}",
             ({ } min, null) => $"≥ {min}",
             (null, { } max) => $"≤ {max}",
             _ => ""

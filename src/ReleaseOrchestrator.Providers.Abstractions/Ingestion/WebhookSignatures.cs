@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// secret through timing.
 /// </summary>
 /// <remarks>
-/// This is pure BCL cryptography with no HTTP and no I/O — the same bar as the other helpers this
+/// This is pure BCL cryptography with no HTTP and no I/O - the same bar as the other helpers this
 /// contracts assembly already carries (<see cref="ProviderKey.Normalize"/>,
 /// <see cref="ProviderSettingsBag.Validate"/>). It lives here rather than in the host because
 /// verification is the provider's job (a provider decides whether it authenticates by a shared

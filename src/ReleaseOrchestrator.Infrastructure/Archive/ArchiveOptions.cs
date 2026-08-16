@@ -36,7 +36,7 @@ public class ArchiveOptions
     /// Pruned rather than archived: these rows are the raw history a task timeline reads, and
     /// copying them into a third database to satisfy symmetry would buy nothing anyone reads.
     /// Because the journal has no foreign key, pruning it and archiving merge requests are
-    /// independent in both directions — neither can block or corrupt the other, and a long-lived
+    /// independent in both directions - neither can block or corrupt the other, and a long-lived
     /// task can lose its earliest transitions while the task itself is still open. That is the
     /// trade a flat cutoff makes; raise this if a task's whole history matters more than the rows.
     /// </remarks>
@@ -48,14 +48,14 @@ public class ArchiveOptions
     /// <remarks>
     /// <para>
     /// Not a tidiness setting. <c>RolloutStep</c> references both a merge request and a task with
-    /// <c>Restrict</c>, and nothing used to delete rollout history — so ANY task that had ever been
+    /// <c>Restrict</c>, and nothing used to delete rollout history - so ANY task that had ever been
     /// deployed was pinned in the operational database permanently, and the archive skipped it every
     /// night for the rest of the installation's life. Retention here is what lets the archive drain
     /// at all.
     /// </para>
     /// <para>
     /// Longer than the archive cutoff on purpose: "when did we deploy this, and did it work" is asked
-    /// long after the task itself has gone quiet. Deleted rather than archived, like the journals —
+    /// long after the task itself has gone quiet. Deleted rather than archived, like the journals -
     /// what a rollout was is reconstructable from the archived task and merge requests; what is lost
     /// is the per-attempt detail, which no tool reads once the rows are cold.
     /// </para>
@@ -67,7 +67,7 @@ public class ArchiveOptions
     /// </summary>
     /// <remarks>
     /// Every ingestion event rebuilds every active plan, so this is structurally the largest table
-    /// here and the overwhelming majority of its rows are byte-identical restatements — the timeline
+    /// here and the overwhelming majority of its rows are byte-identical restatements - the timeline
     /// already collapses them on read. It also pins tasks and merge requests through
     /// <c>PlanTaskNode</c> and <c>PlanItem</c>, both <c>Restrict</c>.
     ///

@@ -4,7 +4,7 @@ using Xunit;
 namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 
 /// <summary>
-/// The shape rules of the plan document — what it accepts, what it refuses, and what it ignores.
+/// The shape rules of the plan document - what it accepts, what it refuses, and what it ignores.
 /// </summary>
 public class PlanDocumentReaderTests
 {

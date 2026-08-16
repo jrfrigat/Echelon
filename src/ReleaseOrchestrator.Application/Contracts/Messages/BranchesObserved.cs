@@ -6,8 +6,8 @@ namespace ReleaseOrchestrator.Application.Contracts.Messages;
 /// <remarks>
 /// A snapshot rather than a per-branch event, deliberately: the consumer must be able to tell that a
 /// branch is *gone* (merged and deleted, or abandoned), and a stream of "branch exists" messages never
-/// says that. Carrying the whole list lets the consumer reconcile — upsert what is here, drop what is
-/// not — which is the same shape the merge-request reconcile uses for labels, and for the same reason.
+/// says that. Carrying the whole list lets the consumer reconcile - upsert what is here, drop what is
+/// not - which is the same shape the merge-request reconcile uses for labels, and for the same reason.
 /// </remarks>
 public record BranchesObserved(
     string ConnectionName,

@@ -21,7 +21,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// </summary>
 /// <remarks>
 /// The wire keeps saying <c>vcsType</c> while the column is <c>ProviderType</c>. The name was never
-/// the problem — an enum in the domain was — and renaming the field would break every client for no
+/// the problem - an enum in the domain was - and renaming the field would break every client for no
 /// gain. Tokens are write-only: they go in encrypted and are never returned.
 /// </remarks>
 [ApiController]
@@ -51,7 +51,7 @@ public class VcsConnectionsController(
         // in any order, so entries can repeat or vanish between pages.
         //
         // The wire keeps saying "vcsType" while the column is now ProviderType. The name was
-        // never the problem — an enum in the domain was — and renaming the field would break
+        // never the problem - an enum in the domain was - and renaming the field would break
         // every client for no gain.
         // Reshaped in memory after paging: the settings bag is JSON in a column, so it cannot be
         // unpacked in SQL.
@@ -121,7 +121,7 @@ public class VcsConnectionsController(
     {
         // Validated against the adapters that are actually registered, not against an enum. The
         // set of providers is a property of the composition root, and this is the last point at
-        // which an operator's typo can be rejected with the list of what would have worked —
+        // which an operator's typo can be rejected with the list of what would have worked -
         // after this it is a stored row that fails on first use.
         var providerType = ProviderKey.Normalize(req.VcsType);
         if (!providerFactory.AvailableProviders.Contains(providerType))
@@ -173,7 +173,7 @@ public class VcsConnectionsController(
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
             return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
 
-        // The provider type is the stored one — this endpoint cannot change it. A connection whose
+        // The provider type is the stored one - this endpoint cannot change it. A connection whose
         // provider is no longer registered is refused rather than saved against an empty schema,
         // which would silently discard settings the absent adapter still needs.
         if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
@@ -195,7 +195,7 @@ public class VcsConnectionsController(
         entity.ProviderSettingsJson = settingsJson;
 
         // Only replace the token when one is supplied. The UI says "leave blank to keep
-        // current", but this used to overwrite unconditionally — so renaming a connection
+        // current", but this used to overwrite unconditionally - so renaming a connection
         // silently encrypted an empty string over a working token and broke every API call.
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
             entity.EncryptedAccessToken = protector.Protect(req.AccessToken);
@@ -206,7 +206,7 @@ public class VcsConnectionsController(
 
     /// <summary>
     /// Polls this connection's open merge requests now, emitting the same events the scheduled poller
-    /// does — a manual refresh for a poll-mode connection between its timer ticks.
+    /// does - a manual refresh for a poll-mode connection between its timer ticks.
     /// </summary>
     /// <remarks>
     /// Works for any registered connection (a webhook-mode connection can be refreshed this way too),
@@ -278,7 +278,7 @@ public class VcsConnectionsController(
 /// </param>
 /// <param name="Settings">
 /// Provider-specific settings, keyed as the chosen provider's schema declares them. Validated
-/// against that schema — an undeclared key is refused rather than stored and ignored.
+/// against that schema - an undeclared key is refused rather than stored and ignored.
 /// </param>
 public record CreateVcsConnectionRequest(
     [Required, MaxLength(200)] string Name,
@@ -293,7 +293,7 @@ public record CreateVcsConnectionRequest(
 /// <param name="AccessToken">Blank keeps the stored token.</param>
 /// <param name="Settings">
 /// Provider-specific settings. A blank value clears the setting, except for one the schema marks
-/// secret, where blank keeps what is stored — the form cannot show a secret back, so an empty box
+/// secret, where blank keeps what is stored - the form cannot show a secret back, so an empty box
 /// there means "untouched", the same convention <paramref name="AccessToken"/> uses.
 /// </param>
 public record UpdateVcsConnectionRequest(

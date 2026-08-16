@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions;
 /// </summary>
 /// <remarks>
 /// The message lists what is registered. A provider type is stored per connection, so this fires
-/// on a row an operator typed — possibly long after the deployment — and "provider 'gitab' is not
+/// on a row an operator typed - possibly long after the deployment - and "provider 'gitab' is not
 /// registered" is only actionable next to "must be one of: gitlab". Renovate's
 /// <c>setPlatformApi</c> throws the same shape of error for the same reason.
 /// </remarks>

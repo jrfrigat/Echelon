@@ -11,15 +11,15 @@ namespace ReleaseOrchestrator.Web.Auth;
 /// The provider is a deploy-time choice, fixed by configuration and never switched at runtime, so
 /// exactly one scheme is wired at startup. Whichever it is, the principal it produces flows into the
 /// same permission pipeline (<see cref="PermissionClaimsTransformation"/>), which keys on the
-/// <c>oid</c> claim — so every provider's token must carry a stable <c>oid</c>.
+/// <c>oid</c> claim - so every provider's token must carry a stable <c>oid</c>.
 ///
 /// <list type="bullet">
-///   <item><c>AzureAd</c> — Microsoft Entra ID via Microsoft.Identity.Web. The default, and the
+///   <item><c>AzureAd</c> - Microsoft Entra ID via Microsoft.Identity.Web. The default, and the
 ///   original behaviour.</item>
-///   <item><c>Oidc</c> — any OpenID Connect provider (Keycloak, Auth0, …), validated as a plain
+///   <item><c>Oidc</c> - any OpenID Connect provider (Keycloak, Auth0, ...), validated as a plain
 ///   JWT bearer against its authority. The provider must issue an <c>oid</c> claim for permissions
 ///   to resolve.</item>
-///   <item><c>Local</c> — no external identity provider: the service issues its own tokens through
+///   <item><c>Local</c> - no external identity provider: the service issues its own tokens through
 ///   <c>/auth/login</c>. See <see cref="LocalAuthenticationOptions"/>.</item>
 /// </list>
 /// </remarks>
@@ -99,7 +99,7 @@ public static class AuthenticationSetup
 
         // The local admin has no database grants and there is no other way to seed them here, so it
         // is made a bootstrap admin: it logs in and immediately holds every permission. This is the
-        // same escape hatch Entra deployments use, and it is honest — a Local deployment is a single
+        // same escape hatch Entra deployments use, and it is honest - a Local deployment is a single
         // operator who owns the connection string anyway.
         services.PostConfigure<PermissionBootstrapOptions>(bootstrap =>
             bootstrap.BootstrapAdminObjectIds = [.. bootstrap.BootstrapAdminObjectIds, localOptions.AdminObjectId]);

@@ -10,8 +10,8 @@ namespace ReleaseOrchestrator.Application.ReleasePlanning;
 /// Deliberately NOT a second planner. The output is edges of the same kinds
 /// (<see cref="PlanEdgeKind.RepoHard"/> / <see cref="PlanEdgeKind.RepoSoft"/>) that
 /// <see cref="ReleasePlanGraph"/> already derives, breaks cycles among and reports conflicts for. The
-/// invariant docs/issues/006 states — import, hand edit and recalculate must all derive edges with
-/// one piece of code — is exactly what a rule language with its own topological sort would break:
+/// invariant docs/issues/006 states - import, hand edit and recalculate must all derive edges with
+/// one piece of code - is exactly what a rule language with its own topological sort would break:
 /// the preview would show one order and the run would use another.
 /// </para>
 /// <para>
@@ -25,7 +25,7 @@ public static class OrderingRuleCompiler
     /// </summary>
     /// <remarks>
     /// <c>needs</c> is a cross product: a group of 50 waiting on a group of 50 is 2500 edges from one
-    /// line, and nothing in the syntax hints at it. A bound with a message beats the alternatives —
+    /// line, and nothing in the syntax hints at it. A bound with a message beats the alternatives -
     /// silently truncating would produce an order nobody wrote, and quietly building a hundred
     /// thousand edges would turn one careless rule into a planner that stops answering.
     /// </remarks>
@@ -39,7 +39,7 @@ public static class OrderingRuleCompiler
     /// <returns>
     /// The edges, and whether the document blew the cap. Edges are (from, to, type) with <c>from</c>
     /// deploying first, deduplicated, and deterministic in the order of <paramref name="candidates"/>
-    /// — the planner needs the same input to give the same plan.
+    /// - the planner needs the same input to give the same plan.
     /// </returns>
     public static OrderingCompileResult Compile(
         OrderingRules rules, IReadOnlyList<OrderingCandidate> candidates)
@@ -67,7 +67,7 @@ public static class OrderingRuleCompiler
                     foreach (var first in needed)
                     {
                         // A self-edge carries no ordering. It happens whenever the two groups overlap,
-                        // which is ordinary — "partner/*" and "everything on this connector" can both
+                        // which is ordinary - "partner/*" and "everything on this connector" can both
                         // match the same merge request.
                         if (waiter.MergeRequestId == first.MergeRequestId) continue;
 
@@ -79,7 +79,7 @@ public static class OrderingRuleCompiler
 
                         if (!seen.Add((first.MergeRequestId, waiter.MergeRequestId))) continue;
 
-                        // Stops at the cap rather than past it, and reports the rule that reached it —
+                        // Stops at the cap rather than past it, and reports the rule that reached it -
                         // "too many edges" without naming one is useless in a document with twenty.
                         if (edges.Count >= MaxEdges)
                             return new OrderingCompileResult(edges, ExceededOn: rule.Group);
@@ -127,7 +127,7 @@ public static class OrderingRuleCompiler
 /// <param name="Edges">The ordering edges, up to <see cref="OrderingRuleCompiler.MaxEdges"/>.</param>
 /// <param name="ExceededOn">
 /// The group whose rule reached the cap, or null when the document fits. When set,
-/// <paramref name="Edges"/> is a partial expansion and must not be used as an ordering — a truncated
+/// <paramref name="Edges"/> is a partial expansion and must not be used as an ordering - a truncated
 /// cross product is an order nobody wrote.
 /// </param>
 public sealed record OrderingCompileResult(IReadOnlyList<OrderingEdge> Edges, string? ExceededOn)

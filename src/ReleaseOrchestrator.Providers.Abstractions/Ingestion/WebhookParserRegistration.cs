@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 public sealed record WebhookParserRegistration(string ProviderType);
 
 /// <summary>
-/// Raised by an <see cref="IWebhookParser"/> when a delivery cannot be parsed at all — a required
+/// Raised by an <see cref="IWebhookParser"/> when a delivery cannot be parsed at all - a required
 /// field is missing, or the body is not the provider's payload.
 /// </summary>
 /// <remarks>

@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers;
 /// <summary>
 /// The settings schema is what lets the admin UI configure a provider it has never heard of. If it
 /// drifts from what the adapter actually reads, the form asks for the wrong thing and the
-/// connection fails at first use — so the two are asserted against each other here.
+/// connection fails at first use - so the two are asserted against each other here.
 /// </summary>
 public class ProviderSettingsSchemaTests
 {
@@ -55,7 +55,7 @@ public class ProviderSettingsSchemaTests
         Assert.True(orgId.Required);
         Assert.False(string.IsNullOrWhiteSpace(orgId.Label));
 
-        // The closed-status set is per-project, so the adapter declares it too — optional, and
+        // The closed-status set is per-project, so the adapter declares it too - optional, and
         // pre-filled with the defaults so a fresh connection reads the same set the form shows.
         var closed = Assert.Single(schema, s => s.Key == YandexTrackerOptions.ClosedStatusesKey);
         Assert.False(closed.Required);

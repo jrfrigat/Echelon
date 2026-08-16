@@ -3,7 +3,7 @@
 # restart loop. Copy .env.example to .env and fill it in before the first run.
 #
 # Only `ingress` and `core` publish ports. The datastores talk to them over this file's default
-# network and are deliberately unreachable from the host — reach them with `docker compose exec`,
+# network and are deliberately unreachable from the host - reach them with `docker compose exec`,
 # or add a docker-compose.override.yml locally if you need a port for debugging.
 services:
   ingress:
@@ -53,12 +53,12 @@ services:
       ConnectionStrings__Default: "Server=mssql;Database=ReleaseOrchestrator;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
       ConnectionStrings__Archive: "Server=mssql;Database=ReleaseOrchestratorArchive;User Id=sa;Password=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)};Encrypt=True;TrustServerCertificate=True"
       # This stack runs a single replica, so startup migration is safe here. Concurrent replicas
-      # race on Migrate() — move this to an init container or CI before scaling out.
+      # race on Migrate() - move this to an init container or CI before scaling out.
       Database__MigrateOnStartup: "${DB_MIGRATE_ON_STARTUP:-true}"
 
       # The Data Protection key ring encrypts the VCS and tracker tokens and is stored in the same
       # database as them, so the keys must be encrypted with something that database does not hold
-      # — otherwise a dump yields both halves and the encryption is decoration.
+      # - otherwise a dump yields both halves and the encryption is decoration.
       #
       # Mount a PKCS#12 file and point DATAPROTECTION_CERT_PATH at it:
       #   volumes: [ "./secrets/keyring.pfx:/run/secrets/keyring.pfx:ro" ]
@@ -110,7 +110,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       # Only applied when mssqldata is empty. Rotating this against an existing volume does
-      # nothing — the password lives in the database.
+      # nothing - the password lives in the database.
       MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required (see .env.example)}"
       MSSQL_MEMORY_LIMIT_MB: 2048
     volumes:

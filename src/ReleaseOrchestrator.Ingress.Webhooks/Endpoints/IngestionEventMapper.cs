@@ -12,8 +12,8 @@ namespace ReleaseOrchestrator.Ingress.Webhooks.Endpoints;
 /// This is the one place the neutral events meet the wire contract, and it lives in the host on
 /// purpose: a provider must not reference <c>Application</c> (that would be a build cycle) or Rebus,
 /// so the provider returns neutral events and the host turns them into messages. Keeping the wire
-/// messages here also keeps their assembly-qualified type name — and therefore their Rebus wire
-/// identity — unchanged.
+/// messages here also keeps their assembly-qualified type name - and therefore their Rebus wire
+/// identity - unchanged.
 /// </para>
 /// <para>
 /// The host supplies the three things a pure parser cannot: the canonical <c>Source</c>
@@ -52,7 +52,7 @@ public static class IngestionEventMapper
 
             // Labels ride along so a merge event can record the final set for the readiness gate.
             // ChangedAt is the receiver's clock, exactly as the webhook front door has always
-            // stamped it — the payload carries no reliable event time.
+            // stamped it - the payload carries no reliable event time.
             MrStatusChangedEvent e => new MrStatusChanged(
                 ConnectionName: connectionName,
                 RepositoryExternalId: e.RepositoryExternalId,

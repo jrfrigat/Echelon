@@ -17,7 +17,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// <remarks>
 /// <para>
 /// Guarded by <c>ConfigEdit</c>, not the view policy every signed-in user holds. These rows carry
-/// names, addresses and activity for everyone — that is administrator data, and the one existing
+/// names, addresses and activity for everyone - that is administrator data, and the one existing
 /// admin-only controller uses the same policy.
 /// </para>
 /// <para>
@@ -45,7 +45,7 @@ public class RequestAuditController(
     /// <summary>Recorded requests, newest first.</summary>
     /// <param name="minutes">How far back to look.</param>
     /// <param name="status">Optional status class: <c>error</c>, <c>client</c>, <c>server</c>.</param>
-    /// <param name="notableOnly">Failures and state changes only. On by default — it is what an operator wants.</param>
+    /// <param name="notableOnly">Failures and state changes only. On by default - it is what an operator wants.</param>
     /// <param name="includeAuditTraffic">
     /// Include this screen's own reads. Off by default so the page is not mostly itself, but
     /// available: an audit that hides what the auditor did is the wrong artifact.
@@ -91,7 +91,7 @@ public class RequestAuditController(
     /// <remarks>
     /// Percentiles are computed from a capped in-memory sample rather than in SQL. SQL Server's
     /// <c>PERCENTILE_CONT</c> is a window function with no GROUP BY form while PostgreSQL's is an
-    /// ordered-set aggregate, so doing it in the database means one hand-written query per provider —
+    /// ordered-set aggregate, so doing it in the database means one hand-written query per provider -
     /// and this codebase keeps provider divergence to the two documented cases. When the cap binds,
     /// the answer says so instead of quietly rounding.
     /// </remarks>

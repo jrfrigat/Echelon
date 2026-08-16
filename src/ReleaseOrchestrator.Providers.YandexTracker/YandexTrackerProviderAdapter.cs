@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// </summary>
 /// <remarks>
 /// No version detection: Yandex.Tracker is a hosted service with one version, so there is nothing
-/// to ask. The GitLab adapter does detect, because a self-hosted install can be any version — the
+/// to ask. The GitLab adapter does detect, because a self-hosted install can be any version - the
 /// mechanism is per adapter precisely so each pays only for what it needs.
 /// </remarks>
 internal sealed class YandexTrackerProviderAdapter(HttpClient http) : ITrackerProviderAdapter

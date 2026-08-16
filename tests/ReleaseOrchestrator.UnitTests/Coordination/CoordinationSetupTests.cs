@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.UnitTests.Coordination;
 /// Both are selectable because neither is a source of truth: the permission stamp is a hash of the
 /// stored rules, so losing the cache costs reads and not correctness, and the lease guards
 /// idempotent work against being done N times rather than guarding data. What is not free is
-/// choosing "memory" for a deployment that is not one process — hence the tests about refusing to
+/// choosing "memory" for a deployment that is not one process - hence the tests about refusing to
 /// get there quietly.
 /// </remarks>
 public class CoordinationSetupTests
@@ -63,7 +63,7 @@ public class CoordinationSetupTests
 
     /// <summary>
     /// Redis stays the default, so an existing deployment that says nothing keeps the behaviour it
-    /// has — and a missing connection string still fails at startup rather than at the first lease.
+    /// has - and a missing connection string still fails at startup rather than at the first lease.
     /// </summary>
     [Fact]
     public void TheDefaultIsRedisAndItStillDemandsItsConnectionString()

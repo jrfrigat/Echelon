@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.UnitTests.Providers.YandexTracker;
 /// <para>
 /// Mostly a test of System.Text.Json, deliberately. PostgreSQL maps DateTime to
 /// <c>timestamp with time zone</c> and Npgsql writes only Kind=Utc, so what this parsing produces
-/// is the difference between a task closing and an exception — on one of the two supported
+/// is the difference between a task closing and an exception - on one of the two supported
 /// databases and not the other. SQL Server takes every Kind without complaint, which is precisely
 /// why the hazard is invisible until someone runs the other one.
 /// </para>
@@ -65,7 +65,7 @@ public class ResolvedAtKindTests
     }
 
     /// <summary>
-    /// A basic-format offset — <c>+0000</c>, no colon — is not ISO-8601 as System.Text.Json reads
+    /// A basic-format offset - <c>+0000</c>, no colon - is not ISO-8601 as System.Text.Json reads
     /// it, and throws rather than parsing wrong. Recorded because it looks like the shape a tracker
     /// might send, and because the failure is a JsonException on the whole issue rather than a bad
     /// date: if a tracker ever sends it, this is what the log will say.

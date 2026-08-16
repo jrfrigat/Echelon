@@ -15,7 +15,7 @@ public class RolloutEvent
     public Guid RolloutId { get; set; }
 
     /// <summary>
-    /// The event kind. The vocabulary is <c>RolloutEventKinds</c> — write a constant from there, not
+    /// The event kind. The vocabulary is <c>RolloutEventKinds</c> - write a constant from there, not
     /// a literal.
     /// </summary>
     [Required, MaxLength(100)]
@@ -32,8 +32,8 @@ public class RolloutEvent
     /// </summary>
     /// <remarks>
     /// This is the only place a cancel, retry or skip can be attributed. Those three change state
-    /// that carries no author — a retry resets the step to Pending and clears the error, leaving
-    /// nothing to read afterwards — so an event not written here is an operator action that is
+    /// that carries no author - a retry resets the step to Pending and clears the error, leaving
+    /// nothing to read afterwards - so an event not written here is an operator action that is
     /// permanently anonymous.
     /// </remarks>
     [MaxLength(64)]

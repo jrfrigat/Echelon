@@ -6,12 +6,12 @@ namespace ReleaseOrchestrator.UnitTests;
 
 /// <summary>
 /// The rules over the normalized merge-request status. Both the webhook consumers and the VCS sync
-/// route through here — they used to keep separate mappings, so the same MR got a different status
+/// route through here - they used to keep separate mappings, so the same MR got a different status
 /// depending on which path imported it.
 /// </summary>
 /// <remarks>
 /// Raw-state mapping used to be tested here (it moved to the GitLab adapter), and so did a coarse
-/// "ready-for-deploy label" promotion — which is gone: deploy readiness is a per-environment rule over
+/// "ready-for-deploy label" promotion - which is gone: deploy readiness is a per-environment rule over
 /// signals now, not a status a label promotes an MR to. What remains is: terminal detection, and that
 /// an open MR is Opened unless an operator pinned its status.
 /// </remarks>

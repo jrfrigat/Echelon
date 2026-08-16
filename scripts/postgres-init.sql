@@ -5,7 +5,7 @@
 -- queries stay off two years of history and the archive can be backed up on its own schedule.
 --
 -- Run by the postgres image only when the data directory is empty. Adding it to a volume that
--- already has data does nothing — create the database by hand there.
+-- already has data does nothing - create the database by hand there.
 --
 -- The SQL Server side has no equivalent because its image creates no database at all: EF's
 -- migrations create both. PostgreSQL creates POSTGRES_DB itself, so only the second one is left.

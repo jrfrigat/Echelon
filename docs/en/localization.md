@@ -20,10 +20,10 @@ This document explains:
 
 ### Technology Stack
 
-- **.resx files** — XML resource files for each language (.NET standard)
+- **.resx files** - XML resource files for each language (.NET standard)
 - **Resource namespaces:**
-  - `ReleaseOrchestrator.Pwa.Resources.UiStrings` — UI strings (PWA)
-  - `ReleaseOrchestrator.Web.Resources.ApiStrings` — API error/status messages
+  - `ReleaseOrchestrator.Pwa.Resources.UiStrings` - UI strings (PWA)
+  - `ReleaseOrchestrator.Web.Resources.ApiStrings` - API error/status messages
 - **Language selection:**
   - PWA: `LanguageService` (localStorage-backed, browser preference fallback)
   - API: `AcceptLanguageHandler` (reads `Accept-Language` header)
@@ -135,13 +135,13 @@ Equivalent Russian file (`UiStrings.ru.resx`):
 3. **Translate every value** in both files
 
 **Use culture codes:**
-- `en` — English
-- `es` — Spanish
-- `fr` — French
-- `de` — German
-- `ru` — Russian
-- `zh` — Chinese
-- `ja` — Japanese
+- `en` - English
+- `es` - Spanish
+- `fr` - French
+- `de` - German
+- `ru` - Russian
+- `zh` - Chinese
+- `ja` - Japanese
 
 [Full list of culture codes](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.cultureinfo)
 
@@ -199,19 +199,19 @@ If the app returns an error in Spanish API responses, localization is working.
 
 ### API Responses (Partially Localized)
 
-- **Validation errors:** "Email is invalid" → "Email не валиден"
-- **Conflict messages:** "This plan conflicts with another" → "Этот план конфликтует с другим"
+- **Validation errors:** "Email is invalid" -> "Email не валиден"
+- **Conflict messages:** "This plan conflicts with another" -> "Этот план конфликтует с другим"
 - **HTTP status descriptions** (in JSON error bodies)
 
 ### NOT Localized (Intentional)
 
 These are **always English**, even in Russian UI:
 
-- **Application logs** — Operators are expected to understand English logs
-- **Database field names and error codes** — Consistency across deployments
+- **Application logs** - Operators are expected to understand English logs
+- **Database field names and error codes** - Consistency across deployments
 - **Documentation and comments in code**
 - **HTTP header names** (standard, must be English)
-- **Authentication/OIDC provider interfaces** — External
+- **Authentication/OIDC provider interfaces** - External
 
 **Rationale:** Logs are operational, not user-facing. Mixing languages in logs makes troubleshooting harder across teams.
 
@@ -221,11 +221,11 @@ These are **always English**, even in Russian UI:
 
 ### For Translators
 
-1. **Keep translations concise** — UI space is limited
-2. **Maintain noun/verb agreement** — Match the style of the English original
-3. **Use context notes** — If a word can have multiple meanings, add a comment
-4. **Never change resource names** — The name (key) stays the same; only translate the value
-5. **Test in the app** — Some strings might not fit in the UI layout in translated form
+1. **Keep translations concise** - UI space is limited
+2. **Maintain noun/verb agreement** - Match the style of the English original
+3. **Use context notes** - If a word can have multiple meanings, add a comment
+4. **Never change resource names** - The name (key) stays the same; only translate the value
+5. **Test in the app** - Some strings might not fit in the UI layout in translated form
 
 ### For Developers
 
@@ -238,7 +238,7 @@ These are **always English**, even in Russian UI:
    <p>@UiStrings.ReleasePlanTitle</p>
    ```
 
-2. **Use consistent naming** — If "Deploy" is used in one place, use `ReleasePlanDeploy` consistently
+2. **Use consistent naming** - If "Deploy" is used in one place, use `ReleasePlanDeploy` consistently
 
 3. **Add context comments in .resx**
    ```xml
@@ -257,7 +257,7 @@ These are **always English**, even in Russian UI:
    throw new InvalidOperationException(ApiStrings.PlanNotFound);
    ```
 
-5. **Test new strings** — Add a unit test to verify the resource exists before shipping
+5. **Test new strings** - Add a unit test to verify the resource exists before shipping
 
 ---
 
@@ -267,8 +267,8 @@ These are **always English**, even in Russian UI:
 |---|---|---|---|
 | English | 129 keys | 32 keys | ✓ (fallback language) |
 | Russian | 129 keys | 32 keys | ✓ (complete translation) |
-| Spanish | — | — | — |
-| French | — | — | — |
+| Spanish | - | - | - |
+| French | - | - | - |
 
 ---
 
@@ -302,7 +302,7 @@ These are **always English**, even in Russian UI:
 ### LanguageService (PWA)
 
 ```csharp
-// Resolves saved language → browser preference → English fallback
+// Resolves saved language -> browser preference -> English fallback
 Apply(Resolve(stored) ?? Resolve(CultureInfo.CurrentUICulture.Name) ?? "en");
 
 // Raises LanguageChanged event when culture switches

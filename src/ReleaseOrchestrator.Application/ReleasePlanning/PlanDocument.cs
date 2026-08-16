@@ -27,7 +27,7 @@ public sealed record PlanDocumentParseResult(PlanDocument? Document, IReadOnlyLi
 }
 
 /// <summary>
-/// Reads the per-task plan document — the schema <c>RolloutPlanner</c> exports — back into
+/// Reads the per-task plan document - the schema <c>RolloutPlanner</c> exports - back into
 /// <see cref="PlanDocument"/>.
 /// </summary>
 /// <remarks>
@@ -37,11 +37,11 @@ public sealed record PlanDocumentParseResult(PlanDocument? Document, IReadOnlyLi
 /// errors rather than silent no-ops, and every problem reported in one pass.
 /// </para>
 /// <para>
-/// Three keys the exporter writes are accepted and IGNORED — <c>plan_version</c>, <c>depends_on</c>
+/// Three keys the exporter writes are accepted and IGNORED - <c>plan_version</c>, <c>depends_on</c>
 /// and <c>conflicts</c>. They are output, not input: a plan's version is assigned when it is stored,
 /// the wait graph belongs to the atlas, and the conflicts are what the derivation concluded. Ignoring
 /// them rather than rejecting them is what lets an operator export a plan, edit the waves and post it
-/// straight back — a schema that could not round-trip would be a schema nobody uses.
+/// straight back - a schema that could not round-trip would be a schema nobody uses.
 /// </para>
 /// <para>
 /// This is a SHAPE reader. Whether the keys name real tasks and merge requests, and whether the plan

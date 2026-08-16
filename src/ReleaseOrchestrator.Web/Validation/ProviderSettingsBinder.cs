@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.Web.Validation;
 /// <remarks>
 /// Shared by the VCS and tracker controllers because both hold a bag of provider-declared settings
 /// and both must treat it identically. Before this, the tracker controller unwrapped the bag into a
-/// literal <c>orgId</c> field — one provider's vocabulary, spelled out in the HTTP contract, so that
+/// literal <c>orgId</c> field - one provider's vocabulary, spelled out in the HTTP contract, so that
 /// giving a second provider a second setting meant editing the controller, the request record and
 /// the form. Nothing here knows the name of any setting.
 /// </remarks>
@@ -84,7 +84,7 @@ public static class ProviderSettingsBinder
     /// <list type="bullet">
     /// <item>
     /// For a <b>secret</b> setting, blank means <b>keep</b>. The form cannot show the operator what
-    /// is stored, so an empty box is what an untouched field looks like — the same convention the
+    /// is stored, so an empty box is what an untouched field looks like - the same convention the
     /// access token already uses, and treating it as "clear" would silently delete a credential
     /// every time anyone renamed a connection.
     /// </item>

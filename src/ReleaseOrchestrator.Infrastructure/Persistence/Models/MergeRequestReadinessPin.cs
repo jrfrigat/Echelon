@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>
-/// A person's decision that a merge request is — or is not — ready for one environment, overriding
+/// A person's decision that a merge request is - or is not - ready for one environment, overriding
 /// whatever its labels would say.
 /// </summary>
 /// <remarks>
@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// left the poller's open-request listing, so a <c>ready-for-prod</c> approval that lands after the
 /// merge may never be observable from labels, and the first production rule would then wedge every
 /// task holding such a merge request. A pin lets a person say "ready" anyway. Because it can also say
-/// "not ready", it doubles as a hold — keeping a merge request out even though its labels would admit
+/// "not ready", it doubles as a hold - keeping a merge request out even though its labels would admit
 /// it.
 /// </para>
 /// <para>

@@ -5,14 +5,14 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>
 /// One recorded change to a merge request's label set: what it was, what it became, what caused it,
-/// and who — when anybody did.
+/// and who - when anybody did.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The sibling of <see cref="MergeRequestStatusChange"/>, and for the same reason: labels drive the
 /// per-environment readiness gate, <see cref="MergeRequest.Labels"/> is overwritten in place on each
-/// observation, and so the moment a merge request became ready for an environment — gained
-/// <c>ready-for-prod</c> — would otherwise leave no trace. This is where "when did it become
+/// observation, and so the moment a merge request became ready for an environment - gained
+/// <c>ready-for-prod</c> - would otherwise leave no trace. This is where "when did it become
 /// deployable to prod" is answered.
 /// </para>
 /// <para>
@@ -43,7 +43,7 @@ public class MergeRequestLabelChange
 
     /// <summary>
     /// The label set before the change, canonical (comma-joined). Empty string when there were no
-    /// labels before — including a merge request seen for the first time, whose stored set starts
+    /// labels before - including a merge request seen for the first time, whose stored set starts
     /// empty. Nullable only to match the status journal's shape; the writer never stores null.
     /// </summary>
     [MaxLength(2000)]
@@ -54,7 +54,7 @@ public class MergeRequestLabelChange
     public string ToLabels { get; set; } = string.Empty;
 
     /// <summary>
-    /// What drove it: <c>webhook</c>, <c>poll</c> or <c>label</c> — the same causes as the status
+    /// What drove it: <c>webhook</c>, <c>poll</c> or <c>label</c> - the same causes as the status
     /// journal, minus <c>manual-pin</c>, since labels are never set by hand.
     /// </summary>
     [Required, MaxLength(32)]

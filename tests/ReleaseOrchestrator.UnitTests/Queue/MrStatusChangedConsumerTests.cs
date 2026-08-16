@@ -18,8 +18,8 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// </summary>
 /// <remarks>
 /// The handler is called directly with a real SQLite database and a <see cref="RecordingBus"/> that
-/// captures the replan it forwards. An unknown merge request throws — which is what makes Rebus
-/// fault and redeliver — so those cases assert the throw rather than inspecting a harness.
+/// captures the replan it forwards. An unknown merge request throws - which is what makes Rebus
+/// fault and redeliver - so those cases assert the throw rather than inspecting a harness.
 /// </remarks>
 public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
 {
@@ -132,7 +132,7 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// An event that carries no labels leaves the stored set alone. Empty means "no label
-    /// information here" — an older message from before the field existed — not "labels removed";
+    /// information here" - an older message from before the field existed - not "labels removed";
     /// wiping the set captured from the opened events would be the wrong reading.
     /// </summary>
     [Fact]
@@ -149,7 +149,7 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A closed merge request never gets a merge time, so archiving keys off this column instead —
+    /// A closed merge request never gets a merge time, so archiving keys off this column instead -
     /// leave it unset and the row is ineligible for archiving forever.
     /// </summary>
     [Fact]
@@ -167,7 +167,7 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
 
     /// <summary>
     /// The claim this consumer exists to keep. Deliveries are concurrent and unordered, so an
-    /// "opened" raised before a merge can arrive after it — and applying it would put a merged
+    /// "opened" raised before a merge can arrive after it - and applying it would put a merged
     /// merge request back in the deploy plan.
     /// </summary>
     [Theory]
@@ -254,7 +254,7 @@ public sealed class MrStatusChangedConsumerTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// A change that was refused changed nothing, so there is nothing to replan — and asking anyway
+    /// A change that was refused changed nothing, so there is nothing to replan - and asking anyway
     /// would rebuild the plan on every out-of-order delivery.
     /// </summary>
     [Fact]

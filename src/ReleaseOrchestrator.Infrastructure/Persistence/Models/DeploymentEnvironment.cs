@@ -43,7 +43,7 @@ public class DeploymentEnvironment
     /// <see cref="Models.ReadinessRule"/> an environment points at, so the same policy is written once
     /// and a repository can override it for one environment (see
     /// <see cref="RepositoryDeployTarget.ReadinessRuleId"/>). Null is the successor to the old
-    /// <c>NoGate</c>: no rule assigned means the environment gates nothing — the absence of a rule, not
+    /// <c>NoGate</c>: no rule assigned means the environment gates nothing - the absence of a rule, not
     /// a rule that admits everything.
     /// </remarks>
     public Guid? ReadinessRuleId { get; set; }

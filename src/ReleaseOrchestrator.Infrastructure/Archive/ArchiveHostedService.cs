@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.Infrastructure.Archive;
 /// <remarks>
 /// Registered in every replica but gated on a lease, so one cycle runs per night across the
 /// deployment. Without it every replica woke at the same UTC hour and raced for the same deletes:
-/// correctness held — the archive insert skips rows another replica already wrote — but they
+/// correctness held - the archive insert skips rows another replica already wrote - but they
 /// deadlocked each other doing work only one of them needed to do.
 /// </remarks>
 public class ArchiveHostedService(

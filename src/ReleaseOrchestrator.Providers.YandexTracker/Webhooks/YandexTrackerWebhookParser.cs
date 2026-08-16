@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker.Webhooks;
 /// <c>X-Tracker-Token</c> header, the <c>issue:*</c> event vocabulary, and the closed-status rule.
 /// The provider keeps the four strings it already used in production (route <c>tracker</c>, config
 /// section <c>Tracker</c>, source prefix <c>yandex</c>) so this move renames no route and no config
-/// key and orphans no dedup rows — see <see cref="WebhookEndpointDescriptor"/>.
+/// key and orphans no dedup rows - see <see cref="WebhookEndpointDescriptor"/>.
 /// </remarks>
 internal sealed class YandexTrackerWebhookParser : IWebhookParser
 {
@@ -24,7 +24,7 @@ internal sealed class YandexTrackerWebhookParser : IWebhookParser
     public WebhookEndpointDescriptor Descriptor { get; } = new(
         ProviderType: YandexTrackerProviderExtensions.WebhookProviderType,  // "yandextracker-webhook"
         // The three strings below intentionally differ from the key and from each other: this is the
-        // spelling that has been in production, preserved so the split breaks no live webhook — the
+        // spelling that has been in production, preserved so the split breaks no live webhook - the
         // route and dedup source prefix stay exactly as they were even as the key gains the -webhook suffix.
         RouteSegment: "tracker",
         SecretConfigSection: "Tracker",
@@ -79,7 +79,7 @@ internal sealed class YandexTrackerWebhookParser : IWebhookParser
                 ];
 
             default:
-                // An event this app does not model. Understood, nothing to do — not an error.
+                // An event this app does not model. Understood, nothing to do - not an error.
                 return [];
         }
     }

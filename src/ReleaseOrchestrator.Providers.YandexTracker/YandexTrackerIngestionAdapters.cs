@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// <remarks>
 /// A thin wrapper over the shared <see cref="YandexTrackerProviderAdapter"/>: the API behaviour is
 /// identical to the poll type, so only the provider type and the declared settings differ. This type
-/// declares no extra settings beyond the base (org id, closed statuses) — the webhook shared secret is
+/// declares no extra settings beyond the base (org id, closed statuses) - the webhook shared secret is
 /// configuration of the ingress host, not of the connection.
 /// </remarks>
 internal sealed class YandexTrackerWebhookAdapter(YandexTrackerProviderAdapter inner) : ITrackerProviderAdapter
@@ -30,7 +30,7 @@ internal sealed class YandexTrackerWebhookAdapter(YandexTrackerProviderAdapter i
 /// </summary>
 /// <remarks>
 /// The sibling of <see cref="YandexTrackerWebhookAdapter"/> over the same shared connect logic. It
-/// declares the one setting polling needs — the interval — under the neutral
+/// declares the one setting polling needs - the interval - under the neutral
 /// <see cref="VcsPollSettings.IntervalKey"/> (a poll interval is not a VCS concept, only spelled there),
 /// so the tracker poller reads it without knowing this is Yandex.Tracker. Dependency links still stay
 /// fresh through the reconciliation pass regardless of type; this only adds a faster status cadence.

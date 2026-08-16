@@ -35,7 +35,7 @@ public class RequestAuditOptions
     /// The only thing standing between this table and an anonymous stranger. Requests that match no
     /// endpoint still reach the app shell and answer 200, so without a cap anyone on the internet
     /// could write rows here as fast as they can issue requests. Past the cap the record is counted
-    /// and discarded, which costs one increment instead of a row plus three index entries — and the
+    /// and discarded, which costs one increment instead of a row plus three index entries - and the
     /// count is shown in the UI, so the gap is visible rather than silent.
     /// </remarks>
     public int MaxAnonymousRecordsPerMinute { get; set; } = 600;
@@ -76,7 +76,7 @@ public class RequestAuditOptions
     /// <remarks>
     /// The lease fails closed when its backend is unreachable, so a long outage would otherwise stop
     /// pruning while writing continued. Deletes here are idempotent and batched, so a double run is
-    /// harmless — an unbounded table is not.
+    /// harmless - an unbounded table is not.
     /// </remarks>
     public long HardRowCap { get; set; } = 20_000_000;
 

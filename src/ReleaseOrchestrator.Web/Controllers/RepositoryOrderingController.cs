@@ -62,7 +62,7 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Derived on read rather than stored, and derived by the same engine that orders a real rollout
-    /// — so it cannot drift from what the planner will actually do. Repositories with no rules at all
+    /// - so it cannot drift from what the planner will actually do. Repositories with no rules at all
     /// still appear: they deploy in the first wave, which is the honest answer, and leaving them out
     /// would make an unconfigured repository look excluded rather than unconstrained.
     /// </remarks>
@@ -171,7 +171,7 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
     /// <remarks>
     /// One writer, not two. These rows and the document both feed the same graph and neither replaces
     /// the other, so with both writable a rule deleted here would leave the order unchanged because
-    /// the document still states it — and nothing on either screen would say why. Once a document
+    /// the document still states it - and nothing on either screen would say why. Once a document
     /// exists it owns ordering; these endpoints turn read-only.
     /// </remarks>
     private async Task<bool> RulesDocumentOwnsOrderingAsync(CancellationToken ct) =>

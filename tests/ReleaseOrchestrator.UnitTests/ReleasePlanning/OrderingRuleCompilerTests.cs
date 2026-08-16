@@ -248,7 +248,7 @@ public class OrderingRuleCompilerTests
         Assert.Contains(edges, e => e.From == SvcApi.MergeRequestId && e.To == PartnerReports.MergeRequestId);
 
         // svc-auth is excluded from backend-main by the repository axis, so task-4 is ordered by its
-        // task link alone — which is the point: the document adds repository ordering and does not
+        // task link alone - which is the point: the document adds repository ordering and does not
         // restate what the tracker already said.
         Assert.DoesNotContain(edges, e => e.From == SvcAuth.MergeRequestId);
     }

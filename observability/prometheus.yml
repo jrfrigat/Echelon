@@ -1,16 +1,16 @@
 # Prometheus scrape configuration for the local observability stack.
 #
 # Mounted read-only into the prometheus container by docker-compose.observability.yml. The targets
-# are compose service names, reachable over the project's default network — the apps expose their
+# are compose service names, reachable over the project's default network - the apps expose their
 # metrics on the same internal 8080 they serve everything else on, at /metrics (the default path,
-# so no metrics_path override is needed). HTTPS redirection does not fire inside the containers —
-# no HTTPS port is bound there — so http is correct here.
+# so no metrics_path override is needed). HTTPS redirection does not fire inside the containers -
+# no HTTPS port is bound there - so http is correct here.
 global:
   scrape_interval: 15s
   scrape_timeout: 10s
 
 scrape_configs:
-  # Prometheus scraping itself — the first thing to check when a dashboard is empty.
+  # Prometheus scraping itself - the first thing to check when a dashboard is empty.
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]

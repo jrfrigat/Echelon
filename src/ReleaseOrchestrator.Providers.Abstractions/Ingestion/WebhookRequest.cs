@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Ingestion;
 /// This is the boundary that lets a webhook endpoint live with its provider while the provider
 /// stays a plain library. The host reads the HTTP request and hands the parser this: the raw body,
 /// a header lookup, and the connection the URL named. Deliberately <b>not</b> an
-/// <c>HttpRequest</c> — the moment a provider takes one of those it needs a
+/// <c>HttpRequest</c> - the moment a provider takes one of those it needs a
 /// <c>FrameworkReference</c> to ASP.NET and stops being the portable adapter the architecture is
 /// built to keep replaceable.
 /// </para>
@@ -25,12 +25,12 @@ public sealed class WebhookRequest
     /// <summary>Creates a request from the pieces the host extracted.</summary>
     /// <param name="connectionName">
     /// The connection the route named, already sanitized by the host. The parser treats it as a
-    /// trusted identifier — the host is responsible for rejecting a malformed one before here.
+    /// trusted identifier - the host is responsible for rejecting a malformed one before here.
     /// </param>
     /// <param name="body">The raw request body.</param>
     /// <param name="headers">
     /// The request headers, keyed case-insensitively. A provider looks up its own header names
-    /// (<c>X-Gitlab-Token</c>, <c>X-Gitlab-Event-UUID</c>, …); the case-insensitive lookup matches
+    /// (<c>X-Gitlab-Token</c>, <c>X-Gitlab-Event-UUID</c>, ...); the case-insensitive lookup matches
     /// how HTTP treats header names and how every provider spelled them inconsistently before.
     /// </param>
     public WebhookRequest(

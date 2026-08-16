@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Infrastructure.Archive.Entities;
 /// <para>
 /// Lives in the ARCHIVE database, not the operational one, and that is the load-bearing decision.
 /// Audit volume is a multiple of real traffic, and putting it beside the release data would mean a
-/// busy afternoon of polling competing with the rollout engine for the same transaction log — a
+/// busy afternoon of polling competing with the rollout engine for the same transaction log - a
 /// runaway audit table degrading the thing it exists to observe. It also means the credential that
 /// writes the audit is not the credential that can erase it.
 /// </para>
@@ -18,7 +18,7 @@ namespace ReleaseOrchestrator.Infrastructure.Archive.Entities;
 /// </para>
 /// <para>
 /// What is deliberately absent is as important as what is here: no headers, no request or response
-/// body, no query string, no cookies. Those are not filtered — they are never read. There is
+/// body, no query string, no cookies. Those are not filtered - they are never read. There is
 /// therefore no allowlist to misconfigure and no future endpoint that leaks by being forgotten.
 /// The sign-in endpoint receives a cleartext password and every call from the app carries a bearer
 /// token; the only safe way to hold that data is not to.
@@ -91,7 +91,7 @@ public class RequestAuditEntry
     /// The transport peer's address, captured before forwarded headers are applied.
     /// </summary>
     /// <remarks>
-    /// This one is unforgeable — it is who actually connected. Kept separate from
+    /// This one is unforgeable - it is who actually connected. Kept separate from
     /// <see cref="ForwardedIp"/> because the two answer different questions and only one of them
     /// can be trusted.
     /// </remarks>

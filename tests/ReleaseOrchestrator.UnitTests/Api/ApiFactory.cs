@@ -34,13 +34,13 @@ namespace ReleaseOrchestrator.UnitTests.Api;
 /// else:
 /// </para>
 /// <list type="bullet">
-/// <item>the DATABASE, with SQLite — same EF model and the same queries, without needing a server;</item>
+/// <item>the DATABASE, with SQLite - same EF model and the same queries, without needing a server;</item>
 /// <item>AUTHENTICATION, with a scheme that issues whatever permissions a test asks for. The real one
 /// is JWT against an identity provider; making tests obtain a token would test that provider, and
 /// entering a password to get one is not something this suite should ever need;</item>
 /// <item>the BUS, with a recorder. The endpoints publish recalculation requests, and a test asserting
 /// that they did should not require a broker;</item>
-/// <item>the HOSTED SERVICES — archive, polling, rollout coordination — because a test that starts
+/// <item>the HOSTED SERVICES - archive, polling, rollout coordination - because a test that starts
 /// background workers is a test with a clock in it.</item>
 /// </list>
 /// <para>
@@ -154,7 +154,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     /// Replaces JWT bearer with a scheme that authenticates every request as a test operator.
     /// </summary>
     /// <remarks>
-    /// The permission CLAIMS are issued here, but the authorization POLICIES are the host's own — so a
+    /// The permission CLAIMS are issued here, but the authorization POLICIES are the host's own - so a
     /// test asking for a plan without <c>ReleasePlanApprove</c> is refused by the same handler
     /// production uses. That is the half worth testing; obtaining a real token is the identity
     /// provider's job, not this suite's.

@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 /// <para>
 /// The key ring is persisted to the same database as the tokens it encrypts. That is fine only if
 /// the keys themselves are encrypted at rest with something the database does not hold: otherwise
-/// anyone with a dump — a backup, a restore to a test box, a DBA, an open port — has both the
+/// anyone with a dump - a backup, a restore to a test box, a DBA, an open port - has both the
 /// ciphertext and the key, and the encryption buys nothing at all. It is the digital equivalent of
 /// taping the key to the lock.
 /// </para>

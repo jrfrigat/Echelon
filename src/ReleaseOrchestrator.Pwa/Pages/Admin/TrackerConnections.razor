@@ -38,7 +38,7 @@
                            never in this data, so nothing here can leak one. *@
                         @if (context.Settings is not { Count: > 0 })
                         {
-                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">—</FlareText>
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">-</FlareText>
                         }
                         else
                         {
@@ -79,7 +79,7 @@
              VisibleChanged="OnDialogVisibleChanged">
     <ChildContent>
         @* A form so Enter saves. The dialog renders its actions separately, so the Save button is not
-           inside this element and cannot be the submit control — hence the hidden one at the end. *@
+           inside this element and cannot be the submit control - hence the hidden one at the end. *@
         <form @onsubmit="Save" @onsubmit:preventDefault>
         <FlareStack Gap="FlareSpacing.Medium">
             <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_fName" />

@@ -51,7 +51,7 @@ public class TasksController(
     /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Guarded by the same view policy as the rest of this controller. The data is the history of
-    /// facts an operator can already see individually — this assembles them; it does not expose
+    /// facts an operator can already see individually - this assembles them; it does not expose
     /// anything a plan view does not.
     /// </remarks>
     [HttpGet("{id:guid}/timeline")]
@@ -76,7 +76,7 @@ public class TasksController(
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The plan in the per-task schema, or 404 when the task has no active plan.</returns>
     /// <remarks>
-    /// For reading, diffing, attaching to a change record — and for editing the waves and posting back
+    /// For reading, diffing, attaching to a change record - and for editing the waves and posting back
     /// to <c>plan/import</c>.
     /// </remarks>
     [HttpGet("{id:guid}/plan/export")]
@@ -93,7 +93,7 @@ public class TasksController(
     /// <param name="id">The target task.</param>
     /// <param name="req">The document.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>200 with the verdict — an unacceptable document is an answer, not an error.</returns>
+    /// <returns>200 with the verdict - an unacceptable document is an answer, not an error.</returns>
     /// <remarks>
     /// Read permission, not approve: checking a document changes nothing, and making the safe way to
     /// find out what an edit would do the privileged one teaches people to skip it.
@@ -113,7 +113,7 @@ public class TasksController(
     /// <param name="ct">Cancellation token.</param>
     /// <returns>200 with the stored plan, or 422 with what is wrong.</returns>
     /// <remarks>
-    /// 422 rather than 400: the request is well-formed and the document parsed — what failed is
+    /// 422 rather than 400: the request is well-formed and the document parsed - what failed is
     /// reconciling it with the plan it claims to describe, which the body explains in full.
     /// </remarks>
     [HttpPost("{id:guid}/plan/import")]
@@ -152,14 +152,14 @@ public class TasksController(
 /// <summary>Request to launch a rollout.</summary>
 /// <param name="EnvironmentId">The target environment.</param>
 /// <param name="Redeploy">
-/// When true, redeploy merge requests already deployed to this environment — honoured only where the
+/// When true, redeploy merge requests already deployed to this environment - honoured only where the
 /// repository's deploy target for the environment sets <c>RedeployPolicy.Always</c>.
 /// </param>
 public record LaunchRolloutRequest([Required] Guid EnvironmentId, bool Redeploy = false);
 
 /// <summary>A plan document, as text.</summary>
 /// <param name="Document">
-/// The plan in the export schema. YAML, and JSON is also accepted since JSON is valid YAML — which
+/// The plan in the export schema. YAML, and JSON is also accepted since JSON is valid YAML - which
 /// matters for a client assembling the document rather than editing an exported one.
 /// </param>
 public record PlanDocumentRequest([Required] string Document);

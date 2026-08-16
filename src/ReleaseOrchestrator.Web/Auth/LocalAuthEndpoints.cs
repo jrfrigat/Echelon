@@ -20,7 +20,7 @@ public static class LocalAuthEndpoints
     /// <param name="ExpiresAtUtc">When the token expires.</param>
     public record LoginResponse(string Token, DateTime ExpiresAtUtc);
 
-    /// <summary>Maps <c>POST /auth/login</c>. Anonymous — it is how a caller becomes authenticated.</summary>
+    /// <summary>Maps <c>POST /auth/login</c>. Anonymous - it is how a caller becomes authenticated.</summary>
     /// <param name="endpoints">The endpoint route builder.</param>
     /// <returns>The same builder, for chaining.</returns>
     public static IEndpointRouteBuilder MapLocalAuthEndpoints(this IEndpointRouteBuilder endpoints)

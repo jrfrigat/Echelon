@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>
-/// "<see cref="DependentTask"/> depends on <see cref="DependsOnTask"/>" — so the latter deploys first.
+/// "<see cref="DependentTask"/> depends on <see cref="DependsOnTask"/>" - so the latter deploys first.
 /// </summary>
 /// <remarks>
 /// Which navigation pairs with which is the most consequential mapping in this model, and it was
@@ -29,7 +29,7 @@ public class TaskDependency
     public Guid DependsOnTaskId { get; set; }
 
     /// <summary>
-    /// The waiting task. Pairs with <see cref="TaskItem.Dependencies"/> — the rows naming it as
+    /// The waiting task. Pairs with <see cref="TaskItem.Dependencies"/> - the rows naming it as
     /// the dependent, which are the tasks it waits on.
     /// </summary>
     [ForeignKey(nameof(DependentTaskId))]
@@ -38,7 +38,7 @@ public class TaskDependency
     public TaskItem DependentTask { get; set; } = null!;
 
     /// <summary>
-    /// The task waited on. Pairs with <see cref="TaskItem.Dependents"/> — the rows naming it as
+    /// The task waited on. Pairs with <see cref="TaskItem.Dependents"/> - the rows naming it as
     /// the prerequisite, which are the tasks waiting on it.
     /// </summary>
     [ForeignKey(nameof(DependsOnTaskId))]

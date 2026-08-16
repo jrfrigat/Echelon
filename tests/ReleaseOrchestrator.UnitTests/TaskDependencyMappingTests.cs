@@ -9,7 +9,7 @@ namespace ReleaseOrchestrator.UnitTests;
 /// <summary>
 /// Locks down which foreign key backs each dependency navigation.
 /// <see cref="ReleasePlanGraphTests"/> hand-wires navigations, so it proves the algorithm
-/// but not the mapping — and the mapping is precisely what was inverted: every task
+/// but not the mapping - and the mapping is precisely what was inverted: every task
 /// dependency collapsed into a self-loop, stranding the MR that should have deployed first.
 /// EF builds the model without touching the database, so no server is needed here.
 /// </summary>

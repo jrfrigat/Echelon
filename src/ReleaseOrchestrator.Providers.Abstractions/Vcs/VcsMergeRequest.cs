@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </summary>
 /// <remarks>
 /// <see cref="Status"/> is the normalized <see cref="MergeRequestStatus"/> and not the provider's
-/// raw state string. Translating the dialect is the adapter's job — GitLab says
+/// raw state string. Translating the dialect is the adapter's job - GitLab says
 /// <c>opened</c>/<c>merged</c>/<c>closed</c>, GitHub says <c>open</c>/<c>closed</c> plus a merged
 /// flag, Bitbucket shouts <c>OPEN</c>/<c>MERGED</c>/<c>DECLINED</c>. A raw state crossing this
 /// boundary would put one provider's vocabulary into the domain, which is what this assembly
@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// Every timestamp here is <see cref="DateTimeKind.Utc"/>, and converting is the adapter's job for
 /// the same reason translating the state dialect is. Providers stamp an offset; deserialising that
 /// straight into a <see cref="DateTime"/> yields <see cref="DateTimeKind.Local"/>, which SQL Server
-/// stores at the wrong instant without complaining and PostgreSQL rejects outright — so a
+/// stores at the wrong instant without complaining and PostgreSQL rejects outright - so a
 /// <c>Kind=Local</c> value that crosses this boundary is a bug nobody sees until the second database
 /// runs. Adapters parse into <see cref="DateTimeOffset"/> and hand back <c>UtcDateTime</c>.
 /// </remarks>
@@ -25,14 +25,14 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// <param name="TargetBranch">Branch being merged into.</param>
 /// <param name="Status">
 /// The normalized status, or <c>null</c> when the provider reported a state the adapter does not
-/// model. Null means "unknown", never "assume open" — guessing here silently moves merge requests
+/// model. Null means "unknown", never "assume open" - guessing here silently moves merge requests
 /// into or out of the release plan.
 /// </param>
 /// <param name="Title">Human-readable title.</param>
 /// <param name="CreatedAt">When the merge request was opened. Always UTC.</param>
 /// <param name="MergedAt">When it was merged, when it was. Always UTC.</param>
 /// <param name="Labels">
-/// Labels currently on the merge request. Empty when the provider cannot report labels — check
+/// Labels currently on the merge request. Empty when the provider cannot report labels - check
 /// <see cref="VcsCapabilities.SupportsMergeRequestLabels"/> to tell "no labels" from "cannot say".
 /// </param>
 /// <param name="PipelineStatus">

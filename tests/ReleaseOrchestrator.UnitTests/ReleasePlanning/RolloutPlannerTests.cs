@@ -118,7 +118,7 @@ public class RolloutPlannerTests : PlannerTestBase
     }
 
     /// <summary>
-    /// The hierarchy reads from both ends, and it is readable with no plan built — which is the
+    /// The hierarchy reads from both ends, and it is readable with no plan built - which is the
     /// point: a subtask's parent is never in the subtask's own plan tree, because a task does not
     /// wait on its parent.
     /// </summary>

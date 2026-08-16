@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.UnitTests.Queue;
 /// Branch reconciliation: what makes unlanded work visible to the launch guard.
 /// </summary>
 /// <remarks>
-/// A snapshot is authoritative — present means the branch exists, absent means it is gone — so the
+/// A snapshot is authoritative - present means the branch exists, absent means it is gone - so the
 /// two directions that matter are that a vanished branch stops blocking and that a still-present one
 /// keeps doing so. Runs over real SQLite, because the unique index on (RepositoryId, Name) is part of
 /// what is being tested and an in-memory dictionary would not have it.

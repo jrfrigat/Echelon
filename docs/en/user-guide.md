@@ -77,7 +77,7 @@ interval.
 
 Poll is slower and costs requests whether or not anything changed, so it is opt-in per connection.
 
-Set it per connection in **VCS connections** — the *Ingestion* field. New connections default to
+Set it per connection in **VCS connections** - the *Ingestion* field. New connections default to
 Push, and the connection list marks the polling ones so they are easy to spot.
 
 Editing a connection for any other reason leaves the mode alone: blank means "keep what is stored",
@@ -181,16 +181,16 @@ its own settings; secret fields are stored encrypted.
 
 **Why:** to answer "is anything failing, and what is slow" without leaving the product.
 
-**How:** it records itself — there is nothing to configure. The page summarises the window by
+**How:** it records itself - there is nothing to configure. The page summarises the window by
 endpoint (calls, 4xx, 5xx, p50/p95) and then lists individual requests, filterable to errors only.
 
 Two things it deliberately tells you about itself. It shows a **warning banner** when the picture is
-incomplete — records dropped, the anonymous cap reached, percentiles from a sample, or the webhook
-host not covered — because an unexplained gap in a log reads as quiet traffic, which is the opposite
+incomplete - records dropped, the anonymous cap reached, percentiles from a sample, or the webhook
+host not covered - because an unexplained gap in a log reads as quiet traffic, which is the opposite
 of what it means. And the **caller address is shown twice**: the connection's real peer, and the
 `X-Forwarded-For` value, which is whatever the client claimed and is labelled as unverified.
 
-It never records headers, bodies, query strings or cookies — those are not filtered out, they are
+It never records headers, bodies, query strings or cookies - those are not filtered out, they are
 never read, so no future endpoint can leak by being forgotten. When something failed, the entry
 carries the request id: search your log aggregator by it for the full error text.
 
@@ -252,7 +252,7 @@ A plan with conflicts cannot be launched. Fix the configuration, recalculate, an
    blocked until there are none.
 6. **Pick an environment and launch.** Three things can refuse the launch at this point, each naming
    exactly what to fix: a prerequisite task not yet deployed in that environment, a merge request that
-   does not meet the environment's readiness rule, and **unfinished work** — see below.
+   does not meet the environment's readiness rule, and **unfinished work** - see below.
 7. **Watch the rollout.** Steps run wave by wave. Everything in a wave runs in parallel; the next
    wave starts only when the current one has fully succeeded.
 
@@ -265,11 +265,11 @@ incomplete change, so the launch is refused and each offending branch is named.
 
 Three ways out, and the right one depends on what the branch actually is:
 
-- raise a merge request for it — then it is in the plan and gets deployed in order;
+- raise a merge request for it - then it is in the plan and gets deployed in order;
 - merge it, if it has already landed by another route;
 - delete it, if it was abandoned.
 
-Note that the ordinary source branch of a merge request in the plan never blocks anything — every one
+Note that the ordinary source branch of a merge request in the plan never blocks anything - every one
 of those is unmerged at launch, which is precisely what the rollout is about to change. Only a branch
 that nobody has raised counts.
 

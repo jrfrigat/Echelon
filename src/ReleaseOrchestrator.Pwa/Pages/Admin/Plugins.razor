@@ -3,7 +3,7 @@
 @inherits PageBase
 
 @* An overview, not a CRUD screen: plugins are wired in at build time, so this only shows what is
-   installed and what each does — the connectors, deploy strategies and action handlers this build has. *@
+   installed and what each does - the connectors, deploy strategies and action handlers this build has. *@
 
 <PageTitle>@UiStrings.Plugins_Title</PageTitle>
 
@@ -73,7 +73,7 @@
 
     /// <summary>
     /// How the connector said its events arrive. Null for a deploy strategy or action handler, which
-    /// declare no ingestion because they have none — nothing is being withheld there.
+    /// declare no ingestion because they have none - nothing is being withheld there.
     /// </summary>
     static string? IngestionLabel(string? ingestion) => ingestion switch
     {

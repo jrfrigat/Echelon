@@ -1,7 +1,7 @@
 namespace ReleaseOrchestrator.Web.Auth;
 
 /// <summary>
-/// Settings for the <c>Local</c> authentication provider — a self-contained login that issues the
+/// Settings for the <c>Local</c> authentication provider - a self-contained login that issues the
 /// service's own JWTs, for a deployment with no external identity provider.
 /// </summary>
 /// <remarks>
@@ -18,7 +18,7 @@ public sealed class LocalAuthenticationOptions
     /// <summary>The admin username, for the <c>Config</c> store.</summary>
     public string Username { get; set; } = "admin";
 
-    /// <summary>The admin password, for the <c>Config</c> store. No default — a blank one is refused at startup.</summary>
+    /// <summary>The admin password, for the <c>Config</c> store. No default - a blank one is refused at startup.</summary>
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
@@ -31,7 +31,7 @@ public sealed class LocalAuthenticationOptions
     /// <summary>The HMAC signing key for issued tokens. At least 32 chars in a real deployment.</summary>
     public string SigningKey { get; set; } = string.Empty;
 
-    /// <summary>The token issuer and audience — arbitrary but must match between issue and validation.</summary>
+    /// <summary>The token issuer and audience - arbitrary but must match between issue and validation.</summary>
     public string Issuer { get; set; } = "release-orchestrator";
 
     /// <summary>How long an issued token is valid, in minutes.</summary>

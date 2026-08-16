@@ -12,7 +12,7 @@ if not exist ".env" (
 
 rem docker-compose.override.yml is optional and merged automatically. With it, the stack runs
 rem against the SQL Server it names (typically the one on this host); without it, docker-compose.yml
-rem starts a containerized SQL Server instead. Neither is an error — just say which one is happening.
+rem starts a containerized SQL Server instead. Neither is an error - just say which one is happening.
 if exist "docker-compose.override.yml" (
     echo [info] docker-compose.override.yml present - SQL Server comes from there, not a container.
 ) else (

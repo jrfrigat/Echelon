@@ -59,7 +59,7 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
     /// <param name="req">The repository to register.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// 201, or 409 when the connection already has a repository with that external id — webhook
+    /// 201, or 409 when the connection already has a repository with that external id - webhook
     /// routing takes the first match, so a duplicate pair silently diverts merge requests.
     /// </returns>
     [HttpPost]
@@ -152,7 +152,7 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
 /// <summary>A repository registration. Used for both create and update.</summary>
 /// <param name="Name">Display name, this service's own.</param>
 /// <param name="ExternalId">
-/// How the provider identifies it — GitLab wants the full <c>group/project</c> path, and a bare name
+/// How the provider identifies it - GitLab wants the full <c>group/project</c> path, and a bare name
 /// is the misconfiguration that makes every poll of it 404.
 /// </param>
 /// <param name="ConnectionId">The VCS connection that reaches it.</param>

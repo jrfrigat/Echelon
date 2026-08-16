@@ -7,7 +7,7 @@ namespace ReleaseOrchestrator.Infrastructure.Auth;
 /// </summary>
 /// <remarks>
 /// Permission lookup used to prefer <see cref="ClaimTypes.NameIdentifier"/>, which for Entra ID
-/// carries "sub" — a pairwise value, unique per user *and application*, that appears nowhere in a
+/// carries "sub" - a pairwise value, unique per user *and application*, that appears nowhere in a
 /// user's profile. An administrator granting an override reads the object id off the portal, so
 /// the row they created never matched the token and the grant silently did nothing. "oid" is the
 /// same value in the token and in the portal, so both ends now agree.

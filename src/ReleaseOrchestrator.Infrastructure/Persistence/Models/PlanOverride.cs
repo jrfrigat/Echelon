@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 /// <para>
 /// Keyed on the TASK, not on a plan. It used to hang off <c>RolloutPlanId</c>, which defeated the
 /// whole design: every ingestion event mints a new plan version, so an edit was orphaned by the very
-/// next recalculation — the thing deltas exist to survive. The task is the stable identity a rollout
+/// next recalculation - the thing deltas exist to survive. The task is the stable identity a rollout
 /// is planned for, so an edit against it outlives any number of rebuilds.
 /// </para>
 /// </remarks>

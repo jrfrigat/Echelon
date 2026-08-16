@@ -6,8 +6,8 @@ namespace ReleaseOrchestrator.UnitTests.Providers.GitLab;
 
 /// <summary>
 /// Moved here with the state dictionary, cases unchanged. These strings are GitLab's vocabulary,
-/// so the mapping left Core with them; what stayed behind — <c>IsTerminal</c> and label-driven
-/// promotion — is still covered by <c>MergeRequestStatusResolverTests</c>.
+/// so the mapping left Core with them; what stayed behind - <c>IsTerminal</c> and label-driven
+/// promotion - is still covered by <c>MergeRequestStatusResolverTests</c>.
 /// </summary>
 public class GitLabMergeRequestStateTests
 {

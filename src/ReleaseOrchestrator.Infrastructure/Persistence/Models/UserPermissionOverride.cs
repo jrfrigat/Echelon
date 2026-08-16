@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ReleaseOrchestrator.Infrastructure.Persistence.Models;
 
 /// <summary>Grants a claim to one person, regardless of their groups.</summary>
-/// <remarks>See <see cref="GroupPermissionMapping"/> — the same race, with the same consequence.</remarks>
+/// <remarks>See <see cref="GroupPermissionMapping"/> - the same race, with the same consequence.</remarks>
 [Index(nameof(UserId), nameof(PermissionClaimId), IsUnique = true, Name = "IX_UserPermissionOverride_UserId_PermissionClaimId")]
 public class UserPermissionOverride
 {
@@ -14,7 +14,7 @@ public class UserPermissionOverride
     public Guid Id { get; set; }
 
     /// <summary>
-    /// The Entra ID object id, normalised to a "D"-format GUID — exactly 36 characters, because
+    /// The Entra ID object id, normalised to a "D"-format GUID - exactly 36 characters, because
     /// <c>UserIdentifier.TryNormalize</c> is the only way a value reaches this column and it parses
     /// a GUID or rejects the input.
     /// </summary>

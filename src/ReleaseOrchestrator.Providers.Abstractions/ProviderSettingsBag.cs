@@ -28,7 +28,7 @@ public enum ProviderSettingsError
     TooLong = 3,
 
     /// <summary>
-    /// A value does not match the kind its setting declares — not an integer, not one of the
+    /// A value does not match the kind its setting declares - not an integer, not one of the
     /// allowed options, or not a compilable pattern.
     /// </summary>
     /// <remarks>
@@ -47,7 +47,7 @@ public enum ProviderSettingsError
 /// <para>
 /// Pure, and deliberately in this project rather than in the API: the rules are the provider
 /// contract's, not HTTP's, and both connection controllers plus anything that imports a connection
-/// must apply exactly the same ones. It carries no localization for the same reason — it returns
+/// must apply exactly the same ones. It carries no localization for the same reason - it returns
 /// which rule failed and which key failed it, and the caller words that for its own audience.
 /// </para>
 /// <para>
@@ -63,7 +63,7 @@ public static class ProviderSettingsBag
     /// </summary>
     /// <remarks>
     /// Checked here rather than left to the database, because the database's answer is either a
-    /// silent truncation or a provider-specific exception surfacing as a 500 — neither of which
+    /// silent truncation or a provider-specific exception surfacing as a 500 - neither of which
     /// tells an operator that one field was too long.
     /// </remarks>
     public const int MaxJsonLength = 4000;

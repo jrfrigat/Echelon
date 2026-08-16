@@ -18,7 +18,7 @@ internal sealed class FakeTrackerProvider : ITrackerProvider, ITrackerDependency
     private readonly Dictionary<string, TrackerIssue> _issues = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<string>> _dependsOn = new(StringComparer.OrdinalIgnoreCase);
 
-    // Implementing ITrackerDependencySource is itself the statement that this tracker has links —
+    // Implementing ITrackerDependencySource is itself the statement that this tracker has links -
     // it is not a flag on Capabilities, because "does the provider do it at all" is answered by
     // the type, not by a value read at runtime.
     public TrackerCapabilities Capabilities { get; } = TrackerCapabilities.None;

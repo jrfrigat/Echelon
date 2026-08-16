@@ -13,7 +13,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A connector does not really report merge requests — it reports that a task has work in a
+/// A connector does not really report merge requests - it reports that a task has work in a
 /// repository, and a merge request is only the vehicle that work currently rides in. Before it is
 /// raised, the vehicle is a branch; the task and the repository are the same either way. So the row
 /// here is (task, repository), and the merge request or branch is what carries it.
@@ -21,7 +21,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// <para>
 /// A merge-request-only list could not show the earliest and most interesting state: a branch that
 /// names a task and has no merge request yet. That is work in progress the plan cannot see, and it is
-/// what the launch guard refuses a rollout over — so it belongs in the same list as everything else,
+/// what the launch guard refuses a rollout over - so it belongs in the same list as everything else,
 /// not hidden behind an error message at launch.
 /// </para>
 /// </remarks>
@@ -159,8 +159,8 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
     /// was named.
     /// </summary>
     /// <remarks>
-    /// Resolved exactly as the launch gate resolves it — pin, then the repository's override for this
-    /// environment, then the environment's default, then no gate — because a screen that disagreed
+    /// Resolved exactly as the launch gate resolves it - pin, then the repository's override for this
+    /// environment, then the environment's default, then no gate - because a screen that disagreed
     /// with the gate about what may deploy would be worse than a screen that said nothing.
     /// </remarks>
     private async Task<ReadinessView?> LoadReadinessAsync(Guid? environmentId, CancellationToken ct)
@@ -246,12 +246,12 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
 }
 
 /// <summary>One piece of deployable work: a task's presence in a repository, and what carries it.</summary>
-/// <param name="Kind"><c>MergeRequest</c> or <c>Branch</c> — what the work currently rides in.</param>
+/// <param name="Kind"><c>MergeRequest</c> or <c>Branch</c> - what the work currently rides in.</param>
 /// <param name="TaskKey">The task the linking rule matched, or null when it matched none.</param>
 /// <param name="RepositoryName">The repository the work is in.</param>
 /// <param name="ConnectionName">The connection that reported it.</param>
 /// <param name="Carrier">The merge request's id, or the branch's name.</param>
-/// <param name="Branch">The branch either way — a merge request's source branch, or the branch itself.</param>
+/// <param name="Branch">The branch either way - a merge request's source branch, or the branch itself.</param>
 /// <param name="State"><c>New</c> for a branch with no merge request; otherwise the merge request's status.</param>
 /// <param name="IsStatusManual">Whether an operator pinned the status by hand.</param>
 /// <param name="Labels">Labels carried, for reading against a readiness rule.</param>

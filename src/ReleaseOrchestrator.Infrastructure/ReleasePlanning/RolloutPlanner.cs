@@ -73,7 +73,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// <remarks>
     /// Reads the stored nodes, waves and conflicts rather than recomputing them. It used to take the
     /// metadata from the row and the CONTENT from a fresh computation, which meant version N was
-    /// displayed with content version N never had as soon as the atlas moved — and the launch, which
+    /// displayed with content version N never had as soon as the atlas moved - and the launch, which
     /// reads the stored rows, would then deploy an order the operator had not seen. A plan version has
     /// to mean one thing; keeping it current is what recalculation is for, and every ingestion event
     /// triggers one.
@@ -224,12 +224,12 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// <para>
     /// One method for both endpoints, because a validate that checked anything different from what
     /// import does would be worse than no validate at all: it would say yes and then the import would
-    /// say no, or — far worse — say nothing and produce a different order.
+    /// say no, or - far worse - say nothing and produce a different order.
     /// </para>
     /// <para>
     /// A document states one thing: which wave each merge request deploys in. Everything else it
     /// carries is checked for AGREEMENT and never applied. Which tasks and merge requests a plan
-    /// covers comes from the atlas, so a document that disagrees is rejected rather than obeyed — a
+    /// covers comes from the atlas, so a document that disagrees is rejected rather than obeyed - a
     /// plan is a projection, and an import that could add work to one would make it something else.
     /// </para>
     /// </remarks>
@@ -299,7 +299,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        // Replaced wholesale. The deltas describe one intent — the document just posted — and merging
+        // Replaced wholesale. The deltas describe one intent - the document just posted - and merging
         // them with the previous import's would leave edges nobody asked for pinning waves nobody
         // wrote.
         await db.PlanOverrides
@@ -361,7 +361,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
 
     /// <summary>
     /// Resolves a document against the derived plan, answering the wave each merge request is to
-    /// deploy in — or filling <paramref name="errors"/> and answering nothing usable.
+    /// deploy in - or filling <paramref name="errors"/> and answering nothing usable.
     /// </summary>
     /// <remarks>
     /// Membership is compared in BOTH directions. A document missing a merge request is as wrong as
@@ -454,7 +454,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Hashes the ORDERED STAGES — the actual deploy order — plus the closure and the dropped
+    /// Hashes the ORDERED STAGES - the actual deploy order - plus the closure and the dropped
     /// constraints. Hashing which merge requests are in the plan would be cheaper and wrong: adding
     /// a repository-ordering rule reorders the stages while membership is untouched, so a
     /// membership fingerprint would report "plan unchanged" about the one edit whose entire purpose
@@ -564,7 +564,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// would last until the next webhook.
     ///
     /// Exclusion wins when a merge request is somehow named by both. That is the conservative
-    /// direction — "do not deploy this" is a stronger statement than "deploy this", and the surprise
+    /// direction - "do not deploy this" is a stronger statement than "deploy this", and the surprise
     /// of something not shipping is recoverable in a way that shipping it is not.
     /// </remarks>
     private async Task<(HashSet<Guid> Include, HashSet<Guid> Exclude)> LoadMembershipOverridesAsync(
@@ -616,11 +616,11 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// <remarks>
     /// Two sources, one relation. Declared dependencies name who waits directly; the hierarchy says a
     /// parent waits on its children. Whether each counts is now a decision rather than an assumption
-    /// — see <see cref="TaskWaitPolicy"/> — and the merge itself moved to the pure
+    /// - see <see cref="TaskWaitPolicy"/> - and the merge itself moved to the pure
     /// <see cref="TaskWaitGraph"/>, so it is testable without a database. What is left here is the
     /// loading.
     ///
-    /// This adjacency decides the closure — which tasks a rollout even includes — so a source omitted
+    /// This adjacency decides the closure - which tasks a rollout even includes - so a source omitted
     /// here is a plan that silently leaves those tasks out, no matter what <see cref="PlanInput"/>
     /// says about the edges between their merge requests. That is the same reason the policy has to
     /// be applied at this level and not later.
@@ -686,7 +686,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     ///
     /// An UNREADABLE document is treated the same way, and that is the uncomfortable call. Refusing to
     /// plan would be defensible, but it would take out every plan in the installation over one bad
-    /// edit, including the plans of people who did not make it — so the rules are dropped, the derived
+    /// edit, including the plans of people who did not make it - so the rules are dropped, the derived
     /// ordering stands, and the problem is reported where it can be acted on (validate, and the log).
     /// The endpoint refuses to SAVE an invalid document, which is the gate that matters.
     /// </remarks>
@@ -805,7 +805,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// <remarks>
     /// Null rather than throwing: a payload written by an older shape must not make the task
     /// unplannable. The edit is dropped and the plan is the derived one, which is the safe direction
-    /// — the alternative is an operator whose plan screen 500s with no way to clear the bad row.
+    /// - the alternative is an operator whose plan screen 500s with no way to clear the bad row.
     /// </remarks>
     private static (Guid From, Guid To)? DeserializeEdge(string payload)
     {
@@ -854,9 +854,9 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// The human-readable keys a plan document is written in: task keys and merge-request keys.
     /// </summary>
     /// <remarks>
-    /// The merge-request key is 006 §6's natural key — connection, repository path and the provider's
+    /// The merge-request key is 006 §6's natural key - connection, repository path and the provider's
     /// own id. GitLab's vocabulary, but a key rather than a dialect leaking into the domain, and it is
-    /// what lets a human read an exported plan and find the merge requests it names — and what lets
+    /// what lets a human read an exported plan and find the merge requests it names - and what lets
     /// import resolve them back without asking for database ids.
     /// </remarks>
     private async Task<(Dictionary<Guid, string> TaskKeys, Dictionary<Guid, string> MrKeys)> LoadKeysAsync(
@@ -895,7 +895,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// one needs quoting is exactly the job a serializer exists to do correctly.
     ///
     /// <c>wave</c> is included and <c>order</c> is not. 006 §6 names an optional authored intra-task
-    /// order; what this document reports is the wave the planner COMPUTED — but it is also the one
+    /// order; what this document reports is the wave the planner COMPUTED - but it is also the one
     /// field import reads back, because a wave assignment is the only thing about a plan an operator
     /// can state that the atlas does not already decide.
     /// </remarks>
@@ -973,7 +973,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     /// back from the row rather than derived again.
     /// </summary>
     /// <remarks>
-    /// Only the display text — task titles, repository names, current merge-request status — is
+    /// Only the display text - task titles, repository names, current merge-request status - is
     /// resolved live, because a name is not part of what the plan decided. The ORDER is not resolved
     /// live, and that is the whole distinction: renaming a repository must change the screen, whereas
     /// a new dependency link must not, until somebody recalculates.

@@ -11,7 +11,7 @@ namespace ReleaseOrchestrator.Providers.YandexTracker;
 /// <remarks>
 /// Implements <see cref="ITrackerDependencySource"/> because this tracker does model issue links.
 /// A tracker that did not would simply not implement it, and callers would see that with an
-/// <c>is</c> check rather than by calling and getting an empty list back — which is
+/// <c>is</c> check rather than by calling and getting an empty list back - which is
 /// indistinguishable from an issue that genuinely has no dependencies.
 /// </remarks>
 internal sealed class YandexTrackerProvider(
@@ -72,16 +72,16 @@ internal sealed class YandexTrackerProvider(
             .ConfigureAwait(false);
 
         // Only "depends": it is the one relation that carries ordering. "relates" exists too and
-        // means nothing — feeding it to a topological sort invents constraints nobody stated.
+        // means nothing - feeding it to a topological sort invents constraints nobody stated.
         //
         // Only the OUTWARD end. Yandex.Tracker (Jira's model) returns the same relationship from both
         // issues: issue A's links carry {depends, direction: outward, object: B} and issue B's carry
-        // {depends, direction: inward, object: A}. Emitting both — as this once did — produces A->B AND
+        // {depends, direction: inward, object: A}. Emitting both - as this once did - produces A->B AND
         // B->A, a cycle that breaks the topological sort the moment both issues are synced. The outward
         // end is the dependent's own edge (A depends on B), so filtering to it records each dependency
         // exactly once, oriented as TrackerIssueDependency(dependent, prerequisite). The direction
         // semantics were not confirmable against a live tracker; if "outward" turns out to mean the
-        // reverse, flip this single predicate — but one acyclic edge is correct where a cycle never was.
+        // reverse, flip this single predicate - but one acyclic edge is correct where a cycle never was.
         return dtos?
             .Where(d => string.Equals(d.Type?.Id, "depends", StringComparison.Ordinal))
             .Where(d => string.Equals(d.Direction, "outward", StringComparison.OrdinalIgnoreCase))
@@ -140,7 +140,7 @@ internal sealed class YandexTrackerProvider(
         [property: JsonPropertyName("summary")] string? Summary,
         [property: JsonPropertyName("status")] YtStatus? Status,
         // DateTimeOffset, not DateTime: the tracker stamps an offset, and deserialising that into a
-        // DateTime yields Kind=Local — which SQL Server stores without complaint and PostgreSQL
+        // DateTime yields Kind=Local - which SQL Server stores without complaint and PostgreSQL
         // refuses outright, since it maps DateTime to timestamptz and Npgsql writes only Kind=Utc.
         // The ambiguity is removed here rather than compensated for later: an offset is exactly what
         // DateTimeOffset is for, and the adapter is where the tracker's format is known.

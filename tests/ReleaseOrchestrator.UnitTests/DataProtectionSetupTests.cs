@@ -33,7 +33,7 @@ public class DataProtectionSetupTests
     }
 
     /// <summary>
-    /// No environment set at all is not Development — it is a deployment that forgot to say. The
+    /// No environment set at all is not Development - it is a deployment that forgot to say. The
     /// insecure default must not be the one you get by omission.
     /// </summary>
     [Fact]
@@ -48,7 +48,7 @@ public class DataProtectionSetupTests
         Assert.Null(exception);
     }
 
-    /// <summary>Accepting the risk is allowed — silently drifting into it is not.</summary>
+    /// <summary>Accepting the risk is allowed - silently drifting into it is not.</summary>
     [Fact]
     public void ExplicitOptOutIsHonoured()
     {

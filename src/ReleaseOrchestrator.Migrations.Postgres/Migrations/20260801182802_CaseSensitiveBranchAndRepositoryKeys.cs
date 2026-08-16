@@ -8,7 +8,7 @@ namespace ReleaseOrchestrator.Migrations.Postgres.Migrations
     /// Deliberately empty. The SQL Server side of this migration forces
     /// <c>Latin1_General_100_BIN2</c> onto <c>RepositoryBranches.Name</c> and
     /// <c>Repositories.ExternalId</c>, because a SQL Server instance's default collation is normally
-    /// case-insensitive and both columns sit under a unique index — so two branches differing only in
+    /// case-insensitive and both columns sit under a unique index - so two branches differing only in
     /// case collide (confirmed: <c>Msg 2601</c>). PostgreSQL already compares text case-sensitively,
     /// so there is nothing to change here.
     ///

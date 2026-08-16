@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// <remarks>
 /// Built on the shape from docs/issues/012: task-1 is an umbrella over task-2 and task-3, which are
 /// unrelated to each other, and task-2 additionally waits on task-4. That arrangement is what makes
-/// the export worth checking — it has a task with no merge requests of its own, two independent
+/// the export worth checking - it has a task with no merge requests of its own, two independent
 /// branches of the tree, and a prerequisite reached only through a declared link.
 /// </remarks>
 public class PlanExportTests : PlannerTestBase

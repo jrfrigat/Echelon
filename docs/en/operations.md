@@ -207,21 +207,21 @@ curl http://localhost:5000/health/ready
 
 Look for these in logs:
 
-- **"Database connection failed"** — Check SQL Server availability
-- **"RabbitMQ connection failed"** — Check RabbitMQ, network, credentials
-- **"Release plan recalculation failed"** — Check logs for graph algorithm issues
-- **"Archive batch failed"** — Check foreign key constraints, disk space
-- **"Permissions cache error"** — Check Redis availability
+- **"Database connection failed"** - Check SQL Server availability
+- **"RabbitMQ connection failed"** - Check RabbitMQ, network, credentials
+- **"Release plan recalculation failed"** - Check logs for graph algorithm issues
+- **"Archive batch failed"** - Check foreign key constraints, disk space
+- **"Permissions cache error"** - Check Redis availability
 
 ### Metrics with Prometheus
 
 Both hosts expose metrics at `/metrics` in the Prometheus text format, on by default and needing no
-collector — Prometheus scrapes them directly. What is exported:
+collector - Prometheus scrapes them directly. What is exported:
 
-- **ASP.NET Core** — request rate, duration and active requests (Core's API, the Ingress webhooks)
-- **.NET runtime** — GC, heap, thread pool, exception count, CPU and working set
-- **HTTP client** — outbound calls to GitLab and the tracker
-- **Rebus** — message send, receive and handle timings
+- **ASP.NET Core** - request rate, duration and active requests (Core's API, the Ingress webhooks)
+- **.NET runtime** - GC, heap, thread pool, exception count, CPU and working set
+- **HTTP client** - outbound calls to GitLab and the tracker
+- **Rebus** - message send, receive and handle timings
 
 Turn the endpoint off with `Prometheus__Enabled=false`. It is anonymous and exempt from the rate
 limiter, like the health probes, so a scrape reaches the process regardless of auth and does not
@@ -251,12 +251,12 @@ dotnet run --project src/ReleaseOrchestrator.Web
 Traces capture:
 - Webhook ingestion (Ingress)
 - Message queue send and handling (Rebus propagates W3C trace context across RabbitMQ, so the
-  Ingress → queue → Core path is one trace)
+  Ingress -> queue -> Core path is one trace)
 - Database operations (EF Core)
 - Release plan calculations
 
 **Limitation:** Prometheus stores metrics only. Without an OTLP collector there is no distributed
-tracing — a Prometheus counter tells you *that* webhook processing slowed, not *which* span.
+tracing - a Prometheus counter tells you *that* webhook processing slowed, not *which* span.
 
 ---
 
@@ -272,7 +272,7 @@ All components are stateless:
 - **Redis:** Shared cache (Redis Cluster if scaling beyond single instance)
 - **Archive service:** Runs in every pod (idempotent, no coordination needed)
 
-**Concurrency note:** The archive service is registered in every pod but gated on a distributed lease, so one cycle runs per night across the deployment rather than one per pod. This is mutual exclusion, not consensus — correctness still rests on the idempotent insert and the retry, and if the lease store is unavailable the cycle is skipped (fail-closed) rather than run by everyone. The same applies to the rollout coordinator, the pollers and task reconciliation.
+**Concurrency note:** The archive service is registered in every pod but gated on a distributed lease, so one cycle runs per night across the deployment rather than one per pod. This is mutual exclusion, not consensus - correctness still rests on the idempotent insert and the retry, and if the lease store is unavailable the cycle is skipped (fail-closed) rather than run by everyone. The same applies to the rollout coordinator, the pollers and task reconciliation.
 
 ### Database Connection Pooling
 
@@ -332,7 +332,7 @@ Archive DB grows ~3.6M rows/year at 10K tasks/day throughput. After 2+ years, co
 |---|---|---|---|
 | **Archival** | Hourly (configurable) | Automatic (Archive service) | Moves closed tasks/MRs >90 days old |
 | **Task sync** | Every 30 minutes (configurable) | Automatic (Task Reconciliation) | Loads open task dependencies |
-| **Permission cache invalidation** | On-demand | Automatic (permission changes) | No TTL — invalidate on change only |
+| **Permission cache invalidation** | On-demand | Automatic (permission changes) | No TTL - invalidate on change only |
 | **Health check** | Continuous | Kubernetes/monitoring | `/health` and `/health/ready` |
 
 ---
@@ -349,12 +349,12 @@ If RabbitMQ is down, webhooks return 503 Service Unavailable with a Retry-After 
 ### A distributed lease for the archive, not leader election
 
 The archive service is registered in every pod but gated on a distributed lease, so only one pod
-holds it and runs the cycle at a time. This is **not** a consensus algorithm — it is mutual
+holds it and runs the cycle at a time. This is **not** a consensus algorithm - it is mutual
 exclusion, and the lease store is a single point of failure. That is acceptable because archiving
 is idempotent. Recommendations:
 
 - Keep the lease store reachable and healthy (it is part of `/health/ready`)
-- If it is unavailable the cycle is skipped (fail-closed) — nothing is archived until it recovers
+- If it is unavailable the cycle is skipped (fail-closed) - nothing is archived until it recovers
 - Watch for excessive locking on archive tables (a sign of long cycles)
 - If lock contention degrades performance, consider a longer lease duration in code
 
@@ -362,12 +362,12 @@ is idempotent. Recommendations:
 
 `RepositoryBranches.Name` and `Repositories.ExternalId` are forced to
 `Latin1_General_100_BIN2` by a migration, because both sit under a unique index and hold identifiers
-a case-sensitive system owns — Git branch names and GitLab project paths. Under the usual
+a case-sensitive system owns - Git branch names and GitLab project paths. Under the usual
 case-insensitive instance default, `feature/Login` and `feature/login` are one duplicate key, and
 the insert fails inside a message consumer, which then redelivers and fails indefinitely.
 
 The migration handles this. What to watch for is a database created or restored **outside** the
-migrations — a hand-built schema, or a restore that re-applied the instance default. Check with:
+migrations - a hand-built schema, or a restore that re-applied the instance default. Check with:
 
 ```sql
 SELECT name, collation_name FROM sys.columns WHERE object_id = OBJECT_ID('RepositoryBranches') AND name = 'Name';
@@ -387,8 +387,8 @@ Async paths have poor visibility. Recommendation:
 
 Both databases are supported on the same terms: one model, one test suite, and a migration assembly
 each (`ReleaseOrchestrator.Migrations.MsSql`, `...Migrations.Postgres`). The three places where they
-genuinely differ are isolated in `ProviderSpecificMapping` — the concurrency token (`rowversion` vs
-the system `xmin` column), the filtered-index dialect, and the case-sensitive collation above — and
+genuinely differ are isolated in `ProviderSpecificMapping` - the concurrency token (`rowversion` vs
+the system `xmin` column), the filtered-index dialect, and the case-sensitive collation above - and
 each is asserted by a test that builds both models offline.
 
 The honest caveat is not support, it is exercise: **no PostgreSQL server has ever been started for
@@ -472,7 +472,7 @@ WITH RECOVERY;
 
 **Issue:** Plan doesn't update after creating MR
 - **Cause:** Task not linked, or the recalculation did not run. Note that a merge request does *not*
-  need a "ready" status to appear in a plan — readiness is checked per environment at launch, not at
+  need a "ready" status to appear in a plan - readiness is checked per environment at launch, not at
   planning time, so an unready merge request still shows up in the plan it belongs to
 - **Check:** `/health/ready` (should be 200), check logs for sync errors
 - **Fix:** Manually check branch name (must include task key), verify label config

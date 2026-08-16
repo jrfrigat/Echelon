@@ -44,7 +44,7 @@ public static class ProviderSpecificMapping
     /// </summary>
     /// <param name="builder">The model builder.</param>
     /// <param name="providerName">
-    /// <c>Database.ProviderName</c>. Null for a provider that is neither — a SQLite test, say —
+    /// <c>Database.ProviderName</c>. Null for a provider that is neither - a SQLite test, say -
     /// which keeps the SQL Server shape, because that is what those tests were written against.
     /// The collations below are the exception: their names are SQL Server's, so SQLite must not be
     /// given them. It compares text with BINARY by default, which is the behaviour they restore
@@ -73,20 +73,20 @@ public static class ProviderSpecificMapping
     /// <remarks>
     /// <para>
     /// A SQL Server instance's default collation is usually case-INsensitive, and every column
-    /// inherits it. That is right for most text here — an operator searching for a connection by name
-    /// should not have to match its casing — but wrong for two columns, and wrong in a way that a
+    /// inherits it. That is right for most text here - an operator searching for a connection by name
+    /// should not have to match its casing - but wrong for two columns, and wrong in a way that a
     /// unique index turns into an outage rather than a curiosity.
     /// </para>
     /// <para>
     /// Git branch names are case-sensitive: <c>feature/Login</c> and <c>feature/login</c> are two
     /// different branches, and a repository can hold both. Under a CI collation
-    /// <c>IX_RepositoryBranch_RepositoryId_Name</c> sees one duplicate key and rejects the second —
+    /// <c>IX_RepositoryBranch_RepositoryId_Name</c> sees one duplicate key and rejects the second -
     /// inside a message consumer, which then redelivers and fails forever, taking every later branch
     /// update for that repository with it. Confirmed against SQL Server 2022, not inferred: two
     /// inserts differing only in case, <c>Msg 2601</c> on the second.
     /// </para>
     /// <para>
-    /// The same holds for a repository's <c>ExternalId</c> — GitLab's <c>group/project</c> path is
+    /// The same holds for a repository's <c>ExternalId</c> - GitLab's <c>group/project</c> path is
     /// case-sensitive, and <c>IX_Repository_ConnectionId_ExternalId</c> is unique over it.
     /// </para>
     /// <para>
@@ -111,14 +111,14 @@ public static class ProviderSpecificMapping
     /// <remarks>
     /// The entities carry <c>[Timestamp] byte[] RowVersion</c>, which is SQL Server's
     /// auto-maintained rowversion. Npgsql accepts that attribute without complaint and maps it to a
-    /// plain <c>bytea</c> — a column PostgreSQL never writes. The model would build, the migration
+    /// plain <c>bytea</c> - a column PostgreSQL never writes. The model would build, the migration
     /// would scaffold, and optimistic concurrency would simply never fire: two replicas processing
     /// the same webhook would both win. Silence, not an error.
     ///
     /// PostgreSQL's equivalent is the system column <c>xmin</c>, which it bumps on every update.
     /// Npgsql's convention maps a <c>uint</c>, OnAddOrUpdate concurrency token onto it, so a shadow
     /// property is enough and the CLR entity stays as SQL Server wants it. Nothing reads
-    /// RowVersion in code — it exists to be compared by EF — so ignoring it here costs nothing.
+    /// RowVersion in code - it exists to be compared by EF - so ignoring it here costs nothing.
     /// </remarks>
     private static void ApplyPostgreSqlConcurrencyTokens(ModelBuilder builder)
     {

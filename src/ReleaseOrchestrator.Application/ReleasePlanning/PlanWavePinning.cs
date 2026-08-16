@@ -12,7 +12,7 @@ public sealed record PlanWaveDeltas(
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the whole of import, minus resolving names. An imported plan is not stored as a plan — plan
+/// This is the whole of import, minus resolving names. An imported plan is not stored as a plan - plan
 /// rows are rebuilt on every ingestion event and would take the import with them. It is stored as the
 /// same <c>AddEdge</c>/<c>RemoveEdge</c> deltas an operator's drag-and-drop produces, so the next
 /// recalculation reproduces it from the atlas instead of preserving a frozen answer. One derivation,
@@ -29,7 +29,7 @@ public static class PlanWavePinning
     /// Computes the deltas for one wave assignment.
     /// </summary>
     /// <param name="mrs">
-    /// The plan's merge requests in the planner's own order — it decides which predecessor is chosen
+    /// The plan's merge requests in the planner's own order - it decides which predecessor is chosen
     /// when several would do, so the same document must always give the same deltas.
     /// </param>
     /// <param name="derivedEdges">Every edge the derivation produces before overrides.</param>
@@ -45,8 +45,8 @@ public static class PlanWavePinning
     /// </para>
     /// <para>
     /// ADD one edge from the previous wave to any merge request that has no surviving predecessor
-    /// there. Waves come from longest-path layering — a merge request lands one past its latest
-    /// predecessor — so this is what stops it floating earlier than the document says.
+    /// there. Waves come from longest-path layering - a merge request lands one past its latest
+    /// predecessor - so this is what stops it floating earlier than the document says.
     /// </para>
     /// <para>
     /// The result is a layered graph: every edge goes from wave k to a strictly higher wave. A layered
@@ -56,7 +56,7 @@ public static class PlanWavePinning
     /// </para>
     /// <para>
     /// Minimal on purpose. Pinning by adding every pair between consecutive waves would work and would
-    /// leave the task carrying a quadratic pile of deltas that no operator could read or edit — and
+    /// leave the task carrying a quadratic pile of deltas that no operator could read or edit - and
     /// they are stored, so they are read.
     /// </para>
     /// </remarks>

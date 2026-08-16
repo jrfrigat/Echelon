@@ -11,8 +11,8 @@ public interface ITrackerProviderAdapter
 {
     /// <summary>
     /// The provider-specific settings a connection to this tracker may carry. Empty when it needs
-    /// none. Declaring them here is what keeps a provider's vocabulary — Yandex's organization id,
-    /// say — out of the entity, the API contract and the admin form.
+    /// none. Declaring them here is what keeps a provider's vocabulary - Yandex's organization id,
+    /// say - out of the entity, the API contract and the admin form.
     /// </summary>
     IReadOnlyList<ProviderSettingSchema> SettingsSchema => [];
 

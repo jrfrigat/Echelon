@@ -28,20 +28,20 @@ public class TrackerPollingOptions
 
 /// <summary>
 /// Re-reads the open tasks of connections whose tracker provider type is registered
-/// <see cref="IngestionMode.Poll"/>, on each connection's own interval — the pull half of the tracker
+/// <see cref="IngestionMode.Poll"/>, on each connection's own interval - the pull half of the tracker
 /// ingestion, symmetric with <see cref="VcsPollingCoordinator"/>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Additive to <c>TaskReconciliationService</c>, which keeps every connection's dependency links fresh
-/// on its own (coarser) global timer regardless of type. This gives a poll-mode connection — one the
-/// tracker cannot push webhooks to — a faster, per-connection cadence for the status of its open tasks.
+/// on its own (coarser) global timer regardless of type. This gives a poll-mode connection - one the
+/// tracker cannot push webhooks to - a faster, per-connection cadence for the status of its open tasks.
 /// Both enqueue <see cref="TaskSyncRequested"/>, and re-reading a task is idempotent, so the overlap is
 /// harmless: a poll connection is simply re-read more often than the reconciliation floor.
 /// </para>
 /// <para>
-/// Each connection is swept on its own interval — the <see cref="VcsPollSettings.IntervalKey"/> setting
-/// the poll tracker type declares — with the global tick (<see cref="TrackerPollingOptions.IntervalSeconds"/>)
+/// Each connection is swept on its own interval - the <see cref="VcsPollSettings.IntervalKey"/> setting
+/// the poll tracker type declares - with the global tick (<see cref="TrackerPollingOptions.IntervalSeconds"/>)
 /// as the floor, since the poller cannot wake more often than it ticks. Leased, so one replica polls.
 /// </para>
 /// </remarks>

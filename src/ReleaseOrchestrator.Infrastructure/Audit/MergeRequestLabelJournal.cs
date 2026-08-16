@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.Infrastructure.Audit;
 /// journal only records, because the caller already computed and assigned the status; here the caller
 /// has raw labels, and canonicalisation (<see cref="LabelSet.Canonical"/>) is the thing that decides
 /// both what to store and whether anything changed. Doing it in one place is what keeps the three
-/// ingestion paths — opened webhook, status webhook, poll — from each normalising slightly
+/// ingestion paths - opened webhook, status webhook, poll - from each normalising slightly
 /// differently and disagreeing about whether two label sets are the same.
 /// </para>
 /// <para>
@@ -40,7 +40,7 @@ public static class MergeRequestLabelJournal
 
     /// <summary>
     /// Canonicalises <paramref name="observedLabels"/>, stores them on the merge request, and records
-    /// the transition — unless the set did not actually change.
+    /// the transition - unless the set did not actually change.
     /// </summary>
     /// <param name="db">The context whose unit of work this row joins.</param>
     /// <param name="mergeRequest">The merge request; its <see cref="MergeRequest.Labels"/> is updated in place.</param>
@@ -52,8 +52,8 @@ public static class MergeRequestLabelJournal
     /// <remarks>
     /// A no-op when the canonical set is unchanged. Deliveries repeat and a re-sent open event
     /// reasserts the same labels; without this guard the history would fill with entries for changes
-    /// that did not happen. A newly observed merge request with no labels is also a no-op — its stored
-    /// set starts empty, so "no labels" to "no labels" records nothing — while one that arrives
+    /// that did not happen. A newly observed merge request with no labels is also a no-op - its stored
+    /// set starts empty, so "no labels" to "no labels" records nothing - while one that arrives
     /// carrying labels records a transition from empty, which is the truth: it gained them.
     /// </remarks>
     public static bool Apply(

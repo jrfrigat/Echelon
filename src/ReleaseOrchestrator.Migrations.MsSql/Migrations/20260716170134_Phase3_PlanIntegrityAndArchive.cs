@@ -86,7 +86,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
 
             // The three permissions the code enforces. Nothing ever created these rows, so
             // PermissionClaims was empty, every grant had nothing to reference, and no one
-            // could hold config.edit — which is itself required to grant config.edit. The
+            // could hold config.edit - which is itself required to grant config.edit. The
             // deployment was unusable by design. Ids are fixed so re-running is a no-op.
             migrationBuilder.Sql("""
                 MERGE [PermissionClaims] AS target
@@ -107,7 +107,7 @@ namespace ReleaseOrchestrator.Migrations.MsSql.Migrations
             // look older than any recalculation request and force a pointless rebuild.
             migrationBuilder.Sql("UPDATE [ReleasePlans] SET [SnapshotStartedAt] = [CreatedAt];");
 
-            // At most one plan may be active from here on. Existing rows can hold several — an
+            // At most one plan may be active from here on. Existing rows can hold several - an
             // imported plan beside an auto-generated one, which is exactly the corruption the
             // filtered unique index exists to prevent. Keep the newest, stand the rest down.
             migrationBuilder.Sql("""

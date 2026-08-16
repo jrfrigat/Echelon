@@ -8,14 +8,14 @@ namespace ReleaseOrchestrator.Core.Parsing;
 /// <remarks>
 /// <para>
 /// Pure: no EF, no I/O, no clock, no knowledge of which environment this is or which provider spelled
-/// the labels. That is deliberate — this is the single most consequential predicate in the product,
+/// the labels. That is deliberate - this is the single most consequential predicate in the product,
 /// because it is what stands between unreviewed code and production, and it has to be exercisable
 /// without a database.
 /// </para>
 /// <para>
 /// The rule it enforces, stated once: <b>the absence of configuration is never readiness.</b> A gate
-/// that is switched on but has no labels configured admits nothing. The tempting reading — "no
-/// criteria, so everything passes" — is how an environment ends up ungated by omission, and it is
+/// that is switched on but has no labels configured admits nothing. The tempting reading - "no
+/// criteria, so everything passes" - is how an environment ends up ungated by omission, and it is
 /// precisely the outcome this function exists to make impossible.
 /// </para>
 /// </remarks>
@@ -30,7 +30,7 @@ public static class ReadinessResolver
     /// <param name="rule">The environment's rule.</param>
     /// <exception cref="ArgumentOutOfRangeException">
     /// The rule is a value this function does not know. Thrown rather than defaulted: a new member
-    /// added later must fail loudly here, not quietly pick an answer — and the wrong quiet answer
+    /// added later must fail loudly here, not quietly pick an answer - and the wrong quiet answer
     /// would be "allowed".
     /// </exception>
     public static bool IsReady(

@@ -1,7 +1,7 @@
 namespace ReleaseOrchestrator.Application.Contracts.Messages;
 
 /// <summary>
-/// A task observed in a tracker. Published on first sight and on every re-observation alike — the
+/// A task observed in a tracker. Published on first sight and on every re-observation alike - the
 /// consumer upserts, so this carries current state rather than announcing a creation.
 /// </summary>
 /// <param name="TrackerConnectionName">The tracker connection the observation came through.</param>

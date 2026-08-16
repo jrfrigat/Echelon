@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.Providers.GitLab.Webhooks;
 /// This is the whole of GitLab's webhook knowledge, moved out of the ingress: the payload shape,
 /// the <c>X-Gitlab-Token</c> and <c>X-Gitlab-Event-UUID</c> header names, the
 /// <c>merge_request</c> event filter, the state dictionary, and where GitLab puts labels. The host
-/// keeps only what every provider shares — the route, the secret lookup, and sending the events.
+/// keeps only what every provider shares - the route, the secret lookup, and sending the events.
 /// </remarks>
 internal sealed class GitLabWebhookParser : IWebhookParser
 {
@@ -58,7 +58,7 @@ internal sealed class GitLabWebhookParser : IWebhookParser
         var payload = Deserialize(request.Body.Span);
 
         // Not a merge-request event: understood, nothing to do. Empty (host answers 200), never an
-        // error — GitLab sends many event kinds to one webhook and must not be told each is a failure.
+        // error - GitLab sends many event kinds to one webhook and must not be told each is a failure.
         if (payload.ObjectKind != "merge_request")
             return [];
 
@@ -131,7 +131,7 @@ internal sealed class GitLabWebhookParser : IWebhookParser
     /// <remarks>
     /// GitLab reports labels at the top level and, for some events, only under
     /// <c>object_attributes</c>; this reads whichever is present. It then runs them through
-    /// <see cref="LabelSet.Normalize"/> — the same form the readiness gate compares against — rather
+    /// <see cref="LabelSet.Normalize"/> - the same form the readiness gate compares against - rather
     /// than the ingress's old ad-hoc trim/dedup, which lower-cased differently and did not sort, so
     /// the webhook and the gate could disagree about whether two spellings were one label.
     /// </remarks>

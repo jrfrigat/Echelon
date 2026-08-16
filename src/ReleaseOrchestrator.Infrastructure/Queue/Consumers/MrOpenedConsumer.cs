@@ -20,7 +20,7 @@ namespace ReleaseOrchestrator.Infrastructure.Queue.Consumers;
 /// <remarks>
 /// It does not decide deployability. That was the ready-for-deploy label's job and is now a
 /// per-environment readiness rule evaluated at launch; what happens here is storing the signals that
-/// rule reads. An "opened" delivery for a merge request already held as Merged is ignored outright —
+/// rule reads. An "opened" delivery for a merge request already held as Merged is ignored outright -
 /// a merge is final, so such an event is a stale, out-of-order delivery.
 /// </remarks>
 public class MrOpenedConsumer(

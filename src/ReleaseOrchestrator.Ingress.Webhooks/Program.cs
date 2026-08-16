@@ -100,7 +100,7 @@ try
     app.UseRateLimiter();
 
     // One route per registered provider, built from the providers' own descriptors. No provider is
-    // named here — adding one is a parser registration above and nothing on this line.
+    // named here - adding one is a parser registration above and nothing on this line.
     app.MapProviderWebhooks();
 
     // AllowAnonymous for symmetry with the core host: this endpoint must stay reachable if

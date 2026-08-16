@@ -29,7 +29,7 @@ public class Repository
     ///
     /// Repositories hang off a VCS connection and tasks off a tracker connection, with nothing
     /// joining them: an issue key parsed from a branch could only be matched globally, so in a
-    /// multi-tracker setup — which this product exists to serve — the same key in two trackers
+    /// multi-tracker setup - which this product exists to serve - the same key in two trackers
     /// made the link ambiguous and it was dropped rather than guessed at.
     ///
     /// Null keeps the old global match, which is fine for a single tracker.

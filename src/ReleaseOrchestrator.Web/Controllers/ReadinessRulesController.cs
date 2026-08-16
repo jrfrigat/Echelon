@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.Web.Controllers;
 /// points at to decide which merge requests may deploy.
 /// </summary>
 /// <remarks>
-/// A rule is created once here and assigned elsewhere — an environment's default rule
+/// A rule is created once here and assigned elsewhere - an environment's default rule
 /// (EnvironmentsController) or a repository's override for one environment (DeployTargetsController).
 /// A rule matches a merge request's signals (<c>label:*</c>, <c>mr-status:*</c>, <c>pipeline:*</c>);
 /// see <see cref="ReadinessSignals"/>. Error messages are not localized yet, matching the sibling
@@ -151,7 +151,7 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
 
 /// <summary>Request to create or update a readiness rule.</summary>
 /// <param name="Name">Operator-facing name; unique.</param>
-/// <param name="Mode">"AnyOf" or "AllOf" — whether any one required signal suffices, or all are needed.</param>
+/// <param name="Mode">"AnyOf" or "AllOf" - whether any one required signal suffices, or all are needed.</param>
 /// <param name="RequiredSignals">
 /// The signals a merge request must carry, as <c>kind:value</c> tokens (<c>label:ready-for-prod</c>,
 /// <c>mr-status:merged</c>, <c>pipeline:success</c>). Canonicalized on save; at least one is required.

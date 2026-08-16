@@ -55,7 +55,7 @@ public class TaskSyncConsumer(
     /// <summary>
     /// Attaches merge requests whose branch named this task before the task existed.
     ///
-    /// Webhook order is not guaranteed — an MR commonly arrives before its task — and without
+    /// Webhook order is not guaranteed - an MR commonly arrives before its task - and without
     /// this the MR stays unlinked for good: its own event has already been handled and nothing
     /// revisits it. Scoped to the tracker's own repositories so a same-named key in another
     /// tracker cannot capture them.

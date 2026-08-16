@@ -16,7 +16,7 @@ namespace ReleaseOrchestrator.UnitTests.Audit;
 /// </summary>
 /// <remarks>
 /// Run against a real (in-memory SQLite) database rather than hand-built lists, because the failure
-/// mode being guarded is not arithmetic — it is a projection selecting the wrong set of rows and
+/// mode being guarded is not arithmetic - it is a projection selecting the wrong set of rows and
 /// producing a history that looks plausible. A list built in the test would encode the same mistake
 /// the service makes.
 ///
@@ -409,7 +409,7 @@ public sealed class TaskTimelineServiceTests : IAsyncLifetime
     /// <remarks>
     /// The flag used to come only from the four capped queries, while merge requests and rollouts
     /// are uncapped by design. A task could therefore produce more entries than the limit with every
-    /// individual source well under it, and the final cut discarded the oldest silently — leaving a
+    /// individual source well under it, and the final cut discarded the oldest silently - leaving a
     /// history that begins mid-story next to a page that swears it is complete.
     /// </remarks>
     [Fact]

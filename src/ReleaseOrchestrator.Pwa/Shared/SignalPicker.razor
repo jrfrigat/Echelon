@@ -7,7 +7,7 @@
 
    A rule's signals were a free-text box with a one-line hint, so writing one meant recalling the
    exact spelling of a token and of a label. A rule naming a signal nothing carries is a gate nothing
-   passes, and it fails at launch rather than where it was written — which is the expensive place to
+   passes, and it fails at launch rather than where it was written - which is the expensive place to
    find out. The tokens here come from ReadinessSignals, the same builder the gate evaluates with, and
    the labels from what merge requests actually carry. *@
 
@@ -79,7 +79,7 @@
     /// <remarks>
     /// Built from <c>ReadinessSignals</c> and <c>MergeRequestStatus</c> rather than from a copied list
     /// of strings: this is the same source the gate reads, so a token offered here cannot drift from
-    /// one the evaluator understands. Retired statuses are filtered out — offering a signal nothing
+    /// one the evaluator understands. Retired statuses are filtered out - offering a signal nothing
     /// can ever carry would be worse than offering none.
     /// </remarks>
     IEnumerable<(string Label, List<string> Signals)> Groups
@@ -100,8 +100,8 @@
         }
     }
 
-    // The results providers commonly report. Not exhaustive and not authoritative — a provider may
-    // report anything — so the field stays free text and these are only the common ones made clickable.
+    // The results providers commonly report. Not exhaustive and not authoritative - a provider may
+    // report anything - so the field stays free text and these are only the common ones made clickable.
     static readonly string[] PipelineResults = ["success", "failed", "running", "canceled", "skipped"];
 
     async Task Toggle(string signal)

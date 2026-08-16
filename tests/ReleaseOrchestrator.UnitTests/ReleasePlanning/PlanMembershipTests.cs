@@ -15,7 +15,7 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// <remarks>
 /// Membership is the second thing about a plan an operator can state that the atlas does not decide
 /// (the first is the wave assignment). Like the ordering deltas it is stored against the TASK and
-/// replayed on every build — a decision recorded on the plan would last until the next webhook, and
+/// replayed on every build - a decision recorded on the plan would last until the next webhook, and
 /// every ingestion event is a webhook.
 /// </remarks>
 public class PlanMembershipTests : PlannerTestBase
@@ -106,7 +106,7 @@ public class PlanMembershipTests : PlannerTestBase
     }
 
     /// <summary>
-    /// Contradictory deltas resolve to exclusion — the conservative direction.
+    /// Contradictory deltas resolve to exclusion - the conservative direction.
     /// </summary>
     /// <remarks>
     /// "Do not deploy this" is the stronger statement: something not shipping is recoverable in a way

@@ -4,7 +4,7 @@
 
 @* What there is to deploy, by task.
 
-   A connector does not really report merge requests — it reports that a task has work in a
+   A connector does not really report merge requests - it reports that a task has work in a
    repository, and a merge request is only what that work currently rides in. Before it is raised the
    work is a branch, and the task is the same either way. So a row here is (task, repository) and the
    merge request or branch is the carrier; a branch nothing has raised yet is New, which is the state
@@ -112,7 +112,7 @@
                     <Template>
                         @if (_environmentId is null)
                         {
-                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">—</FlareText>
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">-</FlareText>
                         }
                         else if (context.Readiness is not { } readiness)
                         {

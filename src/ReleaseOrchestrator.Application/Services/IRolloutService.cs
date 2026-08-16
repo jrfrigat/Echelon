@@ -18,7 +18,7 @@ public interface IRolloutService
     /// <param name="actor">Who launched it, for the audit trail.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <param name="redeploy">
-    /// When true, a merge request already deployed to this environment is deployed again — but only
+    /// When true, a merge request already deployed to this environment is deployed again - but only
     /// where its repository's deploy target for this environment permits it
     /// (<c>RedeployPolicy.Always</c>). Two independent conditions, so neither a stray flag nor a
     /// standing policy redeploys on its own.

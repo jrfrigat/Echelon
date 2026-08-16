@@ -12,10 +12,10 @@ namespace ReleaseOrchestrator.UnitTests.Ingestion;
 /// Exercises the provider webhook parsers through the public port, the way the host does.
 /// </summary>
 /// <remarks>
-/// The parsers are internal; they are reached the same way the ingress reaches them — resolved from
-/// the container by provider key — so these tests also prove the registration exists and is keyed
+/// The parsers are internal; they are reached the same way the ingress reaches them - resolved from
+/// the container by provider key - so these tests also prove the registration exists and is keyed
 /// correctly. There is no integration-test host for the endpoint itself (the unit project does not
-/// reference the ingress), so the endpoint's own behaviour — the 401, the 400, the bus send — is
+/// reference the ingress), so the endpoint's own behaviour - the 401, the 400, the bus send - is
 /// not covered here and has to be checked against a running host.
 /// </remarks>
 public class WebhookParserTests
@@ -123,7 +123,7 @@ public class WebhookParserTests
     [Fact]
     public void GitLabPayloadMissingRequiredFieldsIsRejected()
     {
-        // merge_request event, but no project path — the one thing that identifies the repository.
+        // merge_request event, but no project path - the one thing that identifies the repository.
         const string json = """
         {
           "object_kind": "merge_request",
@@ -260,7 +260,7 @@ public class WebhookParserTests
     public void YandexDescriptorPreservesItsFourProductionStrings()
     {
         var d = Yandex().Descriptor;
-        // The registered key and the three declared strings deliberately differ — preserved so the
+        // The registered key and the three declared strings deliberately differ - preserved so the
         // refactor renames no route, no config key, and orphans no dedup rows.
         Assert.Equal("yandextracker-webhook", d.ProviderType);
         Assert.Equal("tracker", d.RouteSegment);

@@ -14,8 +14,8 @@ namespace ReleaseOrchestrator.UnitTests.ReleasePlanning;
 /// These exist because the same failure already happened once. The wait policy had tests over its
 /// pure function and none over the wiring, and it turned out to reach the closure and not the edges:
 /// the policy decided which tasks a plan covered and left the deploy order byte-identical. Nothing
-/// failed and nothing was logged. A document is in exactly that position — thoroughly tested as a
-/// parser and a compiler — so the wiring gets its own tests rather than the benefit of the doubt.
+/// failed and nothing was logged. A document is in exactly that position - thoroughly tested as a
+/// parser and a compiler - so the wiring gets its own tests rather than the benefit of the doubt.
 /// </remarks>
 public class OrderingRulesPlannerTests : PlannerTestBase
 {

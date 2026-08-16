@@ -12,7 +12,7 @@ namespace ReleaseOrchestrator.UnitTests.Archive;
 
 /// <summary>
 /// Archiving is the one component here that deletes data, so its mistakes are the only
-/// unrecoverable ones — and it had never completed a single cycle before the audit. These tests
+/// unrecoverable ones - and it had never completed a single cycle before the audit. These tests
 /// run against SQLite rather than nothing, which is what the whole .NET 10 move made possible:
 /// under EF Core 9 no provider was available offline at a matching version.
 /// </summary>
@@ -24,7 +24,7 @@ namespace ReleaseOrchestrator.UnitTests.Archive;
 /// The FK itself was checked against a real SQL Server on 2026-07-17, by hand rather than by a
 /// test here: deleting a merge request a plan still refers to fails with error 547, so the
 /// Restrict that <see cref="MergeRequestStillReferencedByAPlanIsNotArchived"/> relies on is real and not
-/// merely modelled. That check is not automated — nothing in CI has a database — so it is a
+/// merely modelled. That check is not automated - nothing in CI has a database - so it is a
 /// point-in-time fact, not a guard.
 /// </remarks>
 public sealed class ArchiveRunnerTests : IAsyncLifetime
@@ -119,7 +119,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
     /// <summary>
     /// A closed MR never gets a merge timestamp. Filtering on MergedAt alone meant `NULL &lt; cutoff`
-    /// — which SQL answers with UNKNOWN — so closed merge requests were never archived at all.
+    /// - which SQL answers with UNKNOWN - so closed merge requests were never archived at all.
     /// </summary>
     [Fact]
     public async Task ClosedMergeRequestIsArchivedOnItsOwnTimestamp()
@@ -157,7 +157,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     /// <summary>
     /// The archive and the operational database cannot share a transaction, so a delete that fails
     /// leaves rows already archived. The next cycle selects them again, and re-inserting the same
-    /// primary keys used to throw — wedging archiving permanently.
+    /// primary keys used to throw - wedging archiving permanently.
     /// </summary>
     [Fact]
     public async Task ArchivingRowsThatAreAlreadyInTheArchiveDoesNotThrow()
@@ -187,7 +187,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
     /// <summary>
     /// A merge request a plan item still refers to must stay: <c>PlanItem</c> points at it with
-    /// Restrict, so the phase skips it rather than FK-violating on the delete — exactly as the
+    /// Restrict, so the phase skips it rather than FK-violating on the delete - exactly as the
     /// retired global plan's StageItem gate used to.
     /// </summary>
     [Fact]
@@ -227,7 +227,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     /// </summary>
     /// <remarks>
     /// This used to be a gate, and it was the wrong shape of one: nothing ever deletes a deployment
-    /// state, so a merge request that had been deployed anywhere was never archivable — which is most
+    /// state, so a merge request that had been deployed anywhere was never archivable - which is most
     /// of them, and the archive's whole purpose. "Deployed to prod" is a fact ABOUT this merge
     /// request; once the row is gone the fact has no subject. The gates that remain (plan item,
     /// rollout step) are what guarantee nothing live is still asking.
@@ -312,8 +312,8 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     /// A parent whose subtask is still here stays, and goes once the subtask does.
     /// </summary>
     /// <remarks>
-    /// ParentTaskId is Restrict and self-referencing — SQL Server allows nothing else on a
-    /// self-reference — so deleting a parent a child still points at FK-violates and wedges the whole
+    /// ParentTaskId is Restrict and self-referencing - SQL Server allows nothing else on a
+    /// self-reference - so deleting a parent a child still points at FK-violates and wedges the whole
     /// task batch. It is also the same ordering constraint a dependency is: archiving the parent
     /// early would drop the edge out of a task still being planned. The child drains first, and the
     /// parent follows on a later pass, exactly as dependents drain before their prerequisites.
@@ -369,7 +369,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
     /// <summary>
     /// The label journal is foreign-key-free and grows by one row per label change on every merge
-    /// request, forever — so, like the status journal, it must be pruned on its own retention window
+    /// request, forever - so, like the status journal, it must be pruned on its own retention window
     /// or it grows without bound. This asserts the pruner drops what is past the window and keeps
     /// what is inside it.
     /// </summary>
@@ -411,7 +411,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     // ---- retention: the phases that let the archive drain at all ----------------------------
 
     /// <summary>
-    /// A task that was deployed reaches the archive — after a full cycle, not before it.
+    /// A task that was deployed reaches the archive - after a full cycle, not before it.
     /// </summary>
     /// <remarks>
     /// The point of the retention phases. Rollout steps reference the merge request and the task with
@@ -468,7 +468,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     /// A rollout that never finished is not history, however old the row is.
     /// </summary>
     /// <remarks>
-    /// Its age says how long it has been stuck, not how long ago it ended — and deleting it would
+    /// Its age says how long it has been stuck, not how long ago it ended - and deleting it would
     /// take away the steps that say where it stopped, which is the only reason anyone opens it.
     /// </remarks>
     [Fact]
@@ -502,7 +502,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
     /// </summary>
     /// <remarks>
     /// The surprising half of the rule, and deliberate: PlanTaskNode pins the task with Restrict, so
-    /// keeping the plan keeps the task. Rebuilding it is one Recalculate away — that is what a plan
+    /// keeping the plan keeps the task. Rebuilding it is one Recalculate away - that is what a plan
     /// being a projection of the atlas buys.
     /// </remarks>
     [Fact]
@@ -559,7 +559,7 @@ public sealed class ArchiveRunnerTests : IAsyncLifetime
 
     /// <summary>
     /// A closed task that was planned and deployed: a plan with its node and item, a rollout with a
-    /// step, and per-environment deployment state — every Restrict that used to pin it.
+    /// step, and per-environment deployment state - every Restrict that used to pin it.
     /// </summary>
     private async Task<(TaskItem Task, MergeRequest Mr)> AddDeployedTaskAsync(
         DateTime? finishedAt, RolloutStatus status = RolloutStatus.Succeeded)

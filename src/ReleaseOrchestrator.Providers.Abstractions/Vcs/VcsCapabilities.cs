@@ -5,7 +5,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Per connection, not per provider type. "GitLab supports X" is not a fact — a self-hosted
+/// Per connection, not per provider type. "GitLab supports X" is not a fact - a self-hosted
 /// GitLab is whatever version its owner last upgraded to, and two connections to two installs
 /// answer differently. Atlantis reached the same shape with
 /// <c>SupportsSingleFileDownload(repo)</c>: the predicate takes the repository because a global
@@ -14,7 +14,7 @@ namespace ReleaseOrchestrator.Providers.Abstractions.Vcs;
 /// <para>
 /// This object answers "can this install do it". The other two questions have their own
 /// mechanisms: "can this provider do it at all" is an optional interface plus an <c>is</c> check,
-/// and "is the server new enough" is settled once at connect time and cached — see
+/// and "is the server new enough" is settled once at connect time and cached - see
 /// <see cref="ServerVersion"/>.
 /// </para>
 /// </remarks>
@@ -38,7 +38,7 @@ public sealed record VcsCapabilities
     /// meaning "this provider cannot tell you". The difference matters because a per-environment
     /// readiness rule is evaluated against the stored label set, so reading "cannot say" as "the
     /// labels were removed" would overwrite that set and hold a merge request out of an environment
-    /// it qualifies for — or, on a rule that gates on absence, let one through.
+    /// it qualifies for - or, on a rule that gates on absence, let one through.
     /// </remarks>
     public bool SupportsMergeRequestLabels { get; init; }
 

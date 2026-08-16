@@ -475,7 +475,7 @@ public class RolloutService(
 
     /// <summary>
     /// Builds an event row. Added to the context by the caller so it lands in the caller's unit of
-    /// work — an audit row that could commit while the change it describes rolled back would be
+    /// work - an audit row that could commit while the change it describes rolled back would be
     /// worse than no audit row.
     /// </summary>
     private static RolloutEvent NewEvent(Guid rolloutId, string kind, ActorRef actor, DateTime at, object? payload) =>
@@ -551,13 +551,13 @@ public class RolloutService(
     /// <remarks>
     /// <para>
     /// A plan is built from merge requests, so a task whose only artefact is a branch used to look
-    /// finished — nothing to deploy, nothing to wait for. That is backwards: a branch is work that
+    /// finished - nothing to deploy, nothing to wait for. That is backwards: a branch is work that
     /// started, and rolling out a parent while a child's branch is unlanded ships an incomplete change.
     /// </para>
     /// <para>
     /// The rule is deliberately "no merge request carries it", not "any unmerged branch". Every merge
-    /// request in a plan has an unmerged source branch at launch — that is what the rollout is about to
-    /// merge — so blocking on those would block every launch. What blocks is a branch nobody has raised
+    /// request in a plan has an unmerged source branch at launch - that is what the rollout is about to
+    /// merge - so blocking on those would block every launch. What blocks is a branch nobody has raised
     /// for review: the work exists, and the plan does not know about it.
     /// </para>
     /// </remarks>
@@ -601,7 +601,7 @@ public class RolloutService(
         if (offenders.Count == 0) return;
 
         throw new DomainValidationException(
-            "Unfinished work blocks this rollout — these branches have no merge request and are not merged: "
+            "Unfinished work blocks this rollout - these branches have no merge request and are not merged: "
             + string.Join(", ", offenders)
             + ". Raise a merge request for each, or merge or delete the branch.");
     }
@@ -619,8 +619,8 @@ public class RolloutService(
     /// <remarks>
     /// The one place a rollout consults the readiness feature, evaluated once here at launch. Each
     /// merge request's rule is resolved as pin &gt; repository override &gt; environment default &gt; no
-    /// gate, then its current signals — a token per label, one for its status, one for its pipeline
-    /// result when known (<see cref="ReadinessSignals"/>) — are checked against the rule. A merge
+    /// gate, then its current signals - a token per label, one for its status, one for its pipeline
+    /// result when known (<see cref="ReadinessSignals"/>) - are checked against the rule. A merge
     /// request whose rule resolves to none is ungated and pays nothing, exactly as before there was a
     /// gate. There is no dispatch-time re-check: a pin or signal changed after launch does not affect a
     /// run already materialised, so an operator who needs to hold a launched rollout cancels it.
