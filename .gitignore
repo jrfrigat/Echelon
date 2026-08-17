@@ -32,6 +32,7 @@ packages/
 # Secrets - never commit
 .env
 .env.*
+*.env
 !.env.example
 *.pfx
 *.p12
@@ -54,9 +55,24 @@ docker-compose.override.yml
 
 # Tooling artifacts (Claude Code). Local assistant configuration, not project source:
 # it is regenerated per machine and carries no decision anyone reviews, so it stays out of the
-# repository as it does in Flare and Weir.
+# repository as it does in Flare and Weir. CLAUDE.md belongs here for the same reason and one
+# more: it records what this particular machine can reach - a proxy host, which databases are
+# installed, where their binaries live - which is noise to a reader and nobody else's business.
 .claude/
 .mcp.json
+CLAUDE.md
+
+# User secrets and local settings.
+secrets.json
+*.userprefs
+
+# Build output for other architectures, and dependencies of any tooling that lands here.
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+x64/
+x86/
+node_modules/
+TestResults/
 
 # OS
 Thumbs.db
