@@ -1,57 +1,85 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Echelon - deploy a task, not a branch" width="760">
+  <a href="docs/README.md">
+    <img src="assets/banner.svg" alt="Echelon - release planning and rollout across issue trackers and repositories" width="860">
+  </a>
 </p>
+
+# Echelon - Release Planning and Rollout
 
 <p align="center"><b>English</b> - <a href="README.ru.md">Русский</a></p>
 
-<p align="center">
-  <a href="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml"><img src="https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/.NET-10-512BD4.svg" alt=".NET 10">
-</p>
+[![CI](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg)](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-# Echelon
+Echelon plans and runs releases around the unit people actually work in: the **task**. It reads tasks from an issue tracker and merge requests from one or more VCS connections, works out everything a task waits on - subtasks, linked tasks, repository ordering rules - orders the work into **deploy waves**, and drives the rollout into each environment. A task is rarely one repository, and Echelon answers the question a release engineer asks every day: what has to ship, in what order, and what is not ready yet.
 
-**Echelon** plans and runs releases around the unit people actually work in: the
-**task**. It reads tasks from an issue tracker and merge requests from one or more VCS connections,
-works out everything a task waits on, orders the work into deploy waves, and drives the rollout into
-each environment.
+**Task-centric planning - YAML ordering rules with a visual editor - per-environment rollouts and readiness - GitLab and Yandex Tracker adapters - SQL Server or PostgreSQL - Blazor admin PWA**
 
-A task is rarely one repository. Echelon takes the subtasks, the linked tasks and the
-repository ordering rules, and answers the question a release engineer asks every day: what has to
-ship, in what order, and what is not ready yet.
+> **Not production-proven.** The code is covered and both database providers are verified against live servers, but no rollout has yet been executed against a real GitLab. See [Maturity](#maturity) before you rely on it.
 
-> **Status: not production-proven.** The code is covered and both database providers are verified
-> against live servers, but no rollout has yet been executed against a real GitLab. See
-> [Maturity](#maturity) before you rely on it.
+---
 
-## Principles
+## Features
 
-- **A plan is a projection, never a stored opinion.** Every ingestion event rebuilds it from the
-  atlas, so it cannot drift from reality. Operator decisions survive as deltas that are replayed on
-  each build, not as a frozen result the next webhook would overwrite.
-- **One derivation.** Recalculation, a hand edit, an imported YAML document and the launch itself all
-  reach the deploy order through the same code, and the plan records the order it decided. Three
-  copies of that logic is three chances to deploy in an order nobody approved.
-- **Never a silent plan.** A rollout may deploy against a declared constraint - sometimes it must -
-  but it can never look clean while doing so. Every broken constraint is recorded on the plan.
-- **The core knows no provider.** GitLab and Yandex Tracker vocabularies, status dictionaries and key
-  formats live in adapters. The domain sees normalised values only.
-- **Deploy order is one thing, deploy method is another.** The order is the same everywhere; only
-  how a repository ships to a given environment, and what counts as ready there, vary by environment.
+- **Planning around a task, not a branch** - the target task's dependency closure (subtasks, linked tasks, repository ordering) is resolved into ordered deploy waves, so a change spanning five repositories ships as one thing
+- **A plan is a projection, never a stored opinion** - every ingestion event rebuilds it from the atlas, and operator decisions survive as deltas replayed on each build, not as a frozen result the next webhook overwrites
+- **One derivation** - recalculation, a hand edit, an imported YAML document and the launch itself reach the deploy order through the same code, and the plan records the order it decided
+- **Never a silent plan** - a rollout may deploy against a declared constraint, but every broken constraint is recorded on the plan; it can never look clean while breaking one
+- **A YAML ordering language** - groups and `needs` generalise "repository A after repository B" across tasks, connectors and repositories, with a visual editor that renders into the same document the planner reads
+- **Plan import and validation** - export a plan, edit the waves, post it back; `validate` runs the same reconciliation as `import` and stores nothing
+- **Membership overrides** - force a merge request into or out of a rollout, stored against the task so the decision survives the next ingestion event
+- **Per-environment execution** - one claim per (merge request, environment), pluggable deploy strategies (merge, pipeline trigger, or your own), and an environment progression gate
+- **Readiness rules** - per environment, overridable per repository, with a per-merge-request pin as the escape hatch when a signal cannot be observed
+- **Two databases, one model** - SQL Server and PostgreSQL, with the provider divergences (concurrency token, filtered index dialect, collation) isolated in one file
+- **Compile-time provider registration** - keyed services, no runtime assembly scanning; a breaking change to a port is a compile error in every adapter
+- **Retention that lets the archive drain** - rollout and plan history age out, so a task that was ever deployed can finally leave the operational database
+- **Blazor admin PWA** - served from the same origin as the API, localized in English and Russian
 
-## What it does
+## Quick Start
 
-| | |
-| :-- | :-- |
-| **Ingestion** | Webhooks and polling from VCS and tracker connections, deduplicated through an inbox |
-| **Planning** | The task's dependency closure, ordered into waves by task links, hierarchy and repository rules |
-| **Ordering rules** | A YAML document (groups and `needs`) that generalises "repository A after repository B", with a visual editor |
-| **Execution** | Per-environment rollouts, one claim per (merge request, environment), pluggable deploy strategies |
-| **Readiness** | Rules per environment, overridable per repository, with a per-merge-request pin as the escape hatch |
-| **Retention** | Rollout and plan history age out, so archived tasks can actually leave the operational database |
+Requires .NET 10 SDK and Docker.
 
-## Solution layout
+```bash
+git clone https://github.com/jrfrigat/echelon.git
+cd echelon
+cp .env.example .env      # set the passwords it names
+docker compose up -d
+# -> http://localhost:8081
+```
+
+PostgreSQL instead of SQL Server, and a single instance without Redis:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.single-instance.yml up -d
+```
+
+Building and running from source:
+
+```bash
+dotnet build Echelon.slnx    # 0 errors, 0 warnings; warnings are errors
+dotnet test Echelon.slnx
+dotnet run --project src/Echelon.Web
+```
+
+> Migrations are applied at startup by default. For more than one replica turn that off
+> (`Database__MigrateOnStartup=false`) and apply them from CI or an init container, or the replicas
+> race each other.
+
+## How a rollout is built
+
+```
+tracker + VCS  ->  atlas  ->  closure  ->  waves  ->  rollout per environment
+   ingestion       tasks,     what the     ordered    one claim per
+   (webhook         MRs,      target       deploy     (merge request,
+    or poll)      branches    waits on     stages      environment)
+```
+
+The ordering comes from three sources merged into one graph: task links and hierarchy, the repository
+ordering rules, and the operator's own edges. Cycles are broken by dropping the least critical edge,
+and every drop is recorded as a conflict on the plan.
+
+## Architecture
 
 Onion, with dependencies pointing inwards only:
 
@@ -63,8 +91,13 @@ Core                    enums, pure parsing; no dependencies at all
           <- Web (composition root, API, hosted PWA) / Ingress.Webhooks
 ```
 
-The planning algorithm is pure and unit-tested without a database. Providers are registered at
-compile time through keyed services, not discovered at runtime.
+The planning algorithm is pure and unit-tested without a database. Two hosts ship as separate images:
+the application (API plus admin PWA) and the webhook ingress, which can be exposed on its own so the
+API need not be.
+
+> Three library packages are published for provider authors - `Echelon.Core`,
+> `Echelon.Providers.Abstractions` and `Echelon.Application`. The hosts, the PWA and the migration
+> assemblies ship as container images, not as a dependency anyone should take.
 
 ## Documentation
 
@@ -78,38 +111,8 @@ compile time through keyed services, not discovered at runtime.
 | [Operations](docs/en/operations.md) | Deployment, monitoring, archiving |
 | [Localization](docs/en/localization.md) | How i18n works |
 
-Russian versions live in [docs/ru](docs/ru); the index is [docs/README.md](docs/README.md).
-Design notes that are still open are in [docs/issues](docs/issues/README.md).
-
-## Install
-
-Requires .NET 10 SDK and Docker.
-
-```bash
-git clone https://github.com/jrfrigat/echelon.git
-cd echelon
-cp .env.example .env      # set the passwords it names
-docker compose up -d
-# Open http://localhost:8081
-```
-
-PostgreSQL instead of SQL Server, and a single instance without Redis:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.single-instance.yml up -d
-```
-
-## Build and run
-
-```bash
-dotnet build Echelon.slnx    # 0 errors, 0 warnings; warnings are errors
-dotnet test Echelon.slnx
-dotnet run --project src/Echelon.Web
-```
-
-Migrations are applied at startup by default. For more than one replica, turn that off
-(`Database__MigrateOnStartup=false`) and apply them from CI or an init container, or the replicas
-race.
+Russian versions live in [docs/ru](docs/ru); the index is [docs/README.md](docs/README.md). Design
+notes that are still open are in [docs/issues](docs/issues/README.md).
 
 ## Maturity
 

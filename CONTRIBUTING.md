@@ -55,9 +55,21 @@ files have reached commits; this script removes them.
 
 ## Commit messages
 
-One line saying what changed, in the imperative. Add a body only when the diff does not explain
-itself - a constraint that is not visible locally, a decision with an alternative worth naming, a
-defect whose symptom differed from its cause. Do not add a body that restates the diff.
+**One line, in English, in the imperative, and no body.** Write the subject so it carries the point
+on its own:
+
+```
+Let the wait policy reach the deploy order, not just the closure
+Refuse a launch whose plan has no steps
+Understand a task key that is not written in Latin
+```
+
+Not `Fix ordering bug`, and not a subject followed by three paragraphs restating the diff. If the
+subject cannot hold the point, the commit is usually doing two things.
+
+A body is for the rare case where the reason lives outside the diff entirely - a constraint no
+reviewer can see locally, or a defect whose symptom was nowhere near its cause. That is a handful of
+commits in a hundred, not most of them.
 
 Do not add `Co-authored-by` trailers.
 
