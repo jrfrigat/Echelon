@@ -8,8 +8,9 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
-First public release is being prepared. Everything below describes the state the repository is
-published in.
+## [0.1.0] - 2026-08-17
+
+First public release. Everything below describes the state the repository is published in.
 
 ### Added
 
@@ -57,3 +58,6 @@ published in.
   stores as the wrong instant.
 - **Branch names were compared case-insensitively on SQL Server**, so two branches differing only in
   case collided on the unique index.
+
+[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/jrfrigat/echelon/releases/tag/v0.1.0
