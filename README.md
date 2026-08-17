@@ -9,6 +9,9 @@
 <p align="center"><b>English</b> - <a href="README.ru.md">Русский</a></p>
 
 [![CI](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg)](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Echelon.Core.svg)](https://www.nuget.org/packages/Echelon.Core/)
+[![Downloads](https://img.shields.io/nuget/dt/Echelon.Core.svg)](https://www.nuget.org/packages/Echelon.Core/)
+[![Docker pulls](https://img.shields.io/docker/pulls/frigat/echelon?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/frigat/echelon)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -95,9 +98,24 @@ The planning algorithm is pure and unit-tested without a database. Two hosts shi
 the application (API plus admin PWA) and the webhook ingress, which can be exposed on its own so the
 API need not be.
 
-> Three library packages are published for provider authors - `Echelon.Core`,
-> `Echelon.Providers.Abstractions` and `Echelon.Application`. The hosts, the PWA and the migration
-> assemblies ship as container images, not as a dependency anyone should take.
+## Packages and images
+
+| Artifact | Get it | What it is |
+| :-- | :-- | :-- |
+| `Echelon.Core` | [NuGet](https://www.nuget.org/packages/Echelon.Core/) | enums and pure parsing, with no dependencies at all |
+| `Echelon.Providers.Abstractions` | [NuGet](https://www.nuget.org/packages/Echelon.Providers.Abstractions/) | the extension points an adapter implements: VCS and tracker providers, webhook parsers, deploy strategies, action handlers |
+| `Echelon.Application` | [NuGet](https://www.nuget.org/packages/Echelon.Application/) | ports, message contracts and the planning algorithm |
+| `frigat/echelon` | [Docker Hub](https://hub.docker.com/r/frigat/echelon) - [GHCR](https://github.com/jrfrigat/echelon/pkgs/container/echelon) | the application host: the API and the admin PWA |
+| `frigat/echelon-ingress` | [Docker Hub](https://hub.docker.com/r/frigat/echelon-ingress) - [GHCR](https://github.com/jrfrigat/echelon/pkgs/container/echelon-ingress) | the webhook ingress, exposable on its own |
+
+The hosts, the PWA and the migration assemblies are deliberately not packages: they are a deployment,
+not a dependency. Writing an adapter starts with
+
+```bash
+dotnet add package Echelon.Providers.Abstractions
+```
+
+and the walkthrough is in [Providers](docs/en/providers.md).
 
 ## Documentation
 

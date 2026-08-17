@@ -9,6 +9,9 @@
 <p align="center"><a href="README.md">English</a> - <b>Русский</b></p>
 
 [![CI](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml/badge.svg)](https://github.com/jrfrigat/echelon/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Echelon.Core.svg)](https://www.nuget.org/packages/Echelon.Core/)
+[![Downloads](https://img.shields.io/nuget/dt/Echelon.Core.svg)](https://www.nuget.org/packages/Echelon.Core/)
+[![Docker pulls](https://img.shields.io/docker/pulls/frigat/echelon?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/frigat/echelon)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -94,9 +97,24 @@ Core                    enum'ы, чистый разбор; ноль завис�
 приложение (API и админка) и приём вебхуков, который можно выставить наружу отдельно, чтобы API
 выставлять не пришлось.
 
-> Для авторов провайдеров публикуются три библиотеки - `Echelon.Core`,
-> `Echelon.Providers.Abstractions` и `Echelon.Application`. Хосты, PWA и сборки миграций
-> поставляются образами, а не зависимостью, которую стоит на себя брать.
+## Пакеты и образы
+
+| Артефакт | Откуда взять | Что это |
+| :-- | :-- | :-- |
+| `Echelon.Core` | [NuGet](https://www.nuget.org/packages/Echelon.Core/) | enum'ы и чистый разбор, без единой зависимости |
+| `Echelon.Providers.Abstractions` | [NuGet](https://www.nuget.org/packages/Echelon.Providers.Abstractions/) | точки расширения для адаптера: провайдеры VCS и трекера, разбор вебхуков, стратегии деплоя, обработчики действий |
+| `Echelon.Application` | [NuGet](https://www.nuget.org/packages/Echelon.Application/) | порты, контракты сообщений и алгоритм планирования |
+| `frigat/echelon` | [Docker Hub](https://hub.docker.com/r/frigat/echelon) - [GHCR](https://github.com/jrfrigat/echelon/pkgs/container/echelon) | хост приложения: API и админка |
+| `frigat/echelon-ingress` | [Docker Hub](https://hub.docker.com/r/frigat/echelon-ingress) - [GHCR](https://github.com/jrfrigat/echelon/pkgs/container/echelon-ingress) | приём вебхуков, который можно выставить отдельно |
+
+Хосты, PWA и сборки миграций пакетами не публикуются намеренно: это развёртывание, а не зависимость.
+Свой адаптер начинается с
+
+```bash
+dotnet add package Echelon.Providers.Abstractions
+```
+
+а разбор по шагам - в [Провайдерах](docs/ru/providers.md).
 
 ## Документация
 

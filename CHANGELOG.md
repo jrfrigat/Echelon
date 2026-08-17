@@ -10,6 +10,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [0.1.1] - 2026-08-17
 
+### Added
+
+- **Where to get it**, in the README: NuGet version, downloads and Docker pulls badges, and a table
+  linking the three packages and both images (Docker Hub and GHCR).
+- **A Docker Hub overview for the ingress image**, which had none, and a note in CONTRIBUTING on what
+  a release needs configured.
+
 ### Fixed
 
 - **The NuGet package icon was a malformed PNG.** Its `IDAT` chunk declared 4096 bytes while carrying
@@ -18,6 +25,12 @@ All notable changes to this project are documented here. The format is based on
   file passes a header check, and `dotnet pack` and nuget.org both embed an icon without decoding it.
   Rebuilt from the geometry in `assets/logo.svg`, and every shipped PNG is now walked chunk by chunk
   in the test suite, where a length that disagrees with its payload fails the build.
+- **The Docker Hub overviews were never published.** The sync step answered 403 Forbidden - an access
+  token may push an image but not edit a repository description - and being `continue-on-error` it
+  reported a green release over two empty pages. It now covers both repositories and stays off until
+  `DOCKERHUB_DESCRIPTION_SYNC` is set, rather than failing on every release.
+- **Three links in the documentation index** pointed at design notes deleted in the pre-release
+  cleanup.
 
 ## [0.1.0] - 2026-08-17
 

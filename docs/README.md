@@ -30,6 +30,7 @@
 
 ## See also
 
-- [Current State Audit](issues/001-current-state.md) - What was broken and what was fixed
-- [Provider Independence](issues/002-provider-independence.md) - Design rationale for provider architecture
-- [Development Roadmap](issues/003-roadmap.md) - Future work and improvements
+- [Design notes](issues/README.md) - the invariant behind the deploy order, the pre-release audit and
+  its register of what is still unverified, and the ordering-rule language
+- [Packages and images](../README.md#packages-and-images) - the three libraries on NuGet and the two
+  host images on Docker Hub and GHCR

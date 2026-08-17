@@ -80,6 +80,42 @@ Do not add `Co-authored-by` trailers.
 3. Build and test locally; both must be clean.
 4. Open a pull request describing what changed and why.
 
+## CI and releasing
+
+Two workflows drive the pipeline:
+
+- **CI** (`.github/workflows/ci.yml`) - on every push and pull request to `main`: repository hygiene,
+  build and test with warnings as errors, a check that the migrations match the model for both
+  providers, and a dependency audit.
+- **Release** (`.github/workflows/release.yml`) - on a pushed `v*` tag. It builds, tests, and produces:
+
+  | Artifact | What | Where |
+  | :-- | :-- | :-- |
+  | **NuGet packages** | `Echelon.Core`, `Echelon.Providers.Abstractions`, `Echelon.Application` | NuGet.org, via Trusted Publishing (OIDC) |
+  | **Container images** | the application host and the webhook ingress | `ghcr.io/jrfrigat/echelon[-ingress]` and `frigat/echelon[-ingress]`, tagged `X.Y.Z` and `latest` |
+  | **GitHub Release** | the tag's page, with generated notes and the `.nupkg` files attached | `github.com/jrfrigat/echelon/releases` |
+
+  The hosts, the PWA, the migration assemblies and the tests are `IsPackable=false`, so `pack` skips
+  them: they ship as images, not as a dependency anyone should take. The version comes from the tag
+  through MinVer (`v1.2.3` -> `1.2.3`), which is why the checkout uses `fetch-depth: 0`.
+
+Setup, once per repository: a **Trusted Publisher** policy on nuget.org for this repository and
+`release.yml`, plus the `NUGET_USER` variable naming the account; `DOCKERHUB_USERNAME` as a variable
+and `DOCKERHUB_TOKEN` as a secret for Docker Hub. GHCR needs nothing beyond `packages: write`.
+
+The Docker Hub overviews in `build/` are a separate matter: **an access token may push an image but
+not edit a repository description** (0.1.0 got 403 Forbidden on that step while its pushes succeeded).
+The two sync steps therefore stay off until `DOCKERHUB_DESCRIPTION_SYNC` is set to `true` and
+`DOCKERHUB_DESCRIPTION_PASSWORD` holds the account password; without them, paste
+`build/dockerhub-overview.md` and `build/dockerhub-overview-ingress.md` into Docker Hub by hand.
+
+To cut a release: close the version in both changelogs, then push the commit and the tag together, so
+a tag can never point at a commit `main` does not have.
+
+```bash
+git push --atomic origin main v0.1.2
+```
+
 ## Reporting bugs and requesting features
 
 Open an issue. For a bug, the useful ones say what you did, what happened, and what you expected;
