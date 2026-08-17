@@ -8,6 +8,17 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-17
+
+### Fixed
+
+- **The NuGet package icon was a malformed PNG.** Its `IDAT` chunk declared 4096 bytes while carrying
+  4550, so a lenient decoder stopped at row 71 of 128 - the third rank and the bottom of the plate
+  were missing - and a strict one refused the file outright. Nothing rejected it on the way in: the
+  file passes a header check, and `dotnet pack` and nuget.org both embed an icon without decoding it.
+  Rebuilt from the geometry in `assets/logo.svg`, and every shipped PNG is now walked chunk by chunk
+  in the test suite, where a length that disagrees with its payload fails the build.
+
 ## [0.1.0] - 2026-08-17
 
 First public release. Everything below describes the state the repository is published in.
@@ -59,5 +70,6 @@ First public release. Everything below describes the state the repository is pub
 - **Branch names were compared case-insensitively on SQL Server**, so two branches differing only in
   case collided on the unique index.
 
-[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jrfrigat/echelon/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jrfrigat/echelon/releases/tag/v0.1.0

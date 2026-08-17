@@ -118,7 +118,7 @@ notes that are still open are in [docs/issues](docs/issues/README.md).
 
 Verified:
 
-- 667 tests, 0 warnings, warnings-as-errors in CI
+- 669 tests, 0 warnings, warnings-as-errors in CI
 - migrations applied from empty on live SQL Server 2022 and PostgreSQL 16, including rollback cycles
 - the application starts, migrates and reports healthy against both
 - the HTTP API is covered against the real host: routes, authorization policies, status codes, bodies
