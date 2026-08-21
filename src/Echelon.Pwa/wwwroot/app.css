@@ -48,22 +48,60 @@ html:not(.flare-icons-ready) .material-symbols-rounded {
     visibility: hidden;
 }
 
+/* Painted before anything else exists. The VisualStudio theme ships its CSS through
+   ITheme.StyleAssets and injects it at runtime, so no --flare-* token resolves until Blazor has
+   started: a var() here silently takes its fallback, which is what made every refresh flash white -
+   worst in dark mode, where white is the one colour the app never shows. These two literals are that
+   theme's own surfaces, and flare-bootstrap.js puts flare-mode-dark on <html> before the first paint,
+   so the right one wins with no script of ours. color-scheme matters too: without it the browser
+   paints its own canvas and scrollbars light behind a dark page. */
+html {
+    background: #FFFFFF;
+    color-scheme: light;
+}
+
+html.flare-mode-dark {
+    background: #1E1E1E;
+    color-scheme: dark;
+}
+
+/* Blazor's error bar carries both languages (see index.html); show the one <html lang> names, and
+   English when nothing has set it yet. */
+#blazor-error-ui [data-lang] {
+    display: none;
+}
+
+#blazor-error-ui [data-lang="en"],
+html[lang="ru"] #blazor-error-ui [data-lang="ru"] {
+    display: inline;
+}
+
+html[lang="ru"] #blazor-error-ui [data-lang="en"] {
+    display: none;
+}
+
 /* Pre-boot splash: index.html shows this before Blazor (and therefore Flare) has loaded, so it
-   cannot use a Flare component. flare-bootstrap.js has already applied the theme classes by then,
-   so the tokens below still resolve to the right colour scheme. */
+   cannot use a Flare component, and no --flare-* token resolves yet either (see the html rule
+   above). It sits over the page and Flare fades it out on "flare:ready"; the background is left to
+   <html> so the two can never disagree. */
 .app-loading {
+    position: fixed;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    background: var(--flare-color-surface, #fff);
+    /* Transparent, so <html> paints it: one background for the shell and the splash, never two. */
+    background: transparent;
+    z-index: 9000;
 }
 
 .app-loading-spinner {
     width: 2.5rem;
     height: 2.5rem;
-    border: 3px solid var(--flare-color-outline-variant, #dee2e6);
-    border-top-color: var(--flare-color-primary, #0d6efd);
+    /* Neutral grey on a blue tip: no --flare-* token resolves this early, and these read on both
+       the light and the dark surface. */
+    border: 3px solid rgba(128, 128, 128, 0.25);
+    border-top-color: #3B82F6;
     border-radius: 50%;
     animation: app-loading-spin 0.8s linear infinite;
 }

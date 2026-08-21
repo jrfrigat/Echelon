@@ -12,7 +12,7 @@
                     <FocusOnNavigate RouteData="@routeData" Selector="h1" />
                 </Found>
                 <NotFound>
-                    <PageTitle>@UiStrings.NotFound_Title</PageTitle>
+                    <AppTitle Title="@UiStrings.NotFound_Title" />
                     <LayoutView Layout="@typeof(MainLayout)">
                         <FlareAlert Severity="AlertSeverity.Warning">@UiStrings.NotFound_Message</FlareAlert>
                     </LayoutView>

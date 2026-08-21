@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Echelon</title>
     <base href="/" />
-    <meta name="theme-color" content="#1e293b" />
+    <!-- Two, because the shell is painted before Blazor starts and the browser chrome should match
+         whichever mode the boot script is about to apply: the VisualStudio surfaces, #FFFFFF and
+         #1E1E1E. One fixed colour made the title bar disagree with the page in one mode or the other. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1E1E1E" />
     <!-- Flare component styles. The VisualStudio theme declares its own stylesheets via
          ITheme.StyleAssets and injects them at runtime, so they are not listed here. -->
     <link rel="stylesheet" href="_content/Flare.Components/css/flare-components.css" />
@@ -15,9 +19,14 @@
     <link rel="icon" type="image/png" href="icon-192.png" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <!-- Applies the saved theme/palette/mode classes to <html> before first paint, so the app does
-         not flash the wrong colour scheme. An external file, not an inline block: script-src is
+         not flash the wrong colour scheme. The data-* defaults must be THIS app's defaults: the
+         script otherwise falls back to md3-expressive/md3-violet, so a first-time visitor was painted
+         in a theme the app then replaced. An external file, not an inline block: script-src is
          'self' 'wasm-unsafe-eval', with no 'unsafe-inline'. -->
-    <script src="_content/Flare.Components/js/flare-bootstrap.js"></script>
+    <script src="_content/Flare.Components/js/flare-bootstrap.js"
+            data-default-theme="visualstudio"
+            data-default-palette="vs-blue"
+            data-default-mode="auto"></script>
     <!-- Flare's consolidated JS-interop bundle (FlareDataGrid infinite-scroll, clipboard, file
          download, ...). Separate from bootstrap; without it interactive components fail at runtime
          with "FlareDataGrid was undefined". Both Flare reference apps load it right after bootstrap. -->
@@ -25,13 +34,21 @@
     <script src="js/icon-font-ready.js"></script>
 </head>
 <body>
-    <div id="app">
-        <div class="app-loading">
-            <div class="app-loading-spinner" role="status" aria-label="Loading"></div>
-        </div>
+    <div id="app"></div>
+    <!-- The splash is a SIBLING of #app, not its content: Blazor replaces #app as soon as the router
+         renders, which is before the VisualStudio theme has injected its stylesheet, so a splash kept
+         inside it vanished into an unstyled page. Flare fades this one out on "flare:ready" - raised
+         by FlareThemeProvider once theme CSS and fonts are in - because of the id it carries. -->
+    <div id="flare-splash" class="app-loading">
+        <div class="app-loading-spinner" role="status" aria-label="Loading"></div>
     </div>
+    <!-- Blazor's own error bar lives outside the component tree, so it cannot read a resx. Both
+         languages ship in the markup and CSS shows the one matching <html lang>, which LanguageService
+         sets: otherwise a Russian session met its only unrecoverable error in English. -->
     <div id="blazor-error-ui" style="display:none">
-        An unhandled error has occurred. <a href="" class="reload">Reload</a>
+        <span data-lang="en">An unhandled error has occurred.</span>
+        <span data-lang="ru">Произошла непредвиденная ошибка.</span>
+        <a href="" class="reload"><span data-lang="en">Reload</span><span data-lang="ru">Перезагрузить</span></a>
     </div>
     <!-- MSAL's JS interop for AddMsalAuthentication. Without it AuthenticationService is undefined
          and the app dies on startup with "Could not find 'AuthenticationService.init'". Must load

@@ -39,7 +39,7 @@ public sealed class LanguageService(IJSRuntime js)
 
         // The WASM runtime seeds CurrentUICulture from navigator.language, so the browser's
         // preference needs no JS call of its own.
-        Apply(Resolve(stored) ?? Resolve(CultureInfo.CurrentUICulture.Name) ?? "en");
+        await ApplyAsync(Resolve(stored) ?? Resolve(CultureInfo.CurrentUICulture.Name) ?? "en");
     }
 
     /// <summary>Switches the UI culture and persists the choice. A no-op if already active.</summary>
@@ -48,13 +48,13 @@ public sealed class LanguageService(IJSRuntime js)
     {
         if (cultureCode == CurrentCulture) return;
 
-        Apply(cultureCode);
+        await ApplyAsync(cultureCode);
         await js.InvokeVoidAsync("localStorage.setItem", StorageKey, cultureCode);
 
         LanguageChanged?.Invoke();
     }
 
-    private void Apply(string cultureCode)
+    private async Task ApplyAsync(string cultureCode)
     {
         CurrentCulture = cultureCode;
         var culture = new CultureInfo(cultureCode);
@@ -64,6 +64,12 @@ public sealed class LanguageService(IJSRuntime js)
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         UiStrings.Culture = culture;
+
+        // The document's own language, which no resx can set: it is what a screen reader announces
+        // in, what the browser offers to translate from, and what picks the language of Blazor's
+        // unhandled-error bar - static markup outside the component tree, so CSS keyed on this
+        // attribute is the only way it speaks Russian at all.
+        await js.InvokeVoidAsync("document.documentElement.setAttribute", "lang", cultureCode);
     }
 
     /// <summary>Maps a browser/stored code ("ru-RU") onto a supported one ("ru"); null if unsupported.</summary>

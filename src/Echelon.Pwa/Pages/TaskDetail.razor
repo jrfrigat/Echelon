@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inherits PageBase
 
-<PageTitle>@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? UiStrings.Tasks_Title)</PageTitle>
+<AppTitle Title="@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? UiStrings.Tasks_Title)" />
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">

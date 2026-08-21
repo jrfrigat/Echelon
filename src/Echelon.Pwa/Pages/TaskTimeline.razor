@@ -5,7 +5,7 @@
 @* History, not live state: no polling loop here on purpose. What is on screen cannot go stale in a
    way that matters, and a poll would only add a CancellationTokenSource to leak. *@
 
-<PageTitle>@(_timeline?.TaskExternalId ?? UiStrings.Timeline_Title)</PageTitle>
+<AppTitle Title="@(_timeline?.TaskExternalId ?? UiStrings.Timeline_Title)" />
 
 <FlareStack Row Align="FlareAlignItems.Center" Gap="FlareSpacing.Medium">
     <FlareButton Size="ButtonSize.Sm" Variant="ButtonVariant.Text" OnClick="Back">

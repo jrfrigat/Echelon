@@ -1,0 +1,13 @@
+@* The browser tab, the task switcher and an installed window all show <title>. A page that sets
+   only its own name ("Tasks") is unidentifiable among a dozen tabs and, once installed, among a
+   dozen apps - which is how the product's name disappeared from its own UI. One component so the
+   brand cannot drift page by page. *@
+<PageTitle>@Title - @Brand</PageTitle>
+
+@code {
+    /// <summary>The product name, appended to every page title.</summary>
+    public const string Brand = "Echelon";
+
+    /// <summary>The page's own title, already localized.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = Brand;
+}
