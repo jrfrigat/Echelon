@@ -101,6 +101,10 @@ public static class InfrastructureExtensions
         services.Configure<RolloutExecutionOptions>(config.GetSection("RolloutExecution"));
         services.AddHostedService<RolloutCoordinator>();
 
+        // What the ingestion is doing, for the operations screen. A singleton because it describes
+        // this process: which sweep is in flight, and what has arrived since it started.
+        services.AddSingleton<IngestionActivity>();
+
         services.Configure<VcsPollingOptions>(config.GetSection("VcsPolling"));
         // The per-connection poll, shared by the scheduled coordinator and the manual "poll now" endpoint.
         services.AddScoped<VcsConnectionPoller>();

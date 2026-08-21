@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Rebus.Bus;
 using Microsoft.Extensions.Localization;
 using Echelon.Application.Contracts.Messages;
+using Echelon.Application.DTOs;
 using Echelon.Application.ReleasePlanning;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
@@ -253,12 +254,12 @@ public class PlanningController(
             .FirstOrDefaultAsync(ct);
 
         if (string.IsNullOrWhiteSpace(document))
-            return Ok(new OrderingRulesModelDto(true, [], [], []));
+            return Ok(new OrderingRulesModelDto { Editable = true });
 
         var parsed = OrderingRuleDocument.Read(document);
         return parsed.IsValid
             ? Ok(ToModel(parsed.Rules!))
-            : Ok(new OrderingRulesModelDto(false, parsed.Errors, [], []));
+            : Ok(new OrderingRulesModelDto { Editable = false, Problems = [.. parsed.Errors] });
     }
 
     /// <summary>
@@ -313,12 +314,11 @@ public class PlanningController(
             req.Groups.ToDictionary(
                 g => g.Name,
                 g => new WorkSelector(
-                    g.Connectors ?? [], g.Repositories ?? [], g.Branches ?? [],
-                    g.TaskKeys ?? [], g.Labels ?? []),
+                    g.Connectors, g.Repositories, g.Branches, g.TaskKeys, g.Labels),
                 StringComparer.Ordinal),
             [.. req.Order.Select(o => new GroupOrderSpec(
                 o.Group,
-                o.Needs ?? [],
+                o.Needs,
                 string.Equals(o.Type, "Soft", StringComparison.OrdinalIgnoreCase)
                     ? StackDependencyType.Soft
                     : StackDependencyType.Hard,
@@ -343,21 +343,33 @@ public class PlanningController(
     /// from the editor is refused while a document defines them (see the page).
     /// </remarks>
     private static OrderingRulesModelDto ToModel(OrderingRules rules) =>
-        new(
+        new()
+        {
             // Editable only when the form can express the whole document. A document using the task
             // policy or nested excludes would come back through the renderer with those silently
             // dropped, so the form declines to own it rather than quietly deleting a rule.
-            Editable:
+            Editable =
                 rules.Tasks is { WaitForSubtasks: null, WaitForLinked: null, GroupOrder: null, Overrides.Count: 0 }
                 && rules.Groups.Values.All(g => g.Exclude is null),
-            Problems: [],
-            Groups: [.. rules.Groups
+            Groups = [.. rules.Groups
                 .OrderBy(g => g.Key, StringComparer.Ordinal)
-                .Select(g => new OrderingRuleGroupDto(
-                    g.Key, g.Value.Connectors, g.Value.Repositories, g.Value.Branches,
-                    g.Value.TaskKeys, g.Value.Labels))],
-            Order: [.. rules.Order.Select(o => new OrderingRuleOrderDto(
-                o.Group, o.Needs, o.Type.ToString(), o.Scope.ToString()))]);
+                .Select(g => new OrderingRuleGroupDto
+                {
+                    Name = g.Key,
+                    Connectors = [.. g.Value.Connectors],
+                    Repositories = [.. g.Value.Repositories],
+                    Branches = [.. g.Value.Branches],
+                    TaskKeys = [.. g.Value.TaskKeys],
+                    Labels = [.. g.Value.Labels]
+                })],
+            Order = [.. rules.Order.Select(o => new OrderingRuleOrderDto
+            {
+                Group = o.Group,
+                Needs = [.. o.Needs],
+                Type = o.Type.ToString(),
+                Scope = o.Scope.ToString()
+            })]
+        };
 
     /// <summary>Saves the ordering-rule document. An invalid one is refused.</summary>
     /// <param name="req">The document.</param>
@@ -722,103 +734,6 @@ public class PlanningController(
 
     private sealed record EdgePayload(Guid From, Guid To);
 }
-
-/// <summary>The ordering-rule document, as text.</summary>
-/// <param name="Document">
-/// The rules, as YAML. A document written as JSON is also accepted, since JSON is valid YAML - which
-/// is what keeps anything stored before the YAML reader existed readable. Empty means no rules.
-/// </param>
-public record OrderingRulesDocumentDto(string Document);
-
-/// <summary>What checking a document found.</summary>
-/// <param name="IsValid">Whether it would be accepted.</param>
-/// <param name="Problems">Everything wrong with it; empty when valid.</param>
-/// <param name="Groups">What each group selects right now - a valid rule can still match nothing.</param>
-public record OrderingRulesValidationDto(
-    bool IsValid, IReadOnlyList<string> Problems, IReadOnlyList<OrderingRuleGroupMatchDto> Groups);
-
-/// <summary>What one group currently selects.</summary>
-/// <param name="Group">The group's name.</param>
-/// <param name="Matched">How many merge requests it selects.</param>
-/// <param name="Examples">A few of them, as <c>repository:branch</c>, to confirm it selected what was meant.</param>
-public record OrderingRuleGroupMatchDto(string Group, int Matched, IReadOnlyList<string> Examples);
-
-/// <summary>The installation-wide wait policy.</summary>
-/// <param name="WaitForSubtasks">Whether a parent waits for the tasks beneath it.</param>
-/// <param name="WaitForLinked">Whether a task waits for the tasks it declares a dependency on.</param>
-/// <param name="PrerequisiteGroupOrder">
-/// <c>Together</c>, <c>SubtasksFirst</c> or <c>LinkedFirst</c>. See the enum of the same name.
-/// </param>
-public record PlanningPolicyDto(bool WaitForSubtasks, bool WaitForLinked, string PrerequisiteGroupOrder);
-
-/// <summary>One task's departures from the installation defaults, and its explicit orderings.</summary>
-/// <param name="WaitForSubtasks">The task's answer, or null to inherit.</param>
-/// <param name="WaitForLinked">The task's answer, or null to inherit.</param>
-/// <param name="PrerequisiteGroupOrder">The task's answer, or null/empty to inherit.</param>
-/// <param name="PrerequisiteOrder">The order to wait on prerequisite tasks in; empty for none.</param>
-/// <param name="MergeRequestOrder">The order to deploy this task's merge requests in; empty for none.</param>
-public record TaskPlanningDto(
-    bool? WaitForSubtasks,
-    bool? WaitForLinked,
-    string? PrerequisiteGroupOrder,
-    IReadOnlyList<Guid>? PrerequisiteOrder,
-    IReadOnlyList<Guid>? MergeRequestOrder);
-
-/// <summary>A merge request an operator forced into or out of a task's rollout.</summary>
-/// <param name="MergeRequestId">The merge request.</param>
-/// <param name="MrExternalId">Its provider id, for display.</param>
-/// <param name="RepositoryName">Its repository, for display.</param>
-/// <param name="SourceBranch">Its branch, for display.</param>
-/// <param name="MrStatus">Its current status - an excluded merge request may since have been merged.</param>
-/// <param name="State">"Included" or "Excluded".</param>
-public record PlanMembershipDto(
-    Guid MergeRequestId,
-    string MrExternalId,
-    string RepositoryName,
-    string SourceBranch,
-    string MrStatus,
-    string State);
-
-/// <summary>A named selector, as the visual editor holds it.</summary>
-/// <param name="Name">The group name that <c>order</c> entries refer to.</param>
-/// <param name="Connectors">Connection-name globs.</param>
-/// <param name="Repositories">Repository external-id globs.</param>
-/// <param name="Branches">Source-branch globs.</param>
-/// <param name="TaskKeys">Task-key globs.</param>
-/// <param name="Labels">Labels, matched exactly.</param>
-public record OrderingRuleGroupDto(
-    string Name,
-    IReadOnlyList<string>? Connectors,
-    IReadOnlyList<string>? Repositories,
-    IReadOnlyList<string>? Branches,
-    IReadOnlyList<string>? TaskKeys,
-    IReadOnlyList<string>? Labels);
-
-/// <summary>One ordering rule, as the visual editor holds it.</summary>
-/// <param name="Group">The group that waits.</param>
-/// <param name="Needs">The groups it waits for.</param>
-/// <param name="Type">"Hard" or "Soft".</param>
-/// <param name="Scope">"AcrossPlan" or "WithinTask".</param>
-public record OrderingRuleOrderDto(
-    string Group,
-    IReadOnlyList<string>? Needs,
-    string? Type,
-    string? Scope);
-
-/// <summary>The ordering rules as a structure the visual editor can hold.</summary>
-/// <param name="Editable">
-/// False when the stored document says something the form cannot express - a wait policy, a per-task
-/// override, a nested exclude. Saving from the form would drop it, so the form refuses to own it and
-/// the text editor stays the way in.
-/// </param>
-/// <param name="Problems">Why the stored document could not be read, when it could not.</param>
-/// <param name="Groups">The named selectors.</param>
-/// <param name="Order">The ordering between them.</param>
-public record OrderingRulesModelDto(
-    bool Editable,
-    IReadOnlyList<string> Problems,
-    IReadOnlyList<OrderingRuleGroupDto> Groups,
-    IReadOnlyList<OrderingRuleOrderDto> Order);
 
 /// <summary>Request to force a merge request into or out of a rollout.</summary>
 /// <param name="State">

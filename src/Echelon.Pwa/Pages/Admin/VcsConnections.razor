@@ -1,6 +1,7 @@
 @page "/admin/vcs"
 @attribute [Authorize]
 @inherits CrudPageBase<VcsConnectionDto>
+@inject VcsApi VcsApi
 @using Echelon.Providers.Abstractions.Vcs
 
 <AppTitle Title="@UiStrings.Vcs_Title" />
@@ -142,7 +143,7 @@
         Success = null;
         try
         {
-            if (!await RunAsync(async () => result = await Api.PollVcsConnectionAsync(c.Id))) return;
+            if (!await RunAsync(async () => result = await VcsApi.PollVcsConnectionAsync(c.Id))) return;
         }
         finally
         {
@@ -174,13 +175,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await RunAsync(async () => _providers = await Api.GetVcsProviderTypesAsync());
+        await RunAsync(async () => _providers = await VcsApi.GetVcsProviderTypesAsync());
         await base.OnInitializedAsync();
     }
 
     /// <inheritdoc/>
     protected override Task<PagedResult<VcsConnectionDto>> FetchPageAsync(DataGridRequest request) =>
-        Api.GetVcsConnectionsAsync(
+        VcsApi.GetVcsConnectionsAsync(
             request.ApiPage(), request.PageSize,
             name: request.Filter("name"),
             type: request.Filter("type"),
@@ -218,11 +219,11 @@
         var settings = ProviderSettingsFields.ForSubmit(_fSettings);
 
         if (_editId.HasValue)
-            await Api.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
+            await VcsApi.UpdateVcsConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
         else
-            await Api.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
+            await VcsApi.CreateVcsConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
     });
 
     Task Delete(VcsConnectionDto c) =>
-        DeleteAsync(string.Format(UiStrings.Vcs_Delete_What, c.Name), () => Api.DeleteVcsConnectionAsync(c.Id));
+        DeleteAsync(string.Format(UiStrings.Vcs_Delete_What, c.Name), () => VcsApi.DeleteVcsConnectionAsync(c.Id));
 }

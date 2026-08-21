@@ -64,6 +64,12 @@
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Lock" /></Icon>
             <ChildContent>@UiStrings.Nav_Permissions</ChildContent>
         </FlareNavLink>
+        @* Whether anything is actually arriving, and who is reading for it. Beside the request audit
+           because both answer "what is this deployment doing right now". *@
+        <FlareNavLink Href="/admin/ingestion">
+            <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Sync" /></Icon>
+            <ChildContent>@UiStrings.Nav_Ingestion</ChildContent>
+        </FlareNavLink>
         <FlareNavLink Href="/admin/request-audit">
             <Icon><FlareIconView Value="MaterialDesign3Icons.Regular.Monitoring" /></Icon>
             <ChildContent>@UiStrings.Nav_RequestAudit</ChildContent>

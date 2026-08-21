@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Core.Parsing;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Providers.Abstractions;
@@ -24,6 +26,7 @@ namespace Echelon.Infrastructure.Queue.Consumers;
 public class BranchesObservedConsumer(
     AppDbContext db,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<BranchesObservedConsumer> logger) : IHandleMessages<BranchesObserved>
 {
     /// <inheritdoc/>
@@ -31,6 +34,10 @@ public class BranchesObservedConsumer(
     {
         var msg = message;
         var ct = HandlerCancellation.Token;
+
+        // Counted by branch, not by message: one delivery can carry a repository's whole branch list,
+        // and "12 branches seen" answers the question "is the VCS being read" better than "1 message".
+        activity.Observed(IngestionSignal.BranchesObserved, msg.Branches.Count);
 
         var repo = await db.Repositories
             .Include(r => r.Connection)

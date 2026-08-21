@@ -1,6 +1,7 @@
 @page "/admin/permissions"
 @attribute [Authorize]
 @inherits PageBase
+@inject PermissionsApi PermissionsApi
 
 <AppTitle Title="@UiStrings.Perms_Title" />
 
@@ -119,8 +120,8 @@
         _loading = true;
         await RunAsync(async () =>
         {
-            var claimsTask = Api.GetPermissionClaimsAsync();
-            var mappingsTask = Api.GetGroupMappingsAsync();
+            var claimsTask = PermissionsApi.GetPermissionClaimsAsync();
+            var mappingsTask = PermissionsApi.GetGroupMappingsAsync();
             await Task.WhenAll(claimsTask, mappingsTask);
 
             _claims = await claimsTask;
@@ -136,7 +137,7 @@
         if (_fClaimId is not { } claimId) return;
 
         _savingMapping = true;
-        var added = await RunAsync(() => Api.AddGroupMappingAsync(_fSid, claimId), UiStrings.Perms_MappingAdded);
+        var added = await RunAsync(() => PermissionsApi.AddGroupMappingAsync(_fSid, claimId), UiStrings.Perms_MappingAdded);
         _savingMapping = false;
 
         if (!added) return;
@@ -152,9 +153,9 @@
                 UiStrings.Perms_Remove_Title,
                 string.Format(UiStrings.Perms_Remove_Message, m.ClaimName, m.AdGroupSid))) return;
 
-        if (await RunAsync(() => Api.RemoveGroupMappingAsync(m.Id), UiStrings.Perms_MappingRemoved))
+        if (await RunAsync(() => PermissionsApi.RemoveGroupMappingAsync(m.Id), UiStrings.Perms_MappingRemoved))
             await ReloadMappings();
     }
 
-    Task ReloadMappings() => RunAsync(async () => _mappings = await Api.GetGroupMappingsAsync());
+    Task ReloadMappings() => RunAsync(async () => _mappings = await PermissionsApi.GetGroupMappingsAsync());
 }

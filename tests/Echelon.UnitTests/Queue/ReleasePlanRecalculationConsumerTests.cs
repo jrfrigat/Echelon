@@ -6,6 +6,7 @@ using Echelon.Application.DTOs;
 using Echelon.Application.Services;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Queue.Consumers;
 using Xunit;
 
@@ -26,6 +27,9 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
 {
     private static readonly DateTime Now = new(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
     private static CancellationToken Ct => CancellationToken.None;
+
+    /// <summary>The consumers report what arrived; these tests do not assert on it.</summary>
+    private static IngestionActivity Activity => new(TimeProvider.System);
 
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
@@ -51,7 +55,7 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
         await _db.SaveChangesAsync(Ct);
 
         _planner = new RecordingPlanner();
-        _handler = new ReleasePlanRecalculationConsumer(_db, _planner, NullLogger<ReleasePlanRecalculationConsumer>.Instance);
+        _handler = new ReleasePlanRecalculationConsumer(_db, _planner, Activity, NullLogger<ReleasePlanRecalculationConsumer>.Instance);
     }
 
     public async Task DisposeAsync()

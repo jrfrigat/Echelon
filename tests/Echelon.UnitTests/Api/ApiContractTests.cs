@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Echelon.Application.DTOs;
-using Echelon.Pwa.Services;
+using Echelon.Pwa.Services.Api;
 using Xunit;
 
 namespace Echelon.UnitTests.Api;
@@ -63,7 +63,7 @@ public class ApiContractTests
             Conflicts: []);
 
         var json = JsonSerializer.Serialize(plan, ServerOptions);
-        var read = JsonSerializer.Deserialize<RolloutPlanDto>(json, ApiService.Json);
+        var read = JsonSerializer.Deserialize<RolloutPlanDto>(json, ApiClient.Json);
 
         Assert.NotNull(read);
         Assert.Equal(plan.Version, read.Version);
@@ -82,7 +82,7 @@ public class ApiContractTests
         Assert.Contains("\"Poll\"", json, StringComparison.Ordinal);
         Assert.Equal(
             Echelon.Core.Enums.IngestionMode.Poll,
-            JsonSerializer.Deserialize<Holder>(json, ApiService.Json)!.Mode);
+            JsonSerializer.Deserialize<Holder>(json, ApiClient.Json)!.Mode);
     }
 
     private sealed record Holder(Echelon.Core.Enums.IngestionMode Mode);

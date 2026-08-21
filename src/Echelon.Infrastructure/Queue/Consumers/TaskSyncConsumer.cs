@@ -4,6 +4,8 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Application.Services;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 
 namespace Echelon.Infrastructure.Queue.Consumers;
@@ -20,11 +22,16 @@ public class TaskSyncConsumer(
     ITrackerService tracker,
     IBus bus,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<TaskSyncConsumer> logger) : IHandleMessages<TaskSyncRequested>
 {
     /// <inheritdoc/>
     public async Task Handle(TaskSyncRequested message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.TaskSynced);
+
         var msg = message;
         var ct = HandlerCancellation.Token;
 

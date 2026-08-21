@@ -1,6 +1,7 @@
 @page "/admin/trackers"
 @attribute [Authorize]
 @inherits CrudPageBase<TrackerConnectionDto>
+@inject TrackerApi TrackerApi
 
 <AppTitle Title="@UiStrings.Tracker_Title" />
 
@@ -154,7 +155,7 @@
         Error = null;
         try
         {
-            if (!await RunAsync(async () => result = await Api.PollTrackerConnectionAsync(c.Id))) return;
+            if (!await RunAsync(async () => result = await TrackerApi.PollTrackerConnectionAsync(c.Id))) return;
         }
         finally
         {
@@ -176,13 +177,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await RunAsync(async () => _providers = await Api.GetTrackerProviderTypesAsync());
+        await RunAsync(async () => _providers = await TrackerApi.GetTrackerProviderTypesAsync());
         await base.OnInitializedAsync();
     }
 
     /// <inheritdoc/>
     protected override Task<PagedResult<TrackerConnectionDto>> FetchPageAsync(DataGridRequest request) =>
-        Api.GetTrackerConnectionsAsync(
+        TrackerApi.GetTrackerConnectionsAsync(
             request.ApiPage(), request.PageSize,
             name: request.Filter("name"),
             type: request.Filter("type"),
@@ -220,11 +221,11 @@
         var settings = ProviderSettingsFields.ForSubmit(_fSettings);
 
         if (_editId.HasValue)
-            await Api.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
+            await TrackerApi.UpdateTrackerConnectionAsync(_editId.Value, _fName, _fUrl, _fToken, settings);
         else
-            await Api.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
+            await TrackerApi.CreateTrackerConnectionAsync(_fName, _fType, _fUrl, _fToken, settings);
     });
 
     Task Delete(TrackerConnectionDto c) =>
-        DeleteAsync(string.Format(UiStrings.Tracker_Delete_What, c.Name), () => Api.DeleteTrackerConnectionAsync(c.Id));
+        DeleteAsync(string.Format(UiStrings.Tracker_Delete_What, c.Name), () => TrackerApi.DeleteTrackerConnectionAsync(c.Id));
 }

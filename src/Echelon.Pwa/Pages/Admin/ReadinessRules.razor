@@ -1,6 +1,7 @@
 @page "/admin/readiness-rules"
 @attribute [Authorize]
 @inherits PageBase
+@inject ReadinessApi ReadinessApi
 
 <AppTitle Title="@UiStrings.RR_Title" />
 
@@ -139,7 +140,7 @@
 
     async Task Load()
     {
-        await RunAsync(async () => _rules = await Api.GetReadinessRulesAsync());
+        await RunAsync(async () => _rules = await ReadinessApi.GetReadinessRulesAsync());
         _loading = false;
     }
 
@@ -151,7 +152,7 @@
 
         _busy = true;
         if (await RunAsync(
-                async () => await Api.CreateReadinessRuleAsync(_name.Trim(), _mode, SplitSignals(_signals)),
+                async () => await ReadinessApi.CreateReadinessRuleAsync(_name.Trim(), _mode, SplitSignals(_signals)),
                 UiStrings.RR_Created))
         {
             _name = ""; _mode = ReadyRule.AllOf; _signals = "";
@@ -176,7 +177,7 @@
 
         _busy = true;
         if (await RunAsync(
-                async () => await Api.UpdateReadinessRuleAsync(_eId, _eName.Trim(), _eMode, SplitSignals(_eSignals)),
+                async () => await ReadinessApi.UpdateReadinessRuleAsync(_eId, _eName.Trim(), _eMode, SplitSignals(_eSignals)),
                 UiStrings.RR_Updated))
         {
             _showEdit = false;
@@ -188,7 +189,7 @@
     async Task Delete(ReadinessRuleDto rule)
     {
         if (!await ConfirmAsync(UiStrings.RR_Delete_Title, string.Format(UiStrings.RR_Delete_Message, rule.Name))) return;
-        if (await RunAsync(async () => await Api.DeleteReadinessRuleAsync(rule.Id), UiStrings.RR_Deleted))
+        if (await RunAsync(async () => await ReadinessApi.DeleteReadinessRuleAsync(rule.Id), UiStrings.RR_Deleted))
             await Load();
     }
 

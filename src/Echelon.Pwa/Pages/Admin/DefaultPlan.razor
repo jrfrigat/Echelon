@@ -1,6 +1,8 @@
 @page "/admin/default-plan"
 @attribute [Authorize]
 @inherits PageBase
+@inject RepositoriesApi RepositoriesApi
+@inject PlanningApi PlanningApi
 
 @* The rules are the input, the order is what they mean. Both are on one page on purpose: an
    operator adds "api after db" and needs to see immediately what the whole sequence became --
@@ -422,12 +424,12 @@
     {
         await RunAsync(async () =>
         {
-            _rules = (await Api.GetRepositoryOrderingAsync()).Items;
-            _repositories = (await Api.GetRepositoriesAsync()).Items;
-            _savedDocument = (await Api.GetOrderingRulesAsync()).Document;
+            _rules = (await PlanningApi.GetRepositoryOrderingAsync()).Items;
+            _repositories = (await RepositoriesApi.GetRepositoriesAsync()).Items;
+            _savedDocument = (await PlanningApi.GetOrderingRulesAsync()).Document;
             _document = _savedDocument;
             // Read after the rules, so it reflects whatever was just added or removed.
-            _plan = await Api.GetDefaultPlanAsync();
+            _plan = await PlanningApi.GetDefaultPlanAsync();
         });
         _loading = false;
     }
@@ -438,7 +440,7 @@
     async Task ValidateRules()
     {
         _validating = true;
-        await RunAsync(async () => _validation = await Api.ValidateOrderingRulesAsync(_document));
+        await RunAsync(async () => _validation = await PlanningApi.ValidateOrderingRulesAsync(_document));
         _validating = false;
     }
 
@@ -448,10 +450,10 @@
 
         // Validated first so a refusal arrives as the list of problems rather than as one API error
         // with the rest hidden behind it.
-        await RunAsync(async () => _validation = await Api.ValidateOrderingRulesAsync(_document));
+        await RunAsync(async () => _validation = await PlanningApi.ValidateOrderingRulesAsync(_document));
 
         if (_validation is { IsValid: true }
-            && await RunAsync(() => Api.SaveOrderingRulesAsync(_document), UiStrings.Rules_Saved))
+            && await RunAsync(() => PlanningApi.SaveOrderingRulesAsync(_document), UiStrings.Rules_Saved))
         {
             await Load();
         }
@@ -477,7 +479,7 @@
     async Task SetEditor(bool visual)
     {
         _visualEditor = visual;
-        if (visual) await RunAsync(async () => _model = await Api.GetOrderingRulesModelAsync());
+        if (visual) await RunAsync(async () => _model = await PlanningApi.GetOrderingRulesModelAsync());
     }
 
     void AddGroup() => _model?.Groups.Add(new OrderingRuleGroupDto { Name = "" });
@@ -490,7 +492,7 @@
     {
         if (_model is null) return;
         _validating = true;
-        if (await RunAsync(async () => _document = (await Api.RenderOrderingRulesModelAsync(_model)).Document))
+        if (await RunAsync(async () => _document = (await PlanningApi.RenderOrderingRulesModelAsync(_model)).Document))
             await ValidateRules();
         _validating = false;
     }
@@ -500,10 +502,10 @@
     {
         if (_model is null) return;
         _savingRules = true;
-        if (await RunAsync(() => Api.SaveOrderingRulesModelAsync(_model), UiStrings.Rules_Saved))
+        if (await RunAsync(() => PlanningApi.SaveOrderingRulesModelAsync(_model), UiStrings.Rules_Saved))
         {
             await Load();
-            await RunAsync(async () => _model = await Api.GetOrderingRulesModelAsync());
+            await RunAsync(async () => _model = await PlanningApi.GetOrderingRulesModelAsync());
         }
         _savingRules = false;
     }
@@ -529,7 +531,7 @@
     /// </remarks>
     async Task AdoptFromScreen()
     {
-        if (await RunAsync(async () => _document = (await Api.OrderingRulesFromScreenAsync()).Document))
+        if (await RunAsync(async () => _document = (await PlanningApi.OrderingRulesFromScreenAsync()).Document))
             await ValidateRules();
     }
 
@@ -537,7 +539,7 @@
     {
         _busy = true;
         if (await RunAsync(
-                () => Api.CreateRepositoryOrderingAsync(_fFrom, _fTo, _fType),
+                () => PlanningApi.CreateRepositoryOrderingAsync(_fFrom, _fTo, _fType),
                 UiStrings.DefaultPlan_Created))
         {
             _fFrom = Guid.Empty;
@@ -553,7 +555,7 @@
         if (!await ConfirmAsync(UiStrings.DefaultPlan_Delete_Title, string.Format(UiStrings.DefaultPlan_Delete_Message, what)))
             return;
 
-        if (await RunAsync(() => Api.DeleteRepositoryOrderingAsync(rule.Id), UiStrings.DefaultPlan_Deleted))
+        if (await RunAsync(() => PlanningApi.DeleteRepositoryOrderingAsync(rule.Id), UiStrings.DefaultPlan_Deleted))
             await Load();
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Queue.Consumers;
 using Xunit;
 
@@ -24,6 +25,9 @@ public sealed class BranchesObservedConsumerTests : IAsyncLifetime
     private static readonly DateTime Now = new(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc);
     private static CancellationToken Ct => CancellationToken.None;
 
+    /// <summary>The consumers report what arrived; these tests do not assert on it.</summary>
+    private static IngestionActivity Activity => new(TimeProvider.System);
+
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
     private BranchesObservedConsumer _handler = null!;
@@ -37,7 +41,7 @@ public sealed class BranchesObservedConsumerTests : IAsyncLifetime
         await _db.Database.EnsureCreatedAsync(Ct);
 
         _handler = new BranchesObservedConsumer(
-            _db, new FakeTimeProvider(Now), NullLogger<BranchesObservedConsumer>.Instance);
+            _db, new FakeTimeProvider(Now), Activity, NullLogger<BranchesObservedConsumer>.Instance);
 
         var vcs = new VcsConnection
         {

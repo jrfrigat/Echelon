@@ -1,6 +1,7 @@
 @page "/admin/action-handlers"
 @attribute [Authorize]
 @inherits PageBase
+@inject ActionsApi ActionsApi
 
 <AppTitle Title="@UiStrings.Actions_Title" />
 
@@ -110,8 +111,8 @@
     {
         await RunAsync(async () =>
         {
-            _types = await Api.GetActionTypesAsync();
-            _bindings = await Api.GetActionBindingsAsync();
+            _types = await ActionsApi.GetActionTypesAsync();
+            _bindings = await ActionsApi.GetActionBindingsAsync();
         });
         _loading = false;
     }
@@ -140,7 +141,7 @@
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         if (await RunAsync(
-                async () => await Api.CreateActionBindingAsync(
+                async () => await ActionsApi.CreateActionBindingAsync(
                     _eventType.Trim(), _actionType, string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(), settings, 0, true),
                 UiStrings.Actions_Created))
         {
@@ -153,9 +154,9 @@
     async Task Delete(ActionBindingDto binding)
     {
         if (!await ConfirmAsync(UiStrings.Actions_Delete_Title, UiStrings.Actions_Delete_Message)) return;
-        if (await RunAsync(async () => await Api.DeleteActionBindingAsync(binding.Id), UiStrings.Actions_Deleted))
+        if (await RunAsync(async () => await ActionsApi.DeleteActionBindingAsync(binding.Id), UiStrings.Actions_Deleted))
             await Reload();
     }
 
-    async Task Reload() => await RunAsync(async () => _bindings = await Api.GetActionBindingsAsync());
+    async Task Reload() => await RunAsync(async () => _bindings = await ActionsApi.GetActionBindingsAsync());
 }

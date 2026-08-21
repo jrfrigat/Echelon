@@ -1,6 +1,7 @@
 @page "/admin/request-audit"
 @attribute [Authorize]
 @inherits PageBase
+@inject AuditApi AuditApi
 
 @* Two views of one window: which endpoints are misbehaving, then the individual requests. The
    summary is first because the first question is always "what is broken", not "what happened". *@
@@ -193,7 +194,7 @@
     /// <summary>The traffic summary above the grid. The grid reads its own rows through LoadPage.</summary>
     async Task LoadSummaryAsync()
     {
-        await RunAsync(async () => _summary = await Api.GetRequestAuditSummaryAsync(_minutes));
+        await RunAsync(async () => _summary = await AuditApi.GetRequestAuditSummaryAsync(_minutes));
         _loading = false;
     }
 
@@ -201,7 +202,7 @@
     async Task<DataGridResult<RequestAuditEntryDto>> LoadPage(DataGridRequest request) =>
         await LoadPageAsync(async () =>
         {
-            var page = await Api.GetRequestAuditAsync(
+            var page = await AuditApi.GetRequestAuditAsync(
                 _minutes, string.IsNullOrEmpty(_status) ? null : _status,
                 _notableOnly, _includeAuditTraffic,
                 string.IsNullOrWhiteSpace(_search) ? null : _search.Trim(),

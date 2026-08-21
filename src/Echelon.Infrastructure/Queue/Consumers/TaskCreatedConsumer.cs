@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Echelon.Application.Contracts.Messages;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 
@@ -20,11 +22,16 @@ public class TaskCreatedConsumer(
     AppDbContext db,
     IBus bus,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<TaskCreatedConsumer> logger) : IHandleMessages<TaskCreated>
 {
     /// <inheritdoc/>
     public async Task Handle(TaskCreated message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.TaskCreated);
+
         var msg = message;
         var ct = HandlerCancellation.Token;
 

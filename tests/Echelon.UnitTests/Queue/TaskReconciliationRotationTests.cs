@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Echelon.Application.Contracts.Messages;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Queue;
@@ -136,6 +137,7 @@ public sealed class TaskReconciliationRotationTests : IAsyncLifetime
             Options.Create(new TaskReconciliationOptions { MaxTasksPerRun = cap }),
             lease: null!,          // unused for the same reason
             new FakeTimeProvider(Now),
+            new IngestionActivity(new FakeTimeProvider(Now)),
             NullLogger<TaskReconciliationService>.Instance);
 
     private void AddOpenTasks(int count)

@@ -86,6 +86,13 @@ namespace Echelon.Pwa.Resources {
                 return ResourceManager.GetString("Shell_Logout", resourceCulture);
             }
         }
+
+        /// <summary>Looks up a localized string similar to Source code on GitHub.</summary>
+        public static string Shell_GitHub {
+            get {
+                return ResourceManager.GetString("Shell_GitHub", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Language.
@@ -3833,6 +3840,349 @@ namespace Echelon.Pwa.Resources {
         public static string Rules_Visual_Preview {
             get {
                 return ResourceManager.GetString("Rules_Visual_Preview", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Ingestion.</summary>
+        public static string Ingestion_Title {
+            get {
+                return ResourceManager.GetString("Ingestion_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to What is reaching this service, and what is reading for it. Per replica, since it started..</summary>
+        public static string Ingestion_Intro {
+            get {
+                return ResourceManager.GetString("Ingestion_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Recording since {0}..</summary>
+        public static string Ingestion_Since {
+            get {
+                return ResourceManager.GetString("Ingestion_Since", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Workers.</summary>
+        public static string Ingestion_Workers {
+            get {
+                return ResourceManager.GetString("Ingestion_Workers", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to What has arrived.</summary>
+        public static string Ingestion_Signals {
+            get {
+                return ResourceManager.GetString("Ingestion_Signals", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Counted however it arrived - a webhook and a poll produce the same signal..</summary>
+        public static string Ingestion_Signals_Intro {
+            get {
+                return ResourceManager.GetString("Ingestion_Signals_Intro", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Last poll per connection.</summary>
+        public static string Ingestion_Connections {
+            get {
+                return ResourceManager.GetString("Ingestion_Connections", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Worker.</summary>
+        public static string Ingestion_Col_Worker {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Worker", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to State.</summary>
+        public static string Ingestion_Col_State {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_State", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Every.</summary>
+        public static string Ingestion_Col_Every {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Every", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Last run.</summary>
+        public static string Ingestion_Col_LastRun {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_LastRun", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Took.</summary>
+        public static string Ingestion_Col_Took {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Took", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Emitted.</summary>
+        public static string Ingestion_Col_Emitted {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Emitted", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Also.</summary>
+        public static string Ingestion_Col_Extra {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Extra", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Passes.</summary>
+        public static string Ingestion_Col_Passes {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Passes", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Outcome.</summary>
+        public static string Ingestion_Col_Outcome {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Outcome", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Signal.</summary>
+        public static string Ingestion_Col_Signal {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Signal", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Count.</summary>
+        public static string Ingestion_Col_Count {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Count", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Last seen.</summary>
+        public static string Ingestion_Col_LastSeen {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_LastSeen", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Last poll.</summary>
+        public static string Ingestion_Col_LastPoll {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_LastPoll", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Problem.</summary>
+        public static string Ingestion_Col_Problem {
+            get {
+                return ResourceManager.GetString("Ingestion_Col_Problem", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to OK.</summary>
+        public static string Ingestion_Outcome_Ok {
+            get {
+                return ResourceManager.GetString("Ingestion_Outcome_Ok", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to never.</summary>
+        public static string Ingestion_Never {
+            get {
+                return ResourceManager.GetString("Ingestion_Never", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to just now.</summary>
+        public static string Ingestion_JustNow {
+            get {
+                return ResourceManager.GetString("Ingestion_JustNow", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0}s ago.</summary>
+        public static string Ingestion_SecondsAgo {
+            get {
+                return ResourceManager.GetString("Ingestion_SecondsAgo", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0} min ago.</summary>
+        public static string Ingestion_MinutesAgo {
+            get {
+                return ResourceManager.GetString("Ingestion_MinutesAgo", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0} h ago.</summary>
+        public static string Ingestion_HoursAgo {
+            get {
+                return ResourceManager.GetString("Ingestion_HoursAgo", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0} d ago.</summary>
+        public static string Ingestion_DaysAgo {
+            get {
+                return ResourceManager.GetString("Ingestion_DaysAgo", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0}s.</summary>
+        public static string Ingestion_EverySeconds {
+            get {
+                return ResourceManager.GetString("Ingestion_EverySeconds", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to {0} min.</summary>
+        public static string Ingestion_EveryMinutes {
+            get {
+                return ResourceManager.GetString("Ingestion_EveryMinutes", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to VCS polling.</summary>
+        public static string Ingestion_Worker_Vcs {
+            get {
+                return ResourceManager.GetString("Ingestion_Worker_Vcs", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Tracker polling.</summary>
+        public static string Ingestion_Worker_Tracker {
+            get {
+                return ResourceManager.GetString("Ingestion_Worker_Tracker", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Task reconciliation.</summary>
+        public static string Ingestion_Worker_Reconciliation {
+            get {
+                return ResourceManager.GetString("Ingestion_Worker_Reconciliation", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to running.</summary>
+        public static string Ingestion_State_Running {
+            get {
+                return ResourceManager.GetString("Ingestion_State_Running", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to idle.</summary>
+        public static string Ingestion_State_Idle {
+            get {
+                return ResourceManager.GetString("Ingestion_State_Idle", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to another replica.</summary>
+        public static string Ingestion_State_NotLeader {
+            get {
+                return ResourceManager.GetString("Ingestion_State_NotLeader", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to off.</summary>
+        public static string Ingestion_State_Disabled {
+            get {
+                return ResourceManager.GetString("Ingestion_State_Disabled", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Tasks created.</summary>
+        public static string Ingestion_Signal_TaskCreated {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_TaskCreated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Task statuses changed.</summary>
+        public static string Ingestion_Signal_TaskStatusChanged {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_TaskStatusChanged", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Tasks re-read.</summary>
+        public static string Ingestion_Signal_TaskSynced {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_TaskSynced", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Merge requests seen.</summary>
+        public static string Ingestion_Signal_MrOpened {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_MrOpened", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Merge request statuses changed.</summary>
+        public static string Ingestion_Signal_MrStatusChanged {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_MrStatusChanged", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Branches observed.</summary>
+        public static string Ingestion_Signal_Branches {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_Branches", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Plans rebuilt.</summary>
+        public static string Ingestion_Signal_PlanRecalculated {
+            get {
+                return ResourceManager.GetString("Ingestion_Signal_PlanRecalculated", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to VCS.</summary>
+        public static string Ingestion_Kind_Vcs {
+            get {
+                return ResourceManager.GetString("Ingestion_Kind_Vcs", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Tracker.</summary>
+        public static string Ingestion_Kind_Tracker {
+            get {
+                return ResourceManager.GetString("Ingestion_Kind_Tracker", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Nothing has been polled yet.</summary>
+        public static string Ingestion_NoPolls_Title {
+            get {
+                return ResourceManager.GetString("Ingestion_NoPolls_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Poll-mode connections appear here after their first sweep. A webhook-mode connection never will - what it delivers is counted above..</summary>
+        public static string Ingestion_NoPolls_Description {
+            get {
+                return ResourceManager.GetString("Ingestion_NoPolls_Description", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Ingestion.</summary>
+        public static string Nav_Ingestion {
+            get {
+                return ResourceManager.GetString("Nav_Ingestion", resourceCulture);
             }
         }
     }

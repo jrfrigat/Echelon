@@ -117,6 +117,9 @@
   <data name="Shell_Logout" xml:space="preserve">
     <value>Выйти</value>
   </data>
+  <data name="Shell_GitHub" xml:space="preserve">
+    <value>Исходный код на GitHub</value>
+  </data>
   <data name="Language_Label" xml:space="preserve">
     <value>Язык</value>
   </data>
@@ -1469,5 +1472,152 @@
   </data>
   <data name="Rules_Visual_Preview" xml:space="preserve">
     <value>Показать текстом</value>
+  </data>
+  <data name="Ingestion_Title" xml:space="preserve">
+    <value>Приём</value>
+  </data>
+  <data name="Ingestion_Intro" xml:space="preserve">
+    <value>Что доходит до сервиса и кто для него читает. По реплике, с момента её запуска.</value>
+  </data>
+  <data name="Ingestion_Since" xml:space="preserve">
+    <value>Учёт ведётся {0}.</value>
+  </data>
+  <data name="Ingestion_Workers" xml:space="preserve">
+    <value>Раннеры</value>
+  </data>
+  <data name="Ingestion_Signals" xml:space="preserve">
+    <value>Что пришло</value>
+  </data>
+  <data name="Ingestion_Signals_Intro" xml:space="preserve">
+    <value>Считается независимо от пути: вебхук и опрос дают один и тот же сигнал.</value>
+  </data>
+  <data name="Ingestion_Connections" xml:space="preserve">
+    <value>Последний опрос по соединениям</value>
+  </data>
+  <data name="Ingestion_Col_Worker" xml:space="preserve">
+    <value>Раннер</value>
+  </data>
+  <data name="Ingestion_Col_State" xml:space="preserve">
+    <value>Состояние</value>
+  </data>
+  <data name="Ingestion_Col_Every" xml:space="preserve">
+    <value>Период</value>
+  </data>
+  <data name="Ingestion_Col_LastRun" xml:space="preserve">
+    <value>Последний проход</value>
+  </data>
+  <data name="Ingestion_Col_Took" xml:space="preserve">
+    <value>Занял</value>
+  </data>
+  <data name="Ingestion_Col_Emitted" xml:space="preserve">
+    <value>Отправлено</value>
+  </data>
+  <data name="Ingestion_Col_Extra" xml:space="preserve">
+    <value>Ещё</value>
+  </data>
+  <data name="Ingestion_Col_Passes" xml:space="preserve">
+    <value>Проходов</value>
+  </data>
+  <data name="Ingestion_Col_Outcome" xml:space="preserve">
+    <value>Итог</value>
+  </data>
+  <data name="Ingestion_Col_Signal" xml:space="preserve">
+    <value>Сигнал</value>
+  </data>
+  <data name="Ingestion_Col_Count" xml:space="preserve">
+    <value>Сколько</value>
+  </data>
+  <data name="Ingestion_Col_LastSeen" xml:space="preserve">
+    <value>Последний раз</value>
+  </data>
+  <data name="Ingestion_Col_LastPoll" xml:space="preserve">
+    <value>Последний опрос</value>
+  </data>
+  <data name="Ingestion_Col_Problem" xml:space="preserve">
+    <value>Проблема</value>
+  </data>
+  <data name="Ingestion_Outcome_Ok" xml:space="preserve">
+    <value>ОК</value>
+  </data>
+  <data name="Ingestion_Never" xml:space="preserve">
+    <value>никогда</value>
+  </data>
+  <data name="Ingestion_JustNow" xml:space="preserve">
+    <value>только что</value>
+  </data>
+  <data name="Ingestion_SecondsAgo" xml:space="preserve">
+    <value>{0} с назад</value>
+  </data>
+  <data name="Ingestion_MinutesAgo" xml:space="preserve">
+    <value>{0} мин назад</value>
+  </data>
+  <data name="Ingestion_HoursAgo" xml:space="preserve">
+    <value>{0} ч назад</value>
+  </data>
+  <data name="Ingestion_DaysAgo" xml:space="preserve">
+    <value>{0} дн назад</value>
+  </data>
+  <data name="Ingestion_EverySeconds" xml:space="preserve">
+    <value>{0} с</value>
+  </data>
+  <data name="Ingestion_EveryMinutes" xml:space="preserve">
+    <value>{0} мин</value>
+  </data>
+  <data name="Ingestion_Worker_Vcs" xml:space="preserve">
+    <value>Опрос VCS</value>
+  </data>
+  <data name="Ingestion_Worker_Tracker" xml:space="preserve">
+    <value>Опрос трекера</value>
+  </data>
+  <data name="Ingestion_Worker_Reconciliation" xml:space="preserve">
+    <value>Сверка задач</value>
+  </data>
+  <data name="Ingestion_State_Running" xml:space="preserve">
+    <value>работает</value>
+  </data>
+  <data name="Ingestion_State_Idle" xml:space="preserve">
+    <value>ждёт</value>
+  </data>
+  <data name="Ingestion_State_NotLeader" xml:space="preserve">
+    <value>другая реплика</value>
+  </data>
+  <data name="Ingestion_State_Disabled" xml:space="preserve">
+    <value>выключен</value>
+  </data>
+  <data name="Ingestion_Signal_TaskCreated" xml:space="preserve">
+    <value>Создано задач</value>
+  </data>
+  <data name="Ingestion_Signal_TaskStatusChanged" xml:space="preserve">
+    <value>Смен статуса задач</value>
+  </data>
+  <data name="Ingestion_Signal_TaskSynced" xml:space="preserve">
+    <value>Перечитано задач</value>
+  </data>
+  <data name="Ingestion_Signal_MrOpened" xml:space="preserve">
+    <value>Увидено merge request'ов</value>
+  </data>
+  <data name="Ingestion_Signal_MrStatusChanged" xml:space="preserve">
+    <value>Смен статуса merge request'ов</value>
+  </data>
+  <data name="Ingestion_Signal_Branches" xml:space="preserve">
+    <value>Увидено веток</value>
+  </data>
+  <data name="Ingestion_Signal_PlanRecalculated" xml:space="preserve">
+    <value>Пересчётов плана</value>
+  </data>
+  <data name="Ingestion_Kind_Vcs" xml:space="preserve">
+    <value>VCS</value>
+  </data>
+  <data name="Ingestion_Kind_Tracker" xml:space="preserve">
+    <value>Трекер</value>
+  </data>
+  <data name="Ingestion_NoPolls_Title" xml:space="preserve">
+    <value>Опросов ещё не было</value>
+  </data>
+  <data name="Ingestion_NoPolls_Description" xml:space="preserve">
+    <value>Соединения в режиме опроса появятся здесь после первого прохода. Соединение на вебхуках здесь не появится - то, что оно приносит, посчитано выше.</value>
+  </data>
+  <data name="Nav_Ingestion" xml:space="preserve">
+    <value>Приём</value>
   </data>
 </root>

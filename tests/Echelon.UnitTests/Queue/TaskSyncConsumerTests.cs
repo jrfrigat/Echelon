@@ -6,6 +6,7 @@ using Echelon.Application.Contracts.Messages;
 using Echelon.Application.Services;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Queue.Consumers;
 using Xunit;
 
@@ -27,6 +28,9 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
     private static readonly DateTime Now = new(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
     private static CancellationToken Ct => CancellationToken.None;
 
+    /// <summary>The consumers report what arrived; these tests do not assert on it.</summary>
+    private static IngestionActivity Activity => new(TimeProvider.System);
+
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
     private RecordingBus _bus = null!;
@@ -45,7 +49,7 @@ public sealed class TaskSyncConsumerTests : IAsyncLifetime
 
         _bus = new RecordingBus();
         _tracker = new RecordingTrackerService();
-        _handler = new TaskSyncConsumer(_db, _tracker, _bus, new FakeTimeProvider(Now), NullLogger<TaskSyncConsumer>.Instance);
+        _handler = new TaskSyncConsumer(_db, _tracker, _bus, new FakeTimeProvider(Now), Activity, NullLogger<TaskSyncConsumer>.Instance);
 
         _trackerConnection = new TrackerConnection
         {

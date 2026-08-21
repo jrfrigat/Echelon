@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 using Rebus.Bus;
 using Echelon.Application.Services;
 using Echelon.Application.Contracts.Messages;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Core.Parsing;
 using Echelon.Infrastructure.Persistence;
 
@@ -42,6 +44,7 @@ public class TaskReconciliationService(
     IOptions<TaskReconciliationOptions> options,
     IDistributedLease lease,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<TaskReconciliationService> logger) : BackgroundService
 {
     /// <summary>Lease name; shared by every replica of this service.</summary>
@@ -58,13 +61,14 @@ public class TaskReconciliationService(
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var interval = TimeSpan.FromMinutes(Math.Max(options.Value.IntervalMinutes, 1));
+        activity.Declare(IngestionWorker.TaskReconciliation, options.Value.Enabled, (int)interval.TotalSeconds);
+
         if (!options.Value.Enabled)
         {
             logger.LogInformation("Task reconciliation is disabled");
             return;
         }
-
-        var interval = TimeSpan.FromMinutes(Math.Max(options.Value.IntervalMinutes, 1));
 
         // Wait one interval before the first pass: at startup the event path has not had a chance
         // to run, and racing it just doubles the calls.
@@ -97,10 +101,20 @@ public class TaskReconciliationService(
                     if (held is null)
                     {
                         logger.LogDebug("Another replica is reconciling; skipping this pass");
+                        activity.NotLeader(IngestionWorker.TaskReconciliation);
                         continue;
                     }
 
-                    await ReconcileAsync(stoppingToken);
+                    using var run = activity.Begin(IngestionWorker.TaskReconciliation);
+                    try
+                    {
+                        run.Emitted(await ReconcileAsync(stoppingToken));
+                    }
+                    catch (Exception ex)
+                    {
+                        run.Failed(ex);
+                        throw;
+                    }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -120,10 +134,11 @@ public class TaskReconciliationService(
         }
     }
 
-    private async Task ReconcileAsync(CancellationToken ct)
+    /// <returns>How many tasks were queued for a re-read, so the caller can report the pass.</returns>
+    private async Task<int> ReconcileAsync(CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        await ReconcileAsync(
+        return await ReconcileAsync(
             scope.ServiceProvider.GetRequiredService<AppDbContext>(),
             scope.ServiceProvider.GetRequiredService<IBus>(),
             ct);
@@ -140,7 +155,8 @@ public class TaskReconciliationService(
     /// and a timer. The rotation is the part worth pinning down: the cap used to mean the tasks past
     /// it were never swept at all, and nothing could have caught that from the outside.
     /// </remarks>
-    internal async Task ReconcileAsync(AppDbContext db, IBus bus, CancellationToken ct)
+    /// <returns>How many tasks were queued for a re-read.</returns>
+    internal async Task<int> ReconcileAsync(AppDbContext db, IBus bus, CancellationToken ct)
     {
         var cap = Math.Max(options.Value.MaxTasksPerRun, 1);
 
@@ -157,7 +173,7 @@ public class TaskReconciliationService(
             stale = await NextPageAsync(db, cap, ct);
         }
 
-        if (stale.Count == 0) return;
+        if (stale.Count == 0) return 0;
 
         foreach (var task in stale)
             await bus.Send(
@@ -172,6 +188,8 @@ public class TaskReconciliationService(
                 "Reconciliation hit its cap of {Cap} tasks; the next pass resumes after {Cursor}. "
                 + "Raise TaskReconciliation__MaxTasksPerRun to cover more open tasks per pass.",
                 cap, _cursor);
+
+        return stale.Count;
     }
 
     /// <summary>The next page of open tasks after <see cref="_cursor"/>, in id order.</summary>

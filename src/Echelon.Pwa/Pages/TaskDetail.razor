@@ -1,6 +1,10 @@
 @page "/tasks/{Id:guid}"
 @attribute [Authorize]
 @inherits PageBase
+@inject TasksApi TasksApi
+@inject RolloutsApi RolloutsApi
+@inject ReadinessApi ReadinessApi
+@inject EnvironmentsApi EnvironmentsApi
 
 <AppTitle Title="@(_task?.ExternalId ?? _plan?.TargetTaskKey ?? UiStrings.Tasks_Title)" />
 
@@ -319,19 +323,19 @@ else
         _pinMrExternalId = mrExternalId;
         _pins = [];
         _showPins = true;
-        await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(mergeRequestId));
+        await RunAsync(async () => _pins = await ReadinessApi.GetReadinessPinsAsync(mergeRequestId));
     }
 
     async Task SetPin(Guid environmentId, bool isReady)
     {
-        if (await RunAsync(async () => await Api.SetReadinessPinAsync(_pinMrId, environmentId, isReady), UiStrings.Pin_Saved))
-            await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(_pinMrId));
+        if (await RunAsync(async () => await ReadinessApi.SetReadinessPinAsync(_pinMrId, environmentId, isReady), UiStrings.Pin_Saved))
+            await RunAsync(async () => _pins = await ReadinessApi.GetReadinessPinsAsync(_pinMrId));
     }
 
     async Task ClearPin(Guid pinId)
     {
-        if (await RunAsync(async () => await Api.DeleteReadinessPinAsync(pinId), UiStrings.Pin_Cleared))
-            await RunAsync(async () => _pins = await Api.GetReadinessPinsAsync(_pinMrId));
+        if (await RunAsync(async () => await ReadinessApi.DeleteReadinessPinAsync(pinId), UiStrings.Pin_Cleared))
+            await RunAsync(async () => _pins = await ReadinessApi.GetReadinessPinsAsync(_pinMrId));
     }
 
     // Merge requests forced into or out of this rollout.
@@ -350,10 +354,10 @@ else
     {
         _busy = true;
         if (await RunAsync(
-                async () => await Api.SetPlanMembershipAsync(Id, mergeRequestId, state),
+                async () => await TasksApi.SetPlanMembershipAsync(Id, mergeRequestId, state),
                 UiStrings.Plan_Membership_Saved))
         {
-            await RunAsync(async () => _plan = await Api.RecalculateTaskPlanAsync(Id));
+            await RunAsync(async () => _plan = await TasksApi.RecalculateTaskPlanAsync(Id));
             await LoadMembership();
             RebuildKeyMap();
         }
@@ -361,7 +365,7 @@ else
     }
 
     Task LoadMembership() =>
-        RunAsync(async () => _membership = await Api.GetPlanMembershipAsync(Id));
+        RunAsync(async () => _membership = await TasksApi.GetPlanMembershipAsync(Id));
 
     /// <summary>
     /// Keyed on the route parameter rather than on first render: the parent and subtask chips
@@ -381,10 +385,10 @@ else
         // A null plan is a legitimate answer (nothing built yet), not a failure.
         await RunAsync(async () =>
         {
-            _task = await Api.GetTaskAsync(Id);
-            _plan = await Api.GetTaskPlanAsync(Id);
-            _environments = await Api.GetEnvironmentsAsync();
-            _membership = await Api.GetPlanMembershipAsync(Id);
+            _task = await TasksApi.GetTaskAsync(Id);
+            _plan = await TasksApi.GetTaskPlanAsync(Id);
+            _environments = await EnvironmentsApi.GetEnvironmentsAsync();
+            _membership = await TasksApi.GetPlanMembershipAsync(Id);
         });
         var first = _environments?.FirstOrDefault(e => e.IsEnabled);
         if (first is not null && _selectedEnvironmentId == Guid.Empty) _selectedEnvironmentId = first.Id;
@@ -397,7 +401,7 @@ else
         if (_selectedEnvironmentId == Guid.Empty) return;
         _busy = true;
         RolloutDto? rollout = null;
-        var ok = await RunAsync(async () => rollout = await Api.LaunchRolloutAsync(Id, _selectedEnvironmentId, _redeploy), UiStrings.TaskDetail_Launched);
+        var ok = await RunAsync(async () => rollout = await RolloutsApi.LaunchRolloutAsync(Id, _selectedEnvironmentId, _redeploy), UiStrings.TaskDetail_Launched);
         _busy = false;
         if (ok && rollout is not null) Nav.NavigateTo($"/rollouts/{rollout.Id}");
     }
@@ -405,7 +409,7 @@ else
     async Task Recalculate()
     {
         _busy = true;
-        await RunAsync(async () => _plan = await Api.RecalculateTaskPlanAsync(Id), UiStrings.TaskDetail_Recalculated);
+        await RunAsync(async () => _plan = await TasksApi.RecalculateTaskPlanAsync(Id), UiStrings.TaskDetail_Recalculated);
         RebuildKeyMap();
         _busy = false;
     }
@@ -421,7 +425,7 @@ else
     async Task ShowYaml()
     {
         _busy = true;
-        if (await RunAsync(async () => _yaml = await Api.ExportTaskPlanYamlAsync(Id)))
+        if (await RunAsync(async () => _yaml = await TasksApi.ExportTaskPlanYamlAsync(Id)))
             _showYaml = true;
         _busy = false;
     }

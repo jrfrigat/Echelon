@@ -5,6 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Queue.Consumers;
 using Echelon.UnitTests.Tracker;
 using Xunit;
@@ -26,6 +27,9 @@ public sealed class TaskConsumerTests : IAsyncLifetime
     private static readonly DateTime Now = new(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
     private static CancellationToken Ct => CancellationToken.None;
 
+    /// <summary>The consumers report what arrived; these tests do not assert on it.</summary>
+    private static IngestionActivity Activity => new(TimeProvider.System);
+
     private SqliteConnection _connection = null!;
     private AppDbContext _db = null!;
     private RecordingBus _bus = null!;
@@ -42,13 +46,13 @@ public sealed class TaskConsumerTests : IAsyncLifetime
         await _db.Database.EnsureCreatedAsync(Ct);
 
         _bus = new RecordingBus();
-        _created = new TaskCreatedConsumer(_db, _bus, new FakeTimeProvider(Now), NullLogger<TaskCreatedConsumer>.Instance);
+        _created = new TaskCreatedConsumer(_db, _bus, new FakeTimeProvider(Now), Activity, NullLogger<TaskCreatedConsumer>.Instance);
         _statusChanged = new TaskStatusChangedConsumer(
             _db,
             new FakeTrackerProviderFactory(new FakeTrackerProvider()),
             _bus,
             new FakeTimeProvider(Now),
-            NullLogger<TaskStatusChangedConsumer>.Instance);
+            Activity, NullLogger<TaskStatusChangedConsumer>.Instance);
 
         _tracker = new TrackerConnection
         {

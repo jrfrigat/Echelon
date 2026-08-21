@@ -1,6 +1,8 @@
 @page "/admin/environments"
 @attribute [Authorize]
 @inherits PageBase
+@inject ReadinessApi ReadinessApi
+@inject EnvironmentsApi EnvironmentsApi
 
 <AppTitle Title="@UiStrings.Env_Title" />
 
@@ -136,8 +138,8 @@
     {
         await RunAsync(async () =>
         {
-            _rules = await Api.GetReadinessRulesAsync();
-            _envs = await Api.GetEnvironmentsAsync();
+            _rules = await ReadinessApi.GetReadinessRulesAsync();
+            _envs = await EnvironmentsApi.GetEnvironmentsAsync();
         });
         _loading = false;
     }
@@ -149,7 +151,7 @@
 
         _busy = true;
         if (await RunAsync(
-                async () => await Api.CreateEnvironmentAsync(
+                async () => await EnvironmentsApi.CreateEnvironmentAsync(
                     _key.Trim(), _name.Trim(), _order, isEnabled: true, RuleIdOf(_ruleId)),
                 UiStrings.Env_Created))
         {
@@ -173,7 +175,7 @@
     {
         _busy = true;
         if (await RunAsync(
-                async () => await Api.UpdateEnvironmentAsync(
+                async () => await EnvironmentsApi.UpdateEnvironmentAsync(
                     _eId, _eName.Trim(), _eOrder, _eEnabled, RuleIdOf(_eRuleId)),
                 UiStrings.Env_Updated))
         {
@@ -186,7 +188,7 @@
     async Task Delete(EnvironmentDto env)
     {
         if (!await ConfirmAsync(UiStrings.Env_Delete_Title, string.Format(UiStrings.Env_Delete_Message, env.Key))) return;
-        if (await RunAsync(async () => await Api.DeleteEnvironmentAsync(env.Id), UiStrings.Env_Deleted))
+        if (await RunAsync(async () => await EnvironmentsApi.DeleteEnvironmentAsync(env.Id), UiStrings.Env_Deleted))
             await Load();
     }
 

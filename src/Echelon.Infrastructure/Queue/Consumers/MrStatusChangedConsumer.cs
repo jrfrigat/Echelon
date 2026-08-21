@@ -7,6 +7,7 @@ using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Audit;
 using Echelon.Core.Parsing;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 
 namespace Echelon.Infrastructure.Queue.Consumers;
@@ -24,11 +25,16 @@ public class MrStatusChangedConsumer(
     AppDbContext db,
     IBus bus,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<MrStatusChangedConsumer> logger) : IHandleMessages<MrStatusChanged>
 {
     /// <inheritdoc/>
     public async Task Handle(MrStatusChanged message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.MergeRequestStatusChanged);
+
         var msg = message;
         var ct = HandlerCancellation.Token;
 

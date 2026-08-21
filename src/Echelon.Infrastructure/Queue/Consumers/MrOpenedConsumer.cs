@@ -7,6 +7,7 @@ using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Audit;
 using Echelon.Core.Parsing;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Providers.Abstractions;
@@ -27,11 +28,16 @@ public class MrOpenedConsumer(
     AppDbContext db,
     IBus bus,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<MrOpenedConsumer> logger) : IHandleMessages<MrOpened>
 {
     /// <inheritdoc/>
     public async Task Handle(MrOpened message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.MergeRequestOpened);
+
         var msg = message;
         var ct = HandlerCancellation.Token;
 

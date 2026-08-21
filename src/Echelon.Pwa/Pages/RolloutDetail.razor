@@ -1,6 +1,7 @@
 @page "/rollouts/{Id:guid}"
 @attribute [Authorize]
 @inherits PageBase
+@inject RolloutsApi RolloutsApi
 
 <AppTitle Title="@UiStrings.Rollouts_Title" />
 
@@ -91,7 +92,7 @@ else
         _ = PollAsync();
     }
 
-    async Task Load() => await RunAsync(async () => _rollout = await Api.GetRolloutAsync(Id));
+    async Task Load() => await RunAsync(async () => _rollout = await RolloutsApi.GetRolloutAsync(Id));
 
     // A running rollout advances in the background; poll so the timeline stays live without a reload.
     async Task PollAsync()
@@ -111,7 +112,7 @@ else
     async Task Cancel()
     {
         _busy = true;
-        await RunAsync(async () => await Api.CancelRolloutAsync(Id), UiStrings.Rollout_Cancelled);
+        await RunAsync(async () => await RolloutsApi.CancelRolloutAsync(Id), UiStrings.Rollout_Cancelled);
         await Load();
         _busy = false;
     }
@@ -119,7 +120,7 @@ else
     async Task Retry(Guid stepId)
     {
         _busy = true;
-        await RunAsync(async () => await Api.RetryRolloutStepAsync(Id, stepId), UiStrings.Rollout_Retried);
+        await RunAsync(async () => await RolloutsApi.RetryRolloutStepAsync(Id, stepId), UiStrings.Rollout_Retried);
         await Load();
         _busy = false;
     }
@@ -127,7 +128,7 @@ else
     async Task Skip(Guid stepId)
     {
         _busy = true;
-        await RunAsync(async () => await Api.SkipRolloutStepAsync(Id, stepId), UiStrings.Rollout_StepSkipped);
+        await RunAsync(async () => await RolloutsApi.SkipRolloutStepAsync(Id, stepId), UiStrings.Rollout_StepSkipped);
         await Load();
         _busy = false;
     }

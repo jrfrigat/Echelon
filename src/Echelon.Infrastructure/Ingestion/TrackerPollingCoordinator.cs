@@ -52,6 +52,7 @@ public class TrackerPollingCoordinator(
     TimeProvider clock,
     IOptions<TrackerPollingOptions> options,
     IEnumerable<TrackerProviderRegistration> registrations,
+    IngestionActivity activity,
     ILogger<TrackerPollingCoordinator> logger) : BackgroundService
 {
     private const string LeaseName = "tracker-polling";
@@ -70,6 +71,9 @@ public class TrackerPollingCoordinator(
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var declaredInterval = Math.Max(options.Value.IntervalSeconds, 5);
+        activity.Declare(IngestionWorker.TrackerPolling, options.Value.Enabled, declaredInterval);
+
         if (!options.Value.Enabled)
         {
             logger.LogInformation("Tracker polling is disabled");
@@ -97,10 +101,20 @@ public class TrackerPollingCoordinator(
                 await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
                 if (held is null)
                 {
+                    activity.NotLeader(IngestionWorker.TrackerPolling);
                     continue;
                 }
 
-                await PollAsync(stoppingToken);
+                using var run = activity.Begin(IngestionWorker.TrackerPolling);
+                try
+                {
+                    await PollAsync(run, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    run.Failed(ex);
+                    throw;
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -113,7 +127,7 @@ public class TrackerPollingCoordinator(
         }
     }
 
-    private async Task PollAsync(CancellationToken ct)
+    private async Task PollAsync(IngestionActivity.IngestionRun run, CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -151,6 +165,10 @@ public class TrackerPollingCoordinator(
                 // and dependency links, and creates the ones this connection had never seen.
                 var result = await poller.PollAsync(connection, ct);
 
+                run.Emitted(result.Emitted);
+                activity.Polled(
+                    IngestionConnectionKind.Tracker, connection.Name, result.Emitted, result.Discovered, result.Failure);
+
                 // A tracker the sweep could not read is reported here and nowhere else: the manual
                 // poll endpoint hands the reason back to the operator, but a scheduled sweep has only
                 // the log, and "discovered nothing" and "could not ask" must not look the same.
@@ -165,6 +183,7 @@ public class TrackerPollingCoordinator(
             {
                 // One connection's failure must not stop the others.
                 logger.LogError(ex, "Polling tracker connection {Connection} failed", connection.Name);
+                activity.Polled(IngestionConnectionKind.Tracker, connection.Name, 0, 0, ex.Message);
             }
         }
     }

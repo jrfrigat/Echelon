@@ -1,0 +1,248 @@
+@page "/admin/ingestion"
+@attribute [Authorize]
+@inherits PageBase
+@inject IngestionApi IngestionApi
+
+@* What is actually happening on the way in. A rollout that never starts is usually not a planning
+   problem - it is a task, a merge request or a branch that never arrived, and until now the only place
+   that showed was the log. *@
+
+<AppTitle Title="@UiStrings.Ingestion_Title" />
+
+<FlareStack Gap="FlareSpacing.Medium">
+    <PageHeader Title="@UiStrings.Ingestion_Title">
+        <Actions>
+            <FlareButton Variant="ButtonVariant.Text" Size="ButtonSize.Sm" OnClick="Reload" Loading="_loading">
+                <LeadingIcon><FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" /></LeadingIcon>
+                <ChildContent>@UiStrings.Common_Refresh</ChildContent>
+            </FlareButton>
+        </Actions>
+    </PageHeader>
+
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Ingestion_Intro</FlareText>
+
+    <PageAlerts Error="@Error" Success="@Success"
+                OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
+
+    @if (_status is null)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else
+    {
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @string.Format(UiStrings.Ingestion_Since, Ago(_status.StartedAt))
+        </FlareText>
+
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Ingestion_Workers</FlareText>
+        <FlareDataGrid TItem="IngestionWorkerDto" Items="_status.Workers" Dense="true" Striped="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="IngestionWorkerDto" Id="worker" Title="@UiStrings.Ingestion_Col_Worker">
+                    <Template>@WorkerLabel(context.Worker)</Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionWorkerDto" Id="state" Title="@UiStrings.Ingestion_Col_State">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@StateColor(context.State)" Label="@StateLabel(context.State)" />
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionWorkerDto" Id="every" Title="@UiStrings.Ingestion_Col_Every">
+                    <Template>@Every(context.IntervalSeconds)</Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionWorkerDto" Id="last" Title="@UiStrings.Ingestion_Col_LastRun">
+                    <Template>
+                        @* Aged against the server's clock, not the browser's: they are rarely the same,
+                           and "in 4 seconds" is a worse answer than "just now". *@
+                        @(context.LastStartedAt is { } at ? Ago(at) : UiStrings.Ingestion_Never)
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionWorkerDto" Id="took" Title="@UiStrings.Ingestion_Col_Took" Align="ColumnAlign.End">
+                    <Template>@(context.LastDurationMs is { } ms ? $"{ms} ms" : "-")</Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionWorkerDto" Id="emitted" Title="@UiStrings.Ingestion_Col_Emitted" Align="ColumnAlign.End"
+                             Field="@(w => (object?)w.Emitted)" />
+                <FlareColumn TItem="IngestionWorkerDto" Id="passes" Title="@UiStrings.Ingestion_Col_Passes" Align="ColumnAlign.End"
+                             Field="@(w => (object?)w.Passes)" />
+                <FlareColumn TItem="IngestionWorkerDto" Id="outcome" Title="@UiStrings.Ingestion_Col_Outcome">
+                    <Template>
+                        @if (context.Outcome == IngestionOutcome.Failed)
+                        {
+                            @* The reason, not just the verdict: "failed" alone sends an operator to the log. *@
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Error">@context.Error</FlareText>
+                        }
+                        else if (context.Outcome == IngestionOutcome.Ok)
+                        {
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success" Label="@UiStrings.Ingestion_Outcome_Ok" />
+                        }
+                        else
+                        {
+                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">-</FlareText>
+                        }
+                    </Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Ingestion_Signals</FlareText>
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">@UiStrings.Ingestion_Signals_Intro</FlareText>
+        <FlareDataGrid TItem="IngestionSignalDto" Items="_status.Signals" Dense="true" Striped="true" ShowPager="false">
+            <Columns>
+                <FlareColumn TItem="IngestionSignalDto" Id="signal" Title="@UiStrings.Ingestion_Col_Signal">
+                    <Template>@SignalLabel(context.Signal)</Template>
+                </FlareColumn>
+                <FlareColumn TItem="IngestionSignalDto" Id="count" Title="@UiStrings.Ingestion_Col_Count" Align="ColumnAlign.End"
+                             Field="@(s => (object?)s.Count)" />
+                <FlareColumn TItem="IngestionSignalDto" Id="lastAt" Title="@UiStrings.Ingestion_Col_LastSeen">
+                    <Template>@(context.LastAt is { } at ? Ago(at) : UiStrings.Ingestion_Never)</Template>
+                </FlareColumn>
+            </Columns>
+        </FlareDataGrid>
+
+        <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Ingestion_Connections</FlareText>
+        @if (_status.Connections.Count == 0)
+        {
+            <FlareEmptyState Title="@UiStrings.Ingestion_NoPolls_Title" Description="@UiStrings.Ingestion_NoPolls_Description" />
+        }
+        else
+        {
+            <FlareDataGrid TItem="IngestionConnectionDto" Items="_status.Connections" Dense="true" Striped="true" ShowPager="false">
+                <Columns>
+                    <FlareColumn TItem="IngestionConnectionDto" Id="kind" Title="@UiStrings.Common_Type">
+                        <Template>
+                            <FlareChip Size="ChipSize.Sm" Label="@KindLabel(context.Kind)" />
+                        </Template>
+                    </FlareColumn>
+                    <FlareColumn TItem="IngestionConnectionDto" Id="name" Title="@UiStrings.Common_Name"
+                                 Field="@(c => (object?)c.Name)" />
+                    <FlareColumn TItem="IngestionConnectionDto" Id="polled" Title="@UiStrings.Ingestion_Col_LastPoll">
+                        <Template>@Ago(context.LastPolledAt)</Template>
+                    </FlareColumn>
+                    <FlareColumn TItem="IngestionConnectionDto" Id="emitted" Title="@UiStrings.Ingestion_Col_Emitted" Align="ColumnAlign.End"
+                                 Field="@(c => (object?)c.Emitted)" />
+                    <FlareColumn TItem="IngestionConnectionDto" Id="extra" Title="@UiStrings.Ingestion_Col_Extra" Align="ColumnAlign.End"
+                                 Field="@(c => (object?)c.Extra)" />
+                    <FlareColumn TItem="IngestionConnectionDto" Id="failure" Title="@UiStrings.Ingestion_Col_Problem">
+                        <Template>
+                            @if (context.Failure is { Length: > 0 } failure)
+                            {
+                                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Error">@failure</FlareText>
+                            }
+                            else
+                            {
+                                <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">-</FlareText>
+                            }
+                        </Template>
+                    </FlareColumn>
+                </Columns>
+            </FlareDataGrid>
+        }
+    }
+</FlareStack>
+
+@code {
+    /// <summary>How often the page re-reads while it is open. Short: this screen exists to be watched.</summary>
+    static readonly TimeSpan RefreshEvery = TimeSpan.FromSeconds(5);
+
+    IngestionStatusDto? _status;
+    bool _loading;
+    PeriodicTimer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+
+        // Refreshed on a timer rather than by hand: a sweep every minute is invisible on a page you
+        // have to reload yourself, which is exactly the thing this page exists to make visible.
+        _timer = new PeriodicTimer(RefreshEvery);
+        _ = RefreshLoopAsync(_timer);
+    }
+
+    async Task RefreshLoopAsync(PeriodicTimer timer)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync())
+            {
+                await Reload();
+                StateHasChanged();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // The page went away mid-wait; nothing to do.
+        }
+    }
+
+    async Task Reload()
+    {
+        _loading = true;
+        await RunAsync(async () => _status = await IngestionApi.GetStatusAsync());
+        _loading = false;
+    }
+
+    /// <summary>How long ago, against the server's clock rather than the browser's.</summary>
+    string Ago(DateTime utc)
+    {
+        if (_status is null) return "-";
+
+        var span = _status.ServerTimeUtc - utc;
+        if (span < TimeSpan.Zero) span = TimeSpan.Zero;
+
+        return span switch
+        {
+            { TotalSeconds: < 10 } => UiStrings.Ingestion_JustNow,
+            { TotalMinutes: < 1 } => string.Format(UiStrings.Ingestion_SecondsAgo, (int)span.TotalSeconds),
+            { TotalHours: < 1 } => string.Format(UiStrings.Ingestion_MinutesAgo, (int)span.TotalMinutes),
+            { TotalDays: < 1 } => string.Format(UiStrings.Ingestion_HoursAgo, (int)span.TotalHours),
+            _ => string.Format(UiStrings.Ingestion_DaysAgo, (int)span.TotalDays)
+        };
+    }
+
+    static string Every(int seconds) =>
+        seconds >= 60
+            ? string.Format(UiStrings.Ingestion_EveryMinutes, seconds / 60)
+            : string.Format(UiStrings.Ingestion_EverySeconds, seconds);
+
+    static string WorkerLabel(IngestionWorker worker) => worker switch
+    {
+        IngestionWorker.VcsPolling => UiStrings.Ingestion_Worker_Vcs,
+        IngestionWorker.TrackerPolling => UiStrings.Ingestion_Worker_Tracker,
+        _ => UiStrings.Ingestion_Worker_Reconciliation
+    };
+
+    static string StateLabel(IngestionRunState state) => state switch
+    {
+        IngestionRunState.Running => UiStrings.Ingestion_State_Running,
+        IngestionRunState.Idle => UiStrings.Ingestion_State_Idle,
+        IngestionRunState.NotLeader => UiStrings.Ingestion_State_NotLeader,
+        _ => UiStrings.Ingestion_State_Disabled
+    };
+
+    static FlareColor StateColor(IngestionRunState state) => state switch
+    {
+        IngestionRunState.Running => FlareColor.Primary,
+        IngestionRunState.Idle => FlareColor.Success,
+        IngestionRunState.NotLeader => FlareColor.Secondary,
+        _ => FlareColor.OnSurfaceVariant
+    };
+
+    static string SignalLabel(IngestionSignal signal) => signal switch
+    {
+        IngestionSignal.TaskCreated => UiStrings.Ingestion_Signal_TaskCreated,
+        IngestionSignal.TaskStatusChanged => UiStrings.Ingestion_Signal_TaskStatusChanged,
+        IngestionSignal.TaskSynced => UiStrings.Ingestion_Signal_TaskSynced,
+        IngestionSignal.MergeRequestOpened => UiStrings.Ingestion_Signal_MrOpened,
+        IngestionSignal.MergeRequestStatusChanged => UiStrings.Ingestion_Signal_MrStatusChanged,
+        IngestionSignal.BranchesObserved => UiStrings.Ingestion_Signal_Branches,
+        _ => UiStrings.Ingestion_Signal_PlanRecalculated
+    };
+
+    static string KindLabel(IngestionConnectionKind kind) =>
+        kind == IngestionConnectionKind.Vcs ? UiStrings.Ingestion_Kind_Vcs : UiStrings.Ingestion_Kind_Tracker;
+
+    /// <summary>Stops the refresh loop. The base unsubscribes from the language service.</summary>
+    public override void Dispose()
+    {
+        _timer?.Dispose();
+        base.Dispose();
+    }
+}

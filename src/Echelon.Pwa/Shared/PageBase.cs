@@ -1,22 +1,20 @@
 using Flare.Components;
 using Microsoft.AspNetCore.Components;
 using Echelon.Pwa.Resources;
-using Echelon.Pwa.Services;
+using Echelon.Pwa.Services.Api;
 
 namespace Echelon.Pwa.Shared;
 
 /// <summary>
 /// Error/notice plumbing shared by every page that calls the API.
 ///
-/// Handlers must funnel through <see cref="RunAsync"/> rather than calling the API bare: an
+/// Handlers must funnel through <see cref="RunAsync"/> rather than calling an API client bare: an
 /// unguarded handler lets the exception escape to Blazor's unhandled-error UI, which replaces
 /// the page with a "reload" bar and throws away the reason. That reason is the useful part -
 /// <see cref="ApiException"/> carries the server's own wording.
 /// </summary>
 public abstract class PageBase : LocalizedComponent
 {
-    [Inject] protected ApiService Api { get; set; } = default!;
-
     /// <summary>Supplied by the FlareConfirmDialogProvider that App.razor wraps the router in.</summary>
     [CascadingParameter] protected FlareConfirmDialogProvider? ConfirmDialog { get; set; }
 

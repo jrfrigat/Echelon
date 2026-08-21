@@ -1,7 +1,7 @@
 @inherits LocalizedComponent
+@inject WorkApi WorkApi
 @using Echelon.Core.Enums
 @using Echelon.Core.Parsing
-@inject ApiService Api
 
 @* The readiness vocabulary, clickable.
 
@@ -65,7 +65,7 @@
         // label suggestions are an aid, not a dependency.
         try
         {
-            _labels = await Api.GetMergeRequestLabelsAsync();
+            _labels = await WorkApi.GetMergeRequestLabelsAsync();
         }
         catch
         {

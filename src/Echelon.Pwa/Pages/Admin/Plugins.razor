@@ -1,6 +1,7 @@
 @page "/admin/plugins"
 @attribute [Authorize]
 @inherits PageBase
+@inject PluginsApi PluginsApi
 
 @* An overview, not a CRUD screen: plugins are wired in at build time, so this only shows what is
    installed and what each does - the connectors, deploy strategies and action handlers this build has. *@
@@ -62,7 +63,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await RunAsync(async () => _plugins = await Api.GetPluginsAsync());
+        await RunAsync(async () => _plugins = await PluginsApi.GetPluginsAsync());
         _loading = false;
     }
 

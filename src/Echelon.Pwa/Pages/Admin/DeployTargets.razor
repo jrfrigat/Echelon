@@ -1,6 +1,10 @@
 @page "/admin/deploy-targets"
 @attribute [Authorize]
 @inherits PageBase
+@inject RepositoriesApi RepositoriesApi
+@inject ReadinessApi ReadinessApi
+@inject EnvironmentsApi EnvironmentsApi
+@inject DeployApi DeployApi
 
 <AppTitle Title="@UiStrings.Deploy_Title" />
 
@@ -141,11 +145,11 @@
     {
         await RunAsync(async () =>
         {
-            _repos = (await Api.GetRepositoriesAsync()).Items;
-            _envs = await Api.GetEnvironmentsAsync();
-            _strategies = await Api.GetDeployStrategiesAsync();
-            _rules = await Api.GetReadinessRulesAsync();
-            _targets = await Api.GetDeployTargetsAsync();
+            _repos = (await RepositoriesApi.GetRepositoriesAsync()).Items;
+            _envs = await EnvironmentsApi.GetEnvironmentsAsync();
+            _strategies = await DeployApi.GetDeployStrategiesAsync();
+            _rules = await ReadinessApi.GetReadinessRulesAsync();
+            _targets = await DeployApi.GetDeployTargetsAsync();
         });
         _repoId = RepoOptions.FirstOrDefault();
         _envId = EnvOptions.FirstOrDefault();
@@ -165,7 +169,7 @@
         _busy = true;
         var settings = ProviderSettingsFields.ForSubmit(_settings);
         if (await RunAsync(
-                async () => await Api.CreateDeployTargetAsync(
+                async () => await DeployApi.CreateDeployTargetAsync(
                     _repoId!.Value, _envId!.Value, _strategyKey, _redeployPolicy, settings, RuleIdOf(_ruleId)),
                 UiStrings.Deploy_Created))
         {
@@ -180,11 +184,11 @@
     {
         if (!await ConfirmAsync(UiStrings.Deploy_Delete_Title,
                 string.Format(UiStrings.Deploy_Delete_Message, target.RepositoryName, target.EnvironmentKey))) return;
-        if (await RunAsync(async () => await Api.DeleteDeployTargetAsync(target.Id), UiStrings.Deploy_Deleted))
+        if (await RunAsync(async () => await DeployApi.DeleteDeployTargetAsync(target.Id), UiStrings.Deploy_Deleted))
             await Reload();
     }
 
-    async Task Reload() => await RunAsync(async () => _targets = await Api.GetDeployTargetsAsync());
+    async Task Reload() => await RunAsync(async () => _targets = await DeployApi.GetDeployTargetsAsync());
 
     static string RedeployLabel(RedeployPolicy policy) => policy switch
     {

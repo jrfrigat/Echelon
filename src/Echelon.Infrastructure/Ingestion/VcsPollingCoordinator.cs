@@ -47,6 +47,7 @@ public class VcsPollingCoordinator(
     TimeProvider clock,
     IOptions<VcsPollingOptions> options,
     IEnumerable<VcsProviderRegistration> registrations,
+    IngestionActivity activity,
     ILogger<VcsPollingCoordinator> logger) : BackgroundService
 {
     private const string LeaseName = "vcs-polling";
@@ -67,13 +68,18 @@ public class VcsPollingCoordinator(
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var interval = TimeSpan.FromSeconds(Math.Max(options.Value.IntervalSeconds, 5));
+
+        // Declared before the first tick, so the operations screen shows a worker that is switched
+        // off as switched off rather than as absent.
+        activity.Declare(IngestionWorker.VcsPolling, options.Value.Enabled, (int)interval.TotalSeconds);
+
         if (!options.Value.Enabled)
         {
             logger.LogInformation("VCS polling is disabled");
             return;
         }
 
-        var interval = TimeSpan.FromSeconds(Math.Max(options.Value.IntervalSeconds, 5));
         using var timer = new PeriodicTimer(interval, clock);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -88,10 +94,22 @@ public class VcsPollingCoordinator(
                 await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
                 if (held is null)
                 {
+                    // Another replica is sweeping. Said out loud, because "idle" and "someone else is
+                    // doing it" look identical from here and mean different things.
+                    activity.NotLeader(IngestionWorker.VcsPolling);
                     continue;
                 }
 
-                await PollAsync(stoppingToken);
+                using var run = activity.Begin(IngestionWorker.VcsPolling);
+                try
+                {
+                    await PollAsync(run, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    run.Failed(ex);
+                    throw;
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -104,7 +122,7 @@ public class VcsPollingCoordinator(
         }
     }
 
-    private async Task PollAsync(CancellationToken ct)
+    private async Task PollAsync(IngestionActivity.IngestionRun run, CancellationToken ct)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -145,12 +163,22 @@ public class VcsPollingCoordinator(
             {
                 // The same per-connection poll the manual "poll now" endpoint runs, so scheduled and
                 // manual sweeps cannot diverge on how an open merge request becomes an event.
-                await poller.PollAsync(connection, ct);
+                var result = await poller.PollAsync(connection, ct);
+
+                run.Emitted(result.Emitted);
+                activity.Polled(
+                    IngestionConnectionKind.Vcs, connection.Name, result.Emitted, result.Branches,
+                    // The repositories it could not read, named: a connection that half worked is the
+                    // case an operator most needs to see, and a green row would hide it.
+                    result.Failures.Count == 0
+                        ? null
+                        : string.Join("; ", result.Failures.Select(f => $"{f.Repository}: {f.Reason}")));
             }
             catch (Exception ex)
             {
                 // One connection's failure must not stop the others.
                 logger.LogError(ex, "Polling connection {Connection} failed", connection.Name);
+                activity.Polled(IngestionConnectionKind.Vcs, connection.Name, 0, 0, ex.Message);
             }
         }
     }

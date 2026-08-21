@@ -8,13 +8,71 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-21
+
+### Added
+
+- **An ingestion screen** (`/admin/ingestion`), because a rollout that never starts is usually not a
+  planning problem: it is a task, a merge request or a branch that never arrived, and until now that
+  only showed in the log. It reports each background worker - running, idle, off, or held by another
+  replica - with its interval, its last pass, how long it took and why it failed if it did; what has
+  arrived since the process started, counted by kind and regardless of whether a webhook or a poll
+  brought it; and the last poll of every connection, naming the repositories it could not read. It
+  refreshes itself, since a sweep on a one-minute timer is invisible on a page you reload by hand.
+- **Column filters and a rows-per-page chooser on every paged list** - tasks, work, repositories, both
+  connection lists and the request audit. The filters are applied by the server and counted with the
+  same query that reads the page, because each screen holds one page: filtering in the browser would
+  search the slice and present the answer as though it had searched the list. The grid owns paging as
+  well now, so the page number lives in one place instead of two.
+- **`ITrackerIssueSource`**, an optional tracker port for listing the open issues of a connection,
+  `is`-checked by the poller exactly as `ITrackerDependencySource` is. A tracker that cannot be
+  searched degrades to re-reading known tasks instead of failing. Keys only: every task still enters
+  the database through the one `TaskSyncRequested` path, so discovery cannot become a second way to
+  write one. Yandex.Tracker implements it over the search API, with the queues to sweep (or a whole
+  query) as connection settings, because which states count as open is a workflow's decision and not
+  the API's.
+- **Poll now for a tracker connection**, beside the one VCS connections already had, reporting how
+  many syncs were queued and how many of those tasks were new. A tracker that could not be searched is
+  named with its own reason - usually the missing queue setting - rather than reported as nothing to
+  do.
+- **A link to the project in the app bar**, outside the sign-in gate: the source is about the product,
+  not about the session.
+- **An opt-in test pass against a local SQL Server** (`ECHELON_SQLSERVER_TESTS=1`). Two of the fixes
+  below could not fail on SQLite - it has no retrying execution strategy and only one collation - so
+  the whole suite passed while the product was broken on every deployment.
+
+### Changed
+
+- **The API's response types are declared once and used by both ends.** The admin client carried its
+  own copy of 44 of them - some mirroring a server DTO, most mirroring an anonymous object a
+  controller built inline - so nothing but attention kept the two halves in step, and attention had
+  already failed once. The copies are gone: the controllers project into the shared records, the
+  browser reads those same records, and a mismatch is now a compile error. Paged endpoints answer with
+  one `PagedResult<T>` instead of seven hand-built shapes. The wire format is unchanged.
+- **Closed sets in those contracts travel as enums**, not spellings: a provider's ingestion mode, a
+  setting's kind, a plugin's category, what a work item rides in, the readiness verdict (a new
+  `WorkItemReadiness`), a rule's mode, a target's redeploy policy, a merge request's status and an
+  ordering rule's type. The admin UI compared them as string literals (`"Poll"`, `"Enum"`,
+  `"Branch"`), which no compiler could check against the server's own enum and which a rename would
+  leave quietly matching nothing. The wire format is unchanged - enums have always been serialized as
+  their names - except `/api/plugins`, whose `category` is now `Vcs`, `Tracker`, `Deploy` or `Action`.
+- **The admin client is one class per area of the API** - tasks, work, VCS, tracker, repositories,
+  planning, environments, readiness, deploy, rollouts, actions, audit, permissions, plugins and
+  ingestion - each registered in the container and injected where it is used. It was one class with
+  seventy methods, which every page took whole. The shared plumbing (settings, failure handling, query
+  building) lives in the base they all derive from.
+- **One type per file** through the contracts and the client: sixty-odd files that each hold the thing
+  they are named after, instead of eight that held everything.
+- **Dependencies brought up to date**: ASP.NET Core and EF Core 10.0.11, Rebus 8.9.3, OpenTelemetry
+  1.18.0, StackExchange.Redis 3.1.31, the xunit runner 4.0.0 and the rest. `Microsoft.OpenApi` stays
+  on 2.12.2 deliberately - `Microsoft.AspNetCore.OpenApi` 10.0.11 refuses anything 3.x, and a build
+  that resolves it anyway fails restore rather than misbehaving later.
+
 ### Fixed
 
 - **The admin UI could not read a plan at all**: "DeserializeUnableToConvertValue ... Path: $.version",
-  with the API answering correctly. The browser kept its own copy of every response type, and one of
-  them had drifted - the plan version became an ordinal `int` on the server while the copy still said
-  `string`. The copies are gone: the client references the server's own DTOs, so a shape both ends
-  must agree on now exists once, where the compiler sees both.
+  with the API answering correctly. The browser kept its own copy of every response type, and one had
+  drifted - the plan version became an ordinal `int` on the server while the copy still said `string`.
 - **Recalculating a plan failed on every real database.** Both providers are configured with
   `EnableRetryOnFailure`, and a retrying execution strategy refuses a transaction it did not open:
   "the configured execution strategy 'SqlServerRetryingExecutionStrategy' does not support
@@ -25,43 +83,29 @@ All notable changes to this project are documented here. The format is based on
 - **Exporting, validating or importing a plan failed on SQL Server** with "Cannot resolve collation
   conflict ... in add operator". The merge request key was built in SQL by concatenating
   `Repository.ExternalId`, which carries a case-sensitive collation, with the connection name, which
-  inherits the server's. The three columns are now read out and joined in memory.
-- **The app flashed white on every refresh, and again in the wrong theme.** Two causes. The boot script
-  was left on its own defaults (`md3-expressive`, `md3-violet`), so a first paint used a theme the app
-  then replaced; and nothing painted a background before Blazor started - the VisualStudio theme injects
-  its stylesheet at runtime, so every `--flare-*` token silently fell back to white, which in dark mode
-  is the one colour the app never shows. The boot script is now given this app's defaults, `<html>`
-  carries the theme's own surface colour from the first frame, and the splash sits beside the app root
-  instead of inside it, where Blazor used to replace it before the theme was ready.
+  inherits the server's. The three columns are read out and joined in memory now.
+- **A poll-mode tracker connection never produced a single task.** The sweep read the open tasks out
+  of the local database and asked the tracker to re-read each one, which cannot bootstrap: a fresh
+  install has no tasks, a polled connection receives no webhook, and nothing else creates one - so the
+  sweep ran over an empty set on every tick and reported success. A poll now asks the tracker which
+  issues are open and re-reads what is already known: the first half is what finds work at all, the
+  second is what notices an issue closed while nobody was looking.
+- **The app flashed white on every refresh, and again in the wrong theme.** Two causes. The boot
+  script was left on its own defaults (`md3-expressive`, `md3-violet`), so a first paint used a theme
+  the app then replaced; and nothing painted a background before Blazor started - the VisualStudio
+  theme injects its stylesheet at runtime, so every `--flare-*` token silently fell back to white,
+  which in dark mode is the one colour the app never shows. The boot script is given this app's
+  defaults now, `<html>` carries the theme's own surface colour from the first frame, and the splash
+  sits beside the app root instead of inside it, where Blazor used to replace it before the theme was
+  ready.
 - **The PWA still called itself Release Orchestrator.** The installed app's short name was
   `ReleaseOrch`, which is what a phone or a task switcher shows under the icon. Every page title also
   ends in the product name now, so a tab or an installed window says which app it is.
 - **Sixteen API error messages were English whatever the language.** They were written as literals
   while the rest of the API answered through its resource file, so the same form could refuse you in
   Russian on one field and English on the next. Also: Blazor's own unhandled-error bar, which sits
-  outside the component tree and cannot read a resource file - it now carries both languages and
+  outside the component tree and cannot read a resource file - it carries both languages now and
   `<html lang>` picks one, which the language service sets along with the culture.
-- **A poll-mode tracker connection never produced a single task.** The sweep read the open tasks out of
-  the local database and asked the tracker to re-read each one, which cannot bootstrap: a fresh install
-  has no tasks, a polled connection receives no webhook, and nothing else creates one - so the sweep ran
-  over an empty set on every tick and reported success. A poll now asks the tracker which issues are
-  open and re-reads what is already known: the first half is what finds work at all, the second is what
-  notices an issue closed while nobody was looking, since a closed issue is absent from the answer.
-
-### Changed
-
-- **The API's response types are declared once and used by both ends.** The admin client carried its
-  own copy of 44 of them - some mirroring a server DTO, most mirroring an anonymous object a
-  controller built inline - so nothing but attention kept the two halves in step, and attention had
-  already failed once. The copies are gone: the controllers project into the shared records, the
-  browser reads those same records, and a mismatch is now a compile error. Paged endpoints answer with
-  one `PagedResult<T>` instead of seven hand-built shapes. The wire format is unchanged.
-- **Closed sets in those contracts travel as enums**, not spellings: the readiness verdict (a new
-  `WorkItemReadiness`), a rule's mode, a target's redeploy policy, a merge request's status and an
-  ordering rule's type. The admin UI compared them as strings, which no compiler could check.
-
-### Fixed
-
 - **The action-type endpoint sent five of its ten schema fields**, so a bounded number arrived without
   its bounds and rendered as a plain text box. It sends the schema whole now, like every other
   provider does.
@@ -69,35 +113,6 @@ All notable changes to this project are documented here. The format is based on
   static machinery, so a second one starting in parallel lost the race and failed with "The entry
   point exited without ever building an IHost" - an error about nothing the test did. They share a
   collection now, which serializes them.
-
-### Added
-
-- **An opt-in test pass against a local SQL Server** (`ECHELON_SQLSERVER_TESTS=1`), covering the two
-  fixes above. Neither could fail on SQLite: it has no retrying execution strategy and only one
-  collation, so the whole suite passed while the product was broken on every deployment.
-- **Column filters and a rows-per-page chooser on every paged list** - tasks, work, repositories, both
-  connection lists and the request audit. The filters are applied by the server and counted with the
-  same query that reads the page, because each screen holds one page: filtering in the browser would
-  search the slice and present the answer as though it had searched the list. The grid now owns paging
-  as well, so the page number lives in one place instead of two.
-- **`ITrackerIssueSource`**, an optional tracker port for listing the open issues of a connection,
-  `is`-checked by the poller exactly as `ITrackerDependencySource` is. A tracker that cannot be searched
-  degrades to re-reading known tasks instead of failing. Keys only: every task still enters the database
-  through the one `TaskSyncRequested` path, so discovery cannot become a second way to write one.
-  Yandex.Tracker implements it over the search API, with the queues to sweep (or a whole query) as
-  connection settings, because which states count as open is a workflow's decision and not the API's.
-- **Poll now for a tracker connection**, beside the one VCS connections already had, reporting how many
-  syncs were queued and how many of those tasks were new. A tracker that could not be searched is named
-  with its own reason - usually the missing queue setting - rather than reported as nothing to do.
-
-### Changed
-
-- **Closed sets that no user types now travel as enums**, end to end: a provider's ingestion mode, a
-  setting's kind, a plugin's category and what a work item rides in. The admin UI compared string
-  literals against them (`"Poll"`, `"Enum"`, `"Branch"`), which no compiler could check against the
-  server's own enum, and which a rename would leave quietly matching nothing. The wire format is
-  unchanged - enums have always been serialized as their names - except `/api/plugins`, whose
-  `category` is now `Vcs`, `Tracker`, `Deploy` or `Action`.
 
 ## [0.1.1] - 2026-08-17
 
@@ -174,6 +189,7 @@ First public release. Everything below describes the state the repository is pub
 - **Branch names were compared case-insensitively on SQL Server**, so two branches differing only in
   case collided on the unique index.
 
-[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/jrfrigat/echelon/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/jrfrigat/echelon/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jrfrigat/echelon/releases/tag/v0.1.0

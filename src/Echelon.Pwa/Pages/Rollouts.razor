@@ -1,6 +1,7 @@
 @page "/rollouts"
 @attribute [Authorize]
 @inherits PageBase
+@inject RolloutsApi RolloutsApi
 
 <AppTitle Title="@UiStrings.Rollouts_Title" />
 
@@ -57,7 +58,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await RunAsync(async () => _rollouts = await Api.GetRolloutsAsync());
+        await RunAsync(async () => _rollouts = await RolloutsApi.GetRolloutsAsync());
         _loading = false;
     }
 

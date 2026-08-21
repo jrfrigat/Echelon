@@ -1,6 +1,8 @@
 @page "/admin/repos"
 @attribute [Authorize]
 @inherits CrudPageBase<RepositoryDto>
+@inject VcsApi VcsApi
+@inject RepositoriesApi RepositoriesApi
 
 <AppTitle Title="@UiStrings.Repos_Title" />
 
@@ -84,7 +86,7 @@
 
     /// <inheritdoc/>
     protected override Task<PagedResult<RepositoryDto>> FetchPageAsync(DataGridRequest request) =>
-        Api.GetRepositoriesAsync(
+        RepositoriesApi.GetRepositoriesAsync(
             request.ApiPage(), request.PageSize,
             name: request.Filter("name"),
             externalId: request.Filter("external"),
@@ -103,13 +105,13 @@
 
         if (_connections is not null) return;
 
-        await RunAsync(async () => _connections = await Api.GetVcsConnectionsAsync());
+        await RunAsync(async () => _connections = await VcsApi.GetVcsConnectionsAsync());
     }
 
     Task Save() => SaveAsync(
-        () => Api.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId),
+        () => RepositoriesApi.CreateRepositoryAsync(_fName, _fExternalId, _fConnectionId),
         UiStrings.Repos_Created);
 
     Task Delete(RepositoryDto r) =>
-        DeleteAsync(string.Format(UiStrings.Repos_Delete_What, r.Name), () => Api.DeleteRepositoryAsync(r.Id));
+        DeleteAsync(string.Format(UiStrings.Repos_Delete_What, r.Name), () => RepositoriesApi.DeleteRepositoryAsync(r.Id));
 }

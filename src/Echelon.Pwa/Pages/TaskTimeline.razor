@@ -1,6 +1,7 @@
 @page "/tasks/{Id:guid}/timeline"
 @attribute [Authorize]
 @inherits PageBase
+@inject TasksApi TasksApi
 
 @* History, not live state: no polling loop here on purpose. What is on screen cannot go stale in a
    way that matters, and a poll would only add a CancellationTokenSource to leak. *@
@@ -186,7 +187,7 @@ else
     async Task Load()
     {
         _loading = true;
-        await RunAsync(async () => _timeline = await Api.GetTaskTimelineAsync(Id));
+        await RunAsync(async () => _timeline = await TasksApi.GetTaskTimelineAsync(Id));
         _loading = false;
     }
 

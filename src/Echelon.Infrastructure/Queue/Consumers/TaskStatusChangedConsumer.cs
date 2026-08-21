@@ -1,4 +1,6 @@
 using Echelon.Application.Contracts.Messages;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Providers;
 using Echelon.Providers.Abstractions.Tracker;
@@ -15,11 +17,16 @@ public class TaskStatusChangedConsumer(
     ITrackerProviderFactory providerFactory,
     IBus bus,
     TimeProvider clock,
+    IngestionActivity activity,
     ILogger<TaskStatusChangedConsumer> logger) : IHandleMessages<TaskStatusChanged>
 {
     /// <inheritdoc/>
     public async Task Handle(TaskStatusChanged message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.TaskStatusChanged);
+
         var msg = message;
         var ct = HandlerCancellation.Token;
 

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Application.Services;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
 
 namespace Echelon.Infrastructure.Queue.Consumers;
@@ -32,11 +34,16 @@ namespace Echelon.Infrastructure.Queue.Consumers;
 public class ReleasePlanRecalculationConsumer(
     AppDbContext db,
     IRolloutPlannerService planner,
+    IngestionActivity activity,
     ILogger<ReleasePlanRecalculationConsumer> logger) : IHandleMessages<ReleasePlanRecalculationRequested>
 {
     /// <inheritdoc/>
     public async Task Handle(ReleasePlanRecalculationRequested message)
     {
+        // Counted on arrival, before any work: what an operator needs to know is whether anything
+        // is reaching this service at all, and a message that fails still arrived.
+        activity.Observed(IngestionSignal.PlanRecalculated);
+
         var ct = HandlerCancellation.Token;
 
         var targetTaskIds = await db.RolloutPlans
