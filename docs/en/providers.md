@@ -256,13 +256,30 @@ internal sealed class MyTrackerAdapter(HttpClient http) : ITrackerProviderAdapte
 ```
 
 The provider implements `ITrackerProvider` (read an issue, decide whether a status is closed) and,
-**optionally**, `ITrackerDependencySource` (issue links) and `ITrackerMutator` (write back). Optional
+**optionally**, `ITrackerDependencySource` (issue links), `ITrackerIssueSource` (list what is open) and
+`ITrackerMutator` (write back). Optional
 capabilities are `is`-checked by callers rather than returning empty lists that cannot be
 distinguished from "genuinely none":
 
 ```csharp
 public bool IsClosedStatus(string? statusKey) =>
     statusKey is not null && _options.ClosedStatuses.Contains(statusKey.Trim());
+```
+
+`ITrackerIssueSource` is the one a **poll** type needs. Without it a polled connection can only re-read
+tasks that are already in the database, which never starts: a fresh install has none, no webhook
+arrives, and the sweep runs over an empty set for ever. Implement it and the poller asks the tracker
+what is open, then requests the same `TaskSyncRequested` the webhook path raises - so a discovered
+issue becomes a task through exactly one code path:
+
+```csharp
+public async Task<IReadOnlyList<string>> ListOpenIssueKeysAsync(int limit, CancellationToken ct)
+{
+    // Where to look is the connection's setting, not the adapter's guess: "open" is a workflow's
+    // word. Throw when it is unset - an empty list reads as "nothing is open" and hides the mistake.
+    var query = _options.BuildSearchQuery(_context.ConnectionName);
+    ...
+}
 ```
 
 Making the closed set a setting (not a hardcoded list) is what lets one project call the terminal

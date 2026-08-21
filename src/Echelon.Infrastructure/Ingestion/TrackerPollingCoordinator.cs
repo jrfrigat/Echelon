@@ -1,15 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Rebus.Bus;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Application.Services;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Vcs;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Echelon.Infrastructure.Ingestion;
 
@@ -27,15 +26,17 @@ public class TrackerPollingOptions
 }
 
 /// <summary>
-/// Re-reads the open tasks of connections whose tracker provider type is registered
-/// <see cref="IngestionMode.Poll"/>, on each connection's own interval - the pull half of the tracker
-/// ingestion, symmetric with <see cref="VcsPollingCoordinator"/>.
+/// Sweeps the connections whose tracker provider type is registered <see cref="IngestionMode.Poll"/> on
+/// each connection's own interval - the pull half of the tracker ingestion, symmetric with
+/// <see cref="VcsPollingCoordinator"/>. Each sweep asks the tracker what is open and re-reads what is
+/// already known, through <see cref="TrackerConnectionPoller"/>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Additive to <c>TaskReconciliationService</c>, which keeps every connection's dependency links fresh
 /// on its own (coarser) global timer regardless of type. This gives a poll-mode connection - one the
-/// tracker cannot push webhooks to - a faster, per-connection cadence for the status of its open tasks.
+/// tracker cannot push webhooks to - a faster, per-connection cadence, and the only way it ever learns
+/// of a task at all: no webhook arrives, so nothing else would create one.
 /// Both enqueue <see cref="TaskSyncRequested"/>, and re-reading a task is idempotent, so the overlap is
 /// harmless: a poll connection is simply re-read more often than the reconciliation floor.
 /// </para>
@@ -76,7 +77,10 @@ public class TrackerPollingCoordinator(
         }
 
         // No poll-mode tracker type registered: nothing sweeps, so do not even hold a timer or lease.
-        if (_pollTypes.Count == 0) return;
+        if (_pollTypes.Count == 0)
+        {
+            return;
+        }
 
         var interval = TimeSpan.FromSeconds(Math.Max(options.Value.IntervalSeconds, 5));
         using var timer = new PeriodicTimer(interval, clock);
@@ -85,10 +89,16 @@ public class TrackerPollingCoordinator(
         {
             try
             {
-                if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    return;
+                }
 
                 await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
-                if (held is null) continue;
+                if (held is null)
+                {
+                    continue;
+                }
 
                 await PollAsync(stoppingToken);
             }
@@ -107,7 +117,7 @@ public class TrackerPollingCoordinator(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var bus = scope.ServiceProvider.GetRequiredService<IBus>();
+        var poller = scope.ServiceProvider.GetRequiredService<TrackerConnectionPoller>();
 
         // Filtered in memory by normalized provider type, exactly as the VCS poller does.
         var connections = (await db.TrackerConnections.AsNoTracking().ToListAsync(ct))
@@ -119,33 +129,37 @@ public class TrackerPollingCoordinator(
         // Drop connections that left poll mode so the map does not grow unbounded.
         var live = connections.Select(c => c.Id).ToHashSet();
         foreach (var gone in _lastPolled.Keys.Where(k => !live.Contains(k)).ToList())
+        {
             _lastPolled.Remove(gone);
+        }
 
         foreach (var connection in connections)
         {
             var configured = VcsPollSettings.IntervalFrom(ProviderSettingsBag.Deserialize(connection.ProviderSettingsJson));
             var due = TimeSpan.FromSeconds(Math.Max(configured, options.Value.IntervalSeconds));
             if (_lastPolled.TryGetValue(connection.Id, out var last) && now - last < due)
+            {
                 continue;
+            }
+
             _lastPolled[connection.Id] = now;
 
             try
             {
-                // Re-read the connection's open tasks: a closed task can no longer change a plan. The
-                // consumer re-reads each from the tracker, refreshing status and dependency links.
-                var externalIds = await db.Tasks
-                    .Where(t => t.ClosedAt == null && t.TrackerConnectionId == connection.Id)
-                    .OrderBy(t => t.Id)
-                    .Take(options.Value.MaxTasksPerRun)
-                    .Select(t => t.ExternalId)
-                    .AsNoTracking()
-                    .ToListAsync(ct);
+                // The poller asks the tracker which issues are open and re-reads what is already
+                // known locally; the consumer behind TaskSyncRequested refreshes each task's status
+                // and dependency links, and creates the ones this connection had never seen.
+                var result = await poller.PollAsync(connection, ct);
 
-                foreach (var externalId in externalIds)
-                    await bus.Send(new TaskSyncRequested(connection.Name, externalId, "Tracker poll"));
-
-                if (externalIds.Count > 0)
-                    logger.LogDebug("Polled {Count} open task(s) from tracker {Connection}", externalIds.Count, connection.Name);
+                // A tracker the sweep could not read is reported here and nowhere else: the manual
+                // poll endpoint hands the reason back to the operator, but a scheduled sweep has only
+                // the log, and "discovered nothing" and "could not ask" must not look the same.
+                if (result.Failure is { Length: > 0 } failure)
+                {
+                    logger.LogWarning(
+                        "Tracker connection {Connection} could not be searched: {Reason}",
+                        connection.Name, failure);
+                }
             }
             catch (Exception ex)
             {

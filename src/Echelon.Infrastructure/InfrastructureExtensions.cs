@@ -1,32 +1,28 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Echelon.Application.DTOs;
 using Echelon.Application.Services;
 using Echelon.Infrastructure.Actions;
-using Echelon.Infrastructure.Coordination;
-using Echelon.Infrastructure.Audit;
 using Echelon.Infrastructure.Archive;
+using Echelon.Infrastructure.Audit;
+using Echelon.Infrastructure.Auth;
+using Echelon.Infrastructure.Coordination;
 using Echelon.Infrastructure.Execution;
 using Echelon.Infrastructure.Ingestion;
-using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Providers;
 using Echelon.Infrastructure.Queue;
-using Echelon.Infrastructure.Queue.Consumers;
 using Echelon.Infrastructure.ReleasePlanning;
 using Echelon.Infrastructure.Tracker;
 using Echelon.Infrastructure.Vcs;
 using Echelon.Providers.Abstractions.Deploy;
 using Echelon.Providers.Abstractions.Tracker;
 using Echelon.Providers.Abstractions.Vcs;
-using StackExchange.Redis;
 using Echelon.Providers.GitLab;
 using Echelon.Providers.YandexTracker;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Echelon.Infrastructure;
 
@@ -110,9 +106,10 @@ public static class InfrastructureExtensions
         services.AddScoped<VcsConnectionPoller>();
         services.AddHostedService<VcsPollingCoordinator>();
 
-        // The tracker counterpart: re-reads poll-mode tracker connections' open tasks on their interval,
-        // on top of the global reconciliation pass.
+        // The tracker counterpart: asks each poll-mode tracker connection what is open and re-reads what
+        // is already known, on the connection's interval, on top of the global reconciliation pass.
         services.Configure<TrackerPollingOptions>(config.GetSection("TrackerPolling"));
+        services.AddScoped<TrackerConnectionPoller>();
         services.AddHostedService<TrackerPollingCoordinator>();
 
         // The bus and its six handlers, over RabbitMQ. See MessagingSetup for the one-queue model

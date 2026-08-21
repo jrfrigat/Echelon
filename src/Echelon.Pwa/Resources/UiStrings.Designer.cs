@@ -3557,6 +3557,27 @@ namespace Echelon.Pwa.Resources {
         }
 
         /// <summary>Looks up a localized string similar to Poll {0} now.</summary>
+        public static string Tracker_PollNow_Aria {
+            get {
+                return ResourceManager.GetString("Tracker_PollNow_Aria", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Polled '{0}': {1} task(s) queued for sync, {2} of them new.</summary>
+        public static string Tracker_Polled {
+            get {
+                return ResourceManager.GetString("Tracker_Polled", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to '{0}' could not be searched, so only the tasks already known were re-read - {1}.</summary>
+        public static string Tracker_Poll_Failed {
+            get {
+                return ResourceManager.GetString("Tracker_Poll_Failed", resourceCulture);
+            }
+        }
+
+        /// <summary>Looks up a localized string similar to Poll {0} now.</summary>
         public static string Vcs_PollNow_Aria {
             get {
                 return ResourceManager.GetString("Vcs_PollNow_Aria", resourceCulture);

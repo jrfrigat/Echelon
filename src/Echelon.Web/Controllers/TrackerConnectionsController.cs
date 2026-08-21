@@ -1,17 +1,16 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Localization;
-using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Auth;
+using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
+using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Tracker;
 using Echelon.Web.Resources;
 using Echelon.Web.Validation;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace Echelon.Web.Controllers;
 
@@ -112,21 +111,29 @@ public class TrackerConnectionsController(
         // See VcsConnectionsController.Create: validated against the registered adapters.
         var providerType = ProviderKey.Normalize(req.TrackerType);
         if (!providerFactory.AvailableProviders.Contains(providerType))
+        {
             return BadRequest(new
             {
                 error = localizer["Tracker_UnknownType", req.TrackerType, string.Join(", ", providerFactory.AvailableProviders)].Value
             });
+        }
 
         if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
+        {
             return BadRequest(new { error = urlError });
+        }
 
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name, ct))
+        {
             return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
+        }
 
         if (!ProviderSettingsBinder.TryBind(
                 req.Settings, providerFactory.GetSettingsSchema(providerType),
                 existingJson: null, protector, localizer, out var settingsJson, out var settingsError))
+        {
             return BadRequest(new { error = settingsError });
+        }
 
         var entity = new TrackerConnection
         {
@@ -152,30 +159,41 @@ public class TrackerConnectionsController(
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTrackerConnectionRequest req, CancellationToken ct)
     {
         if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
+        {
             return BadRequest(new { error = urlError });
+        }
 
         var entity = await db.TrackerConnections.FindAsync([id], ct);
-        if (entity is null) return NotFound();
+        if (entity is null)
+        {
+            return NotFound();
+        }
 
         if (await db.TrackerConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
+        {
             return Conflict(new { error = localizer["Tracker_NameTaken", req.Name].Value });
+        }
 
         // The provider type is the stored one - this endpoint cannot change it. A connection whose
         // provider is no longer registered is refused rather than saved against an empty schema,
         // which would silently discard settings the absent adapter still needs.
         if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+        {
             return BadRequest(new
             {
                 error = localizer[
                     "Tracker_UnknownType", entity.ProviderType,
                     string.Join(", ", providerFactory.AvailableProviders)].Value
             });
+        }
 
         if (!ProviderSettingsBinder.TryBind(
                 req.Settings, providerFactory.GetSettingsSchema(entity.ProviderType),
                 entity.ProviderSettingsJson, protector, localizer,
                 out var settingsJson, out var settingsError))
+        {
             return BadRequest(new { error = settingsError });
+        }
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
@@ -183,10 +201,60 @@ public class TrackerConnectionsController(
 
         // Blank keeps the stored token - see the UI's "leave blank to keep current".
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
+        {
             entity.EncryptedAccessToken = protector.Protect(req.AccessToken);
+        }
 
         await db.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Polls this connection now: asks the tracker which issues are open and re-reads the tasks already
+    /// known to be open, emitting the same events the scheduled sweep does.
+    /// </summary>
+    /// <remarks>
+    /// Works for any registered connection - a webhook-mode one can be refreshed this way too - but the
+    /// UI offers the button only for poll-mode types, whose tasks would otherwise wait for the next
+    /// tick. Re-requesting a sync for an unchanged task is a no-op, so polling twice costs a tracker
+    /// read and changes nothing.
+    /// </remarks>
+    /// <param name="id">The connection to poll.</param>
+    /// <param name="poller">The shared per-connection poller, so manual and scheduled sweeps cannot diverge.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>How many syncs were requested, how many tasks were new, and why the tracker could not be searched when it could not.</returns>
+    [HttpPost("{id:guid}/poll")]
+    [Authorize(Policy = Permissions.ConfigEdit)]
+    public async Task<IActionResult> Poll(
+        Guid id, [FromServices] TrackerConnectionPoller poller, CancellationToken ct)
+    {
+        var entity = await db.TrackerConnections
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (entity is null)
+        {
+            return NotFound();
+        }
+
+        if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+        {
+            return BadRequest(new
+            {
+                error = localizer[
+                    "Tracker_UnknownType", entity.ProviderType,
+                    string.Join(", ", providerFactory.AvailableProviders)].Value
+            });
+        }
+
+        // A tracker that cannot be searched is reported in the body, not thrown: the tasks already known
+        // were still re-read, and a 500 would hide both that and the tracker's own explanation - which
+        // is usually the missing setting that says which queues to sweep.
+        var result = await poller.PollAsync(entity, ct);
+        return Ok(new
+        {
+            emitted = result.Emitted,
+            discovered = result.Discovered,
+            failure = result.Failure
+        });
     }
 
     /// <summary>Removes a tracker connection. Refused while tasks still point at it.</summary>
@@ -197,10 +265,15 @@ public class TrackerConnectionsController(
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var entity = await db.TrackerConnections.FindAsync([id], ct);
-        if (entity is null) return NotFound();
+        if (entity is null)
+        {
+            return NotFound();
+        }
 
         if (await db.Tasks.AnyAsync(t => t.TrackerConnectionId == id, ct))
+        {
             return Conflict(new { error = localizer["Tracker_HasTasks"].Value });
+        }
 
         db.TrackerConnections.Remove(entity);
         await db.SaveChangesAsync(ct);

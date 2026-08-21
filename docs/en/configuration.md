@@ -186,9 +186,16 @@ URI (TLS, a cluster, a non-default vhost).
 ### Ingestion Polling
 
 For a connection whose provider type is a *poll* type (`gitlab-poll`, `yandextracker-poll`), the app
-re-reads it on a timer instead of receiving webhooks. Each connection carries its own interval in its
+reads it on a timer instead of receiving webhooks. Each connection carries its own interval in its
 settings; these globals set whether the poller runs and how often it wakes - the floor for a
 connection's interval.
+
+A tracker poll asks the tracker which issues are open **and** re-reads the tasks already known to be
+open. The first half is what discovers work at all - a polled tracker sends no webhook, so nothing
+else would ever create a task - and it needs the connection to say where to look: set **Queues to
+sweep** (or a **Search query** of your own) in the connection's settings, or the poll reports that it
+could not search and only refreshes what is already there. The second half is what notices an issue
+that was closed while nobody was looking, since a closed issue is absent from the tracker's answer.
 
 **`VcsPolling__Enabled`** / **`TrackerPolling__Enabled`** (sections: `VcsPolling`, `TrackerPolling`)
 - **What:** Whether the VCS / tracker poller runs
@@ -201,7 +208,7 @@ connection's interval.
 - **Default:** 60
 
 **`TrackerPolling__MaxTasksPerRun`**
-- **What:** Open tasks re-read per tracker connection per pass
+- **What:** Tasks queued per tracker connection per pass, over both the issues the tracker reports open and the tasks already known
 - **Example:** `500`
 - **Default:** 500
 

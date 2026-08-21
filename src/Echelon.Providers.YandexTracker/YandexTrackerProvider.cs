@@ -9,7 +9,9 @@ namespace Echelon.Providers.YandexTracker;
 /// Yandex.Tracker, bound to one connection.
 /// </summary>
 /// <remarks>
-/// Implements <see cref="ITrackerDependencySource"/> because this tracker does model issue links.
+/// Implements <see cref="ITrackerDependencySource"/> because this tracker does model issue links, and
+/// <see cref="ITrackerIssueSource"/> because it can be searched - which is what lets a polled connection
+/// find work that is not in the local database yet.
 /// A tracker that did not would simply not implement it, and callers would see that with an
 /// <c>is</c> check rather than by calling and getting an empty list back - which is
 /// indistinguishable from an issue that genuinely has no dependencies.
@@ -17,8 +19,13 @@ namespace Echelon.Providers.YandexTracker;
 internal sealed class YandexTrackerProvider(
     HttpClient http,
     TrackerProviderContext context,
-    YandexTrackerOptions options) : ITrackerProvider, ITrackerDependencySource, ITrackerMutator
+    YandexTrackerOptions options) : ITrackerProvider, ITrackerDependencySource, ITrackerIssueSource, ITrackerMutator
 {
+    // Yandex.Tracker pages search results; 100 is its documented maximum per page. The sweep asks
+    // for pages of this size until the caller's limit is met, so the limit is the only cap that
+    // matters to a caller.
+    private const int SearchPageSize = 100;
+
     /// <inheritdoc/>
     public TrackerCapabilities Capabilities => TrackerCapabilities.None;
 
@@ -125,6 +132,50 @@ internal sealed class YandexTrackerProvider(
         response.EnsureSuccessStatusCode();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Yandex.Tracker is searched through <c>POST /v2/issues/_search</c> with a query in its own
+    /// language, paged by <c>perPage</c> and <c>page</c>. What counts as open is the connection's own
+    /// business - a queue list, or a query the operator wrote - because "open" is a workflow's word,
+    /// not the API's; the default reading is "in these queues, with no resolution".
+    /// NOT VERIFIED against a live tracker.
+    /// </remarks>
+    public async Task<IReadOnlyList<string>> ListOpenIssueKeysAsync(int limit, CancellationToken ct)
+    {
+        var query = options.BuildSearchQuery(context.ConnectionName);
+        var keys = new List<string>();
+
+        // Paged rather than one request: the API caps how much a page returns, so a single call would
+        // silently truncate a connection whose queues hold more than that - and the caller's limit,
+        // not the page size, is what decides how much of a backlog one sweep takes.
+        for (var page = 1; keys.Count < limit; page++)
+        {
+            var perPage = Math.Min(SearchPageSize, limit - keys.Count);
+
+            using var request = Authorized(HttpMethod.Post, Url($"v2/issues/_search?perPage={perPage}&page={page}"));
+            request.Content = JsonContent.Create(new { query });
+
+            var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+            // Thrown rather than answered with what arrived: an empty list here means "nothing is
+            // open", so a 401 from a wrong token would otherwise read as a healthy, quiet sweep.
+            response.EnsureSuccessStatusCode();
+
+            var batch = await response.Content
+                .ReadFromJsonAsync<List<YtIssueKeyDto>>(cancellationToken: ct).ConfigureAwait(false) ?? [];
+
+            keys.AddRange(batch
+                .Select(i => i.Key)
+                .Where(k => !string.IsNullOrWhiteSpace(k))
+                .Select(k => k!));
+
+            // A short page is the last one. Without this the loop would keep asking for pages past the
+            // end until it happened to fill the limit, which for a small tracker is every sweep.
+            if (batch.Count < perPage) break;
+        }
+
+        return keys;
+    }
+
     private Uri Url(string relative) => new($"{context.ApiUrl.ToString().TrimEnd('/')}/{relative}");
 
     private HttpRequestMessage Authorized(HttpMethod method, Uri url)
@@ -134,6 +185,10 @@ internal sealed class YandexTrackerProvider(
         request.Headers.Add("X-Org-Id", options.OrgId);
         return request;
     }
+
+    // Only the key: the search answers with whole issues, but every one of them is re-read through the
+    // single sync path, so parsing more here would be a second, divergent reading of the same issue.
+    private sealed record YtIssueKeyDto([property: JsonPropertyName("key")] string? Key);
 
     private sealed record YtIssueDto(
         [property: JsonPropertyName("key")] string Key,

@@ -54,6 +54,20 @@
                 <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
                     <Template>
                         <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                            @if (IsPollType(context.TrackerType))
+                            {
+                                @* Loading on the button itself, keyed to this row: the poll searches the
+                                   tracker over the network and can take a while, and without it the
+                                   click looked like nothing happened - so it got clicked again,
+                                   starting a second sweep. Disabled while any poll runs so two
+                                   cannot overlap. *@
+                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Tracker_PollNow_Aria, context.Name)"
+                                                 Loading="@(_pollingId == context.Id)"
+                                                 Disabled="@(_pollingId is not null)"
+                                                 OnClick="@(() => Poll(context))">
+                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
+                                </FlareIconButton>
+                            }
                             <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
                                 <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
                             </FlareIconButton>
@@ -128,6 +142,43 @@
                              || string.IsNullOrWhiteSpace(_fType)
                              || (!_editId.HasValue && string.IsNullOrWhiteSpace(_fToken))
                              || ProviderSettingsFields.MissingRequired(SelectedSchema, _fSettings, _editId.HasValue);
+
+    // A poll-mode type's events would otherwise wait for its timer, so the manual poll is offered only
+    // for those; a webhook connection gets its events pushed and needs no button.
+    bool IsPollType(string trackerType) =>
+        _providers?.FirstOrDefault(p => p.ProviderType == trackerType)?.Ingestion == IngestionMode.Poll;
+
+    /// <summary>Which connection is being polled right now, or null when none is. Drives the spinner.</summary>
+    Guid? _pollingId;
+
+    async Task Poll(TrackerConnectionDto c)
+    {
+        TrackerPollResultDto? result = null;
+
+        _pollingId = c.Id;
+        Success = null;
+        Error = null;
+        try
+        {
+            if (!await RunAsync(async () => result = await Api.PollTrackerConnectionAsync(c.Id))) return;
+        }
+        finally
+        {
+            // In a finally: a failed poll must release the button, or the row is stuck spinning and
+            // every other connection stays disabled behind it.
+            _pollingId = null;
+        }
+
+        Success = string.Format(UiStrings.Tracker_Polled, c.Name, result!.Emitted, result.Discovered);
+
+        // Shown beside the count, not instead of it: a tracker that could not be searched still had
+        // its known tasks re-read, and the reason is usually the operator's to fix - the setting that
+        // says which queues to sweep. A zero with no explanation reads as "nothing to do".
+        if (result.Failure is { Length: > 0 } failure)
+        {
+            Error = string.Format(UiStrings.Tracker_Poll_Failed, c.Name, failure);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

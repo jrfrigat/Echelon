@@ -141,7 +141,7 @@ There is no "ready-for-deploy label" field - deploy readiness is configured sepa
 Tasks, their statuses, dependencies and hierarchy come from the tracker.
 
 - **Name**, **API URL** (`https://api.tracker.yandex.net`), **Access Token**.
-- **Type** - `yandextracker-webhook` (receives task webhooks) or `yandextracker-poll` (no webhook; open tasks are re-read on a **poll interval** you set).
+- **Type** - `yandextracker-webhook` (receives task webhooks) or `yandextracker-poll` (no webhook; the tracker is searched on a **poll interval** you set, so a poll type also needs **Queues to sweep** - without it there is nothing to search and no task is ever discovered).
 - **Organization ID** - sent as the `X-Org-Id` header (Yandex Tracker).
 - **Closed statuses** - comma-separated status keys that mean a task is *done*; leave blank for the
   defaults (`closed, cancelled, rejected, resolved`).

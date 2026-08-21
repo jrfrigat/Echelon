@@ -1311,6 +1311,15 @@
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Некоторые репозитории не удалось прочитать - {0}</value>
   </data>
+  <data name="Tracker_PollNow_Aria" xml:space="preserve">
+    <value>Опросить {0} сейчас</value>
+  </data>
+  <data name="Tracker_Polled" xml:space="preserve">
+    <value>Опрошено "{0}": задач отправлено на синхронизацию - {1}, из них новых - {2}. После чтения они появятся в разделе "Задачи".</value>
+  </data>
+  <data name="Tracker_Poll_Failed" xml:space="preserve">
+    <value>"{0}" не удалось опросить, перечитаны только уже известные задачи - {1}</value>
+  </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Плагины</value>
   </data>

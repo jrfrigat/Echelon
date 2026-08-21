@@ -1311,6 +1311,15 @@
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Some repositories could not be read - {0}</value>
   </data>
+  <data name="Tracker_PollNow_Aria" xml:space="preserve">
+    <value>Poll {0} now</value>
+  </data>
+  <data name="Tracker_Polled" xml:space="preserve">
+    <value>Polled '{0}': {1} task(s) queued for sync, {2} of them new. They appear under Tasks once read.</value>
+  </data>
+  <data name="Tracker_Poll_Failed" xml:space="preserve">
+    <value>'{0}' could not be searched, so only the tasks already known were re-read - {1}</value>
+  </data>
   <data name="Nav_Plugins" xml:space="preserve">
     <value>Plugins</value>
   </data>

@@ -47,6 +47,19 @@ internal sealed class YandexTrackerPollAdapter(YandexTrackerProviderAdapter inne
             Default: VcsPollSettings.DefaultIntervalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
             Min: VcsPollSettings.MinIntervalSeconds,
             Max: VcsPollSettings.MaxIntervalSeconds),
+        // Neither key is Required: a poll needs one of the two, and a schema cannot say "either". The
+        // sweep names the missing one when it runs (YandexTrackerOptions.BuildSearchQuery), and the
+        // poll endpoint reports that sentence back to the operator rather than discovering nothing.
+        new(YandexTrackerOptions.QueuesKey,
+            Label: "Queues to sweep",
+            Description: "Comma-separated queue keys. A poll looks for issues with no resolution in these, "
+                + "which is how tasks are discovered before anything links to them.",
+            Kind: ProviderSettingKind.Text),
+        new(YandexTrackerOptions.SearchQueryKey,
+            Label: "Search query (optional)",
+            Description: "A whole query in Yandex.Tracker's language, used instead of the queues above - "
+                + "for a workflow whose open states a resolution filter does not describe.",
+            Kind: ProviderSettingKind.Text),
         .. inner.SettingsSchema
     ];
 

@@ -255,13 +255,30 @@ internal sealed class MyTrackerAdapter(HttpClient http) : ITrackerProviderAdapte
 ```
 
 Провайдер реализует `ITrackerProvider` (прочитать задачу, решить, закрыт ли статус) и, **опционально**,
-`ITrackerDependencySource` (связи задач) и `ITrackerMutator` (обратная запись). Опциональные
+`ITrackerDependencySource` (связи задач), `ITrackerIssueSource` (перечислить открытое) и
+`ITrackerMutator` (обратная запись). Опциональные
 возможности вызывающий проверяет через `is`, а не по пустым спискам, которые не отличить от
 "действительно ничего нет":
 
 ```csharp
 public bool IsClosedStatus(string? statusKey) =>
     statusKey is not null && _options.ClosedStatuses.Contains(statusKey.Trim());
+```
+
+`ITrackerIssueSource` - тот, что нужен **poll**-типу. Без него опрашиваемое соединение может лишь
+перечитывать задачи, уже лежащие в БД, а это никогда не стартует: на свежей установке их нет, вебхук
+не приходит, и проход навсегда остаётся проходом по пустому множеству. С ним поллер спрашивает у
+трекера, что открыто, и шлёт тот же `TaskSyncRequested`, что и путь вебхука, - найденная задача
+попадает в базу ровно одним кодом:
+
+```csharp
+public async Task<IReadOnlyList<string>> ListOpenIssueKeysAsync(int limit, CancellationToken ct)
+{
+    // Где искать - настройка соединения, а не догадка адаптера: "открыто" - слово рабочего процесса.
+    // Если её нет, бросаем: пустой список читается как "открытого нет" и прячет ошибку настройки.
+    var query = _options.BuildSearchQuery(_context.ConnectionName);
+    ...
+}
 ```
 
 Именно то, что набор "закрытых" - настройка, а не зашитый список, позволяет одному проекту звать

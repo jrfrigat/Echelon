@@ -8,6 +8,36 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **A poll-mode tracker connection never produced a single task.** The sweep read the open tasks out of
+  the local database and asked the tracker to re-read each one, which cannot bootstrap: a fresh install
+  has no tasks, a polled connection receives no webhook, and nothing else creates one - so the sweep ran
+  over an empty set on every tick and reported success. A poll now asks the tracker which issues are
+  open and re-reads what is already known: the first half is what finds work at all, the second is what
+  notices an issue closed while nobody was looking, since a closed issue is absent from the answer.
+
+### Added
+
+- **`ITrackerIssueSource`**, an optional tracker port for listing the open issues of a connection,
+  `is`-checked by the poller exactly as `ITrackerDependencySource` is. A tracker that cannot be searched
+  degrades to re-reading known tasks instead of failing. Keys only: every task still enters the database
+  through the one `TaskSyncRequested` path, so discovery cannot become a second way to write one.
+  Yandex.Tracker implements it over the search API, with the queues to sweep (or a whole query) as
+  connection settings, because which states count as open is a workflow's decision and not the API's.
+- **Poll now for a tracker connection**, beside the one VCS connections already had, reporting how many
+  syncs were queued and how many of those tasks were new. A tracker that could not be searched is named
+  with its own reason - usually the missing queue setting - rather than reported as nothing to do.
+
+### Changed
+
+- **Closed sets that no user types now travel as enums**, end to end: a provider's ingestion mode, a
+  setting's kind, a plugin's category and what a work item rides in. The admin UI compared string
+  literals against them (`"Poll"`, `"Enum"`, `"Branch"`), which no compiler could check against the
+  server's own enum, and which a rename would leave quietly matching nothing. The wire format is
+  unchanged - enums have always been serialized as their names - except `/api/plugins`, whose
+  `category` is now `Vcs`, `Tracker`, `Deploy` or `Action`.
+
 ## [0.1.1] - 2026-08-17
 
 ### Added

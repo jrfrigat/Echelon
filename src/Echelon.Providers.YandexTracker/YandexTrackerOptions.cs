@@ -20,13 +20,25 @@ namespace Echelon.Providers.YandexTracker;
 /// </remarks>
 /// <param name="OrgId">The organization the token belongs to; sent as the <c>X-Org-Id</c> header.</param>
 /// <param name="ClosedStatuses">The status keys this connection treats as "done", case-insensitive.</param>
-public sealed record YandexTrackerOptions(string OrgId, IReadOnlySet<string> ClosedStatuses)
+/// <param name="Queues">The queue keys a poll searches for open issues; empty when none were named.</param>
+/// <param name="SearchQuery">A whole query in the tracker's own language, overriding <paramref name="Queues"/>; null when unset.</param>
+public sealed record YandexTrackerOptions(
+    string OrgId,
+    IReadOnlySet<string> ClosedStatuses,
+    IReadOnlyList<string> Queues,
+    string? SearchQuery)
 {
     /// <summary>The settings key that carries the organization id.</summary>
     public const string OrgIdKey = "orgId";
 
     /// <summary>The settings key that carries the comma-separated closed-status keys.</summary>
     public const string ClosedStatusesKey = "closedStatuses";
+
+    /// <summary>The settings key that carries the comma-separated queue keys a poll searches.</summary>
+    public const string QueuesKey = "queues";
+
+    /// <summary>The settings key that carries a hand-written search query, used as-is.</summary>
+    public const string SearchQueryKey = "searchQuery";
 
     /// <summary>Reads the options out of a connection's settings bag.</summary>
     /// <param name="context">The connection being bound.</param>
@@ -55,6 +67,39 @@ public sealed record YandexTrackerOptions(string OrgId, IReadOnlySet<string> Clo
             : closed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return new YandexTrackerOptions(orgId.Trim(), closedStatuses);
+        // Searching is only meaningful for a polled connection, so neither key is validated here: a
+        // webhook connection is missing both and must still connect. The search itself says what is
+        // missing, at the moment it is actually needed.
+        context.ProviderSettings.TryGetValue(QueuesKey, out var queues);
+        context.ProviderSettings.TryGetValue(SearchQueryKey, out var query);
+
+        return new YandexTrackerOptions(
+            orgId.Trim(),
+            closedStatuses,
+            queues?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [],
+            string.IsNullOrWhiteSpace(query) ? null : query.Trim());
+    }
+
+    /// <summary>Builds the query that lists this connection's open issues.</summary>
+    /// <param name="connectionName">Named in the error, so an operator knows which connection to fix.</param>
+    /// <returns>A query in Yandex.Tracker's query language.</returns>
+    /// <exception cref="InvalidOperationException">Neither a queue nor a query was configured.</exception>
+    /// <remarks>
+    /// The hand-written query wins outright: a workflow that calls its open states something else, or a
+    /// filter by component or assignee, cannot be expressed by a queue list, and an operator who has
+    /// written the query means it. Otherwise the queues become the obvious query - everything in them
+    /// that has no resolution.
+    /// </remarks>
+    public string BuildSearchQuery(string connectionName)
+    {
+        if (SearchQuery is { Length: > 0 } query)
+            return query;
+
+        if (Queues.Count == 0)
+            throw new InvalidOperationException(
+                $"Tracker connection '{connectionName}' is polled, so it has to say what to look in. "
+                + $"Set '{QueuesKey}' to the queue keys to sweep, or '{SearchQueryKey}' to a query of your own.");
+
+        return $"Queue: {string.Join(", ", Queues)} AND Resolution: empty()";
     }
 }

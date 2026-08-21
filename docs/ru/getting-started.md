@@ -146,7 +146,7 @@ dotnet run --project src/Echelon.Web
 Задачи, их статусы, зависимости и иерархия приходят из трекера.
 
 - **Name**, **API URL** (`https://api.tracker.yandex.net`), **Access Token**.
-- **Type** - `yandextracker-webhook` (принимает вебхуки задач) или `yandextracker-poll` (без вебхука; открытые задачи перечитываются с **интервалом опроса**, который вы задаёте).
+- **Type** - `yandextracker-webhook` (принимает вебхуки задач) или `yandextracker-poll` (без вебхука; трекер опрашивается с **интервалом опроса**, который вы задаёте, поэтому poll-типу нужны ещё и **Queues to sweep** - без них искать негде и ни одна задача не будет найдена).
 - **Organization ID** - отправляется в заголовке `X-Org-Id` (Yandex Tracker).
 - **Closed statuses** - список статусов через запятую, означающих, что задача *завершена*; пусто -
   значения по умолчанию (`closed, cancelled, rejected, resolved`).
