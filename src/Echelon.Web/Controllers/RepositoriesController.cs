@@ -22,17 +22,27 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
     /// <summary>Registered repositories, by name.</summary>
     /// <param name="page">1-based page.</param>
     /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="name">Substring of the repository name; the grid's "name" column filter.</param>
+    /// <param name="externalId">Substring of the provider-side id; the grid's "external" column filter.</param>
+    /// <param name="connection">Substring of the VCS connection name; the grid's "connection" column filter.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <remarks>See <see cref="ListFilter"/> for why the filtering is here and not in the grid.</remarks>
     [HttpGet]
     public async Task<IActionResult> List(
-        [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken ct = default)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        [FromQuery] string? name = null,
+        [FromQuery] string? externalId = null,
+        [FromQuery] string? connection = null,
+        CancellationToken ct = default)
     {
         var paging = Paging.From(page, pageSize);
-        var total = await db.Repositories.CountAsync(ct);
+        var repositories = ListFilter.Apply(db.Repositories, name, externalId, connection);
+        var total = await repositories.CountAsync(ct);
 
         // OrderBy is required for paging to be stable: without it SQL Server may return rows
         // in any order, so entries can repeat or vanish between pages.
-        var items = await db.Repositories
+        var items = await repositories
             .OrderBy(r => r.Name).ThenBy(r => r.Id)
             .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name, r.TrackerConnectionId, TrackerConnectionName = r.TrackerConnection != null ? r.TrackerConnection.Name : null })
             .Skip(paging.Skip).Take(paging.PageSize)

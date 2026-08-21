@@ -73,12 +73,16 @@ public class ApiService(HttpClient http)
     /// <param name="page">1-based page.</param>
     /// <param name="pageSize">Rows per page.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <summary>A page of deployable work: the filter bar above the grid, plus its column filter boxes.</summary>
     public Task<WorkItemsResult> GetWorkItemsAsync(
         Guid? environmentId = null, string? state = null, string? search = null,
+        string? taskKey = null, string? repository = null, string? connection = null, string? branch = null,
         int page = 1, int pageSize = 50, CancellationToken ct = default) =>
         GetAsync<WorkItemsResult>(
-            $"api/work-items?environmentId={environmentId}&state={Uri.EscapeDataString(state ?? "")}"
-            + $"&search={Uri.EscapeDataString(search ?? "")}&page={page}&pageSize={pageSize}", ct);
+            $"api/work-items?{Query(
+                ("environmentId", environmentId), ("state", state), ("search", search),
+                ("taskKey", taskKey), ("repository", repository), ("connection", connection), ("branch", branch),
+                ("page", page), ("pageSize", pageSize))}", ct);
 
     /// <summary>
     /// The labels merge requests actually carry, so a readiness rule can be built from real values
@@ -111,8 +115,13 @@ public class ApiService(HttpClient http)
 
     // ---- VCS connections ------------------------------------------------------
 
-    public Task<PagedResult<VcsConnectionDto>> GetVcsConnectionsAsync(int page = 1, CancellationToken ct = default) =>
-        GetAsync<PagedResult<VcsConnectionDto>>($"api/vcs-connections?page={page}&pageSize=50", ct);
+    /// <summary>A page of VCS connections, narrowed by the grid's column filter boxes.</summary>
+    public Task<PagedResult<VcsConnectionDto>> GetVcsConnectionsAsync(
+        int page = 1, int pageSize = 50,
+        string? name = null, string? type = null, string? apiUrl = null,
+        CancellationToken ct = default) =>
+        GetAsync<PagedResult<VcsConnectionDto>>(
+            $"api/vcs-connections?{Query(("page", page), ("pageSize", pageSize), ("name", name), ("type", type), ("apiUrl", apiUrl))}", ct);
 
     /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateVcsConnectionAsync(
@@ -160,8 +169,13 @@ public class ApiService(HttpClient http)
 
     // ---- tracker connections --------------------------------------------------
 
-    public Task<PagedResult<TrackerConnectionDto>> GetTrackerConnectionsAsync(int page = 1, CancellationToken ct = default) =>
-        GetAsync<PagedResult<TrackerConnectionDto>>($"api/tracker-connections?page={page}&pageSize=50", ct);
+    /// <summary>A page of tracker connections, narrowed by the grid's column filter boxes.</summary>
+    public Task<PagedResult<TrackerConnectionDto>> GetTrackerConnectionsAsync(
+        int page = 1, int pageSize = 50,
+        string? name = null, string? type = null, string? apiUrl = null,
+        CancellationToken ct = default) =>
+        GetAsync<PagedResult<TrackerConnectionDto>>(
+            $"api/tracker-connections?{Query(("page", page), ("pageSize", pageSize), ("name", name), ("type", type), ("apiUrl", apiUrl))}", ct);
 
     /// <param name="settings">Provider-specific settings, keyed as that provider's schema declares them.</param>
     public Task CreateTrackerConnectionAsync(
@@ -197,8 +211,13 @@ public class ApiService(HttpClient http)
 
     // ---- repositories ---------------------------------------------------------
 
-    public Task<PagedResult<RepositoryDto>> GetRepositoriesAsync(int page = 1, CancellationToken ct = default) =>
-        GetAsync<PagedResult<RepositoryDto>>($"api/repositories?page={page}&pageSize=50", ct);
+    /// <summary>A page of repositories, narrowed by the grid's column filter boxes.</summary>
+    public Task<PagedResult<RepositoryDto>> GetRepositoriesAsync(
+        int page = 1, int pageSize = 50,
+        string? name = null, string? externalId = null, string? connection = null,
+        CancellationToken ct = default) =>
+        GetAsync<PagedResult<RepositoryDto>>(
+            $"api/repositories?{Query(("page", page), ("pageSize", pageSize), ("name", name), ("externalId", externalId), ("connection", connection))}", ct);
 
     public Task CreateRepositoryAsync(string name, string externalId, Guid connectionId, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/repositories",
@@ -229,8 +248,14 @@ public class ApiService(HttpClient http)
 
     // ---- tasks (per-task rollout plans) ---------------------------------------
 
-    public Task<PagedResult<TaskListItemDto>> GetTasksAsync(int page = 1, CancellationToken ct = default) =>
-        GetAsync<PagedResult<TaskListItemDto>>($"api/tasks?page={page}&pageSize=50", ct);
+    /// <summary>A page of tasks, narrowed by the grid's column filter boxes.</summary>
+    /// <remarks>The filters go to the server because the page here is one slice of the list; see the API.</remarks>
+    public Task<PagedResult<TaskListItemDto>> GetTasksAsync(
+        int page = 1, int pageSize = 50,
+        string? key = null, string? title = null, string? status = null,
+        CancellationToken ct = default) =>
+        GetAsync<PagedResult<TaskListItemDto>>(
+            $"api/tasks?{Query(("page", page), ("pageSize", pageSize), ("key", key), ("title", title), ("status", status))}", ct);
 
     /// <summary>The task itself - its parent and subtasks - which exists whether or not a plan does.</summary>
     public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>
@@ -421,11 +446,14 @@ public class ApiService(HttpClient http)
 
     public Task<PagedResult<RequestAuditEntryDto>> GetRequestAuditAsync(
         int minutes, string? status, bool notableOnly, bool includeAuditTraffic, string? search,
-        int page = 1, CancellationToken ct = default) =>
+        string? method = null, string? path = null, string? user = null,
+        int page = 1, int pageSize = 50, CancellationToken ct = default) =>
         GetAsync<PagedResult<RequestAuditEntryDto>>(
-            $"api/request-audit?minutes={minutes}&status={Uri.EscapeDataString(status ?? "")}"
-            + $"&notableOnly={notableOnly}&includeAuditTraffic={includeAuditTraffic}"
-            + $"&search={Uri.EscapeDataString(search ?? "")}&page={page}&pageSize=50", ct);
+            $"api/request-audit?{Query(
+                ("minutes", minutes), ("status", status), ("notableOnly", notableOnly),
+                ("includeAuditTraffic", includeAuditTraffic), ("search", search),
+                ("method", method), ("path", path), ("user", user),
+                ("page", page), ("pageSize", pageSize))}", ct);
 
     public Task<RequestAuditSummaryDto> GetRequestAuditSummaryAsync(int minutes, CancellationToken ct = default) =>
         GetAsync<RequestAuditSummaryDto>($"api/request-audit/summary?minutes={minutes}", ct);
@@ -462,6 +490,17 @@ public class ApiService(HttpClient http)
     {
         Converters = { new JsonStringEnumConverter() }
     };
+
+    /// <summary>Builds a query string, dropping every parameter that is null or blank.</summary>
+    /// <remarks>
+    /// An empty parameter is not the same as an absent one to a model binder, and the hand-built
+    /// strings this replaced sent <c>status=</c> and <c>search=</c> on every call - which is also how
+    /// pageSize came to be hardcoded at 50 in half of them.
+    /// </remarks>
+    private static string Query(params (string Key, object? Value)[] parts) =>
+        string.Join("&", parts
+            .Where(p => p.Value?.ToString() is { Length: > 0 })
+            .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value!.ToString()!)}"));
 
     private async Task<T> GetAsync<T>(string url, CancellationToken ct)
     {

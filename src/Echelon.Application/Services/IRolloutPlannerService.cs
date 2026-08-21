@@ -12,14 +12,15 @@ namespace Echelon.Application.Services;
 public interface IRolloutPlannerService
 {
     /// <summary>Lists tasks (a page of them), each with enough to decide whether to roll it out.</summary>
-    /// <param name="page">1-based page number.</param>
-    /// <param name="pageSize">Page size.</param>
+    /// <param name="query">Which page to read, and the column filters narrowing it.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(TaskListQuery query, CancellationToken ct = default);
 
-    /// <summary>Total number of tasks, for pagination.</summary>
+    /// <summary>How many tasks match the query, for pagination. Takes the same query as the page, so
+    /// a filtered list can never be counted against the unfiltered table.</summary>
+    /// <param name="query">The filters to count under; the page fields are ignored.</param>
     /// <param name="ct">Cancellation token.</param>
-    Task<int> CountTasksAsync(CancellationToken ct = default);
+    Task<int> CountTasksAsync(TaskListQuery query, CancellationToken ct = default);
 
     /// <summary>
     /// One task's own facts and its place in the hierarchy, or <c>null</c> when there is no such task.

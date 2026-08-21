@@ -10,6 +10,21 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- **The app flashed white on every refresh, and again in the wrong theme.** Two causes. The boot script
+  was left on its own defaults (`md3-expressive`, `md3-violet`), so a first paint used a theme the app
+  then replaced; and nothing painted a background before Blazor started - the VisualStudio theme injects
+  its stylesheet at runtime, so every `--flare-*` token silently fell back to white, which in dark mode
+  is the one colour the app never shows. The boot script is now given this app's defaults, `<html>`
+  carries the theme's own surface colour from the first frame, and the splash sits beside the app root
+  instead of inside it, where Blazor used to replace it before the theme was ready.
+- **The PWA still called itself Release Orchestrator.** The installed app's short name was
+  `ReleaseOrch`, which is what a phone or a task switcher shows under the icon. Every page title also
+  ends in the product name now, so a tab or an installed window says which app it is.
+- **Sixteen API error messages were English whatever the language.** They were written as literals
+  while the rest of the API answered through its resource file, so the same form could refuse you in
+  Russian on one field and English on the next. Also: Blazor's own unhandled-error bar, which sits
+  outside the component tree and cannot read a resource file - it now carries both languages and
+  `<html lang>` picks one, which the language service sets along with the culture.
 - **A poll-mode tracker connection never produced a single task.** The sweep read the open tasks out of
   the local database and asked the tracker to re-read each one, which cannot bootstrap: a fresh install
   has no tasks, a polled connection receives no webhook, and nothing else creates one - so the sweep ran
@@ -19,6 +34,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- **Column filters and a rows-per-page chooser on every paged list** - tasks, work, repositories, both
+  connection lists and the request audit. The filters are applied by the server and counted with the
+  same query that reads the page, because each screen holds one page: filtering in the browser would
+  search the slice and present the answer as though it had searched the list. The grid now owns paging
+  as well, so the page number lives in one place instead of two.
 - **`ITrackerIssueSource`**, an optional tracker port for listing the open issues of a connection,
   `is`-checked by the poller exactly as `ITrackerDependencySource` is. A tracker that cannot be searched
   degrades to re-reading known tasks instead of failing. Keys only: every task still enters the database

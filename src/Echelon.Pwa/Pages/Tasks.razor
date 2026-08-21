@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inherits PageBase
 
-<PageTitle>@UiStrings.Tasks_Title</PageTitle>
+<AppTitle Title="@UiStrings.Tasks_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Tasks_Heading" />
@@ -10,82 +10,62 @@
     <PageAlerts Error="@Error" Success="@Success"
                 OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-    @if (_loading)
-    {
-        <FlareProgress Variant="ProgressVariant.Circular" />
-    }
-    else if (_tasks is null || _tasks.Items.Count == 0)
-    {
-        <FlareEmptyState Title="@UiStrings.Tasks_Empty_Title" Description="@UiStrings.Tasks_Empty_Description" />
-    }
-    else
-    {
-        @* Server-paged: the grid holds one page, so its own pager is off and the columns are not
-           sortable. Sorting 50 of N rows client-side reorders the slice while looking like it ordered
-           the whole list -- the wrong answer wearing the right one's clothes. *@
-        <FlareDataGrid TItem="TaskListItemDto" Items="_tasks.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-            <Columns>
-                <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
-                             Field="@(t => (object?)t.ExternalId)" />
-                <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
-                             Field="@(t => (object?)t.Title)" />
-                <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
-                             Field="@(t => (object?)t.Status)" />
-                <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
-                             Field="@(t => (object?)t.MergeRequestCount)" Align="ColumnAlign.End" />
-                <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
-                    <Template>
-                        @if (context.HasActivePlan)
-                        {
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success" Label="@UiStrings.Tasks_PlanBuilt" />
-                        }
-                        else
-                        {
-                            <FlareChip Size="ChipSize.Sm" Label="@UiStrings.Tasks_PlanNone" />
-                        }
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="TaskListItemDto" Id="actions" Title="" Align="ColumnAlign.End">
-                    <Template>
-                        <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Tasks_Open</FlareButton>
-                    </Template>
-                </FlareColumn>
-            </Columns>
-        </FlareDataGrid>
-
-        @* This page is server-paged and had no pager, so past the first 50 tasks the rest were simply
-           unreachable - and nothing said so, which is the worse half: the list looked complete. *@
-        @if (_tasks.Total > _tasks.PageSize)
-        {
-            <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
-                             TotalItems="_tasks.Total" PageSize="_tasks.PageSize" ShowInfo />
-        }
-    }
+    @* Server-paged through the grid's own provider: the pager, the rows-per-page chooser and the
+       column filter boxes arrive as one request, so a filter narrows the whole list rather than the
+       page this screen happens to hold. Sorting stays off for that same reason - the server orders by
+       key, and re-ordering 25 rows of N would look like ordering N. *@
+    <FlareDataGrid TItem="TaskListItemDto" ItemsProvider="LoadPage"
+                   PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                   FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                   Dense="true" Striped="true" Hoverable="true">
+        <EmptyStateContent>
+            <FlareEmptyState Title="@UiStrings.Tasks_Empty_Title" Description="@UiStrings.Tasks_Empty_Description" />
+        </EmptyStateContent>
+        <Columns>
+            <FlareColumn TItem="TaskListItemDto" Id="key" Title="@UiStrings.Tasks_Col_Key"
+                         Field="@(t => (object?)t.ExternalId)" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="title" Title="@UiStrings.Tasks_Col_Title"
+                         Field="@(t => (object?)t.Title)" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="status" Title="@UiStrings.Tasks_Col_Status"
+                         Field="@(t => (object?)t.Status)" Filterable="true" />
+            <FlareColumn TItem="TaskListItemDto" Id="mrs" Title="@UiStrings.Tasks_Col_Mrs"
+                         Field="@(t => (object?)t.MergeRequestCount)" Align="ColumnAlign.End" />
+            <FlareColumn TItem="TaskListItemDto" Id="plan" Title="@UiStrings.Tasks_Col_Plan">
+                <Template>
+                    @if (context.HasActivePlan)
+                    {
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Success" Label="@UiStrings.Tasks_PlanBuilt" />
+                    }
+                    else
+                    {
+                        <FlareChip Size="ChipSize.Sm" Label="@UiStrings.Tasks_PlanNone" />
+                    }
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="TaskListItemDto" Id="actions" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareButton Size="ButtonSize.Sm" OnClick="@(() => Open(context.Id))">@UiStrings.Tasks_Open</FlareButton>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 </FlareStack>
 
 @code {
     [Inject] NavigationManager Nav { get; set; } = default!;
 
-    PagedResult<TaskListItemDto>? _tasks;
-    bool _loading = true;
-    int _page = 1;
+    /// <summary>One page of tasks, narrowed by whatever the column filter boxes hold.</summary>
+    async Task<DataGridResult<TaskListItemDto>> LoadPage(DataGridRequest request) =>
+        await LoadPageAsync(async () =>
+        {
+            var page = await Api.GetTasksAsync(
+                request.ApiPage(), request.PageSize,
+                key: request.Filter("key"),
+                title: request.Filter("title"),
+                status: request.Filter("status"));
 
-    int TotalPages => _tasks is null ? 1 : (int)Math.Ceiling(_tasks.Total / (double)_tasks.PageSize);
-
-    protected override async Task OnInitializedAsync() => await Load();
-
-    async Task Load()
-    {
-        _loading = true;
-        await RunAsync(async () => _tasks = await Api.GetTasksAsync(_page));
-        _loading = false;
-    }
-
-    async Task OnPageChanged(int page)
-    {
-        _page = page;
-        await Load();
-    }
+            return new DataGridResult<TaskListItemDto>(page.Items, page.Total);
+        });
 
     void Open(Guid id) => Nav.NavigateTo($"/tasks/{id}");
 }

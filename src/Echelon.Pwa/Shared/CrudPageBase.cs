@@ -1,54 +1,58 @@
+using Flare.Components;
 using Echelon.Pwa.Models;
 using Echelon.Pwa.Resources;
 
 namespace Echelon.Pwa.Shared;
 
 /// <summary>
-/// The paged list + modal-editor shape shared by the admin pages. Each page supplies its fetch
-/// call and its own markup; load, paging, save and delete flows live here so they cannot drift
+/// The paged list + modal-editor shape shared by the admin pages. Each page supplies its fetch call
+/// and its own markup; loading, paging, filtering, save and delete live here so they cannot drift
 /// apart again.
 /// </summary>
+/// <remarks>
+/// The grid owns the page number, the page size and the column filter boxes, and asks for a page
+/// through <see cref="LoadPage"/>. That is why the page state that used to live here is gone: two
+/// copies of "which page are we on" - one in the pager, one in the page - is how a filtered list ends
+/// up asking for page 4 of a result that now has two.
+/// </remarks>
 public abstract class CrudPageBase<TItem> : PageBase
 {
-    protected PagedResult<TItem>? Result;
-    protected bool Loading = true;
+    /// <summary>The grid, so a save or a delete can make it re-read what it is showing.</summary>
+    protected FlareDataGrid<TItem>? Grid;
+
+    /// <summary>Which page the grid is on, 0-based. Kept so a reload returns to it.</summary>
+    protected int CurrentPageIndex;
+
     protected bool ShowModal;
     protected bool Saving;
-    protected int Page = 1;
 
-    /// <summary>Page count for FlarePagination, which counts pages where the API reports rows.</summary>
-    protected int TotalPages => Result is null || Result.PageSize <= 0
-        ? 1
-        : (int)Math.Ceiling(Result.Total / (double)Result.PageSize);
+    /// <summary>Reads one page from the API, honouring the request's paging and column filters.</summary>
+    /// <param name="request">What the grid is asking for.</param>
+    protected abstract Task<PagedResult<TItem>> FetchPageAsync(DataGridRequest request);
 
-    protected abstract Task<PagedResult<TItem>> FetchPageAsync(int page);
+    /// <summary>The grid's items provider: one page, or an empty one with the failure on screen.</summary>
+    /// <param name="request">What the grid is asking for.</param>
+    protected Task<DataGridResult<TItem>> LoadPage(DataGridRequest request) =>
+        LoadPageAsync(async () =>
+        {
+            var page = await FetchPageAsync(request);
+            return new DataGridResult<TItem>(page.Items, page.Total);
+        });
 
-    protected override Task OnInitializedAsync() => LoadPage(1);
+    /// <summary>Remembers the page the grid moved to, so a reload can come back to it.</summary>
+    /// <param name="pageIndex">0-based page index, as the grid counts.</param>
+    protected void OnGridPageChanged(int pageIndex) => CurrentPageIndex = pageIndex;
+
+    /// <summary>Re-reads the page the grid is on - what a save or a delete has to do.</summary>
+    protected async Task ReloadAsync()
+    {
+        if (Grid is not null) await Grid.GoToPageAsync(CurrentPageIndex);
+    }
 
     protected void CloseModal() => ShowModal = false;
 
     /// <summary>FlareDialog reports its own dismissals (Escape, scrim click) through here.</summary>
     protected void OnDialogVisibleChanged(bool visible) => ShowModal = visible;
-
-    protected async Task LoadPage(int page)
-    {
-        Loading = true;
-        Error = null;
-        try
-        {
-            Result = await FetchPageAsync(page);
-            // Only after a successful fetch, so the pager keeps describing the rows on screen.
-            Page = page;
-        }
-        catch (Exception ex)
-        {
-            Error = Describe(ex);
-        }
-        finally
-        {
-            Loading = false;
-        }
-    }
 
     /// <summary>
     /// Whether the editor is missing something required. Overridden by a page whose dialog can be
@@ -61,7 +65,8 @@ public abstract class CrudPageBase<TItem> : PageBase
     /// </remarks>
     protected virtual bool IsEditorIncomplete => false;
 
-    /// <summary>Saves via <paramref name="save"/>, then closes the modal and reloads the page on success.</summary>
+    /// <summary>Saves via <paramref name="save"/>, then closes the modal and reloads on success.</summary>
+    /// <param name="save">The call that persists the editor.</param>
     /// <param name="success">Notice to show; the generic "Saved." when omitted. Not a default
     /// parameter value: a resource lookup is not a compile-time constant.</param>
     protected async Task SaveAsync(Func<Task> save, string? success = null)
@@ -77,16 +82,17 @@ public abstract class CrudPageBase<TItem> : PageBase
         if (!saved) return;
 
         ShowModal = false;
-        await LoadPage(Page);
+        await ReloadAsync();
     }
 
     /// <param name="what">Names the row in the prompt, e.g. "connection 'gitlab-prod'".</param>
+    /// <param name="delete">The call that removes it.</param>
     protected async Task DeleteAsync(string what, Func<Task> delete)
     {
         if (!await ConfirmAsync(
                 UiStrings.Confirm_Delete_Title,
                 string.Format(UiStrings.Confirm_Delete_Message, what))) return;
 
-        if (await RunAsync(delete, UiStrings.Common_Deleted)) await LoadPage(Page);
+        if (await RunAsync(delete, UiStrings.Common_Deleted)) await ReloadAsync();
     }
 }

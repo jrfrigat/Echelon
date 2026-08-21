@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inherits CrudPageBase<RepositoryDto>
 
-<PageTitle>@UiStrings.Repos_Title</PageTitle>
+<AppTitle Title="@UiStrings.Repos_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Repos_Title">
@@ -17,35 +17,28 @@
     <PageAlerts Error="@Error" Success="@Success"
                 OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-    @if (Loading)
-    {
-        <FlareProgress Variant="ProgressVariant.Circular" />
-    }
-    else if (Result is not null)
-    {
-        <FlareDataGrid TItem="RepositoryDto" Items="Result.Items" ShowPager="false">
-            <Columns>
-                <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Common_Name" Field="@(r => r.Name)" />
-                <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Repos_Col_ExternalId" Field="@(r => r.ExternalId)" />
-                <FlareColumn TItem="RepositoryDto" Title="@UiStrings.Repos_Col_Connection" Field="@(r => r.ConnectionName)" />
-                <FlareColumn TItem="RepositoryDto" Title="" Align="ColumnAlign.End">
-                    <Template>
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
-                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                            </FlareIconButton>
-                        </FlareStack>
-                    </Template>
-                </FlareColumn>
-            </Columns>
-        </FlareDataGrid>
-
-        @if (Result.Total > Result.PageSize)
-        {
-            <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
-                             TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
-        }
-    }
+    @* The grid reads its own pages: the pager, the rows-per-page chooser and the column filter
+       boxes come back as one request, and the server applies them - this screen only ever holds one
+       page, so filtering here would search the slice and look like it had searched the list. *@
+    <FlareDataGrid TItem="RepositoryDto" @ref="Grid" ItemsProvider="LoadPage" OnPageChanged="OnGridPageChanged"
+                   PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                   FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                   Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="RepositoryDto" Id="name" Title="@UiStrings.Common_Name" Field="@(r => r.Name)" Filterable="true" />
+            <FlareColumn TItem="RepositoryDto" Id="external" Title="@UiStrings.Repos_Col_ExternalId" Field="@(r => r.ExternalId)" Filterable="true" />
+            <FlareColumn TItem="RepositoryDto" Id="connection" Title="@UiStrings.Repos_Col_Connection" Field="@(r => r.ConnectionName)" Filterable="true" />
+            <FlareColumn TItem="RepositoryDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 </FlareStack>
 
 <FlareDialog Visible="ShowModal" Title="@UiStrings.Repos_New" VisibleChanged="OnDialogVisibleChanged">
@@ -89,8 +82,13 @@
                              || string.IsNullOrWhiteSpace(_fExternalId)
                              || _fConnectionId == Guid.Empty;
 
-    protected override Task<PagedResult<RepositoryDto>> FetchPageAsync(int page) =>
-        Api.GetRepositoriesAsync(page);
+    /// <inheritdoc/>
+    protected override Task<PagedResult<RepositoryDto>> FetchPageAsync(DataGridRequest request) =>
+        Api.GetRepositoriesAsync(
+            request.ApiPage(), request.PageSize,
+            name: request.Filter("name"),
+            externalId: request.Filter("external"),
+            connection: request.Filter("connection"));
 
     string ConnectionLabel(Guid id)
     {

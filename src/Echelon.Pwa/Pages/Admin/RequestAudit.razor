@@ -5,7 +5,7 @@
 @* Two views of one window: which endpoints are misbehaving, then the individual requests. The
    summary is first because the first question is always "what is broken", not "what happened". *@
 
-<PageTitle>@UiStrings.Audit_Title</PageTitle>
+<AppTitle Title="@UiStrings.Audit_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Audit_Title" />
@@ -119,72 +119,68 @@
         }
 
         <FlareText Typo="TypographyScale.TitleMedium">@UiStrings.Audit_Requests</FlareText>
-        @if (_result is null || _result.Items.Count == 0)
-        {
-            <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
-        }
-        else
-        {
-            @* Server-paged, with its own FlarePagination below: the grid must not page as well, and its
-               columns are not sortable because a client sort would reorder only the current page while
-               appearing to order the whole window. *@
-            <FlareDataGrid TItem="RequestAuditEntryDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-                <Columns>
-                    @* Raw DateTime so the sort is chronological rather than lexicographic on the rendered text. *@
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="time" Title="@UiStrings.Audit_Col_Time"
-                                 Field="@(e => (object?)e.StartedAt)" />
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="method" Title="@UiStrings.Audit_Col_Method"
-                                 Field="@(e => (object?)e.Method)" />
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="path" Title="@UiStrings.Audit_Col_Path"
-                                 Field="@(e => (object?)e.Path)">
-                        <Template>
-                            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
-                                <FlareText Element="span">@context.Path</FlareText>
-                                @if (context.Kind == "RoutingMiss")
-                                {
-                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
-                                               Title="@UiStrings.Audit_RoutingMiss_Tooltip"
-                                               Label="@UiStrings.Audit_RoutingMiss" />
-                                }
-                                @if (context.ExceptionType is { Length: > 0 })
-                                {
-                                    <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
-                                               Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)"
-                                               Label="@context.ExceptionType" />
-                                }
-                            </FlareStack>
-                        </Template>
-                    </FlareColumn>
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
-                                 Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
-                        <Template>
-                            <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)" Label="@context.StatusCode.ToString()" />
-                        </Template>
-                    </FlareColumn>
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"
-                                 Field="@(e => (object?)e.DurationMs)" Align="ColumnAlign.End">
-                        <Template>@context.DurationMs ms</Template>
-                    </FlareColumn>
-                    <FlareColumn TItem="RequestAuditEntryDto" Id="user" Title="@UiStrings.Audit_Col_User"
-                                 Field="@(e => (object?)UserLabel(e))" />
-                </Columns>
+        @* Server-paged through the grid's provider: pager, rows-per-page and the column filter boxes
+           are one request the server answers. Not sortable, for the reason the filters are not applied
+           here either - the page is a slice, and ordering it would look like ordering the window. *@
+        <FlareDataGrid TItem="RequestAuditEntryDto" @ref="_grid" ItemsProvider="LoadPage"
+                       OnPageChanged="@(p => _pageIndex = p)"
+                       PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                       FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                       Dense="true" Striped="true" Hoverable="true">
+            <EmptyStateContent>
+                <FlareEmptyState Title="@UiStrings.Audit_Empty_Title" Description="@UiStrings.Audit_Empty_Description" />
+            </EmptyStateContent>
+            <Columns>
+                @* Raw DateTime so the sort is chronological rather than lexicographic on the rendered text. *@
+                <FlareColumn TItem="RequestAuditEntryDto" Id="time" Title="@UiStrings.Audit_Col_Time"
+                             Field="@(e => (object?)e.StartedAt)" />
+                <FlareColumn TItem="RequestAuditEntryDto" Id="method" Title="@UiStrings.Audit_Col_Method"
+                             Field="@(e => (object?)e.Method)" Filterable="true" />
+                <FlareColumn TItem="RequestAuditEntryDto" Id="path" Title="@UiStrings.Audit_Col_Path"
+                             Field="@(e => (object?)e.Path)" Filterable="true">
+                    <Template>
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                            <FlareText Element="span">@context.Path</FlareText>
+                            @if (context.Kind == "RoutingMiss")
+                            {
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning"
+                                           Title="@UiStrings.Audit_RoutingMiss_Tooltip"
+                                           Label="@UiStrings.Audit_RoutingMiss" />
+                            }
+                            @if (context.ExceptionType is { Length: > 0 })
+                            {
+                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Error"
+                                           Title="@string.Format(UiStrings.Audit_Correlation_Tooltip, context.CorrelationId)"
+                                           Label="@context.ExceptionType" />
+                            }
+                        </FlareStack>
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="RequestAuditEntryDto" Id="status" Title="@UiStrings.Audit_Col_Status"
+                             Field="@(e => (object?)e.StatusCode)" Align="ColumnAlign.End">
+                    <Template>
+                        <FlareChip Size="ChipSize.Sm" Color="@StatusColor(context.StatusCode)" Label="@context.StatusCode.ToString()" />
+                    </Template>
+                </FlareColumn>
+                <FlareColumn TItem="RequestAuditEntryDto" Id="duration" Title="@UiStrings.Audit_Col_Duration"
+                             Field="@(e => (object?)e.DurationMs)" Align="ColumnAlign.End">
+                    <Template>@context.DurationMs ms</Template>
+                </FlareColumn>
+                <FlareColumn TItem="RequestAuditEntryDto" Id="user" Title="@UiStrings.Audit_Col_User"
+                             Field="@(e => (object?)UserLabel(e))" Filterable="true" />
+            </Columns>
             </FlareDataGrid>
-
-            @if (_result.Total > _result.PageSize)
-            {
-                <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
-                                 TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
-            }
-        }
     }
 </FlareStack>
 
 @code {
-    PagedResult<RequestAuditEntryDto>? _result;
+    FlareDataGrid<RequestAuditEntryDto>? _grid;
     RequestAuditSummaryDto? _summary;
     bool _loading = true;
     bool _busy;
-    int _page = 1;
+
+    // The page the grid is on, so applying the filter bar can send it back to the first one.
+    int _pageIndex;
 
     int _minutes = 60;
     string _status = "";
@@ -192,37 +188,39 @@
     bool _notableOnly = true;
     bool _includeAuditTraffic;
 
-    int TotalPages => _result is null || _result.PageSize == 0
-        ? 1
-        : (int)Math.Ceiling(_result.Total / (double)_result.PageSize);
+    protected override async Task OnInitializedAsync() => await LoadSummaryAsync();
 
-    protected override async Task OnInitializedAsync() => await Load();
-
-    async Task Load()
+    /// <summary>The traffic summary above the grid. The grid reads its own rows through LoadPage.</summary>
+    async Task LoadSummaryAsync()
     {
-        await RunAsync(async () =>
-        {
-            _summary = await Api.GetRequestAuditSummaryAsync(_minutes);
-            _result = await Api.GetRequestAuditAsync(
-                _minutes, string.IsNullOrEmpty(_status) ? null : _status,
-                _notableOnly, _includeAuditTraffic,
-                string.IsNullOrWhiteSpace(_search) ? null : _search.Trim(), _page);
-        });
+        await RunAsync(async () => _summary = await Api.GetRequestAuditSummaryAsync(_minutes));
         _loading = false;
     }
 
+    /// <summary>One page of entries: the filter bar above, AND the column filter boxes.</summary>
+    async Task<DataGridResult<RequestAuditEntryDto>> LoadPage(DataGridRequest request) =>
+        await LoadPageAsync(async () =>
+        {
+            var page = await Api.GetRequestAuditAsync(
+                _minutes, string.IsNullOrEmpty(_status) ? null : _status,
+                _notableOnly, _includeAuditTraffic,
+                string.IsNullOrWhiteSpace(_search) ? null : _search.Trim(),
+                method: request.Filter("method"),
+                path: request.Filter("path"),
+                user: request.Filter("user"),
+                page: request.ApiPage(),
+                pageSize: request.PageSize);
+
+            return new DataGridResult<RequestAuditEntryDto>(page.Items, page.Total);
+        });
+
+    /// <summary>Applies the filter bar: a new summary, and the grid back to its first page.</summary>
     async Task Reload()
     {
         _busy = true;
-        _page = 1;
-        await Load();
+        await LoadSummaryAsync();
+        if (_grid is not null) await _grid.GoToPageAsync(0);
         _busy = false;
-    }
-
-    async Task OnPageChanged(int page)
-    {
-        _page = page;
-        await Load();
     }
 
     string WindowLabel(int minutes) => minutes switch

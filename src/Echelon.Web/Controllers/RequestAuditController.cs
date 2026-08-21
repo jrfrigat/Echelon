@@ -52,6 +52,9 @@ public class RequestAuditController(
     /// </param>
     /// <param name="search">Free text matched against the path and route pattern.</param>
     /// <param name="page">1-based page.</param>
+    /// <param name="method">Substring of the HTTP method; the grid's "method" column filter.</param>
+    /// <param name="path">Substring of the request path; the grid's "path" column filter.</param>
+    /// <param name="user">Substring of the user name or id; the grid's "user" column filter.</param>
     /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
     /// <param name="ct">Cancellation token.</param>
     [HttpGet]
@@ -61,12 +64,15 @@ public class RequestAuditController(
         [FromQuery] bool notableOnly = true,
         [FromQuery] bool includeAuditTraffic = false,
         [FromQuery] string? search = null,
+        [FromQuery] string? method = null,
+        [FromQuery] string? path = null,
+        [FromQuery] string? user = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = Paging.DefaultPageSize,
         CancellationToken ct = default)
     {
         var paging = Paging.From(page, pageSize);
-        var query = Filtered(minutes, status, notableOnly, includeAuditTraffic, search);
+        var query = Filtered(minutes, status, notableOnly, includeAuditTraffic, search, method, path, user);
 
         var total = await query.CountAsync(ct);
 
@@ -149,7 +155,8 @@ public class RequestAuditController(
     }
 
     private IQueryable<Echelon.Infrastructure.Archive.Entities.RequestAuditEntry> Filtered(
-        int minutes, string? status, bool notableOnly, bool includeAuditTraffic, string? search)
+        int minutes, string? status, bool notableOnly, bool includeAuditTraffic, string? search,
+        string? method = null, string? path = null, string? user = null)
     {
         var from = Now.AddMinutes(-Math.Clamp(minutes, 1, 10_080));
         var query = db.RequestAuditEntries.Where(e => e.StartedAt >= from);
@@ -171,6 +178,14 @@ public class RequestAuditController(
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(e => e.Path.Contains(search) || e.RoutePattern.Contains(search));
+
+        // The grid's column filter boxes, AND-ed with everything above. Lowercased on both sides for
+        // the reason ListFilter gives: SQL Server ignores case by default and PostgreSQL does not.
+        if (ListFilter.Needle(method) is { } m) query = query.Where(e => e.Method.ToLower().Contains(m));
+        if (ListFilter.Needle(path) is { } p) query = query.Where(e => e.Path.ToLower().Contains(p));
+        if (ListFilter.Needle(user) is { } u)
+            query = query.Where(e => (e.UserName != null && e.UserName.ToLower().Contains(u))
+                                     || (e.UserId != null && e.UserId.ToLower().Contains(u)));
 
         return query;
     }

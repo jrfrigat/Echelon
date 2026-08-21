@@ -1169,6 +1169,13 @@ namespace Echelon.Pwa.Resources {
             }
         }
 
+        /// <summary>Looks up a localized string similar to Filter.</summary>
+        public static string Common_Filter {
+            get {
+                return ResourceManager.GetString("Common_Filter", resourceCulture);
+            }
+        }
+
         /// <summary>Looks up a localized string similar to Merge requests.</summary>
 
         /// <summary>Looks up a localized string for Work_Title.</summary>

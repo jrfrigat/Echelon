@@ -14,7 +14,7 @@
    production another, another VCS a label. Pick the environment and the rows say where they stand
    against exactly the rule the launch gate will apply. *@
 
-<PageTitle>@UiStrings.Work_Title</PageTitle>
+<AppTitle Title="@UiStrings.Work_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Work_Heading" />
@@ -40,120 +40,111 @@
                     </FlareButton>
                 </div>
                 <FlareSpacer />
-                @if (_result is not null)
-                {
-                    <div style="margin-top:1.5rem;">
-                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
-                            @string.Format(UiStrings.Work_Total, _result.Total)
-                        </FlareText>
-                    </div>
-                }
+                <div style="margin-top:1.5rem;">
+                    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                        @string.Format(UiStrings.Work_Total, _total)
+                    </FlareText>
+                </div>
             </FlareStack>
         </FlareCardContent>
     </FlareCard>
 
-    @if (_result is { Truncated: true })
+    @if (_truncated)
     {
         @* Said, not hidden: past the scan cap this list is a slice, and a slice that looks complete
            is the failure worth avoiding. *@
         <FlareAlert Severity="AlertSeverity.Warning">@UiStrings.Work_Truncated</FlareAlert>
     }
 
-    @if (_loading)
-    {
-        <FlareProgress Variant="ProgressVariant.Linear" />
-    }
-    else if (_result is null || _result.Items.Count == 0)
-    {
-        <FlareEmptyState Title="@UiStrings.Work_Empty_Title" Description="@UiStrings.Work_Empty_Description" />
-    }
-    else
-    {
-        <FlareDataGrid TItem="WorkItemDto" Items="_result.Items" Dense="true" Striped="true" Hoverable="true" ShowPager="false">
-            <Columns>
-                <FlareColumn TItem="WorkItemDto" Id="task" Title="@UiStrings.Work_Col_Task">
-                    <Template>
-                        @if (string.IsNullOrEmpty(context.TaskKey))
+    @* Server-paged through the grid's provider, so the pager, the rows-per-page chooser and the
+       column filter boxes are one request. The boxes narrow the same list the filter bar above does -
+       they are AND-ed with it - and both are applied by the server, because this page holds one page. *@
+    <FlareDataGrid TItem="WorkItemDto" @ref="_grid" ItemsProvider="LoadPage"
+                   PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                   FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                   Dense="true" Striped="true" Hoverable="true">
+        <EmptyStateContent>
+            <FlareEmptyState Title="@UiStrings.Work_Empty_Title" Description="@UiStrings.Work_Empty_Description" />
+        </EmptyStateContent>
+        <Columns>
+            <FlareColumn TItem="WorkItemDto" Id="task" Title="@UiStrings.Work_Col_Task" Filterable="true">
+                <Template>
+                    @if (string.IsNullOrEmpty(context.TaskKey))
+                    {
+                        @* The linking rule matched nothing, so this work is in no plan. That is
+                           the anomaly worth seeing, not a blank cell. *@
+                        <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Work_NoTask" />
+                    }
+                    else
+                    {
+                        <FlareCode>@context.TaskKey</FlareCode>
+                    }
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="WorkItemDto" Id="repo" Title="@UiStrings.Work_Col_Repository"
+                         Field="@(w => (object?)w.RepositoryName)" Filterable="true" />
+            <FlareColumn TItem="WorkItemDto" Id="carrier" Title="@UiStrings.Work_Col_Carrier" Filterable="true">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
+                        <FlareIconView Value="@(context.Kind == WorkItemKind.Branch
+                                                ? MaterialDesign3Icons.Regular.AccountTree
+                                                : MaterialDesign3Icons.Regular.CallMerge)" />
+                        <FlareCode>@(context.Kind == WorkItemKind.Branch ? context.Branch : $"!{context.Carrier}")</FlareCode>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="WorkItemDto" Id="state" Title="@UiStrings.Work_Col_State">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
+                        <FlareChip Size="ChipSize.Sm" Color="@StateColor(context.State)" Label="@StateLabel(context.State)" />
+                        @if (context.IsStatusManual)
                         {
-                            @* The linking rule matched nothing, so this work is in no plan. That is
-                               the anomaly worth seeing, not a blank cell. *@
-                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Warning" Label="@UiStrings.Work_NoTask" />
+                            <FlareChip Size="ChipSize.Sm" Color="FlareColor.Secondary" Label="@UiStrings.Work_Pinned" />
                         }
-                        else
-                        {
-                            <FlareCode>@context.TaskKey</FlareCode>
-                        }
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="WorkItemDto" Id="repo" Title="@UiStrings.Work_Col_Repository"
-                             Field="@(w => (object?)w.RepositoryName)" />
-                <FlareColumn TItem="WorkItemDto" Id="carrier" Title="@UiStrings.Work_Col_Carrier">
-                    <Template>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="WorkItemDto" Id="readiness" Title="@UiStrings.Work_Col_Readiness">
+                <Template>
+                    @if (_environmentId is null)
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">-</FlareText>
+                    }
+                    else if (context.Readiness is not { } readiness)
+                    {
+                        @* No merge request, so there are no signals to judge. "Cannot say", which
+                           is not the same as "not ready" and must not read as it. *@
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+                            @UiStrings.Work_Readiness_NoMr
+                        </FlareText>
+                    }
+                    else
+                    {
                         <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
-                            <FlareIconView Value="@(context.Kind == WorkItemKind.Branch
-                                                    ? MaterialDesign3Icons.Regular.AccountTree
-                                                    : MaterialDesign3Icons.Regular.CallMerge)" />
-                            <FlareCode>@(context.Kind == WorkItemKind.Branch ? context.Branch : $"!{context.Carrier}")</FlareCode>
-                        </FlareStack>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="WorkItemDto" Id="state" Title="@UiStrings.Work_Col_State">
-                    <Template>
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center">
-                            <FlareChip Size="ChipSize.Sm" Color="@StateColor(context.State)" Label="@StateLabel(context.State)" />
-                            @if (context.IsStatusManual)
+                            <FlareChip Size="ChipSize.Sm" Color="@ReadinessColor(readiness.Status)"
+                                       Label="@ReadinessLabel(readiness.Status)" />
+                            @* Naming what is missing turns "no" into an instruction. *@
+                            @foreach (var missing in readiness.MissingSignals)
                             {
-                                <FlareChip Size="ChipSize.Sm" Color="FlareColor.Secondary" Label="@UiStrings.Work_Pinned" />
+                                <FlareCode>@missing</FlareCode>
                             }
                         </FlareStack>
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="WorkItemDto" Id="readiness" Title="@UiStrings.Work_Col_Readiness">
-                    <Template>
-                        @if (_environmentId is null)
-                        {
-                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">-</FlareText>
-                        }
-                        else if (context.Readiness is not { } readiness)
-                        {
-                            @* No merge request, so there are no signals to judge. "Cannot say", which
-                               is not the same as "not ready" and must not read as it. *@
-                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
-                                @UiStrings.Work_Readiness_NoMr
-                            </FlareText>
-                        }
-                        else
-                        {
-                            <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
-                                <FlareChip Size="ChipSize.Sm" Color="@ReadinessColor(readiness.Status)"
-                                           Label="@ReadinessLabel(readiness.Status)" />
-                                @* Naming what is missing turns "no" into an instruction. *@
-                                @foreach (var missing in readiness.MissingSignals)
-                                {
-                                    <FlareCode>@missing</FlareCode>
-                                }
-                            </FlareStack>
-                        }
-                    </Template>
-                </FlareColumn>
-            </Columns>
+                    }
+                </Template>
+            </FlareColumn>
+        </Columns>
         </FlareDataGrid>
-
-        @if (_result.Total > _result.PageSize)
-        {
-            <FlarePagination Current="_page" CurrentChanged="OnPageChanged" TotalPages="TotalPages"
-                             TotalItems="_result.Total" PageSize="_result.PageSize" ShowInfo />
-        }
-    }
 </FlareStack>
 
 @code {
-    const int PageSize = 50;
-
-    WorkItemsResult? _result;
+    FlareDataGrid<WorkItemDto>? _grid;
     List<EnvironmentDto>? _environments;
-    bool _loading = true;
-    int _page = 1;
+
+    // Kept from the last page load, because the header above the grid reports on the whole result:
+    // how many rows matched, and whether the scan cap bound before they were counted.
+    int _total;
+    bool _truncated;
+    bool _loading;
     Guid? _environmentId;
     string _state = "";
     string _search = "";
@@ -162,37 +153,56 @@
     // absent: nothing writes them, so filtering by one could only ever return old rows.
     static readonly string[] StateOptions = ["", "New", "Opened", "Merged", "Closed"];
 
-    int TotalPages => _result is null ? 1 : (int)Math.Ceiling(_result.Total / (double)_result.PageSize);
-
     IEnumerable<Guid?> EnvironmentOptions => [null, .. (_environments ?? []).Select(e => (Guid?)e.Id)];
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() =>
         await RunAsync(async () => _environments = await Api.GetEnvironmentsAsync());
-        await Reload();
-    }
 
-    async Task Reload()
+    /// <summary>One page of work, narrowed by the filter bar and by the column filter boxes.</summary>
+    async Task<DataGridResult<WorkItemDto>> LoadPage(DataGridRequest request)
     {
         _loading = true;
-        await RunAsync(async () =>
-            _result = await Api.GetWorkItemsAsync(
-                _environmentId,
-                string.IsNullOrEmpty(_state) ? null : _state,
-                string.IsNullOrWhiteSpace(_search) ? null : _search,
-                _page, PageSize));
-        _loading = false;
+        try
+        {
+            return await LoadPageAsync(async () =>
+            {
+                var result = await Api.GetWorkItemsAsync(
+                    _environmentId,
+                    string.IsNullOrEmpty(_state) ? null : _state,
+                    string.IsNullOrWhiteSpace(_search) ? null : _search,
+                    taskKey: request.Filter("task"),
+                    repository: request.Filter("repo"),
+                    connection: null,
+                    branch: request.Filter("carrier"),
+                    page: request.ApiPage(),
+                    pageSize: request.PageSize);
+
+                _total = result.Total;
+                _truncated = result.Truncated;
+                return new DataGridResult<WorkItemDto>(result.Items, result.Total);
+            });
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
-    // Every filter resets to the first page: keeping the page number lands the operator on an empty
-    // page whenever the narrower filter has fewer pages than the old one.
-    async Task OnEnvironmentChanged(Guid? value) { _environmentId = value; _page = 1; await Reload(); }
+    /// <summary>Re-runs the query from the first page - what every filter above the grid does.</summary>
+    /// <remarks>
+    /// Back to page one on purpose: keeping the page number lands the operator on an empty page
+    /// whenever the narrower filter has fewer pages than the old one.
+    /// </remarks>
+    async Task Reload()
+    {
+        if (_grid is not null) await _grid.GoToPageAsync(0);
+    }
 
-    async Task OnStateChanged(string value) { _state = value; _page = 1; await Reload(); }
+    async Task OnEnvironmentChanged(Guid? value) { _environmentId = value; await Reload(); }
 
-    async Task OnSearchChanged(string value) { _search = value; _page = 1; await Reload(); }
+    async Task OnStateChanged(string value) { _state = value; await Reload(); }
 
-    async Task OnPageChanged(int page) { _page = page; await Reload(); }
+    async Task OnSearchChanged(string value) { _search = value; await Reload(); }
 
     string EnvironmentLabel(Guid? id) =>
         id is null

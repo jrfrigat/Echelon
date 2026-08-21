@@ -40,6 +40,10 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
     /// <param name="environmentId">Environment to report readiness for, or omit for none.</param>
     /// <param name="state">Optional state filter: <c>New</c>, <c>Opened</c>, <c>Merged</c>, <c>Closed</c>.</param>
     /// <param name="search">Free text matched against the task key, repository and branch.</param>
+    /// <param name="taskKey">Substring of the task key; the grid's "task" column filter.</param>
+    /// <param name="repository">Substring of the repository name; the grid's "repo" column filter.</param>
+    /// <param name="connection">Substring of the connection name; the grid's "connection" column filter.</param>
+    /// <param name="branch">Substring of the branch or carrier; the grid's "work" column filter.</param>
     /// <param name="page">1-based page.</param>
     /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -48,6 +52,10 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
         [FromQuery] Guid? environmentId = null,
         [FromQuery] string? state = null,
         [FromQuery] string? search = null,
+        [FromQuery] string? taskKey = null,
+        [FromQuery] string? repository = null,
+        [FromQuery] string? connection = null,
+        [FromQuery] string? branch = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = Paging.DefaultPageSize,
         CancellationToken ct = default)
@@ -126,9 +134,17 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
                 Readiness: null,
                 At: b.FirstSeenAt)));
 
+        // The column filters narrow the same in-memory rows as the search box above them: this list is
+        // assembled from two sources (merge requests and bare branches) and capped, so there is no one
+        // query to push them into. They are AND-ed with each other and with the search box, which is
+        // what a filter row means everywhere else.
         var filtered = rows
             .Where(r => string.IsNullOrEmpty(state) || string.Equals(r.State, state, StringComparison.OrdinalIgnoreCase))
             .Where(r => Matches(r, search))
+            .Where(r => Contains(r.TaskKey, taskKey))
+            .Where(r => Contains(r.RepositoryName, repository))
+            .Where(r => Contains(r.ConnectionName, connection))
+            .Where(r => Contains(r.Branch, branch) || Contains(r.Carrier, branch))
             // Grouped by task so a task's work reads together, which is the question this page answers.
             // Items with no task sort last: they are in no plan, and that is the anomaly to notice.
             .OrderBy(r => r.TaskKey is null ? 1 : 0)
@@ -147,6 +163,11 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
             Truncated = mergeRequests.Count >= ScanCap || branches.Count >= ScanCap
         });
     }
+
+    /// <summary>One column filter box against one value; a blank box selects everything.</summary>
+    private static bool Contains(string? value, string? needle) =>
+        string.IsNullOrWhiteSpace(needle)
+        || (value?.Contains(needle.Trim(), StringComparison.OrdinalIgnoreCase) ?? false);
 
     private static bool Matches(WorkItemDto row, string? search) =>
         string.IsNullOrWhiteSpace(search)

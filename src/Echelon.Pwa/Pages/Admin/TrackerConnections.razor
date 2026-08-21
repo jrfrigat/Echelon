@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inherits CrudPageBase<TrackerConnectionDto>
 
-<PageTitle>@UiStrings.Tracker_Title</PageTitle>
+<AppTitle Title="@UiStrings.Tracker_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Tracker_Title">
@@ -17,75 +17,69 @@
     <PageAlerts Error="@Error" Success="@Success"
                 OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-    @if (Loading)
-    {
-        <FlareProgress Variant="ProgressVariant.Circular" />
-    }
-    else if (Result is not null)
-    {
-        <FlareDataGrid TItem="TrackerConnectionDto" Items="Result.Items" ShowPager="false">
-            <Columns>
-                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
-                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_Type">
-                    <Template>
-                        <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
-                <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Provider_Col_Settings">
-                    <Template>
-                        @* Whatever the provider declared, rather than one provider's field. Secrets are
-                           never in this data, so nothing here can leak one. *@
-                        @if (context.Settings is not { Count: > 0 })
-                        {
-                            <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">-</FlareText>
-                        }
-                        else
-                        {
-                            <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
-                                @foreach (var (key, value) in context.Settings.OrderBy(s => s.Key, StringComparer.Ordinal))
-                                {
-                                    <FlareChip Size="ChipSize.Sm" Label="@($"{key}: {value}")" />
-                                }
-                            </FlareStack>
-                        }
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
-                    <Template>
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                            @if (IsPollType(context.TrackerType))
+    @* The grid reads its own pages: the pager, the rows-per-page chooser and the column filter
+       boxes come back as one request, and the server applies them - this screen only ever holds one
+       page, so filtering here would search the slice and look like it had searched the list. *@
+    <FlareDataGrid TItem="TrackerConnectionDto" @ref="Grid" ItemsProvider="LoadPage" OnPageChanged="OnGridPageChanged"
+                   PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                   FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                   Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="TrackerConnectionDto" Id="name" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" Filterable="true" />
+            <FlareColumn TItem="TrackerConnectionDto" Id="type" Title="@UiStrings.Common_Type" Filterable="true"
+                         Field="@(c => (object?)c.TrackerType)">
+                <Template>
+                    <FlareChip Label="@context.TrackerType" Size="ChipSize.Sm" />
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="TrackerConnectionDto" Id="url" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" Filterable="true" />
+            <FlareColumn TItem="TrackerConnectionDto" Title="@UiStrings.Provider_Col_Settings">
+                <Template>
+                    @* Whatever the provider declared, rather than one provider's field. Secrets are
+                       never in this data, so nothing here can leak one. *@
+                    @if (context.Settings is not { Count: > 0 })
+                    {
+                        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Secondary">-</FlareText>
+                    }
+                    else
+                    {
+                        <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+                            @foreach (var (key, value) in context.Settings.OrderBy(s => s.Key, StringComparer.Ordinal))
                             {
-                                @* Loading on the button itself, keyed to this row: the poll searches the
-                                   tracker over the network and can take a while, and without it the
-                                   click looked like nothing happened - so it got clicked again,
-                                   starting a second sweep. Disabled while any poll runs so two
-                                   cannot overlap. *@
-                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Tracker_PollNow_Aria, context.Name)"
-                                                 Loading="@(_pollingId == context.Id)"
-                                                 Disabled="@(_pollingId is not null)"
-                                                 OnClick="@(() => Poll(context))">
-                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
-                                </FlareIconButton>
+                                <FlareChip Size="ChipSize.Sm" Label="@($"{key}: {value}")" />
                             }
-                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
-                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
-                            </FlareIconButton>
-                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
-                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                            </FlareIconButton>
                         </FlareStack>
-                    </Template>
-                </FlareColumn>
-            </Columns>
-        </FlareDataGrid>
-
-        @if (Result.Total > Result.PageSize)
-        {
-            <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
-                             TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
-        }
-    }
+                    }
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="TrackerConnectionDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        @if (IsPollType(context.TrackerType))
+                        {
+                            @* Loading on the button itself, keyed to this row: the poll searches the
+                               tracker over the network and can take a while, and without it the
+                               click looked like nothing happened - so it got clicked again,
+                               starting a second sweep. Disabled while any poll runs so two
+                               cannot overlap. *@
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Tracker_PollNow_Aria, context.Name)"
+                                             Loading="@(_pollingId == context.Id)"
+                                             Disabled="@(_pollingId is not null)"
+                                             OnClick="@(() => Poll(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
+                            </FlareIconButton>
+                        }
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 </FlareStack>
 
 <FlareDialog Visible="ShowModal"
@@ -186,8 +180,13 @@
         await base.OnInitializedAsync();
     }
 
-    protected override Task<PagedResult<TrackerConnectionDto>> FetchPageAsync(int page) =>
-        Api.GetTrackerConnectionsAsync(page);
+    /// <inheritdoc/>
+    protected override Task<PagedResult<TrackerConnectionDto>> FetchPageAsync(DataGridRequest request) =>
+        Api.GetTrackerConnectionsAsync(
+            request.ApiPage(), request.PageSize,
+            name: request.Filter("name"),
+            type: request.Filter("type"),
+            apiUrl: request.Filter("url"));
 
     void OpenCreate()
     {

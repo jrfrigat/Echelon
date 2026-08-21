@@ -474,6 +474,9 @@
   <data name="Common_Refresh" xml:space="preserve">
     <value>Обновить</value>
   </data>
+  <data name="Common_Filter" xml:space="preserve">
+    <value>Фильтр</value>
+  </data>
   <data name="Work_Title" xml:space="preserve">
     <value>Что выкатывать</value>
   </data>

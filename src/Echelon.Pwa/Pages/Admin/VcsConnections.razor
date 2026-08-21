@@ -3,7 +3,7 @@
 @inherits CrudPageBase<VcsConnectionDto>
 @using Echelon.Providers.Abstractions.Vcs
 
-<PageTitle>@UiStrings.Vcs_Title</PageTitle>
+<AppTitle Title="@UiStrings.Vcs_Title" />
 
 <FlareStack Gap="FlareSpacing.Medium">
     <PageHeader Title="@UiStrings.Vcs_Title">
@@ -18,58 +18,52 @@
     <PageAlerts Error="@Error" Success="@Success"
                 OnErrorDismiss="@(() => Error = null)" OnSuccessDismiss="@(() => Success = null)" />
 
-    @if (Loading)
-    {
-        <FlareProgress Variant="ProgressVariant.Circular" />
-    }
-    else if (Result is not null)
-    {
-        <FlareDataGrid TItem="VcsConnectionDto" Items="Result.Items" ShowPager="false">
-            <Columns>
-                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" />
-                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_Type">
-                    <Template>
-                        <FlareChip Label="@context.VcsType" Size="ChipSize.Sm" />
-                    </Template>
-                </FlareColumn>
-                <FlareColumn TItem="VcsConnectionDto" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" />
-                <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
-                    <Template>
-                        <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
-                            @* Poll-mode connections are refreshed on a timer; offer a manual poll so an
-                               operator does not have to wait for the next tick. *@
-                            @if (IsPollType(context.VcsType))
-                            {
-                                @* Loading on the button itself, keyed to this row: a poll walks every
-                                   repository of the connection over the network and can take a while,
-                                   and without it the click looked like nothing happened -- so it got
-                                   clicked again, starting a second sweep. Disabled while any poll runs
-                                   so two cannot overlap. *@
-                                <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)"
-                                                 Loading="@(_pollingId == context.Id)"
-                                                 Disabled="@(_pollingId is not null)"
-                                                 OnClick="@(() => Poll(context))">
-                                    <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
-                                </FlareIconButton>
-                            }
-                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
-                                <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+    @* The grid reads its own pages: the pager, the rows-per-page chooser and the column filter
+       boxes come back as one request, and the server applies them - this screen only ever holds one
+       page, so filtering here would search the slice and look like it had searched the list. *@
+    <FlareDataGrid TItem="VcsConnectionDto" @ref="Grid" ItemsProvider="LoadPage" OnPageChanged="OnGridPageChanged"
+                   PageSize="GridDefaults.PageSize" RowsPerPageOptions="GridDefaults.RowsPerPage"
+                   FilterMode="DataGridFilterMode.Simple" FilterPlaceholder="@UiStrings.Common_Filter"
+                   Dense="true" Striped="true" Hoverable="true">
+        <Columns>
+            <FlareColumn TItem="VcsConnectionDto" Id="name" Title="@UiStrings.Common_Name" Field="@(c => c.Name)" Filterable="true" />
+            <FlareColumn TItem="VcsConnectionDto" Id="type" Title="@UiStrings.Common_Type" Filterable="true"
+                         Field="@(c => (object?)c.VcsType)">
+                <Template>
+                    <FlareChip Label="@context.VcsType" Size="ChipSize.Sm" />
+                </Template>
+            </FlareColumn>
+            <FlareColumn TItem="VcsConnectionDto" Id="url" Title="@UiStrings.Common_ApiUrl" Field="@(c => c.ApiUrl)" Filterable="true" />
+            <FlareColumn TItem="VcsConnectionDto" Title="" Align="ColumnAlign.End">
+                <Template>
+                    <FlareStack Row Gap="FlareSpacing.XSmall" Justify="FlareJustifyContent.End">
+                        @* Poll-mode connections are refreshed on a timer; offer a manual poll so an
+                           operator does not have to wait for the next tick. *@
+                        @if (IsPollType(context.VcsType))
+                        {
+                            @* Loading on the button itself, keyed to this row: a poll walks every
+                               repository of the connection over the network and can take a while,
+                               and without it the click looked like nothing happened -- so it got
+                               clicked again, starting a second sweep. Disabled while any poll runs
+                               so two cannot overlap. *@
+                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Vcs_PollNow_Aria, context.Name)"
+                                             Loading="@(_pollingId == context.Id)"
+                                             Disabled="@(_pollingId is not null)"
+                                             OnClick="@(() => Poll(context))">
+                                <FlareIconView Value="MaterialDesign3Icons.Regular.Refresh" />
                             </FlareIconButton>
-                            <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
-                                <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
-                            </FlareIconButton>
-                        </FlareStack>
-                    </Template>
-                </FlareColumn>
-            </Columns>
-        </FlareDataGrid>
-
-        @if (Result.Total > Result.PageSize)
-        {
-            <FlarePagination Current="Page" CurrentChanged="LoadPage" TotalPages="TotalPages"
-                             TotalItems="Result.Total" PageSize="Result.PageSize" ShowInfo />
-        }
-    }
+                        }
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Edit_Aria, context.Name)" OnClick="@(() => OpenEdit(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Edit" />
+                        </FlareIconButton>
+                        <FlareIconButton AriaLabel="@string.Format(UiStrings.Common_Delete_Aria, context.Name)" Color="FlareColor.Error" OnClick="@(() => Delete(context))">
+                            <FlareIconView Value="MaterialDesign3Icons.Regular.Delete" />
+                        </FlareIconButton>
+                    </FlareStack>
+                </Template>
+            </FlareColumn>
+        </Columns>
+    </FlareDataGrid>
 </FlareStack>
 
 <FlareDialog Visible="ShowModal"
@@ -184,8 +178,13 @@
         await base.OnInitializedAsync();
     }
 
-    protected override Task<PagedResult<VcsConnectionDto>> FetchPageAsync(int page) =>
-        Api.GetVcsConnectionsAsync(page);
+    /// <inheritdoc/>
+    protected override Task<PagedResult<VcsConnectionDto>> FetchPageAsync(DataGridRequest request) =>
+        Api.GetVcsConnectionsAsync(
+            request.ApiPage(), request.PageSize,
+            name: request.Filter("name"),
+            type: request.Filter("type"),
+            apiUrl: request.Filter("url"));
 
     void OpenCreate()
     {

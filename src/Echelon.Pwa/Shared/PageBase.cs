@@ -41,6 +41,33 @@ public abstract class PageBase : LocalizedComponent
     }
 
     /// <summary>
+    /// Feeds a server-paged Flare grid, reporting a failure on the page instead of throwing into the
+    /// grid's provider.
+    /// </summary>
+    /// <remarks>
+    /// An exception raised inside an ItemsProvider leaves the grid showing its spinner for ever and
+    /// takes the reason with it - the same failure mode <see cref="RunAsync"/> exists to prevent for
+    /// handlers. An empty result plus a visible error is the honest answer.
+    /// </remarks>
+    /// <typeparam name="T">The grid's row type.</typeparam>
+    /// <param name="fetch">Reads one page from the API and shapes it into a grid result.</param>
+    protected async Task<DataGridResult<T>> LoadPageAsync<T>(Func<Task<DataGridResult<T>>> fetch)
+    {
+        ArgumentNullException.ThrowIfNull(fetch);
+
+        Error = null;
+        try
+        {
+            return await fetch();
+        }
+        catch (Exception ex)
+        {
+            Error = Describe(ex);
+            return new DataGridResult<T>([], 0);
+        }
+    }
+
+    /// <summary>
     /// Asks for confirmation before a destructive action. True only on an explicit confirm: Flare
     /// reports a cancel as false and a dismissal (Escape) as null, and neither is consent. A missing
     /// provider answers false for the same reason - losing the dialog must not mean losing the

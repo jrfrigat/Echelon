@@ -27,16 +27,18 @@ namespace Echelon.Infrastructure.ReleasePlanning;
 public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<RolloutPlanner> logger) : IRolloutPlannerService
 {
     /// <inheritdoc/>
-    public async Task<int> CountTasksAsync(CancellationToken ct = default) =>
-        await db.Tasks.CountAsync(ct);
+    public async Task<int> CountTasksAsync(TaskListQuery query, CancellationToken ct = default) =>
+        await Filtered(query).CountAsync(ct);
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(int page, int pageSize, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(TaskListQuery query, CancellationToken ct = default)
     {
-        var skip = (page - 1) * pageSize;
-        return await db.Tasks
+        ArgumentNullException.ThrowIfNull(query);
+
+        var skip = (Math.Max(query.Page, 1) - 1) * query.PageSize;
+        return await Filtered(query)
             .OrderBy(t => t.ExternalId).ThenBy(t => t.Id)
-            .Skip(skip).Take(pageSize)
+            .Skip(skip).Take(query.PageSize)
             .Select(t => new TaskListItemDto(
                 t.Id,
                 t.ExternalId,
@@ -47,6 +49,34 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .AsNoTracking()
             .ToListAsync(ct);
     }
+
+    /// <summary>The task rows a query selects, before paging.</summary>
+    /// <remarks>
+    /// Lowercased on both sides rather than left to the database's collation: SQL Server compares
+    /// case-insensitively by default and PostgreSQL does not, so a filter box that matched "ECH-1"
+    /// on one provider and not the other would be a difference nobody could see in the UI.
+    /// </remarks>
+    private IQueryable<TaskItem> Filtered(TaskListQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var tasks = db.Tasks.AsQueryable();
+
+        if (Needle(query.Key) is { } key)
+            tasks = tasks.Where(t => t.ExternalId.ToLower().Contains(key));
+
+        if (Needle(query.Title) is { } title)
+            tasks = tasks.Where(t => t.Title.ToLower().Contains(title));
+
+        if (Needle(query.Status) is { } status)
+            tasks = tasks.Where(t => t.Status.ToLower().Contains(status));
+
+        return tasks;
+    }
+
+    /// <summary>A filter box's text, or null when it selects everything.</summary>
+    private static string? Needle(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
 
     /// <inheritdoc/>
     public async Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>

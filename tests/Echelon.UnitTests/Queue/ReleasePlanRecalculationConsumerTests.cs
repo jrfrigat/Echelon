@@ -78,9 +78,10 @@ public sealed class ReleasePlanRecalculationConsumerTests : IAsyncLifetime
                 : Task.FromResult<RolloutPlanDto>(null!);
         }
 
-        public Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(int page, int pageSize, CancellationToken ct = default) =>
+        public Task<IReadOnlyList<TaskListItemDto>> ListTasksAsync(TaskListQuery query, CancellationToken ct = default) =>
             throw new NotSupportedException();
-        public Task<int> CountTasksAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<int> CountTasksAsync(TaskListQuery query, CancellationToken ct = default) =>
+            throw new NotSupportedException();
         public Task<RolloutPlanDto?> GetActivePlanAsync(Guid taskId, CancellationToken ct = default) =>
             throw new NotSupportedException();
         public Task<TaskDetailDto?> GetTaskAsync(Guid taskId, CancellationToken ct = default) =>

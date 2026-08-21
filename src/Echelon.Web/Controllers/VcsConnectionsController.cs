@@ -38,13 +38,26 @@ public class VcsConnectionsController(
     /// <summary>Configured connections, by name. Never includes the access token.</summary>
     /// <param name="page">1-based page.</param>
     /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="name">Substring of the connection name; the grid's "name" column filter.</param>
+    /// <param name="type">Substring of the provider type; the grid's "type" column filter.</param>
+    /// <param name="apiUrl">Substring of the API URL; the grid's "url" column filter.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// The filters run here, not in the browser, because the browser holds one page: filtering there
+    /// searches the slice and presents the answer as though it had searched the list.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> List(
-        [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken ct = default)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        [FromQuery] string? name = null,
+        [FromQuery] string? type = null,
+        [FromQuery] string? apiUrl = null,
+        CancellationToken ct = default)
     {
         var paging = Paging.From(page, pageSize);
-        var total = await db.VcsConnections.CountAsync(ct);
+        var connections = ListFilter.Apply(db.VcsConnections, name, type, apiUrl);
+        var total = await connections.CountAsync(ct);
 
         // OrderBy is required for paging to be stable: without it SQL Server may return rows
         // in any order, so entries can repeat or vanish between pages.
@@ -54,7 +67,7 @@ public class VcsConnectionsController(
         // every client for no gain.
         // Reshaped in memory after paging: the settings bag is JSON in a column, so it cannot be
         // unpacked in SQL.
-        var rows = await db.VcsConnections
+        var rows = await connections
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
             .Select(c => new
             {

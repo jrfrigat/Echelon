@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using Echelon.Application.DTOs;
 using Echelon.Application.Services;
 using Echelon.Infrastructure.Auth;
 
@@ -18,17 +19,32 @@ public class TasksController(
     IRolloutService rollouts,
     ITaskTimelineService timeline) : ControllerBase
 {
-    /// <summary>Lists tasks, paged.</summary>
+    /// <summary>Lists tasks, paged, narrowed by the grid's column filters.</summary>
     /// <param name="page">1-based page number.</param>
     /// <param name="pageSize">Page size, clamped by <see cref="Paging"/>.</param>
+    /// <param name="key">Substring of the task key; the grid's "key" column filter.</param>
+    /// <param name="title">Substring of the title; the grid's "title" column filter.</param>
+    /// <param name="status">Substring of the tracker status; the grid's "status" column filter.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// Filtered here rather than in the browser because the browser only holds one page: a filter
+    /// applied there searches 50 rows of N and presents the result as though it had searched all of
+    /// them - the same reason these columns are not client-sortable.
+    /// </remarks>
     [HttpGet]
     public async Task<IActionResult> List(
-        [FromQuery] int page = 1, [FromQuery] int pageSize = Paging.DefaultPageSize, CancellationToken ct = default)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        [FromQuery] string? key = null,
+        [FromQuery] string? title = null,
+        [FromQuery] string? status = null,
+        CancellationToken ct = default)
     {
         var paging = Paging.From(page, pageSize);
-        var total = await planner.CountTasksAsync(ct);
-        var items = await planner.ListTasksAsync(paging.Page, paging.PageSize, ct);
+        var query = new TaskListQuery(paging.Page, paging.PageSize, key, title, status);
+
+        var total = await planner.CountTasksAsync(query, ct);
+        var items = await planner.ListTasksAsync(query, ct);
         return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
     }
 
