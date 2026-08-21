@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Echelon.Application.DTOs;
 using Echelon.Pwa.Models;
 
 namespace Echelon.Pwa.Services;
@@ -486,7 +487,8 @@ public class ApiService(HttpClient http)
     /// fields used to be declared as strings and compared against literals like "Poll", something no
     /// compiler could check against the server's own enum.
     /// </remarks>
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    /// <remarks>Public so a test can read the server's own DTOs with the client's real settings.</remarks>
+    public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
     };

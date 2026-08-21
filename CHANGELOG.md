@@ -10,6 +10,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- **The admin UI could not read a plan at all**: "DeserializeUnableToConvertValue ... Path: $.version",
+  with the API answering correctly. The browser kept its own copy of every response type, and one of
+  them had drifted - the plan version became an ordinal `int` on the server while the copy still said
+  `string`. The copies are gone: the client references the server's own DTOs, so a shape both ends
+  must agree on now exists once, where the compiler sees both.
 - **Recalculating a plan failed on every real database.** Both providers are configured with
   `EnableRetryOnFailure`, and a retrying execution strategy refuses a transaction it did not open:
   "the configured execution strategy 'SqlServerRetryingExecutionStrategy' does not support

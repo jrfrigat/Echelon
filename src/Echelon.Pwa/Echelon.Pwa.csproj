@@ -35,6 +35,14 @@
          inward, pure, zero-runtime-dependency assemblies (Core, and Abstractions over it), so this
          is an onion-legal inward reference and WASM-safe. -->
     <ProjectReference Include="..\Echelon.Providers.Abstractions\Echelon.Providers.Abstractions.csproj" />
+
+    <!-- And to the API's response contracts, so the client reads the server's own DTOs instead of a
+         hand-copied set. The copies drifted: the plan version became an int on the server while the
+         browser still declared a string, and the first plan ever fetched failed to deserialize -
+         "DeserializeUnableToConvertValue ... Path: $.version". A shape both ends must agree on should
+         exist once, where the compiler can see both. Application is pure - no Entity Framework, no
+         ASP.NET - which is what makes it loadable in a browser. -->
+    <ProjectReference Include="..\Echelon.Application\Echelon.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
