@@ -90,10 +90,10 @@
                 <FlareColumn TItem="WorkItemDto" Id="carrier" Title="@UiStrings.Work_Col_Carrier">
                     <Template>
                         <FlareStack Row Gap="FlareSpacing.XSmall" Align="FlareAlignItems.Center" Wrap>
-                            <FlareIconView Value="@(context.Kind == "Branch"
+                            <FlareIconView Value="@(context.Kind == WorkItemKind.Branch
                                                     ? MaterialDesign3Icons.Regular.AccountTree
                                                     : MaterialDesign3Icons.Regular.CallMerge)" />
-                            <FlareCode>@(context.Kind == "Branch" ? context.Branch : $"!{context.Carrier}")</FlareCode>
+                            <FlareCode>@(context.Kind == WorkItemKind.Branch ? context.Branch : $"!{context.Carrier}")</FlareCode>
                         </FlareStack>
                     </Template>
                 </FlareColumn>

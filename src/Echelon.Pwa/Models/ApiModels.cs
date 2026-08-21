@@ -1,7 +1,12 @@
+using Echelon.Core.Enums;
+using Echelon.Providers.Abstractions;
+
 namespace Echelon.Pwa.Models;
 
-// Mirrors Echelon.Application.DTOs. Enum-valued fields are strings here, which
-// only works because the API registers JsonStringEnumConverter - keep the two in step.
+// Mirrors Echelon.Application.DTOs. A field the API declares as an enum is an enum here too, which
+// works because both ends read and write the enum's name - the API registers JsonStringEnumConverter,
+// and so does ApiService. A closed set the server owns is never re-spelled here as a string literal:
+// the compiler cannot check "Poll", and a rename would leave the UI quietly comparing against nothing.
 
 /// <summary>A dependency the plan could not honour; shown to operators as a warning. Shared by the per-task rollout plan.</summary>
 public record PlanConflictDto(
@@ -16,30 +21,36 @@ public record PlanConflictDto(
 /// existing one - reaches the UI without a change here.
 /// </remarks>
 /// <param name="Secret">Render write-only. The API never sends a stored secret back.</param>
-/// <param name="Kind">"Text" (default), "Int", "Enum" or "Regex" - which control to render and how to validate.</param>
-/// <param name="Options">Allowed values, for an "Enum" field. Null otherwise.</param>
+/// <param name="Kind">Which control to render and how to validate.</param>
+/// <param name="Options">Allowed values, for an <see cref="ProviderSettingKind.Enum"/> field. Null otherwise.</param>
 /// <param name="Default">Value to pre-fill for a new connection. Null when there is none.</param>
-/// <param name="Min">Inclusive lower bound for an "Int" field; null for no bound.</param>
-/// <param name="Max">Inclusive upper bound for an "Int" field; null for no bound.</param>
+/// <param name="Min">Inclusive lower bound for an <see cref="ProviderSettingKind.Int"/> field; null for no bound.</param>
+/// <param name="Max">Inclusive upper bound for an <see cref="ProviderSettingKind.Int"/> field; null for no bound.</param>
 public record ProviderSettingDto(
     string Key, string Label, string? Description, bool Required, bool Secret,
-    string Kind = "Text", List<string>? Options = null, string? Default = null,
+    ProviderSettingKind Kind = ProviderSettingKind.Text, List<string>? Options = null, string? Default = null,
     int? Min = null, int? Max = null);
 
-/// <summary>A provider that can back a connection, the settings it declares, and (for VCS) push vs poll.</summary>
-/// <param name="Ingestion">"Push" or "Poll" for a VCS provider; null for trackers and deploy strategies.</param>
-public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings, string? Ingestion = null);
+/// <summary>A provider that can back a connection, the settings it declares, and how its events arrive.</summary>
+/// <param name="Ingestion">Push or Poll for a VCS or tracker provider; null for a deploy strategy.</param>
+public record ProviderTypeDto(string ProviderType, List<ProviderSettingDto> Settings, IngestionMode? Ingestion = null);
 
-/// <summary>What a manual poll produced: observations emitted, and repositories that could not be read.</summary>
+/// <summary>What a manual VCS poll produced: observations emitted, and repositories that could not be read.</summary>
 public record PollResultDto(int Emitted, List<PollFailureDto>? Failures = null, int Branches = 0);
 
 /// <summary>A repository the poll could not read, and why (usually a wrong external id or token access).</summary>
 public record PollFailureDto(string Repository, string Reason);
 
+/// <summary>What a manual tracker poll produced.</summary>
+/// <param name="Emitted">Syncs requested, over the issues the tracker reported open and the tasks already known.</param>
+/// <param name="Discovered">How many of those the tracker turned up that were not in the database yet.</param>
+/// <param name="Failure">Why the tracker could not be searched; null when it was. The known tasks were still re-read.</param>
+public record TrackerPollResultDto(int Emitted, int Discovered, string? Failure = null);
+
 /// <summary>An installed plugin (a connector, deploy strategy or action handler) for the admin overview.</summary>
-/// <param name="Category">Which kind: <c>vcs</c>, <c>tracker</c>, <c>deploy</c> or <c>action</c>.</param>
-/// <param name="Ingestion">"Push" or "Poll" for a VCS connector; null otherwise.</param>
-public record PluginDto(string Category, string Key, string? Ingestion, string? Description);
+/// <param name="Category">Which axis the plugin extends.</param>
+/// <param name="Ingestion">Push or Poll for a connector; null for a deploy strategy or action handler.</param>
+public record PluginDto(PluginCategory Category, string Key, IngestionMode? Ingestion, string? Description);
 
 /// <param name="VcsType">The provider type, e.g. <c>gitlab-webhook</c> or <c>gitlab-poll</c> - this is what carries push vs poll.</param>
 /// <param name="Settings">
@@ -127,7 +138,7 @@ public record OrderingRuleGroupMatchDto(string Group, int Matched, List<string> 
 /// way. <c>State</c> is <c>New</c> for a branch nothing has raised yet.
 /// </remarks>
 public record WorkItemDto(
-    string Kind,
+    WorkItemKind Kind,
     string? TaskKey,
     string RepositoryName,
     string ConnectionName,

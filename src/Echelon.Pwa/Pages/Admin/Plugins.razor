@@ -20,7 +20,8 @@
     }
     else if (_plugins is { Count: > 0 })
     {
-        @foreach (var group in _plugins.GroupBy(p => p.Category).OrderBy(g => CategoryOrder(g.Key)))
+        @* Grouped in the enum's own order: connectors first, then what a rollout does with them. *@
+        @foreach (var group in _plugins.GroupBy(p => p.Category).OrderBy(g => g.Key))
         {
             <FlareText Typo="TypographyScale.TitleMedium">@CategoryLabel(group.Key)</FlareText>
             <FlareStack Gap="FlareSpacing.Small">
@@ -37,7 +38,7 @@
                                 @if (IngestionLabel(plugin.Ingestion) is { } ingestion)
                                 {
                                     <FlareChip Size="ChipSize.Sm"
-                                               Color="@(plugin.Ingestion == "Poll" ? FlareColor.Secondary : FlareColor.Primary)"
+                                               Color="@(plugin.Ingestion == IngestionMode.Poll ? FlareColor.Secondary : FlareColor.Primary)"
                                                Label="@ingestion" />
                                 }
                                 @if (!string.IsNullOrWhiteSpace(plugin.Description))
@@ -65,29 +66,23 @@
         _loading = false;
     }
 
-    // Connectors first (VCS, then tracker), then the things a rollout does with them.
-    static int CategoryOrder(string category) => category switch
-    {
-        "vcs" => 0, "tracker" => 1, "deploy" => 2, "action" => 3, _ => 9
-    };
-
     /// <summary>
     /// How the connector said its events arrive. Null for a deploy strategy or action handler, which
     /// declare no ingestion because they have none - nothing is being withheld there.
     /// </summary>
-    static string? IngestionLabel(string? ingestion) => ingestion switch
+    static string? IngestionLabel(IngestionMode? ingestion) => ingestion switch
     {
-        "Poll" => UiStrings.Plugins_Ingestion_Poll,
-        "Push" => UiStrings.Plugins_Ingestion_Push,
+        IngestionMode.Poll => UiStrings.Plugins_Ingestion_Poll,
+        IngestionMode.Push => UiStrings.Plugins_Ingestion_Push,
         _ => null
     };
 
-    static string CategoryLabel(string category) => category switch
+    static string CategoryLabel(PluginCategory category) => category switch
     {
-        "vcs" => UiStrings.Plugins_Cat_Vcs,
-        "tracker" => UiStrings.Plugins_Cat_Tracker,
-        "deploy" => UiStrings.Plugins_Cat_Deploy,
-        "action" => UiStrings.Plugins_Cat_Action,
-        _ => category
+        PluginCategory.Vcs => UiStrings.Plugins_Cat_Vcs,
+        PluginCategory.Tracker => UiStrings.Plugins_Cat_Tracker,
+        PluginCategory.Deploy => UiStrings.Plugins_Cat_Deploy,
+        PluginCategory.Action => UiStrings.Plugins_Cat_Action,
+        _ => category.ToString()
     };
 }

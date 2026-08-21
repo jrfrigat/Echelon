@@ -135,7 +135,7 @@
     // A poll-mode type's events would otherwise wait for its timer, so the manual poll is offered only
     // for those; a webhook connection gets its events pushed and needs no button.
     bool IsPollType(string vcsType) =>
-        string.Equals(_providers?.FirstOrDefault(p => p.ProviderType == vcsType)?.Ingestion, "Poll", StringComparison.Ordinal);
+        _providers?.FirstOrDefault(p => p.ProviderType == vcsType)?.Ingestion == IngestionMode.Poll;
 
     /// <summary>Which connection is being polled right now, or null when none is. Drives the spinner.</summary>
     Guid? _pollingId;

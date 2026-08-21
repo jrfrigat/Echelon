@@ -1,10 +1,11 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Deploy;
 using Echelon.Providers.Abstractions.Tracker;
 using Echelon.Providers.Abstractions.Vcs;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Echelon.Web.Controllers;
 
@@ -27,7 +28,8 @@ public class ProvidersController(
     IVcsProviderFactory vcsFactory,
     ITrackerProviderFactory trackerFactory,
     IDeployStrategyFactory deployFactory,
-    IEnumerable<VcsProviderRegistration> vcsRegistrations) : ControllerBase
+    IEnumerable<VcsProviderRegistration> vcsRegistrations,
+    IEnumerable<TrackerProviderRegistration> trackerRegistrations) : ControllerBase
 {
     /// <summary>Lists the registered VCS providers, their settings, and whether each is push or poll.</summary>
     /// <returns>One entry per provider.</returns>
@@ -35,14 +37,23 @@ public class ProvidersController(
     public IActionResult ListVcsProviders() =>
         Ok(vcsFactory.AvailableProviders
             .OrderBy(p => p, StringComparer.Ordinal)
-            .Select(p => Describe(p, vcsFactory.GetSettingsSchema(p), IngestionOf(p))));
+            .Select(p => Describe(p, vcsFactory.GetSettingsSchema(p), VcsIngestionOf(p))));
 
-    // Push or Poll for a VCS type, from its registration - this is what tells the UI which connections
-    // can be polled by hand (a poll type would otherwise wait for its next timer tick).
-    private string? IngestionOf(string providerType) =>
+    // Push or Poll for a provider type, from its registration - this is what tells the UI which
+    // connections can be polled by hand (a poll type would otherwise wait for its next timer tick).
+    // The enum itself, not its name: the API serializes enums as their names anyway, so the wire
+    // format is unchanged and both ends compare a value instead of a spelling.
+    private IngestionMode? VcsIngestionOf(string providerType) =>
         vcsRegistrations
             .FirstOrDefault(r => ProviderKey.Normalize(r.ProviderType) == providerType)
-            ?.Ingestion.ToString();
+            ?.Ingestion;
+
+    // The tracker half of the same question. A poll-mode tracker is the one that has to be asked what
+    // is open, so this is what puts the poll button on a tracker connection's row.
+    private IngestionMode? TrackerIngestionOf(string providerType) =>
+        trackerRegistrations
+            .FirstOrDefault(r => ProviderKey.Normalize(r.ProviderType) == providerType)
+            ?.Ingestion;
 
     /// <summary>Lists the registered tracker providers and their settings.</summary>
     /// <returns>One entry per provider.</returns>
@@ -50,7 +61,7 @@ public class ProvidersController(
     public IActionResult ListTrackerProviders() =>
         Ok(trackerFactory.AvailableProviders
             .OrderBy(p => p, StringComparer.Ordinal)
-            .Select(p => Describe(p, trackerFactory.GetSettingsSchema(p))));
+            .Select(p => Describe(p, trackerFactory.GetSettingsSchema(p), TrackerIngestionOf(p))));
 
     /// <summary>
     /// Lists the registered deploy strategies and their settings, so the deploy-target form can offer
@@ -65,19 +76,27 @@ public class ProvidersController(
 
     private static object Describe(
         string providerType, IEnumerable<Providers.Abstractions.ProviderSettingSchema> schema,
-        string? ingestion = null) =>
+        IngestionMode? ingestion = null) =>
         new
         {
             ProviderType = providerType,
-            // Push/Poll for VCS providers; null for trackers and deploy strategies, which have no such axis.
+            // Push/Poll for a VCS or tracker provider; null for deploy strategies, which have no such axis.
             Ingestion = ingestion,
             // Secret settings are declared but their values are never read back - the schema tells
             // the UI to render a write-only field, and nothing here can leak one. Kind/Options/etc.
             // let the UI render a number, a dropdown or a pattern rather than a text box for all.
             Settings = schema.Select(s => new
             {
-                s.Key, s.Label, s.Description, s.Required, s.Secret,
-                Kind = s.Kind.ToString(), s.Options, s.Default, s.Min, s.Max
+                s.Key,
+                s.Label,
+                s.Description,
+                s.Required,
+                s.Secret,
+                s.Kind,
+                s.Options,
+                s.Default,
+                s.Min,
+                s.Max
             })
         };
 }

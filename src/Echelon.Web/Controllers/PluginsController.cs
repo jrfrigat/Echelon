@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Actions;
@@ -35,15 +36,17 @@ public class PluginsController(
     /// </remarks>
     [HttpGet]
     public IActionResult List() => Ok(
-        vcs.Select(r => new PluginView("vcs", r.ProviderType, r.Ingestion.ToString(), r.Description))
-            .Concat(trackers.Select(r => new PluginView("tracker", r.ProviderType, r.Ingestion.ToString(), r.Description)))
-            .Concat(deployStrategies.Select(r => new PluginView("deploy", r.Key, null, r.Description)))
-            .Concat(actionHandlers.Select(r => new PluginView("action", r.ActionType, null, r.Description)))
-            .OrderBy(p => p.Category, StringComparer.Ordinal)
+        vcs.Select(r => new PluginView(PluginCategory.Vcs, r.ProviderType, r.Ingestion, r.Description))
+            .Concat(trackers.Select(r => new PluginView(PluginCategory.Tracker, r.ProviderType, r.Ingestion, r.Description)))
+            .Concat(deployStrategies.Select(r => new PluginView(PluginCategory.Deploy, r.Key, null, r.Description)))
+            .Concat(actionHandlers.Select(r => new PluginView(PluginCategory.Action, r.ActionType, null, r.Description)))
+            // Category first, in the enum's own order - what the service reads from, then what a
+            // rollout does with it - so the list reads the way the pipeline runs.
+            .OrderBy(p => p.Category)
             .ThenBy(p => p.Key, StringComparer.Ordinal));
 
     /// <summary>One installed plugin.</summary>
-    /// <param name="Category">Which kind: <c>vcs</c>, <c>tracker</c>, <c>deploy</c> or <c>action</c>.</param>
+    /// <param name="Category">Which axis the plugin extends.</param>
     /// <param name="Key">The registered key (provider type, strategy key, or action type).</param>
     /// <param name="Ingestion">
     /// <c>"Push"</c> or <c>"Poll"</c> for a connector, null for a deploy strategy or action handler,
@@ -57,5 +60,5 @@ public class PluginsController(
     /// decide what it is.
     /// </remarks>
     /// <param name="Description">The plugin's own one-line description; null when it declared none.</param>
-    public sealed record PluginView(string Category, string Key, string? Ingestion, string? Description);
+    public sealed record PluginView(PluginCategory Category, string Key, IngestionMode? Ingestion, string? Description);
 }

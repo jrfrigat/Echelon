@@ -87,7 +87,7 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
 
         var rows = mergeRequests
             .Select(m => new WorkItemDto(
-                Kind: "MergeRequest",
+                Kind: WorkItemKind.MergeRequest,
                 TaskKey: m.TaskKey,
                 RepositoryName: m.RepositoryName,
                 ConnectionName: m.ConnectionName,
@@ -110,7 +110,7 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
         rows.AddRange(branches
             .Where(b => !carried.Contains((b.RepositoryId, b.Name)))
             .Select(b => new WorkItemDto(
-                Kind: "Branch",
+                Kind: WorkItemKind.Branch,
                 TaskKey: b.TaskExternalId,
                 RepositoryName: b.RepositoryName,
                 ConnectionName: b.ConnectionName,
@@ -246,7 +246,7 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
 }
 
 /// <summary>One piece of deployable work: a task's presence in a repository, and what carries it.</summary>
-/// <param name="Kind"><c>MergeRequest</c> or <c>Branch</c> - what the work currently rides in.</param>
+/// <param name="Kind">What the work currently rides in - a merge request, or a branch nobody has raised one for.</param>
 /// <param name="TaskKey">The task the linking rule matched, or null when it matched none.</param>
 /// <param name="RepositoryName">The repository the work is in.</param>
 /// <param name="ConnectionName">The connection that reported it.</param>
@@ -259,7 +259,7 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
 /// <param name="Readiness">Judgement for the named environment, or null when none was named or none is possible.</param>
 /// <param name="At">When the work first appeared.</param>
 public record WorkItemDto(
-    string Kind,
+    WorkItemKind Kind,
     string? TaskKey,
     string RepositoryName,
     string ConnectionName,

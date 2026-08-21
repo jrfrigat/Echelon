@@ -21,7 +21,7 @@
                             Value="@Values.GetValueOrDefault(setting.Key, "")"
                             ValueChanged="@(v => Set(setting.Key, v))" />
     }
-    else if (setting.Kind == "Enum" && setting.Options is { Count: > 0 } options)
+    else if (setting.Kind == ProviderSettingKind.Enum && setting.Options is { Count: > 0 } options)
     {
         @* A fixed choice: a dropdown, so an invalid value cannot be typed. The server still
            re-validates the value against the same option set. *@
@@ -117,7 +117,7 @@
     // before a rejected save rather than after. Other kinds just show their description.
     static string? FieldHelper(ProviderSettingDto setting)
     {
-        if (setting.Kind != "Int" || (setting.Min is null && setting.Max is null))
+        if (setting.Kind != ProviderSettingKind.Int || (setting.Min is null && setting.Max is null))
             return setting.Description;
 
         var range = (setting.Min, setting.Max) switch

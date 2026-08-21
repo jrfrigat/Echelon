@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Echelon.Pwa.Models;
 
 namespace Echelon.Pwa.Services;
@@ -120,7 +122,10 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PostAsJsonAsync("api/vcs-connections",
             new
             {
-                Name = name, VcsType = vcsType, ApiUrl = apiUrl, AccessToken = accessToken,
+                Name = name,
+                VcsType = vcsType,
+                ApiUrl = apiUrl,
+                AccessToken = accessToken,
                 Settings = settings
             }, ct), ct);
 
@@ -136,7 +141,10 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PutAsJsonAsync($"api/vcs-connections/{id}",
             new
             {
-                Name = name, ApiUrl = apiUrl, AccessToken = accessToken, Settings = settings
+                Name = name,
+                ApiUrl = apiUrl,
+                AccessToken = accessToken,
+                Settings = settings
             }, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
@@ -162,8 +170,11 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PostAsJsonAsync("api/tracker-connections",
             new
             {
-                Name = name, TrackerType = trackerType, ApiUrl = apiUrl,
-                AccessToken = accessToken, Settings = settings
+                Name = name,
+                TrackerType = trackerType,
+                ApiUrl = apiUrl,
+                AccessToken = accessToken,
+                Settings = settings
             }, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
@@ -176,6 +187,13 @@ public class ApiService(HttpClient http)
 
     public Task DeleteTrackerConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/tracker-connections/{id}", ct), ct);
+
+    /// <summary>
+    /// Polls a tracker connection now: the tracker is asked what is open and the tasks already known
+    /// are re-read, returning how many syncs were requested and how many of them are new.
+    /// </summary>
+    public Task<TrackerPollResultDto> PollTrackerConnectionAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync<TrackerPollResultDto>(() => http.PostAsync($"api/tracker-connections/{id}/poll", content: null, ct), ct);
 
     // ---- repositories ---------------------------------------------------------
 
@@ -287,9 +305,12 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PostAsJsonAsync("api/deploy-targets",
             new
             {
-                RepositoryId = repositoryId, EnvironmentId = environmentId,
-                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy,
-                Settings = settings, ReadinessRuleId = readinessRuleId
+                RepositoryId = repositoryId,
+                EnvironmentId = environmentId,
+                DeployStrategyKey = deployStrategyKey,
+                RedeployPolicy = redeployPolicy,
+                Settings = settings,
+                ReadinessRuleId = readinessRuleId
             }, ct), ct);
 
     /// <param name="settings">An omitted secret keeps the stored one, as with a connection token.</param>
@@ -300,9 +321,12 @@ public class ApiService(HttpClient http)
         SendAsync(() => http.PutAsJsonAsync($"api/deploy-targets/{id}",
             new
             {
-                RepositoryId = repositoryId, EnvironmentId = environmentId,
-                DeployStrategyKey = deployStrategyKey, RedeployPolicy = redeployPolicy,
-                Settings = settings, ReadinessRuleId = readinessRuleId
+                RepositoryId = repositoryId,
+                EnvironmentId = environmentId,
+                DeployStrategyKey = deployStrategyKey,
+                RedeployPolicy = redeployPolicy,
+                Settings = settings,
+                ReadinessRuleId = readinessRuleId
             }, ct), ct);
 
     public Task DeleteDeployTargetAsync(Guid id, CancellationToken ct = default) =>
@@ -427,12 +451,24 @@ public class ApiService(HttpClient http)
 
     // ---- plumbing -------------------------------------------------------------
 
+    /// <summary>Web defaults plus enum names, matching what the API writes.</summary>
+    /// <remarks>
+    /// The API registers <c>JsonStringEnumConverter</c>, so an enum arrives as its name. Without the
+    /// same converter here every enum-typed field would fail to deserialize - which is why those
+    /// fields used to be declared as strings and compared against literals like "Poll", something no
+    /// compiler could check against the server's own enum.
+    /// </remarks>
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private async Task<T> GetAsync<T>(string url, CancellationToken ct)
     {
         var response = await http.GetAsync(url, ct);
         await EnsureSuccessAsync(response, ct);
 
-        return await response.Content.ReadFromJsonAsync<T>(ct)
+        return await response.Content.ReadFromJsonAsync<T>(Json, ct)
                ?? throw new ApiException("The server returned an empty response.", response.StatusCode);
     }
 
@@ -443,7 +479,7 @@ public class ApiService(HttpClient http)
         if (response.StatusCode == HttpStatusCode.NotFound) return default;
 
         await EnsureSuccessAsync(response, ct);
-        return await response.Content.ReadFromJsonAsync<T>(ct);
+        return await response.Content.ReadFromJsonAsync<T>(Json, ct);
     }
 
     private async Task<T> SendAsync<T>(Func<Task<HttpResponseMessage>> send, CancellationToken ct)
@@ -451,7 +487,7 @@ public class ApiService(HttpClient http)
         var response = await send();
         await EnsureSuccessAsync(response, ct);
 
-        return await response.Content.ReadFromJsonAsync<T>(ct)
+        return await response.Content.ReadFromJsonAsync<T>(Json, ct)
                ?? throw new ApiException("The server returned an empty response.", response.StatusCode);
     }
 
