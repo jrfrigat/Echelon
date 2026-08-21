@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Echelon.Application.Contracts.Messages;
+using Echelon.Application.DTOs;
 using Echelon.Application.Exceptions;
 using Echelon.Core.Enums;
 using Echelon.Core.Parsing;
@@ -61,8 +62,7 @@ public class MergeRequestsController(
             .OrderByDescending(mr => mr.CreatedAt).ThenBy(mr => mr.Id)
             .Skip(paging.Skip)
             .Take(paging.PageSize)
-            .Select(mr => new
-            {
+            .Select(mr => new MrDto(
                 mr.Id,
                 mr.ExternalId,
                 mr.SourceBranch,
@@ -73,14 +73,13 @@ public class MergeRequestsController(
                 mr.ClosedAt,
                 mr.IsStatusManual,
                 mr.RepositoryId,
-                RepositoryName = mr.Repository.Name,
-                ConnectionName = mr.Repository.Connection.Name,
-                TaskExternalId = mr.Task != null ? mr.Task.ExternalId : null
-            })
+                mr.Repository.Name,
+                mr.Repository.Connection.Name,
+                mr.Task != null ? mr.Task.ExternalId : null))
             .AsSplitQuery()
             .ToListAsync(ct);
 
-        return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
+        return Ok(new PagedResult<MrDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>Every distinct label currently carried by a stored merge request.</summary>

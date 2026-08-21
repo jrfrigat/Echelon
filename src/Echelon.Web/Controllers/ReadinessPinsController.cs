@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
@@ -37,12 +38,15 @@ public class ReadinessPinsController(
         var items = await db.MergeRequestReadinessPins
             .Where(p => p.MergeRequestId == mergeRequestId)
             .OrderBy(p => p.Environment.Order)
-            .Select(p => new
-            {
-                p.Id, p.MergeRequestId, p.EnvironmentId,
-                EnvironmentKey = p.Environment.Key,
-                p.IsReady, p.Reason, p.ActorName, p.At
-            })
+            .Select(p => new ReadinessPinDto(
+                p.Id,
+                p.MergeRequestId,
+                p.EnvironmentId,
+                p.Environment.Key,
+                p.IsReady,
+                p.Reason,
+                p.ActorName,
+                p.At))
             .ToListAsync(ct);
         return Ok(items);
     }

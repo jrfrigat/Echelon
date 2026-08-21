@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
 using Echelon.Core.Parsing;
 using Echelon.Infrastructure.Auth;
@@ -153,15 +154,13 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
             .ThenBy(r => r.Carrier, StringComparer.Ordinal)
             .ToList();
 
-        return Ok(new
-        {
-            Total = filtered.Count,
+        return Ok(new WorkItemsResult(
+            filtered.Count,
             paging.Page,
             paging.PageSize,
-            Items = filtered.Skip(paging.Skip).Take(paging.PageSize).ToList(),
+            filtered.Skip(paging.Skip).Take(paging.PageSize).ToList(),
             // Stated rather than left to be discovered: past the cap this list is a slice.
-            Truncated = mergeRequests.Count >= ScanCap || branches.Count >= ScanCap
-        });
+            Truncated: mergeRequests.Count >= ScanCap || branches.Count >= ScanCap));
     }
 
     /// <summary>One column filter box against one value; a blank box selects everything.</summary>
@@ -239,14 +238,15 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
             Guid mergeRequestId, Guid repositoryId, string labels, MergeRequestStatus status, string? pipelineResult)
         {
             if (Deployed.Contains(mergeRequestId))
-                return new WorkItemReadinessDto("Deployed", true, []);
+                return new WorkItemReadinessDto(WorkItemReadiness.Deployed, true, []);
 
             var ruleId = RepositoryOverrides.GetValueOrDefault(repositoryId) ?? EnvironmentRuleId;
             var pin = Pins.GetValueOrDefault(mergeRequestId);
 
             // No rule resolved: ungated, so ready unless a pin deliberately holds it.
             if (ruleId is not { } id || !Rules.TryGetValue(id, out var rule))
-                return new WorkItemReadinessDto(pin is false ? "Held" : "Ungated", pin ?? true, []);
+                return new WorkItemReadinessDto(
+                    pin is false ? WorkItemReadiness.Held : WorkItemReadiness.Ungated, pin ?? true, []);
 
             var signals = ReadinessSignals.For(
                 labels.Split(',', StringSplitOptions.RemoveEmptyEntries), status, pipelineResult);
@@ -258,43 +258,12 @@ public class WorkItemsController(AppDbContext db) : ControllerBase
                 ? []
                 : required.Where(r => !signals.Contains(r)).ToArray();
 
-            return new WorkItemReadinessDto(
-                decision.Source == ReadinessSource.Pin ? (decision.IsReady ? "Pinned" : "Held") : (decision.IsReady ? "Ready" : "NotReady"),
-                decision.IsReady,
-                missing);
+            var readiness = decision.Source == ReadinessSource.Pin
+                ? (decision.IsReady ? WorkItemReadiness.Pinned : WorkItemReadiness.Held)
+                : (decision.IsReady ? WorkItemReadiness.Ready : WorkItemReadiness.NotReady);
+
+            return new WorkItemReadinessDto(readiness, decision.IsReady, missing);
         }
     }
 }
 
-/// <summary>One piece of deployable work: a task's presence in a repository, and what carries it.</summary>
-/// <param name="Kind">What the work currently rides in - a merge request, or a branch nobody has raised one for.</param>
-/// <param name="TaskKey">The task the linking rule matched, or null when it matched none.</param>
-/// <param name="RepositoryName">The repository the work is in.</param>
-/// <param name="ConnectionName">The connection that reported it.</param>
-/// <param name="Carrier">The merge request's id, or the branch's name.</param>
-/// <param name="Branch">The branch either way - a merge request's source branch, or the branch itself.</param>
-/// <param name="State"><c>New</c> for a branch with no merge request; otherwise the merge request's status.</param>
-/// <param name="IsStatusManual">Whether an operator pinned the status by hand.</param>
-/// <param name="Labels">Labels carried, for reading against a readiness rule.</param>
-/// <param name="PipelineResult">The latest pipeline result, when the source reports one.</param>
-/// <param name="Readiness">Judgement for the named environment, or null when none was named or none is possible.</param>
-/// <param name="At">When the work first appeared.</param>
-public record WorkItemDto(
-    WorkItemKind Kind,
-    string? TaskKey,
-    string RepositoryName,
-    string ConnectionName,
-    string Carrier,
-    string Branch,
-    string State,
-    bool IsStatusManual,
-    IReadOnlyList<string> Labels,
-    string? PipelineResult,
-    WorkItemReadinessDto? Readiness,
-    DateTime At);
-
-/// <summary>How one piece of work stands against one environment's rule.</summary>
-/// <param name="Status"><c>Ready</c>, <c>NotReady</c>, <c>Pinned</c>, <c>Held</c>, <c>Ungated</c> or <c>Deployed</c>.</param>
-/// <param name="IsReady">Whether it would pass the gate now.</param>
-/// <param name="MissingSignals">The required signals it does not carry; empty when it is ready.</param>
-public record WorkItemReadinessDto(string Status, bool IsReady, IReadOnlyList<string> MissingSignals);

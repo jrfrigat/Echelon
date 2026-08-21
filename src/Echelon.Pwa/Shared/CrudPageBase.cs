@@ -1,5 +1,5 @@
 using Flare.Components;
-using Echelon.Pwa.Models;
+using Echelon.Application.DTOs;
 using Echelon.Pwa.Resources;
 
 namespace Echelon.Pwa.Shared;

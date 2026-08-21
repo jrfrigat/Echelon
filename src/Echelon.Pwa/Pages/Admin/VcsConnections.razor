@@ -119,7 +119,7 @@
 
     IEnumerable<string> VcsTypes => _providers?.Select(p => p.ProviderType) ?? [];
 
-    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+    IReadOnlyList<ProviderSettingSchema> SelectedSchema =>
         _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
 
     // Every GitLab type carries the linking rule; a future provider that links some other way would
@@ -136,7 +136,7 @@
 
     async Task Poll(VcsConnectionDto c)
     {
-        PollResultDto? result = null;
+        VcsPollResultDto? result = null;
 
         _pollingId = c.Id;
         Success = null;

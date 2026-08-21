@@ -45,7 +45,7 @@ public class TasksController(
 
         var total = await planner.CountTasksAsync(query, ct);
         var items = await planner.ListTasksAsync(query, ct);
-        return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
+        return Ok(new PagedResult<TaskListItemDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>One task's own facts and its place in the tracker hierarchy (parent and subtasks).</summary>

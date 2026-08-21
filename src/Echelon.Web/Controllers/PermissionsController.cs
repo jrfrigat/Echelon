@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Localization;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Web.Resources;
@@ -42,7 +43,7 @@ public class PermissionsController(
     public async Task<IActionResult> ListClaims(CancellationToken ct)
         => Ok(await db.PermissionClaims
             .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name })
+            .Select(c => new PermissionClaimDto(c.Id, c.Name))
             .ToListAsync(ct));
 
     /// <summary>Which directory group holds which permission.</summary>
@@ -51,7 +52,7 @@ public class PermissionsController(
     public async Task<IActionResult> ListGroupMappings(CancellationToken ct)
         => Ok(await db.GroupPermissionMappings
             .OrderBy(m => m.AdGroupSid).ThenBy(m => m.PermissionClaim.Name)
-            .Select(m => new { m.Id, m.AdGroupSid, ClaimName = m.PermissionClaim.Name })
+            .Select(m => new GroupMappingDto(m.Id, m.AdGroupSid, m.PermissionClaim.Name))
             .ToListAsync(ct));
 
     /// <summary>Grants a permission to a directory group.</summary>

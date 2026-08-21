@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
@@ -81,17 +82,10 @@ public class VcsConnectionsController(
             .ToListAsync(ct);
 
         var items = rows
-            .Select(c => new
-            {
-                c.Id,
-                c.Name,
-                VcsType = c.ProviderType,
-                c.ApiUrl,
-                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
-            })
+            .Select(c => new VcsConnectionDto(c.Id, c.Name, c.ProviderType, c.ApiUrl, ReadSettings(c.ProviderType, c.ProviderSettingsJson)))
             .ToList();
 
-        return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
+        return Ok(new PagedResult<VcsConnectionDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>One connection. Never includes the access token.</summary>
@@ -114,14 +108,7 @@ public class VcsConnectionsController(
 
         return c is null
             ? NotFound()
-            : Ok(new
-            {
-                c.Id,
-                c.Name,
-                VcsType = c.ProviderType,
-                c.ApiUrl,
-                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
-            });
+            : Ok(new VcsConnectionDto(c.Id, c.Name, c.ProviderType, c.ApiUrl, ReadSettings(c.ProviderType, c.ProviderSettingsJson)));
     }
 
     /// <summary>
@@ -288,17 +275,8 @@ public class VcsConnectionsController(
 
         // A repository that cannot be read is reported, not thrown: the operator needs to see which one
         // is misconfigured (and what the others found), which a 500 hid.
-        var result = await poller.PollAsync(entity, ct);
-        return Ok(new
-        {
-            emitted = result.Emitted,
-            // Reported alongside the merge requests because a sweep can be entirely branches: a
-            // repository whose work has not reached review yet emits nothing here but still holds a
-            // parent task back, and an operator seeing only "emitted: 0" would read that as "nothing
-            // happened" rather than "the unlanded work was refreshed".
-            branches = result.Branches,
-            failures = result.Failures.Select(f => new { repository = f.RepositoryExternalId, reason = f.Reason })
-        });
+        // Returned as the poller built it: the shape the client reads is the shape this produces.
+        return Ok(await poller.PollAsync(entity, ct));
     }
 
     /// <summary>Removes a connection. Refused while repositories still point at it.</summary>

@@ -230,21 +230,21 @@
         _ => FlareColor.OnSurfaceVariant
     };
 
-    static string ReadinessLabel(string status) => status switch
+    static string ReadinessLabel(WorkItemReadiness status) => status switch
     {
-        "Ready" => UiStrings.Work_Ready,
-        "NotReady" => UiStrings.Work_NotReady,
-        "Pinned" => UiStrings.Work_Ready_Pinned,
-        "Held" => UiStrings.Work_Held,
-        "Deployed" => UiStrings.Work_Deployed,
+        WorkItemReadiness.Ready => UiStrings.Work_Ready,
+        WorkItemReadiness.NotReady => UiStrings.Work_NotReady,
+        WorkItemReadiness.Pinned => UiStrings.Work_Ready_Pinned,
+        WorkItemReadiness.Held => UiStrings.Work_Held,
+        WorkItemReadiness.Deployed => UiStrings.Work_Deployed,
         _ => UiStrings.Work_Ungated
     };
 
-    static FlareColor ReadinessColor(string status) => status switch
+    static FlareColor ReadinessColor(WorkItemReadiness status) => status switch
     {
-        "Ready" or "Pinned" => FlareColor.Success,
-        "Deployed" => FlareColor.Secondary,
-        "Held" or "NotReady" => FlareColor.Warning,
+        WorkItemReadiness.Ready or WorkItemReadiness.Pinned => FlareColor.Success,
+        WorkItemReadiness.Deployed => FlareColor.Secondary,
+        WorkItemReadiness.Held or WorkItemReadiness.NotReady => FlareColor.Warning,
         _ => FlareColor.OnSurfaceVariant
     };
 }

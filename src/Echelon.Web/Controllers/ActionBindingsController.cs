@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Echelon.Infrastructure.Actions;
 using Echelon.Infrastructure.Providers;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
@@ -30,7 +31,7 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
     {
         var items = await db.ActionBindings
             .OrderBy(b => b.EventType).ThenBy(b => b.Order).ThenBy(b => b.Id)
-            .Select(b => new { b.Id, b.EventType, b.ActionType, b.Scope, b.Order, b.Enabled })
+            .Select(b => new ActionBindingDto(b.Id, b.EventType, b.ActionType, b.Scope, b.Order, b.Enabled))
             .ToListAsync(ct);
         return Ok(items);
     }
@@ -38,12 +39,7 @@ public class ActionBindingsController(AppDbContext db, IActionHandlerFactory fac
     /// <summary>The action types available to bind, each with its settings schema.</summary>
     [HttpGet("types")]
     public IActionResult Types() =>
-        Ok(factory.AvailableActionTypes.Select(t => new
-        {
-            ActionType = t,
-            Settings = factory.GetSettingsSchema(t)
-                .Select(s => new { s.Key, s.Label, s.Description, s.Required, s.Secret })
-        }));
+        Ok(factory.AvailableActionTypes.Select(t => new ActionTypeDto(t, factory.GetSettingsSchema(t))));
 
     /// <summary>Creates an action binding.</summary>
     /// <param name="req">The binding to create.</param>

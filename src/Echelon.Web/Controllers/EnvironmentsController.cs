@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
@@ -31,13 +32,15 @@ public class EnvironmentsController(
     {
         var items = await db.DeploymentEnvironments
             .OrderBy(e => e.Order).ThenBy(e => e.Key)
-            .Select(e => new
-            {
-                e.Id, e.Key, e.Name, e.Order, e.IsEnabled,
+            .Select(e => new EnvironmentDto(
+                e.Id,
+                e.Key,
+                e.Name,
+                e.Order,
+                e.IsEnabled,
                 e.ReadinessRuleId,
                 // Null when ungated; the name lets the UI show which rule without a second call.
-                ReadinessRuleName = e.ReadinessRule != null ? e.ReadinessRule.Name : null
-            })
+                e.ReadinessRule != null ? e.ReadinessRule.Name : null))
             .ToListAsync(ct);
 
         return Ok(items);

@@ -363,7 +363,9 @@
                     <FlareColumn TItem="RepositoryOrderingDto" Id="type" Title="@UiStrings.DefaultPlan_Col_Type"
                                  Field="@(r => (object?)r.Type)" Sortable="true">
                         <Template>
-                            <FlareChip Size="ChipSize.Sm" Color="@(context.Type == "Hard" ? FlareColor.Primary : FlareColor.Default)" Label="@(context.Type == "Hard" ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)" />
+                            <FlareChip Size="ChipSize.Sm"
+                                       Color="@(context.Type == StackDependencyType.Hard ? FlareColor.Primary : FlareColor.Default)"
+                                       Label="@(context.Type == StackDependencyType.Hard ? UiStrings.DefaultPlan_Type_Hard : UiStrings.DefaultPlan_Type_Soft)" />
                         </Template>
                     </FlareColumn>
                     <FlareColumn TItem="RepositoryOrderingDto" Id="actions" Title="" Align="ColumnAlign.End">
@@ -386,8 +388,8 @@
 </FlareStack>
 
 @code {
-    List<RepositoryOrderingDto>? _rules;
-    List<RepositoryDto>? _repositories;
+    IReadOnlyList<RepositoryOrderingDto>? _rules;
+    IReadOnlyList<RepositoryDto>? _repositories;
     DefaultPlanDto? _plan;
     bool _loading = true;
     bool _busy;

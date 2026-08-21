@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Echelon.Core.Enums;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
@@ -52,7 +53,7 @@ public class DeployTargetsController(
                 t.EnvironmentId,
                 EnvironmentKey = t.Environment.Key,
                 t.DeployStrategyKey,
-                RedeployPolicy = t.RedeployPolicy.ToString(),
+                t.RedeployPolicy,
                 t.DeploySettingsJson,
                 t.ReadinessRuleId,
                 // Null when this target uses the environment's default rule; the name lets the UI show
@@ -62,12 +63,17 @@ public class DeployTargetsController(
             .ToListAsync(ct);
 
         // Reshaped after the query: settings are unpacked and secrets withheld in memory.
-        var items = rows.Select(t => new
-        {
-            t.Id, t.RepositoryId, t.RepositoryName, t.EnvironmentId, t.EnvironmentKey,
-            t.DeployStrategyKey, t.RedeployPolicy, t.ReadinessRuleId, t.ReadinessRuleName,
-            Settings = ReadSettings(t.DeployStrategyKey, t.DeploySettingsJson)
-        });
+        var items = rows.Select(t => new DeployTargetDto(
+            t.Id,
+            t.RepositoryId,
+            t.RepositoryName,
+            t.EnvironmentId,
+            t.EnvironmentKey,
+            t.DeployStrategyKey,
+            t.RedeployPolicy,
+            ReadSettings(t.DeployStrategyKey, t.DeploySettingsJson),
+            t.ReadinessRuleId,
+            t.ReadinessRuleName));
 
         return Ok(items);
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
 using Echelon.Core.Parsing;
 using Echelon.Infrastructure.Auth;
@@ -38,12 +39,11 @@ public class ReadinessRulesController(
     {
         var items = await db.ReadinessRules
             .OrderBy(r => r.Name)
-            .Select(r => new
-            {
-                r.Id, r.Name,
-                Mode = r.Mode.ToString(),
-                RequiredSignals = r.RequiredSignals.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            })
+            .Select(r => new ReadinessRuleDto(
+                r.Id,
+                r.Name,
+                r.Mode,
+                r.RequiredSignals.Split(',', StringSplitOptions.RemoveEmptyEntries)))
             .ToListAsync(ct);
 
         return Ok(items);

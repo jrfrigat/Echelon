@@ -48,6 +48,28 @@ All notable changes to this project are documented here. The format is based on
   open and re-reads what is already known: the first half is what finds work at all, the second is what
   notices an issue closed while nobody was looking, since a closed issue is absent from the answer.
 
+### Changed
+
+- **The API's response types are declared once and used by both ends.** The admin client carried its
+  own copy of 44 of them - some mirroring a server DTO, most mirroring an anonymous object a
+  controller built inline - so nothing but attention kept the two halves in step, and attention had
+  already failed once. The copies are gone: the controllers project into the shared records, the
+  browser reads those same records, and a mismatch is now a compile error. Paged endpoints answer with
+  one `PagedResult<T>` instead of seven hand-built shapes. The wire format is unchanged.
+- **Closed sets in those contracts travel as enums**, not spellings: the readiness verdict (a new
+  `WorkItemReadiness`), a rule's mode, a target's redeploy policy, a merge request's status and an
+  ordering rule's type. The admin UI compared them as strings, which no compiler could check.
+
+### Fixed
+
+- **The action-type endpoint sent five of its ten schema fields**, so a bounded number arrived without
+  its bounds and rendered as a plain text box. It sends the schema whole now, like every other
+  provider does.
+- **Two API test classes could not run at once.** WebApplicationFactory intercepts the host through
+  static machinery, so a second one starting in parallel lost the race and failed with "The entry
+  point exited without ever building an IHost" - an error about nothing the test did. They share a
+  collection now, which serializes them.
+
 ### Added
 
 - **An opt-in test pass against a local SQL Server** (`ECHELON_SQLSERVER_TESTS=1`), covering the two

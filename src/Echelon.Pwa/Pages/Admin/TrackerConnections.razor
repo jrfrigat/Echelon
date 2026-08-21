@@ -124,7 +124,7 @@
 
     IEnumerable<string> TrackerTypes => _providers?.Select(p => p.ProviderType) ?? [];
 
-    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+    IReadOnlyList<ProviderSettingSchema> SelectedSchema =>
         _providers?.FirstOrDefault(p => p.ProviderType == _fType)?.Settings ?? [];
 
     // As with VCS connections, the type is fixed at creation and Update does not accept it.

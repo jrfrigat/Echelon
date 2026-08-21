@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Echelon.Application.DTOs;
+using Echelon.Core.Enums;
 using Echelon.Pwa.Models;
 
 namespace Echelon.Pwa.Services;
@@ -55,11 +56,11 @@ public class ApiService(HttpClient http)
     /// <summary>Checks a document without saving, reporting problems and what each group selects.</summary>
     public Task<OrderingRulesValidationDto> ValidateOrderingRulesAsync(string document, CancellationToken ct = default) =>
         SendAsync<OrderingRulesValidationDto>(
-            () => http.PostAsJsonAsync("api/planning/rules/validate", new { Document = document }, ct), ct);
+            () => http.PostAsJsonAsync("api/planning/rules/validate", new { Document = document }, Json, ct), ct);
 
     /// <summary>Saves the document. An invalid one is refused with the problems listed.</summary>
     public Task SaveOrderingRulesAsync(string document, CancellationToken ct = default) =>
-        SendAsync(() => http.PutAsJsonAsync("api/planning/rules", new { Document = document }, ct), ct);
+        SendAsync(() => http.PutAsJsonAsync("api/planning/rules", new { Document = document }, Json, ct), ct);
 
     /// <summary>The rules configured on screen, written out as a document ready to adopt.</summary>
     public Task<OrderingRulesDocumentDto> OrderingRulesFromScreenAsync(CancellationToken ct = default) =>
@@ -94,7 +95,7 @@ public class ApiService(HttpClient http)
 
     /// <summary>Pins a status by hand - one of the two ways an MR is marked deployable.</summary>
     public Task SetMergeRequestStatusAsync(Guid id, string status, CancellationToken ct = default) =>
-        SendAsync(() => http.PatchAsJsonAsync($"api/merge-requests/{id}/status", new { Status = status }, ct), ct);
+        SendAsync(() => http.PatchAsJsonAsync($"api/merge-requests/{id}/status", new { Status = status }, Json, ct), ct);
 
     // ---- providers ------------------------------------------------------------
 
@@ -137,7 +138,7 @@ public class ApiService(HttpClient http)
                 ApiUrl = apiUrl,
                 AccessToken = accessToken,
                 Settings = settings
-            }, ct), ct);
+            }, Json, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
     /// <param name="settings">
@@ -155,14 +156,14 @@ public class ApiService(HttpClient http)
                 ApiUrl = apiUrl,
                 AccessToken = accessToken,
                 Settings = settings
-            }, ct), ct);
+            }, Json, ct), ct);
 
     public Task DeleteVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/vcs-connections/{id}", ct), ct);
 
     /// <summary>Polls a poll-mode connection's open merge requests now, returning how many were emitted.</summary>
-    public Task<PollResultDto> PollVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
-        SendAsync<PollResultDto>(() => http.PostAsync($"api/vcs-connections/{id}/poll", content: null, ct), ct);
+    public Task<VcsPollResultDto> PollVcsConnectionAsync(Guid id, CancellationToken ct = default) =>
+        SendAsync<VcsPollResultDto>(() => http.PostAsync($"api/vcs-connections/{id}/poll", content: null, ct), ct);
 
     /// <summary>The connectors, deploy strategies and action handlers this build has installed.</summary>
     public Task<List<PluginDto>> GetPluginsAsync(CancellationToken ct = default) =>
@@ -190,7 +191,7 @@ public class ApiService(HttpClient http)
                 ApiUrl = apiUrl,
                 AccessToken = accessToken,
                 Settings = settings
-            }, ct), ct);
+            }, Json, ct), ct);
 
     /// <param name="accessToken">Blank keeps the stored token.</param>
     /// <param name="settings">An omitted secret keeps the stored one, as with the token.</param>
@@ -198,7 +199,7 @@ public class ApiService(HttpClient http)
         Guid id, string name, string apiUrl, string? accessToken,
         Dictionary<string, string?>? settings = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/tracker-connections/{id}",
-            new { Name = name, ApiUrl = apiUrl, AccessToken = accessToken, Settings = settings }, ct), ct);
+            new { Name = name, ApiUrl = apiUrl, AccessToken = accessToken, Settings = settings }, Json, ct), ct);
 
     public Task DeleteTrackerConnectionAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/tracker-connections/{id}", ct), ct);
@@ -222,7 +223,7 @@ public class ApiService(HttpClient http)
 
     public Task CreateRepositoryAsync(string name, string externalId, Guid connectionId, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/repositories",
-            new { Name = name, ExternalId = externalId, ConnectionId = connectionId }, ct), ct);
+            new { Name = name, ExternalId = externalId, ConnectionId = connectionId }, Json, ct), ct);
 
     public Task DeleteRepositoryAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/repositories/{id}", ct), ct);
@@ -242,7 +243,7 @@ public class ApiService(HttpClient http)
     public Task CreateRepositoryOrderingAsync(
         Guid fromRepositoryId, Guid toRepositoryId, string type, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/repository-ordering",
-            new { FromRepositoryId = fromRepositoryId, ToRepositoryId = toRepositoryId, Type = type }, ct), ct);
+            new { FromRepositoryId = fromRepositoryId, ToRepositoryId = toRepositoryId, Type = type }, Json, ct), ct);
 
     public Task DeleteRepositoryOrderingAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/repository-ordering/{id}", ct), ct);
@@ -282,14 +283,14 @@ public class ApiService(HttpClient http)
         string key, string name, int order, bool isEnabled,
         Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/environments",
-            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, ct), ct);
+            new { Key = key, Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, Json, ct), ct);
 
     /// <param name="readinessRuleId">The default readiness rule, or null for no gate; removing a gate needs approval.</param>
     public Task UpdateEnvironmentAsync(
         Guid id, string name, int order, bool isEnabled,
         Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/environments/{id}",
-            new { Key = "", Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, ct), ct);
+            new { Key = "", Name = name, Order = order, IsEnabled = isEnabled, ReadinessRuleId = readinessRuleId }, Json, ct), ct);
 
     public Task DeleteEnvironmentAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/environments/{id}", ct), ct);
@@ -302,14 +303,14 @@ public class ApiService(HttpClient http)
     /// <param name="mode">"AnyOf" or "AllOf".</param>
     /// <param name="requiredSignals">The signal tokens a merge request must carry, e.g. label:ready-for-prod.</param>
     public Task CreateReadinessRuleAsync(
-        string name, string mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
+        string name, ReadyRule mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/readiness-rules",
-            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, ct), ct);
+            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, Json, ct), ct);
 
     public Task UpdateReadinessRuleAsync(
-        Guid id, string name, string mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
+        Guid id, string name, ReadyRule mode, IReadOnlyList<string> requiredSignals, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/readiness-rules/{id}",
-            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, ct), ct);
+            new { Name = name, Mode = mode, RequiredSignals = requiredSignals }, Json, ct), ct);
 
     public Task DeleteReadinessRuleAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/readiness-rules/{id}", ct), ct);
@@ -326,7 +327,7 @@ public class ApiService(HttpClient http)
     /// <param name="settings">Strategy settings, keyed as the strategy declares them.</param>
     /// <param name="readinessRuleId">Readiness-rule override for this pair, or null to use the environment default.</param>
     public Task CreateDeployTargetAsync(
-        Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
+        Guid repositoryId, Guid environmentId, string deployStrategyKey, RedeployPolicy redeployPolicy,
         Dictionary<string, string?>? settings = null, Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/deploy-targets",
             new
@@ -337,12 +338,12 @@ public class ApiService(HttpClient http)
                 RedeployPolicy = redeployPolicy,
                 Settings = settings,
                 ReadinessRuleId = readinessRuleId
-            }, ct), ct);
+            }, Json, ct), ct);
 
     /// <param name="settings">An omitted secret keeps the stored one, as with a connection token.</param>
     /// <param name="readinessRuleId">Readiness-rule override for this pair, or null to use the environment default.</param>
     public Task UpdateDeployTargetAsync(
-        Guid id, Guid repositoryId, Guid environmentId, string deployStrategyKey, string redeployPolicy,
+        Guid id, Guid repositoryId, Guid environmentId, string deployStrategyKey, RedeployPolicy redeployPolicy,
         Dictionary<string, string?>? settings = null, Guid? readinessRuleId = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync($"api/deploy-targets/{id}",
             new
@@ -353,7 +354,7 @@ public class ApiService(HttpClient http)
                 RedeployPolicy = redeployPolicy,
                 Settings = settings,
                 ReadinessRuleId = readinessRuleId
-            }, ct), ct);
+            }, Json, ct), ct);
 
     public Task DeleteDeployTargetAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/deploy-targets/{id}", ct), ct);
@@ -367,7 +368,7 @@ public class ApiService(HttpClient http)
     public Task SetReadinessPinAsync(
         Guid mergeRequestId, Guid environmentId, bool isReady, string? reason = null, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync("api/readiness-pins",
-            new { MergeRequestId = mergeRequestId, EnvironmentId = environmentId, IsReady = isReady, Reason = reason }, ct), ct);
+            new { MergeRequestId = mergeRequestId, EnvironmentId = environmentId, IsReady = isReady, Reason = reason }, Json, ct), ct);
 
     public Task DeleteReadinessPinAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/readiness-pins/{id}", ct), ct);
@@ -384,11 +385,11 @@ public class ApiService(HttpClient http)
     public Task<OrderingRulesDocumentDto> RenderOrderingRulesModelAsync(
         OrderingRulesModelDto model, CancellationToken ct = default) =>
         SendAsync<OrderingRulesDocumentDto>(
-            () => http.PostAsJsonAsync("api/planning/rules/model/render", model, ct), ct);
+            () => http.PostAsJsonAsync("api/planning/rules/model/render", model, Json, ct), ct);
 
     /// <summary>Renders a structure and stores it as the ordering-rule document.</summary>
     public Task SaveOrderingRulesModelAsync(OrderingRulesModelDto model, CancellationToken ct = default) =>
-        SendAsync(() => http.PutAsJsonAsync("api/planning/rules/model", model, ct), ct);
+        SendAsync(() => http.PutAsJsonAsync("api/planning/rules/model", model, Json, ct), ct);
 
     /// <summary>The merge requests forced into or out of a task's rollout.</summary>
     /// <remarks>
@@ -402,14 +403,14 @@ public class ApiService(HttpClient http)
     public Task SetPlanMembershipAsync(
         Guid taskId, Guid mergeRequestId, string state, CancellationToken ct = default) =>
         SendAsync(() => http.PutAsJsonAsync(
-            $"api/planning/tasks/{taskId}/membership/{mergeRequestId}", new { State = state }, ct), ct);
+            $"api/planning/tasks/{taskId}/membership/{mergeRequestId}", new { State = state }, Json, ct), ct);
 
     // ---- rollouts -------------------------------------------------------------
 
     /// <param name="redeploy">Redeploy already-deployed merge requests, where their target permits it.</param>
     public Task<RolloutDto> LaunchRolloutAsync(Guid taskId, Guid environmentId, bool redeploy = false, CancellationToken ct = default) =>
         SendAsync<RolloutDto>(
-            () => http.PostAsJsonAsync($"api/tasks/{taskId}/rollouts", new { EnvironmentId = environmentId, Redeploy = redeploy }, ct), ct);
+            () => http.PostAsJsonAsync($"api/tasks/{taskId}/rollouts", new { EnvironmentId = environmentId, Redeploy = redeploy }, Json, ct), ct);
 
     public Task<RolloutDto?> GetRolloutAsync(Guid id, CancellationToken ct = default) =>
         GetOrNullAsync<RolloutDto>($"api/rollouts/{id}", ct);
@@ -438,7 +439,7 @@ public class ApiService(HttpClient http)
         string eventType, string actionType, string? scope, Dictionary<string, string> settings, int order, bool enabled,
         CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/action-bindings",
-            new { EventType = eventType, ActionType = actionType, Scope = scope, Settings = settings, Order = order, Enabled = enabled }, ct), ct);
+            new { EventType = eventType, ActionType = actionType, Scope = scope, Settings = settings, Order = order, Enabled = enabled }, Json, ct), ct);
 
     public Task DeleteActionBindingAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/action-bindings/{id}", ct), ct);
@@ -469,14 +470,14 @@ public class ApiService(HttpClient http)
 
     public Task AddGroupMappingAsync(string adGroupSid, Guid permissionClaimId, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/permissions/group-mappings",
-            new { AdGroupSid = adGroupSid, PermissionClaimId = permissionClaimId }, ct), ct);
+            new { AdGroupSid = adGroupSid, PermissionClaimId = permissionClaimId }, Json, ct), ct);
 
     public Task RemoveGroupMappingAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => http.DeleteAsync($"api/permissions/group-mappings/{id}", ct), ct);
 
     public Task AddUserOverrideAsync(string userId, Guid permissionClaimId, CancellationToken ct = default) =>
         SendAsync(() => http.PostAsJsonAsync("api/permissions/user-overrides",
-            new { UserId = userId, PermissionClaimId = permissionClaimId }, ct), ct);
+            new { UserId = userId, PermissionClaimId = permissionClaimId }, Json, ct), ct);
 
     // ---- plumbing -------------------------------------------------------------
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
@@ -64,17 +65,10 @@ public class TrackerConnectionsController(
             .ToListAsync(ct);
 
         var items = rows
-            .Select(c => new
-            {
-                c.Id,
-                c.Name,
-                TrackerType = c.ProviderType,
-                c.ApiUrl,
-                Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
-            })
+            .Select(c => new TrackerConnectionDto(c.Id, c.Name, c.ProviderType, c.ApiUrl, ReadSettings(c.ProviderType, c.ProviderSettingsJson)))
             .ToList();
 
-        return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
+        return Ok(new PagedResult<TrackerConnectionDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>One tracker connection. Never includes the access token.</summary>
@@ -90,14 +84,7 @@ public class TrackerConnectionsController(
 
         return row is null
             ? NotFound()
-            : Ok(new
-            {
-                row.Id,
-                row.Name,
-                TrackerType = row.ProviderType,
-                row.ApiUrl,
-                Settings = ReadSettings(row.ProviderType, row.ProviderSettingsJson)
-            });
+            : Ok(new TrackerConnectionDto(row.Id, row.Name, row.ProviderType, row.ApiUrl, ReadSettings(row.ProviderType, row.ProviderSettingsJson)));
     }
 
     /// <summary>
@@ -261,13 +248,7 @@ public class TrackerConnectionsController(
         // A tracker that cannot be searched is reported in the body, not thrown: the tasks already known
         // were still re-read, and a 500 would hide both that and the tracker's own explanation - which
         // is usually the missing setting that says which queues to sweep.
-        var result = await poller.PollAsync(entity, ct);
-        return Ok(new
-        {
-            emitted = result.Emitted,
-            discovered = result.Discovered,
-            failure = result.Failure
-        });
+        return Ok(await poller.PollAsync(entity, ct));
     }
 
     /// <summary>Removes a tracker connection. Refused while tasks still point at it.</summary>

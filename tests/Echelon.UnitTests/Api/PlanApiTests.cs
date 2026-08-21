@@ -19,6 +19,7 @@ namespace Echelon.UnitTests.Api;
 /// is the right one, that a refusal is a 422 and not a 500, and that the JSON says what the client
 /// reads. Verified by hand against a running instance once; this is the version that survives.
 /// </remarks>
+[Collection(ApiCollection.Name)]
 public class PlanApiTests : IAsyncLifetime
 {
     private ApiFactory _factory = null!;

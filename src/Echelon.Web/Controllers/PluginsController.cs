@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Echelon.Core.Enums;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Auth;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Actions;
@@ -36,29 +37,12 @@ public class PluginsController(
     /// </remarks>
     [HttpGet]
     public IActionResult List() => Ok(
-        vcs.Select(r => new PluginView(PluginCategory.Vcs, r.ProviderType, r.Ingestion, r.Description))
-            .Concat(trackers.Select(r => new PluginView(PluginCategory.Tracker, r.ProviderType, r.Ingestion, r.Description)))
-            .Concat(deployStrategies.Select(r => new PluginView(PluginCategory.Deploy, r.Key, null, r.Description)))
-            .Concat(actionHandlers.Select(r => new PluginView(PluginCategory.Action, r.ActionType, null, r.Description)))
+        vcs.Select(r => new PluginDto(PluginCategory.Vcs, r.ProviderType, r.Ingestion, r.Description))
+            .Concat(trackers.Select(r => new PluginDto(PluginCategory.Tracker, r.ProviderType, r.Ingestion, r.Description)))
+            .Concat(deployStrategies.Select(r => new PluginDto(PluginCategory.Deploy, r.Key, null, r.Description)))
+            .Concat(actionHandlers.Select(r => new PluginDto(PluginCategory.Action, r.ActionType, null, r.Description)))
             // Category first, in the enum's own order - what the service reads from, then what a
             // rollout does with it - so the list reads the way the pipeline runs.
             .OrderBy(p => p.Category)
             .ThenBy(p => p.Key, StringComparer.Ordinal));
-
-    /// <summary>One installed plugin.</summary>
-    /// <param name="Category">Which axis the plugin extends.</param>
-    /// <param name="Key">The registered key (provider type, strategy key, or action type).</param>
-    /// <param name="Ingestion">
-    /// <c>"Push"</c> or <c>"Poll"</c> for a connector, null for a deploy strategy or action handler,
-    /// which have no ingestion at all.
-    /// </param>
-    /// <remarks>
-    /// This is the connector's <em>own</em> declaration, echoed - not a classification this service
-    /// makes. Each adapter registers itself with the mode it works in (GitLab registers
-    /// <c>gitlab-webhook</c> as Push and <c>gitlab-poll</c> as Poll, in its own extension method), and
-    /// the poller then sweeps whichever connections declared Poll. Nothing here inspects a plugin to
-    /// decide what it is.
-    /// </remarks>
-    /// <param name="Description">The plugin's own one-line description; null when it declared none.</param>
-    public sealed record PluginView(PluginCategory Category, string Key, IngestionMode? Ingestion, string? Description);
 }

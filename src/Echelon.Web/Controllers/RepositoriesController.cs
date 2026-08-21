@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
@@ -44,11 +45,18 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
         // in any order, so entries can repeat or vanish between pages.
         var items = await repositories
             .OrderBy(r => r.Name).ThenBy(r => r.Id)
-            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name, r.TrackerConnectionId, TrackerConnectionName = r.TrackerConnection != null ? r.TrackerConnection.Name : null })
+            .Select(r => new RepositoryDto(
+                r.Id,
+                r.Name,
+                r.ExternalId,
+                r.ConnectionId,
+                r.Connection.Name,
+                r.TrackerConnectionId,
+                r.TrackerConnection != null ? r.TrackerConnection.Name : null))
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
 
-        return Ok(new { Total = total, Page = paging.Page, PageSize = paging.PageSize, Items = items });
+        return Ok(new PagedResult<RepositoryDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>One repository.</summary>
@@ -59,7 +67,14 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
     {
         var repository = await db.Repositories
             .Where(r => r.Id == id)
-            .Select(r => new { r.Id, r.Name, r.ExternalId, r.ConnectionId, ConnectionName = r.Connection.Name, r.TrackerConnectionId, TrackerConnectionName = r.TrackerConnection != null ? r.TrackerConnection.Name : null })
+            .Select(r => new RepositoryDto(
+                r.Id,
+                r.Name,
+                r.ExternalId,
+                r.ConnectionId,
+                r.Connection.Name,
+                r.TrackerConnectionId,
+                r.TrackerConnection != null ? r.TrackerConnection.Name : null))
             .FirstOrDefaultAsync(ct);
 
         return repository is null ? NotFound() : Ok(repository);

@@ -46,19 +46,17 @@ public class RepositoryOrderingController(
 
         var items = await db.RepositoryDependencies
             .OrderBy(d => d.FromRepository.Name).ThenBy(d => d.Id)
-            .Select(d => new
-            {
+            .Select(d => new RepositoryOrderingDto(
                 d.Id,
                 d.FromRepositoryId,
-                FromRepositoryName = d.FromRepository.Name,
+                d.FromRepository.Name,
                 d.ToRepositoryId,
-                ToRepositoryName = d.ToRepository.Name,
-                Type = d.Type.ToString()
-            })
+                d.ToRepository.Name,
+                d.Type))
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
 
-        return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
+        return Ok(new PagedResult<RepositoryOrderingDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>

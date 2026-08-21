@@ -1,4 +1,5 @@
 using Echelon.Application.Contracts.Messages;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Providers;
 using Echelon.Providers.Abstractions;
@@ -33,7 +34,7 @@ public sealed class VcsConnectionPoller(
     /// connection's sweep and surface as a blanket 500, hiding both which repository was wrong and the
     /// results of every other repository.
     /// </remarks>
-    public async Task<VcsPollResult> PollAsync(VcsConnection connection, CancellationToken ct)
+    public async Task<VcsPollResultDto> PollAsync(VcsConnection connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
@@ -41,7 +42,7 @@ public sealed class VcsConnectionPoller(
         var source = $"{ProviderKey.Normalize(connection.ProviderType)}/{connection.Name}";
         var emitted = 0;
         var branchesSeen = 0;
-        var failures = new List<VcsPollFailure>();
+        var failures = new List<VcsPollFailureDto>();
 
         foreach (var repository in connection.Repositories)
         {
@@ -94,7 +95,7 @@ public sealed class VcsConnectionPoller(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                failures.Add(new VcsPollFailure(repository.ExternalId, Describe(ex)));
+                failures.Add(new VcsPollFailureDto(repository.ExternalId, Describe(ex)));
                 logger.LogWarning(
                     ex, "Polling repository {Repository} of {Connection} failed", repository.ExternalId, connection.Name);
             }
@@ -107,7 +108,7 @@ public sealed class VcsConnectionPoller(
                 emitted, branchesSeen, connection.Name);
         }
 
-        return new VcsPollResult(emitted, failures, branchesSeen);
+        return new VcsPollResultDto(emitted, failures, branchesSeen);
     }
 
     // A 404 from the provider is the common misconfiguration, and "Not Found" alone does not say what to
@@ -118,13 +119,3 @@ public sealed class VcsConnectionPoller(
             : ex.Message;
 }
 
-/// <summary>What one connection's poll produced.</summary>
-/// <param name="Emitted">How many merge-request observations were sent.</param>
-/// <param name="Failures">Repositories that could not be read; empty when every one succeeded.</param>
-/// <param name="Branches">How many branches were observed across the connection's repositories.</param>
-public sealed record VcsPollResult(int Emitted, IReadOnlyList<VcsPollFailure> Failures, int Branches = 0);
-
-/// <summary>A repository the poll could not read, and why.</summary>
-/// <param name="RepositoryExternalId">The repository, as configured.</param>
-/// <param name="Reason">A human explanation, aimed at the misconfiguration that usually causes it.</param>
-public sealed record VcsPollFailure(string RepositoryExternalId, string Reason);

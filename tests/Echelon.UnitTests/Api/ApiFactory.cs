@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Xunit;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -304,4 +305,19 @@ public sealed class NoopClaimsTransformation : IClaimsTransformation
 {
     /// <inheritdoc/>
     public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal) => Task.FromResult(principal);
+}
+
+/// <summary>Puts every test that boots the host into one collection, so only one runs at a time.</summary>
+/// <remarks>
+/// WebApplicationFactory starts the real entry point and intercepts host creation through static
+/// machinery in HostFactoryResolver. Two of them starting at once race it, and the loser fails with
+/// "The entry point exited without ever building an IHost" - which says nothing about the test that
+/// failed and looks like a flake. xunit parallelises across classes by default, so the second API test
+/// class ever written is what surfaces this; the collection is what stops it.
+/// </remarks>
+[CollectionDefinition(Name)]
+public sealed class ApiCollection
+{
+    /// <summary>The collection name, so a new API test class can join it without re-spelling a string.</summary>
+    public const string Name = "api-host";
 }

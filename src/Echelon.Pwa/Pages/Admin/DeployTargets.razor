@@ -32,7 +32,7 @@
                         <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Strategy"
                                      Value="_strategyKey" ValueChanged="OnStrategyChanged"
                                      Items="StrategyOptions" Style="min-width:12rem;" />
-                        <FlareSelect TValue="string" Label="@UiStrings.Deploy_Col_Redeploy"
+                        <FlareSelect TValue="RedeployPolicy" Label="@UiStrings.Deploy_Col_Redeploy"
                                      @bind-Value="_redeployPolicy" Items="RedeployPolicies"
                                      ItemLabel="@(p => RedeployLabel(p))" Style="min-width:10rem;" />
                         @* Optional per-repository readiness override; empty falls back to the environment's rule. *@
@@ -74,7 +74,8 @@
                 <FlareColumn TItem="DeployTargetDto" Id="redeploy" Title="@UiStrings.Deploy_Col_Redeploy">
                     <Template>
                         <FlareChip Size="ChipSize.Sm"
-                                   Color="@(context.RedeployPolicy == "Always" ? FlareColor.Warning : FlareColor.Default)" Label="@RedeployLabel(context.RedeployPolicy)" />
+                                   Color="@(context.RedeployPolicy == RedeployPolicy.Always ? FlareColor.Warning : FlareColor.Default)"
+                                   Label="@RedeployLabel(context.RedeployPolicy)" />
                     </Template>
                 </FlareColumn>
                 <FlareColumn TItem="DeployTargetDto" Id="readiness" Title="@UiStrings.Deploy_Col_Readiness">
@@ -104,10 +105,11 @@
 </FlareStack>
 
 @code {
-    // Mirrors Core.Enums.RedeployPolicy; the PWA does not reference Core.
-    static readonly string[] RedeployPolicies = ["Once", "Always", "Inherit"];
+    // The enum itself, not a copy of its spellings: the client reads Core.Enums now, so the list and
+    // the values the API accepts cannot drift apart.
+    static readonly RedeployPolicy[] RedeployPolicies = Enum.GetValues<RedeployPolicy>();
 
-    List<RepositoryDto>? _repos;
+    IReadOnlyList<RepositoryDto>? _repos;
     List<EnvironmentDto>? _envs;
     List<ProviderTypeDto>? _strategies;
     List<DeployTargetDto>? _targets;
@@ -118,7 +120,7 @@
     Guid? _repoId;
     Guid? _envId;
     string _strategyKey = "";
-    string _redeployPolicy = "Once";
+    RedeployPolicy _redeployPolicy = RedeployPolicy.Once;
     string _ruleId = "";   // "" = use the environment's default readiness rule
     Dictionary<string, string> _settings = [];
 
@@ -129,7 +131,7 @@
     IEnumerable<Guid?> EnvOptions => _envs?.Select(e => (Guid?)e.Id) ?? [];
     IEnumerable<string> StrategyOptions => _strategies?.Select(s => s.ProviderType) ?? [];
 
-    IReadOnlyList<ProviderSettingDto> SelectedSchema =>
+    IReadOnlyList<ProviderSettingSchema> SelectedSchema =>
         _strategies?.FirstOrDefault(s => s.ProviderType == _strategyKey)?.Settings ?? [];
 
     bool IsIncomplete => _repoId is null || _envId is null || string.IsNullOrWhiteSpace(_strategyKey)
@@ -184,10 +186,10 @@
 
     async Task Reload() => await RunAsync(async () => _targets = await Api.GetDeployTargetsAsync());
 
-    static string RedeployLabel(string policy) => policy switch
+    static string RedeployLabel(RedeployPolicy policy) => policy switch
     {
-        "Always" => UiStrings.Deploy_Redeploy_Always,
-        "Inherit" => UiStrings.Deploy_Redeploy_Inherit,
+        RedeployPolicy.Always => UiStrings.Deploy_Redeploy_Always,
+        RedeployPolicy.Inherit => UiStrings.Deploy_Redeploy_Inherit,
         _ => UiStrings.Deploy_Redeploy_Once
     };
 

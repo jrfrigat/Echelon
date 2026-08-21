@@ -1,4 +1,5 @@
 using Echelon.Application.Contracts.Messages;
+using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Providers;
@@ -52,7 +53,7 @@ public sealed class TrackerConnectionPoller(
     /// still worth re-reading, and the operator needs the tracker's own sentence - usually a missing
     /// queue setting or a rejected token - rather than a blanket 500 that hides both.
     /// </remarks>
-    public async Task<TrackerPollResult> PollAsync(TrackerConnection connection, CancellationToken ct)
+    public async Task<TrackerPollResultDto> PollAsync(TrackerConnection connection, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
@@ -91,7 +92,7 @@ public sealed class TrackerConnectionPoller(
                 keys.Count, connection.Name, discovered);
         }
 
-        return new TrackerPollResult(keys.Count, discovered, failure);
+        return new TrackerPollResultDto(keys.Count, discovered, failure);
     }
 
     /// <summary>Adds the tracker's own open issues to <paramref name="keys"/>.</summary>
@@ -141,8 +142,4 @@ public sealed class TrackerConnectionPoller(
     }
 }
 
-/// <summary>What one tracker poll did.</summary>
-/// <param name="Emitted">Sync requests sent, over both the discovered and the already-known issues.</param>
-/// <param name="Discovered">How many of those the tracker turned up that were not in the database.</param>
-/// <param name="Failure">Why the tracker could not be searched, or null when it was.</param>
-public sealed record TrackerPollResult(int Emitted, int Discovered, string? Failure = null);
+

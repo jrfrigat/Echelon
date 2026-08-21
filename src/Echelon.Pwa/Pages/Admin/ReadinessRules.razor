@@ -22,7 +22,7 @@
                    nudged down by the label height so it still sits on the input line. *@
                 <FlareStack Row Gap="FlareSpacing.Small" Align="FlareAlignItems.Start" Wrap>
                     <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_name" Style="min-width:12rem;" />
-                    <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                    <FlareSelect TValue="ReadyRule" Label="@UiStrings.RR_Mode_Label"
                                  @bind-Value="_mode" Items="Modes" ItemLabel="@(ModeLabel)" Style="min-width:10rem;" />
                     <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_signals"
                                     Style="min-width:22rem;" />
@@ -101,7 +101,7 @@
         <form @onsubmit="SaveEdit" @onsubmit:preventDefault>
             <FlareStack Gap="FlareSpacing.Medium">
                 <FlareTextField Label="@UiStrings.Common_Name" @bind-Value="_eName" />
-                <FlareSelect TValue="string" Label="@UiStrings.RR_Mode_Label"
+                <FlareSelect TValue="ReadyRule" Label="@UiStrings.RR_Mode_Label"
                              @bind-Value="_eMode" Items="Modes" ItemLabel="@(ModeLabel)" />
                 <FlareTextField Label="@UiStrings.RR_Signals_Label" @bind-Value="_eSignals" />
             </FlareStack>
@@ -117,21 +117,22 @@
 </FlareDialog>
 
 @code {
-    // Mirrors the gating modes a named rule may take (ReadyRule minus NoGate); the PWA does not reference Core.
-    static readonly string[] Modes = ["AllOf", "AnyOf"];
+    // The gating modes a NAMED rule may take: ReadyRule minus NoGate, which is the absence of a rule
+    // rather than one you can pick. Taken from the enum now that the client reads Core.
+    static readonly ReadyRule[] Modes = [ReadyRule.AllOf, ReadyRule.AnyOf];
 
     List<ReadinessRuleDto>? _rules;
     bool _loading = true;
     bool _busy;
 
     string _name = "";
-    string _mode = "AllOf";
+    ReadyRule _mode = ReadyRule.AllOf;
     string _signals = "";
 
     bool _showEdit;
     Guid _eId;
     string _eName = "";
-    string _eMode = "AllOf";
+    ReadyRule _eMode = ReadyRule.AllOf;
     string _eSignals = "";
 
     protected override async Task OnInitializedAsync() => await Load();
@@ -153,7 +154,7 @@
                 async () => await Api.CreateReadinessRuleAsync(_name.Trim(), _mode, SplitSignals(_signals)),
                 UiStrings.RR_Created))
         {
-            _name = ""; _mode = "AllOf"; _signals = "";
+            _name = ""; _mode = ReadyRule.AllOf; _signals = "";
             await Load();
         }
         _busy = false;
@@ -195,9 +196,9 @@
     static List<string> SplitSignals(string text) =>
         text.Split([',', ' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).ToList();
 
-    static string ModeLabel(string mode) => mode switch
+    static string ModeLabel(ReadyRule mode) => mode switch
     {
-        "AnyOf" => UiStrings.Env_Rule_AnyOf,
+        ReadyRule.AnyOf => UiStrings.Env_Rule_AnyOf,
         _ => UiStrings.Env_Rule_AllOf
     };
 }

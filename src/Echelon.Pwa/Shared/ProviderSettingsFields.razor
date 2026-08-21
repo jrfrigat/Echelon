@@ -46,7 +46,7 @@
 @code {
     /// <summary>The settings the chosen provider declares. Empty renders nothing at all.</summary>
     [Parameter, EditorRequired]
-    public IReadOnlyList<ProviderSettingDto> Schema { get; set; } = [];
+    public IReadOnlyList<ProviderSettingSchema> Schema { get; set; } = [];
 
     /// <summary>The current values, keyed as the schema declares them. Mutated in place.</summary>
     [Parameter, EditorRequired]
@@ -64,7 +64,7 @@
     /// Disabling the button is so the operator learns it before a round trip, not instead of one.
     /// </remarks>
     public static bool MissingRequired(
-        IReadOnlyList<ProviderSettingDto> schema, IReadOnlyDictionary<string, string> values, bool editing) =>
+        IReadOnlyList<ProviderSettingSchema> schema, IReadOnlyDictionary<string, string> values, bool editing) =>
         schema.Any(s => s.Required
                         // While editing, a blank secret means "keep the stored one", so it is not
                         // missing. Treating it as missing would wedge the save button on every edit
@@ -76,7 +76,7 @@
     /// A fresh value map for a schema, with every declared key present and seeded with its default
     /// (blank when it has none). A secret never gets a default - its box stays empty.
     /// </summary>
-    public static Dictionary<string, string> Blank(IEnumerable<ProviderSettingDto>? schema) =>
+    public static Dictionary<string, string> Blank(IEnumerable<ProviderSettingSchema>? schema) =>
         schema?.ToDictionary(s => s.Key, s => s.Secret ? "" : s.Default ?? "", StringComparer.Ordinal)
         ?? new(StringComparer.Ordinal);
 
@@ -86,7 +86,7 @@
     /// <param name="schema">The provider's declared settings.</param>
     /// <param name="stored">What the API returned for this connection; secrets are already absent.</param>
     public static Dictionary<string, string> ForEdit(
-        IEnumerable<ProviderSettingDto>? schema, IReadOnlyDictionary<string, string>? stored)
+        IEnumerable<ProviderSettingSchema>? schema, IReadOnlyDictionary<string, string>? stored)
     {
         var values = Blank(schema);
         foreach (var (key, value) in stored ?? new Dictionary<string, string>())
@@ -108,14 +108,14 @@
         values.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
               .ToDictionary(kv => kv.Key, kv => (string?)kv.Value.Trim(), StringComparer.Ordinal);
 
-    string? SecretHelper(ProviderSettingDto setting) =>
+    string? SecretHelper(ProviderSettingSchema setting) =>
         string.IsNullOrWhiteSpace(setting.Description)
             ? UiStrings.Provider_Secret_Keep
             : $"{setting.Description} {UiStrings.Provider_Secret_Keep}";
 
     // For an Int field with bounds, append the accepted range to the hint so the operator learns it
     // before a rejected save rather than after. Other kinds just show their description.
-    static string? FieldHelper(ProviderSettingDto setting)
+    static string? FieldHelper(ProviderSettingSchema setting)
     {
         if (setting.Kind != ProviderSettingKind.Int || (setting.Min is null && setting.Max is null))
             return setting.Description;

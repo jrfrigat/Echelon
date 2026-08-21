@@ -88,7 +88,7 @@ public class RequestAuditController(
             .AsNoTracking()
             .ToListAsync(ct);
 
-        return Ok(new { Total = total, paging.Page, paging.PageSize, Items = items });
+        return Ok(new PagedResult<RequestAuditEntryDto>(total, paging.Page, paging.PageSize, items));
     }
 
     /// <summary>Traffic, failures and latency per endpoint over the window.</summary>

@@ -1,3 +1,4 @@
+using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
 using Echelon.Providers.Abstractions;
@@ -74,29 +75,15 @@ public class ProvidersController(
             .OrderBy(k => k, StringComparer.Ordinal)
             .Select(k => Describe(k, deployFactory.GetSettingsSchema(k))));
 
-    private static object Describe(
-        string providerType, IEnumerable<Providers.Abstractions.ProviderSettingSchema> schema,
+    /// <summary>One provider as the admin forms need it: its key, its fields, and how its events arrive.</summary>
+    /// <remarks>
+    /// The adapter's own schema is passed through rather than copied field by field. Secret settings are
+    /// declared but never carry a value - the schema tells the UI to render a write-only field, and
+    /// nothing here can leak one.
+    /// </remarks>
+    private static ProviderTypeDto Describe(
+        string providerType,
+        IReadOnlyList<ProviderSettingSchema> schema,
         IngestionMode? ingestion = null) =>
-        new
-        {
-            ProviderType = providerType,
-            // Push/Poll for a VCS or tracker provider; null for deploy strategies, which have no such axis.
-            Ingestion = ingestion,
-            // Secret settings are declared but their values are never read back - the schema tells
-            // the UI to render a write-only field, and nothing here can leak one. Kind/Options/etc.
-            // let the UI render a number, a dropdown or a pattern rather than a text box for all.
-            Settings = schema.Select(s => new
-            {
-                s.Key,
-                s.Label,
-                s.Description,
-                s.Required,
-                s.Secret,
-                s.Kind,
-                s.Options,
-                s.Default,
-                s.Min,
-                s.Max
-            })
-        };
+        new(providerType, schema, ingestion);
 }
