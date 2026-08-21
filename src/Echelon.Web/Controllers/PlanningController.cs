@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Rebus.Bus;
+using Microsoft.Extensions.Localization;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Application.ReleasePlanning;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
+using Echelon.Web.Resources;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
 
@@ -24,7 +26,11 @@ namespace Echelon.Web.Controllers;
 [ApiController]
 [Route("api/planning")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) : ControllerBase
+public class PlanningController(
+    AppDbContext db,
+    IBus bus,
+    TimeProvider clock,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     /// <summary>
     /// Asks for every active plan to be rebuilt, because something that decides deploy order changed.
@@ -270,7 +276,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     {
         var (document, errors) = Render(req);
         return errors.Count > 0
-            ? BadRequest(new { error = "The rules could not be written.", problems = errors })
+            ? BadRequest(new { error = localizer["Rules_WriteFailed"].Value, problems = errors })
             : Ok(new OrderingRulesDocumentDto(document));
     }
 
@@ -289,7 +295,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     {
         var (document, errors) = Render(req);
         if (errors.Count > 0)
-            return BadRequest(new { error = "The rules could not be written.", problems = errors });
+            return BadRequest(new { error = localizer["Rules_WriteFailed"].Value, problems = errors });
 
         return await SetRules(new OrderingRulesDocumentDto(document), ct);
     }
@@ -366,7 +372,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     {
         var parsed = OrderingRuleDocument.Read(req.Document);
         if (!parsed.IsValid)
-            return BadRequest(new { error = "The ordering rules are not valid.", problems = parsed.Errors });
+            return BadRequest(new { error = localizer["Rules_Invalid"].Value, problems = parsed.Errors });
 
         var settings = await db.PlanningSettings.FirstOrDefaultAsync(ct);
         if (settings is null)
@@ -532,7 +538,7 @@ public class PlanningController(AppDbContext db, IBus bus, TimeProvider clock) :
     {
         if (!await db.Tasks.AnyAsync(t => t.Id == taskId, ct)) return NotFound();
         if (!await db.MergeRequests.AnyAsync(m => m.Id == mergeRequestId, ct))
-            return NotFound(new { error = "Unknown merge request." });
+            return NotFound(new { error = localizer["Mr_NotFound", mergeRequestId].Value });
 
         PlanOverrideKind? kind;
         switch (req.State?.ToLowerInvariant())

@@ -2,10 +2,12 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Echelon.Core.Enums;
 using Echelon.Core.Parsing;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
+using Echelon.Web.Resources;
 using Echelon.Infrastructure.Persistence.Models;
 
 namespace Echelon.Web.Controllers;
@@ -25,7 +27,9 @@ namespace Echelon.Web.Controllers;
 [ApiController]
 [Route("api/readiness-rules")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class ReadinessRulesController(AppDbContext db) : ControllerBase
+public class ReadinessRulesController(
+    AppDbContext db,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     /// <summary>Lists the readiness rules.</summary>
     /// <param name="ct">Cancellation token.</param>
@@ -52,7 +56,7 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
     [Authorize(Policy = Permissions.ConfigEdit)]
     public async Task<IActionResult> Create([FromBody] SaveReadinessRuleRequest req, CancellationToken ct)
     {
-        if (!TryRead(req, out var name, out var mode, out var signals, out var error))
+        if (!TryRead(req, localizer, out var name, out var mode, out var signals, out var error))
             return BadRequest(new { error });
         if (await db.ReadinessRules.AnyAsync(r => r.Name == name, ct))
             return Conflict(new { error = $"A readiness rule named '{name}' already exists." });
@@ -74,7 +78,7 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
         var rule = await db.ReadinessRules.FirstOrDefaultAsync(r => r.Id == id, ct);
         if (rule is null) return NotFound();
 
-        if (!TryRead(req, out var name, out var mode, out var signals, out var error))
+        if (!TryRead(req, localizer, out var name, out var mode, out var signals, out var error))
             return BadRequest(new { error });
         if (await db.ReadinessRules.AnyAsync(r => r.Name == name && r.Id != id, ct))
             return Conflict(new { error = $"A readiness rule named '{name}' already exists." });
@@ -117,8 +121,13 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
     /// Validates and normalizes a submitted rule: a non-blank name, a real gating mode, and a
     /// non-empty canonical signal set.
     /// </summary>
+    /// <remarks>
+    /// Takes the localizer rather than being static: these three sentences are shown to whoever is
+    /// filling the form in, and the rest of the API answers that person in their own language.
+    /// </remarks>
     private static bool TryRead(
-        SaveReadinessRuleRequest req, out string name, out ReadyRule mode, out string signals, out string error)
+        SaveReadinessRuleRequest req, IStringLocalizer<ApiStrings> localizer,
+        out string name, out ReadyRule mode, out string signals, out string error)
     {
         name = (req.Name ?? string.Empty).Trim();
         signals = LabelSet.Canonical(req.RequiredSignals);
@@ -127,7 +136,7 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
 
         if (name.Length == 0)
         {
-            error = "Name is required.";
+            error = localizer["Common_NameRequired"].Value;
             return false;
         }
 
@@ -135,13 +144,13 @@ public class ReadinessRulesController(AppDbContext db) : ControllerBase
         // rejected here rather than stored as a rule that admits everything.
         if (!Enum.TryParse(req.Mode, ignoreCase: true, out mode) || (mode != ReadyRule.AnyOf && mode != ReadyRule.AllOf))
         {
-            error = $"Unknown rule mode '{req.Mode}'. Valid: AnyOf, AllOf.";
+            error = localizer["RR_ModeUnknown", req.Mode ?? string.Empty].Value;
             return false;
         }
 
         if (signals.Length == 0)
         {
-            error = "A rule must require at least one signal (e.g. label:ready-for-prod, mr-status:merged).";
+            error = localizer["RR_SignalRequired"].Value;
             return false;
         }
 

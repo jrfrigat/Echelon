@@ -2,9 +2,11 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Web.Resources;
 
 namespace Echelon.Web.Controllers;
 
@@ -21,7 +23,10 @@ namespace Echelon.Web.Controllers;
 [ApiController]
 [Route("api/readiness-pins")]
 [Authorize(Policy = Permissions.ReleasePlanApprove)]
-public class ReadinessPinsController(AppDbContext db, TimeProvider clock) : ControllerBase
+public class ReadinessPinsController(
+    AppDbContext db,
+    TimeProvider clock,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     /// <summary>Lists the readiness pins for one merge request, across environments.</summary>
     /// <param name="mergeRequestId">The merge request whose pins to list.</param>
@@ -52,9 +57,9 @@ public class ReadinessPinsController(AppDbContext db, TimeProvider clock) : Cont
     public async Task<IActionResult> Set([FromBody] SetReadinessPinRequest req, CancellationToken ct)
     {
         if (!await db.MergeRequests.AnyAsync(m => m.Id == req.MergeRequestId, ct))
-            return BadRequest(new { error = "No such merge request." });
+            return BadRequest(new { error = localizer["Pin_MergeRequestNotFound"].Value });
         if (!await db.DeploymentEnvironments.AnyAsync(e => e.Id == req.EnvironmentId, ct))
-            return BadRequest(new { error = "No such environment." });
+            return BadRequest(new { error = localizer["Pin_EnvironmentNotFound"].Value });
 
         var actor = this.ResolveActor();
         var now = clock.GetUtcNow().UtcDateTime;

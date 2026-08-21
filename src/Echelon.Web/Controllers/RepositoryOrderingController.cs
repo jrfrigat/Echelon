@@ -3,12 +3,14 @@ using Rebus.Bus;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Application.DTOs;
 using Echelon.Application.ReleasePlanning;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
+using Echelon.Web.Resources;
 using Echelon.Infrastructure.Persistence.Models;
 
 namespace Echelon.Web.Controllers;
@@ -25,7 +27,11 @@ namespace Echelon.Web.Controllers;
 [ApiController]
 [Route("api/repository-ordering")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvider clock) : ControllerBase
+public class RepositoryOrderingController(
+    AppDbContext db,
+    IBus bus,
+    TimeProvider clock,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     /// <summary>Lists the repository-ordering rules.</summary>
     /// <param name="page">1-based page number.</param>
@@ -120,7 +126,7 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
             return BadRequest(new { error = $"Unknown dependency type '{req.Type}'. Expected one of: {string.Join(", ", Enum.GetNames<StackDependencyType>())}." });
 
         if (req.FromRepositoryId == req.ToRepositoryId)
-            return BadRequest(new { error = "A repository cannot depend on itself." });
+            return BadRequest(new { error = localizer["Ordering_SelfDependency"].Value });
 
         if (!await db.Repositories.AnyAsync(r => r.Id == req.FromRepositoryId, ct))
             return BadRequest(new { error = $"Repository {req.FromRepositoryId} not found." });
@@ -130,7 +136,7 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
 
         if (await db.RepositoryDependencies.AnyAsync(
                 d => d.FromRepositoryId == req.FromRepositoryId && d.ToRepositoryId == req.ToRepositoryId, ct))
-            return Conflict(new { error = "This repository dependency already exists." });
+            return Conflict(new { error = localizer["Ordering_Exists"].Value });
 
         var dep = new RepositoryDependency
         {
@@ -182,8 +188,7 @@ public class RepositoryOrderingController(AppDbContext db, IBus bus, TimeProvide
     private IActionResult DocumentOwnsOrdering() =>
         Conflict(new
         {
-            error = "Deploy ordering is defined by the ordering-rule document, so these rules are read-only. "
-                    + "Edit the document instead, or clear it to go back to editing rules here."
+            error = localizer["Ordering_ReadOnly"].Value
         });
 
     /// <summary>

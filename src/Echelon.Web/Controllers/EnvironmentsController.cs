@@ -2,9 +2,11 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Echelon.Web.Resources;
 
 namespace Echelon.Web.Controllers;
 
@@ -17,7 +19,10 @@ namespace Echelon.Web.Controllers;
 [ApiController]
 [Route("api/environments")]
 [Authorize(Policy = Permissions.ReleasePlanView)]
-public class EnvironmentsController(AppDbContext db, IAuthorizationService authz) : ControllerBase
+public class EnvironmentsController(
+    AppDbContext db,
+    IAuthorizationService authz,
+    IStringLocalizer<ApiStrings> localizer) : ControllerBase
 {
     /// <summary>Lists environments in promotion order, with their readiness rule.</summary>
     /// <param name="ct">Cancellation token.</param>
@@ -46,12 +51,12 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
     public async Task<IActionResult> Create([FromBody] SaveEnvironmentRequest req, CancellationToken ct)
     {
         var key = req.Key.Trim();
-        if (key.Length == 0) return BadRequest(new { error = "Key is required." });
+        if (key.Length == 0) return BadRequest(new { error = localizer["Env_KeyRequired"].Value });
         if (await db.DeploymentEnvironments.AnyAsync(e => e.Key == key, ct))
             return Conflict(new { error = $"An environment with key '{key}' already exists." });
 
         if (req.ReadinessRuleId is { } ruleId && !await db.ReadinessRules.AnyAsync(r => r.Id == ruleId, ct))
-            return BadRequest(new { error = "No such readiness rule." });
+            return BadRequest(new { error = localizer["Readiness_RuleNotFound"].Value });
         // Creating an ungated environment (no rule) is an approval decision, not a config one.
         if (req.ReadinessRuleId is null && await ApprovalDenied(ct))
             return Forbid();
@@ -82,7 +87,7 @@ public class EnvironmentsController(AppDbContext db, IAuthorizationService authz
         if (env is null) return NotFound();
 
         if (req.ReadinessRuleId is { } ruleId && !await db.ReadinessRules.AnyAsync(r => r.Id == ruleId, ct))
-            return BadRequest(new { error = "No such readiness rule." });
+            return BadRequest(new { error = localizer["Readiness_RuleNotFound"].Value });
         // Only removing the gate (to no rule) on an environment that had one is a new approval
         // decision; a routine rename that leaves an already-ungated environment ungated is not.
         if (req.ReadinessRuleId is null && env.ReadinessRuleId is not null && await ApprovalDenied(ct))

@@ -104,7 +104,7 @@ public class DeployTargetsController(
             return BadRequest(new { error = localizer["DeployTarget_UnknownRedeployPolicy", req.RedeployPolicy ?? ""].Value });
 
         if (req.ReadinessRuleId is { } createRuleId && !await db.ReadinessRules.AnyAsync(r => r.Id == createRuleId, ct))
-            return BadRequest(new { error = "No such readiness rule." });
+            return BadRequest(new { error = localizer["Readiness_RuleNotFound"].Value });
 
         if (await db.RepositoryDeployTargets.AnyAsync(
                 t => t.RepositoryId == req.RepositoryId && t.EnvironmentId == req.EnvironmentId, ct))
@@ -155,7 +155,7 @@ public class DeployTargetsController(
             return BadRequest(new { error = localizer["DeployTarget_UnknownRedeployPolicy", req.RedeployPolicy ?? ""].Value });
 
         if (req.ReadinessRuleId is { } updateRuleId && !await db.ReadinessRules.AnyAsync(r => r.Id == updateRuleId, ct))
-            return BadRequest(new { error = "No such readiness rule." });
+            return BadRequest(new { error = localizer["Readiness_RuleNotFound"].Value });
 
         // Existing settings passed in so a secret left blank on the form keeps its stored value,
         // the same convention the connection editors use.

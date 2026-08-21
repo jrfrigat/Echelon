@@ -234,4 +234,40 @@
   <data name="Vcs_HasRepositories" xml:space="preserve">
     <value>Connection still has repositories; remove them first.</value>
   </data>
+  <data name="Common_NameRequired" xml:space="preserve">
+    <value>Name is required.</value>
+  </data>
+  <data name="Env_KeyRequired" xml:space="preserve">
+    <value>Key is required.</value>
+  </data>
+  <data name="Readiness_RuleNotFound" xml:space="preserve">
+    <value>No such readiness rule.</value>
+  </data>
+  <data name="RR_ModeUnknown" xml:space="preserve">
+    <value>Unknown rule mode '{0}'. Valid: AnyOf, AllOf.</value>
+  </data>
+  <data name="RR_SignalRequired" xml:space="preserve">
+    <value>A rule must require at least one signal (e.g. label:ready-for-prod, mr-status:merged).</value>
+  </data>
+  <data name="Rules_WriteFailed" xml:space="preserve">
+    <value>The rules could not be written.</value>
+  </data>
+  <data name="Rules_Invalid" xml:space="preserve">
+    <value>The ordering rules are not valid.</value>
+  </data>
+  <data name="Pin_MergeRequestNotFound" xml:space="preserve">
+    <value>No such merge request.</value>
+  </data>
+  <data name="Pin_EnvironmentNotFound" xml:space="preserve">
+    <value>No such environment.</value>
+  </data>
+  <data name="Ordering_SelfDependency" xml:space="preserve">
+    <value>A repository cannot depend on itself.</value>
+  </data>
+  <data name="Ordering_Exists" xml:space="preserve">
+    <value>This repository dependency already exists.</value>
+  </data>
+  <data name="Ordering_ReadOnly" xml:space="preserve">
+    <value>Deploy ordering is defined by the ordering-rule document, so these rules are read-only. Edit the document instead, or clear it to go back to editing rules here.</value>
+  </data>
 </root>

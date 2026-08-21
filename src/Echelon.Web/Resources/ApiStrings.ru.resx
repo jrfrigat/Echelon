@@ -234,4 +234,40 @@
   <data name="Vcs_HasRepositories" xml:space="preserve">
     <value>У подключения остались репозитории - сначала удалите их.</value>
   </data>
+  <data name="Common_NameRequired" xml:space="preserve">
+    <value>Название обязательно.</value>
+  </data>
+  <data name="Env_KeyRequired" xml:space="preserve">
+    <value>Ключ обязателен.</value>
+  </data>
+  <data name="Readiness_RuleNotFound" xml:space="preserve">
+    <value>Такого правила готовности нет.</value>
+  </data>
+  <data name="RR_ModeUnknown" xml:space="preserve">
+    <value>Неизвестный режим правила "{0}". Допустимо: AnyOf, AllOf.</value>
+  </data>
+  <data name="RR_SignalRequired" xml:space="preserve">
+    <value>Правило должно требовать хотя бы один сигнал (например, label:ready-for-prod, mr-status:merged).</value>
+  </data>
+  <data name="Rules_WriteFailed" xml:space="preserve">
+    <value>Не удалось записать правила.</value>
+  </data>
+  <data name="Rules_Invalid" xml:space="preserve">
+    <value>Правила порядка некорректны.</value>
+  </data>
+  <data name="Pin_MergeRequestNotFound" xml:space="preserve">
+    <value>Такого merge request'а нет.</value>
+  </data>
+  <data name="Pin_EnvironmentNotFound" xml:space="preserve">
+    <value>Такого окружения нет.</value>
+  </data>
+  <data name="Ordering_SelfDependency" xml:space="preserve">
+    <value>Репозиторий не может зависеть сам от себя.</value>
+  </data>
+  <data name="Ordering_Exists" xml:space="preserve">
+    <value>Такая зависимость репозиториев уже есть.</value>
+  </data>
+  <data name="Ordering_ReadOnly" xml:space="preserve">
+    <value>Порядок выкатки задан документом правил, поэтому эти правила доступны только для чтения. Правьте документ или очистите его, чтобы вернуться к правке правил здесь.</value>
+  </data>
 </root>
