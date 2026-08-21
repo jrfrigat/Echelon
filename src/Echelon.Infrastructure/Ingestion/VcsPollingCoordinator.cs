@@ -1,15 +1,14 @@
+using Echelon.Application.Contracts.Messages;
+using Echelon.Application.Services;
+using Echelon.Core.Enums;
+using Echelon.Infrastructure.Persistence;
+using Echelon.Providers.Abstractions;
+using Echelon.Providers.Abstractions.Vcs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Echelon.Application.Contracts.Messages;
-using Echelon.Application.Services;
-using Echelon.Core.Enums;
-using Echelon.Infrastructure.Persistence;
-using Echelon.Infrastructure.Providers;
-using Echelon.Providers.Abstractions;
-using Echelon.Providers.Abstractions.Vcs;
 
 namespace Echelon.Infrastructure.Ingestion;
 
@@ -81,10 +80,16 @@ public class VcsPollingCoordinator(
         {
             try
             {
-                if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    return;
+                }
 
                 await using var held = await lease.TryAcquireAsync(LeaseName, interval, stoppingToken);
-                if (held is null) continue;
+                if (held is null)
+                {
+                    continue;
+                }
 
                 await PollAsync(stoppingToken);
             }
@@ -119,7 +124,9 @@ public class VcsPollingCoordinator(
         // Drop connections that left poll mode so the map does not grow unbounded.
         var live = connections.Select(c => c.Id).ToHashSet();
         foreach (var gone in _lastPolled.Keys.Where(k => !live.Contains(k)).ToList())
+        {
             _lastPolled.Remove(gone);
+        }
 
         foreach (var connection in connections)
         {
@@ -128,7 +135,10 @@ public class VcsPollingCoordinator(
             var configured = VcsPollSettings.IntervalFrom(ProviderSettingsBag.Deserialize(connection.ProviderSettingsJson));
             var due = TimeSpan.FromSeconds(Math.Max(configured, options.Value.IntervalSeconds));
             if (_lastPolled.TryGetValue(connection.Id, out var last) && now - last < due)
+            {
                 continue;
+            }
+
             _lastPolled[connection.Id] = now;
 
             try

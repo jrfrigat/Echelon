@@ -1,10 +1,10 @@
-using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Providers;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Vcs;
+using Microsoft.Extensions.Logging;
+using Rebus.Bus;
 
 namespace Echelon.Infrastructure.Ingestion;
 
@@ -101,9 +101,12 @@ public sealed class VcsConnectionPoller(
         }
 
         if (emitted > 0 || branchesSeen > 0)
+        {
             logger.LogDebug(
                 "Polled {Count} open merge request(s) and {Branches} branch(es) from {Connection}",
                 emitted, branchesSeen, connection.Name);
+        }
+
         return new VcsPollResult(emitted, failures, branchesSeen);
     }
 

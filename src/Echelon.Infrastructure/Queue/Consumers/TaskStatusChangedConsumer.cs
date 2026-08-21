@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Rebus.Bus;
-using Rebus.Handlers;
 using Echelon.Application.Contracts.Messages;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Providers;
 using Echelon.Providers.Abstractions.Tracker;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Rebus.Bus;
+using Rebus.Handlers;
 
 namespace Echelon.Infrastructure.Queue.Consumers;
 
@@ -35,15 +35,13 @@ public class TaskStatusChangedConsumer(
         }
 
         // Scoped by connection: ExternalId is unique only within a tracker, so matching on it
-        // alone would stamp the status onto a same-keyed task in a different tracker.
+        // alone would stamp the status onto a same-keyed task in a different tracker. A task that is
+        // not here yet is retried rather than dropped - its created event is likely still in flight.
         var task = await db.Tasks.FirstOrDefaultAsync(
-            t => t.TrackerConnectionId == conn.Id && t.ExternalId == msg.ExternalId, ct);
-
-        if (task is null)
-            // Retry: the created event is likely still in flight.
-            throw new TaskNotYetKnownException(
-                $"Task {msg.ExternalId} in tracker {msg.TrackerConnectionName} is not known yet; "
-                + "retrying so the created event can land first.");
+                       t => t.TrackerConnectionId == conn.Id && t.ExternalId == msg.ExternalId, ct)
+                   ?? throw new TaskNotYetKnownException(
+                       $"Task {msg.ExternalId} in tracker {msg.TrackerConnectionName} is not known yet; "
+                       + "retrying so the created event can land first.");
 
         var wasClosed = task.ClosedAt is not null;
 
@@ -64,8 +62,10 @@ public class TaskStatusChangedConsumer(
         // Any crossing of the closed boundary changes which MRs are deployable - reopening
         // matters as much as closing.
         if (wasClosed != (task.ClosedAt is not null))
+        {
             await bus.Send(new ReleasePlanRecalculationRequested(
                 clock.GetUtcNow().UtcDateTime, $"Task {msg.ExternalId} status changed to {msg.NewStatus}"));
+        }
 
         // Links are not carried by the status webhook and trackers do not raise an event when one
         // changes, so any touch of the issue is the cheapest moment to re-read them.

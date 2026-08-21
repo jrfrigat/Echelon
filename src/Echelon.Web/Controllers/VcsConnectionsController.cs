@@ -1,17 +1,16 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Localization;
-using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Ingestion;
 using Echelon.Infrastructure.Persistence;
+using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Providers.Abstractions;
 using Echelon.Providers.Abstractions.Vcs;
 using Echelon.Web.Resources;
 using Echelon.Web.Validation;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 
 namespace Echelon.Web.Controllers;
 
@@ -59,7 +58,11 @@ public class VcsConnectionsController(
             .OrderBy(c => c.Name).ThenBy(c => c.Id)
             .Select(c => new
             {
-                c.Id, c.Name, c.ProviderType, c.ApiUrl, c.ProviderSettingsJson
+                c.Id,
+                c.Name,
+                c.ProviderType,
+                c.ApiUrl,
+                c.ProviderSettingsJson
             })
             .Skip(paging.Skip).Take(paging.PageSize)
             .ToListAsync(ct);
@@ -67,7 +70,10 @@ public class VcsConnectionsController(
         var items = rows
             .Select(c => new
             {
-                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl,
+                c.Id,
+                c.Name,
+                VcsType = c.ProviderType,
+                c.ApiUrl,
                 Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
             })
             .ToList();
@@ -85,7 +91,11 @@ public class VcsConnectionsController(
             .Where(x => x.Id == id)
             .Select(x => new
             {
-                x.Id, x.Name, x.ProviderType, x.ApiUrl, x.ProviderSettingsJson
+                x.Id,
+                x.Name,
+                x.ProviderType,
+                x.ApiUrl,
+                x.ProviderSettingsJson
             })
             .FirstOrDefaultAsync(ct);
 
@@ -93,7 +103,10 @@ public class VcsConnectionsController(
             ? NotFound()
             : Ok(new
             {
-                c.Id, c.Name, VcsType = c.ProviderType, c.ApiUrl,
+                c.Id,
+                c.Name,
+                VcsType = c.ProviderType,
+                c.ApiUrl,
                 Settings = ReadSettings(c.ProviderType, c.ProviderSettingsJson)
             });
     }
@@ -125,21 +138,29 @@ public class VcsConnectionsController(
         // after this it is a stored row that fails on first use.
         var providerType = ProviderKey.Normalize(req.VcsType);
         if (!providerFactory.AvailableProviders.Contains(providerType))
+        {
             return BadRequest(new
             {
                 error = localizer["Vcs_UnknownType", req.VcsType, string.Join(", ", providerFactory.AvailableProviders)].Value
             });
+        }
 
         if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
+        {
             return BadRequest(new { error = urlError });
+        }
 
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name, ct))
+        {
             return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
+        }
 
         if (!ProviderSettingsBinder.TryBind(
                 req.Settings, providerFactory.GetSettingsSchema(providerType),
                 existingJson: null, protector, localizer, out var settingsJson, out var settingsError))
+        {
             return BadRequest(new { error = settingsError });
+        }
 
         var entity = new VcsConnection
         {
@@ -165,30 +186,41 @@ public class VcsConnectionsController(
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateVcsConnectionRequest req, CancellationToken ct)
     {
         if (!ApiUrlValidator.TryValidate(req.ApiUrl, AllowedApiHosts, localizer, out var urlError))
+        {
             return BadRequest(new { error = urlError });
+        }
 
         var entity = await db.VcsConnections.FindAsync([id], ct);
-        if (entity is null) return NotFound();
+        if (entity is null)
+        {
+            return NotFound();
+        }
 
         if (await db.VcsConnections.AnyAsync(c => c.Name == req.Name && c.Id != id, ct))
+        {
             return Conflict(new { error = localizer["Vcs_NameTaken", req.Name].Value });
+        }
 
         // The provider type is the stored one - this endpoint cannot change it. A connection whose
         // provider is no longer registered is refused rather than saved against an empty schema,
         // which would silently discard settings the absent adapter still needs.
         if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+        {
             return BadRequest(new
             {
                 error = localizer[
                     "Vcs_UnknownType", entity.ProviderType,
                     string.Join(", ", providerFactory.AvailableProviders)].Value
             });
+        }
 
         if (!ProviderSettingsBinder.TryBind(
                 req.Settings, providerFactory.GetSettingsSchema(entity.ProviderType),
                 entity.ProviderSettingsJson, protector, localizer,
                 out var settingsJson, out var settingsError))
+        {
             return BadRequest(new { error = settingsError });
+        }
 
         entity.Name = req.Name;
         entity.ApiUrl = req.ApiUrl;
@@ -198,7 +230,9 @@ public class VcsConnectionsController(
         // current", but this used to overwrite unconditionally - so renaming a connection
         // silently encrypted an empty string over a working token and broke every API call.
         if (!string.IsNullOrWhiteSpace(req.AccessToken))
+        {
             entity.EncryptedAccessToken = protector.Protect(req.AccessToken);
+        }
 
         await db.SaveChangesAsync(ct);
         return NoContent();
@@ -224,15 +258,20 @@ public class VcsConnectionsController(
         var entity = await db.VcsConnections
             .Include(c => c.Repositories)
             .FirstOrDefaultAsync(c => c.Id == id, ct);
-        if (entity is null) return NotFound();
+        if (entity is null)
+        {
+            return NotFound();
+        }
 
         if (!providerFactory.AvailableProviders.Contains(entity.ProviderType))
+        {
             return BadRequest(new
             {
                 error = localizer[
                     "Vcs_UnknownType", entity.ProviderType,
                     string.Join(", ", providerFactory.AvailableProviders)].Value
             });
+        }
 
         // A repository that cannot be read is reported, not thrown: the operator needs to see which one
         // is misconfigured (and what the others found), which a 500 hid.
@@ -257,10 +296,15 @@ public class VcsConnectionsController(
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var entity = await db.VcsConnections.FindAsync([id], ct);
-        if (entity is null) return NotFound();
+        if (entity is null)
+        {
+            return NotFound();
+        }
 
         if (await db.Repositories.AnyAsync(r => r.ConnectionId == id, ct))
+        {
             return Conflict(new { error = localizer["Vcs_HasRepositories"].Value });
+        }
 
         db.VcsConnections.Remove(entity);
         await db.SaveChangesAsync(ct);
