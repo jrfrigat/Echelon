@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -38,7 +39,8 @@ public abstract class PlannerTestBase : IAsyncLifetime
         _connection = new SqliteConnection("DataSource=:memory:");
         await _connection.OpenAsync(Ct);
 
-        Db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection, ConfigureSqlite);
+        Db = new AppDbContext(options.Options);
         await Db.Database.EnsureCreatedAsync(Ct);
 
         Tracker = new TrackerConnection
@@ -58,6 +60,17 @@ public abstract class PlannerTestBase : IAsyncLifetime
         Db.TrackerConnections.Add(Tracker);
         Db.VcsConnections.Add(Vcs);
         await Db.SaveChangesAsync(Ct);
+    }
+
+    /// <summary>Hook for a test that needs the provider configured differently.</summary>
+    /// <param name="sqlite">The SQLite options being built.</param>
+    /// <remarks>
+    /// Exists for <c>PlanWriteRetryTests</c>, which needs a retrying execution strategy - the thing
+    /// SQLite does not have and SQL Server does, and therefore the one difference that let a broken
+    /// transaction pass every test here and fail on a real deployment.
+    /// </remarks>
+    protected virtual void ConfigureSqlite(SqliteDbContextOptionsBuilder sqlite)
+    {
     }
 
     public async Task DisposeAsync()

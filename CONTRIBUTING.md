@@ -19,6 +19,18 @@ dotnet test Echelon.slnx
 The build must be **0 errors and 0 warnings**: `TreatWarningsAsErrors` is on, so a warning is a
 build failure, locally and in CI.
 
+The suite runs on SQLite, which cannot express two things a real database does: a retrying execution
+strategy and more than one collation. Both have hidden a defect that broke every deployment while the
+tests stayed green, so there is an opt-in pass against a local SQL Server - run it when you touch a
+transaction, a collated column, or a query that concatenates text:
+
+```bash
+ECHELON_SQLSERVER_TESTS=1 dotnet test Echelon.slnx
+```
+
+It uses LocalDB unless `ECHELON_SQLSERVER` names another instance, and creates its own scratch
+database. Without the variable those tests report as skipped, which is how CI runs them.
+
 Before committing, run:
 
 ```bash

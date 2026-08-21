@@ -10,6 +10,17 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- **Recalculating a plan failed on every real database.** Both providers are configured with
+  `EnableRetryOnFailure`, and a retrying execution strategy refuses a transaction it did not open:
+  "the configured execution strategy 'SqlServerRetryingExecutionStrategy' does not support
+  user-initiated transactions". The planner opened its own, so `POST /api/tasks/{id}/plan/recalculate`
+  answered 500 - as did import, which nests a second transaction around it. Both now open their
+  transaction inside the strategy's delegate, as one retriable unit, and detach what a rolled-back
+  attempt left tracked so a retry writes each row once.
+- **Exporting, validating or importing a plan failed on SQL Server** with "Cannot resolve collation
+  conflict ... in add operator". The merge request key was built in SQL by concatenating
+  `Repository.ExternalId`, which carries a case-sensitive collation, with the connection name, which
+  inherits the server's. The three columns are now read out and joined in memory.
 - **The app flashed white on every refresh, and again in the wrong theme.** Two causes. The boot script
   was left on its own defaults (`md3-expressive`, `md3-violet`), so a first paint used a theme the app
   then replaced; and nothing painted a background before Blazor started - the VisualStudio theme injects
@@ -34,6 +45,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- **An opt-in test pass against a local SQL Server** (`ECHELON_SQLSERVER_TESTS=1`), covering the two
+  fixes above. Neither could fail on SQLite: it has no retrying execution strategy and only one
+  collation, so the whole suite passed while the product was broken on every deployment.
 - **Column filters and a rows-per-page chooser on every paged list** - tasks, work, repositories, both
   connection lists and the request audit. The filters are applied by the server and counted with the
   same query that reads the page, because each screen holds one page: filtering in the browser would

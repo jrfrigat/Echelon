@@ -1,8 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Echelon.Application.DTOs;
 using Echelon.Application.Exceptions;
 using Echelon.Application.ReleasePlanning;
@@ -10,6 +8,8 @@ using Echelon.Application.Services;
 using Echelon.Core.Enums;
 using Echelon.Infrastructure.Persistence;
 using Echelon.Infrastructure.Persistence.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
 namespace Echelon.Infrastructure.ReleasePlanning;
@@ -143,18 +143,99 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             ?? throw new NotFoundException($"Task {taskId} not found");
 
         var computed = await ComputeAsync(taskId, ct);
-        var now = clock.GetUtcNow().UtcDateTime;
 
-        // One active plan per task: deactivate the previous one and insert in a single transaction,
-        // so a crash between the two never leaves the task with no active plan and two concurrent
-        // recalculations cannot both leave one active (the filtered unique index is the backstop).
-        //
-        // Joins an ambient transaction when there is one. Import opens its own, because writing the
+        // Joins an ambient transaction when there is one - import opens its own, because writing the
         // deltas and building the plan that reflects them is one act: committing the deltas alone
         // would apply the import at the next ingestion event, from an endpoint that had just reported
-        // failure.
-        var ownsTransaction = db.Database.CurrentTransaction is null;
-        await using var tx = ownsTransaction ? await db.Database.BeginTransactionAsync(ct) : null;
+        // failure. With no ambient transaction, the write opens its own retriable one.
+        var plan = db.Database.CurrentTransaction is null
+            ? await InTransactionAsync(
+                () => WritePlanAsync(taskId, actor, source, yamlHash, snapshotStartedAt, computed, ct), ct)
+            : await WritePlanAsync(taskId, actor, source, yamlHash, snapshotStartedAt, computed, ct);
+
+        if (computed.Graph.Conflicts.Count > 0)
+        {
+            logger.LogWarning(
+                "Rollout plan for task {Task} built with {Count} dropped dependency link(s); the order violates them.",
+                target.ExternalId, computed.Graph.Conflicts.Count);
+        }
+
+        return await BuildStoredDtoAsync(plan, ct);
+    }
+
+    /// <summary>
+    /// Runs one unit of work inside a transaction the provider is allowed to retry.
+    /// </summary>
+    /// <param name="work">The writes that have to commit together.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <remarks>
+    /// <para>
+    /// The transaction is opened INSIDE the execution strategy's delegate, not around it. A retrying
+    /// strategy refuses a transaction it did not open - "the configured execution strategy
+    /// 'SqlServerRetryingExecutionStrategy' does not support user-initiated transactions" - and both
+    /// real providers are configured with <c>EnableRetryOnFailure</c> (see <c>DatabaseSetup</c>). A
+    /// plain <c>BeginTransactionAsync</c> here therefore failed every recalculation on a real
+    /// deployment, while the tests passed: they run on SQLite, which has no retrying strategy.
+    /// </para>
+    /// <para>
+    /// The delegate can run more than once, so it starts by detaching what a rolled-back attempt left
+    /// behind: those entities are still tracked as Added, and the next attempt would insert them a
+    /// second time.
+    /// </para>
+    /// </remarks>
+    private async Task<T> InTransactionAsync<T>(Func<Task<T>> work, CancellationToken ct)
+    {
+        var strategy = db.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+        {
+            DetachPendingPlanWrites();
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var result = await work();
+            await tx.CommitAsync(ct);
+
+            return result;
+        });
+    }
+
+    /// <summary>Drops what a failed attempt added, so a retry writes each row once.</summary>
+    /// <remarks>
+    /// Only the plan's own entities, never the whole change tracker: whatever else the caller is
+    /// holding is the caller's business, and clearing it would silently discard work this class never
+    /// saw.
+    /// </remarks>
+    private void DetachPendingPlanWrites()
+    {
+        var pending = db.ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added
+                        && e.Entity is RolloutPlan or PlanTaskNode or PlanItem or PlanOverride)
+            .ToList();
+
+        foreach (var entry in pending)
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>
+    /// Writes the new active version: deactivating the previous one and inserting this one, together.
+    /// </summary>
+    /// <remarks>
+    /// One transaction, so a crash between the two never leaves the task with no active plan, and two
+    /// concurrent recalculations cannot both leave one active (the filtered unique index is the
+    /// backstop). The caller owns that transaction, and may run this more than once.
+    /// </remarks>
+    private async Task<RolloutPlan> WritePlanAsync(
+        Guid taskId,
+        ActorRef? actor,
+        PlanSource source,
+        string? yamlHash,
+        DateTime snapshotStartedAt,
+        Computed computed,
+        CancellationToken ct)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
 
         // Read inside the transaction, together with the deactivation that serialises concurrent
         // rebuilds of this task. Max over the task's own history rather than a count: superseded rows
@@ -207,6 +288,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             };
 
             foreach (var mr in computed.PlanMrs.Where(m => m.TaskId == closureTaskId))
+            {
                 node.Items.Add(new PlanItem
                 {
                     Id = Guid.NewGuid(),
@@ -218,6 +300,7 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                     // display time would answer for the CURRENT deltas, not for this version.
                     ManualInclusion = computed.ManuallyIncluded.Contains(mr.Id)
                 });
+            }
 
             plan.Nodes.Add(node);
         }
@@ -227,14 +310,8 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, false), ct);
         db.RolloutPlans.Add(plan);
         await db.SaveChangesAsync(ct);
-        if (tx is not null) await tx.CommitAsync(ct);
 
-        if (computed.Graph.Conflicts.Count > 0)
-            logger.LogWarning(
-                "Rollout plan for task {Task} built with {Count} dropped dependency link(s); the order violates them.",
-                target.ExternalId, computed.Graph.Conflicts.Count);
-
-        return await BuildStoredDtoAsync(plan, ct);
+        return plan;
     }
 
     /// <inheritdoc/>
@@ -320,29 +397,42 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             computed.PlanMrs, deltas.Add, deltas.Remove, computed.RuleEdges));
 
         if (waveOf.Any(kv => replayed.GetValueOrDefault(kv.Key) != kv.Value))
+        {
             return new PlanImportDto(
                 false,
                 ["The requested waves could not be reproduced by the planner, so nothing was saved. "
                  + "This is a defect rather than a problem with the document; please report it."],
                 violations,
                 null);
+        }
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // The deltas and the plan that reflects them are one act, so they commit together - and the
+        // whole act is the retriable unit, which is why the transaction lives inside the strategy's
+        // delegate rather than around it. StoreAsync joins this transaction instead of opening its own.
+        var plan = await InTransactionAsync(async () =>
+        {
+            // Replaced wholesale. The deltas describe one intent - the document just posted - and
+            // merging them with the previous import's would leave edges nobody asked for pinning waves
+            // nobody wrote.
+            await db.PlanOverrides
+                .Where(o => o.TaskId == taskId
+                            && (o.Kind == PlanOverrideKind.AddEdge || o.Kind == PlanOverrideKind.RemoveEdge))
+                .ExecuteDeleteAsync(ct);
 
-        // Replaced wholesale. The deltas describe one intent - the document just posted - and merging
-        // them with the previous import's would leave edges nobody asked for pinning waves nobody
-        // wrote.
-        await db.PlanOverrides
-            .Where(o => o.TaskId == taskId
-                        && (o.Kind == PlanOverrideKind.AddEdge || o.Kind == PlanOverrideKind.RemoveEdge))
-            .ExecuteDeleteAsync(ct);
+            foreach (var (from, to) in deltas.Add)
+            {
+                db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.AddEdge, from, to));
+            }
 
-        foreach (var (from, to) in deltas.Add) db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.AddEdge, from, to));
-        foreach (var (from, to) in deltas.Remove) db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.RemoveEdge, from, to));
-        await db.SaveChangesAsync(ct);
+            foreach (var (from, to) in deltas.Remove)
+            {
+                db.PlanOverrides.Add(NewOverride(taskId, PlanOverrideKind.RemoveEdge, from, to));
+            }
 
-        var plan = await StoreAsync(taskId, actor, PlanSource.Imported, HashOf(document), ct);
-        await tx.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+
+            return await StoreAsync(taskId, actor, PlanSource.Imported, HashOf(document), ct);
+        }, ct);
 
         return new PlanImportDto(true, [], violations, plan);
     }
@@ -371,16 +461,24 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .ToDictionary(t => t.Id, t => t.ExternalId);
 
         var mrIds = computed.PlanMrs.Select(m => m.Id).ToList();
+        // Read as three columns and joined here rather than concatenated in SQL. Repository.ExternalId
+        // carries a case-sensitive collation on SQL Server (see ProviderSpecificMapping) while the
+        // connection name inherits the database default, and joining two collations is an error there:
+        // "Cannot resolve collation conflict ... in add operator". SQLite has a single collation and no
+        // such rule, so this failed only on a real deployment - in export, validate and import alike,
+        // since all three resolve their keys through here.
         var mrKeys = (await db.MergeRequests
                 .Where(m => mrIds.Contains(m.Id))
                 .Select(m => new
                 {
                     m.Id,
-                    Key = m.Repository.Connection.Name + ":" + m.Repository.ExternalId + "!" + m.ExternalId
+                    Connection = m.Repository.Connection.Name,
+                    Repository = m.Repository.ExternalId,
+                    m.ExternalId
                 })
                 .AsNoTracking()
                 .ToListAsync(ct))
-            .ToDictionary(m => m.Id, m => m.Key);
+            .ToDictionary(m => m.Id, m => $"{m.Connection}:{m.Repository}!{m.ExternalId}");
 
         return new PlanKeys(taskKeys, mrKeys);
     }
@@ -442,12 +540,16 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         }
 
         foreach (var taskId in computed.Closure.Where(id => !seenTasks.Contains(id) && keys.TaskKeys.ContainsKey(id)))
+        {
             errors.Add($"Task '{keys.TaskKeys[taskId]}' is in this plan but missing from the document.");
+        }
 
         foreach (var mrId in computed.PlanMrs.Select(m => m.Id).Where(id => !waveOf.ContainsKey(id)))
+        {
             errors.Add(
                 $"Merge request '{keys.MrKeys.GetValueOrDefault(mrId, mrId.ToString("D"))}' is in this plan "
                 + "but missing from the document.");
+        }
 
         if (errors.Count > 0) return waveOf;
 
@@ -475,7 +577,13 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
     {
         var waveOf = new Dictionary<Guid, int>();
         for (var i = 0; i < graph.Stages.Count; i++)
-            foreach (var id in graph.Stages[i]) waveOf[id] = i + 1;
+        {
+            foreach (var id in graph.Stages[i])
+            {
+                waveOf[id] = i + 1;
+            }
+        }
+
         return waveOf;
     }
 
@@ -506,7 +614,10 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         {
             builder.Append(stage).Append(':');
             foreach (var mrId in computed.Graph.Stages[stage])
+            {
                 builder.Append(mrId.ToString("N")).Append(',');
+            }
+
             builder.Append(';');
         }
 
@@ -514,13 +625,17 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         // Sorted: the closure is a set, and its enumeration order must not make an unchanged plan
         // look changed.
         foreach (var closureTaskId in computed.Closure.OrderBy(id => id))
+        {
             builder.Append(closureTaskId.ToString("N")).Append(',');
+        }
 
         builder.Append('|');
         foreach (var conflict in computed.Graph.Conflicts.OrderBy(c => c.FromMrId).ThenBy(c => c.ToMrId))
+        {
             builder.Append(conflict.DroppedEdgeKind).Append(':')
                    .Append(conflict.FromMrId.ToString("N")).Append("->")
                    .Append(conflict.ToMrId.ToString("N")).Append(',');
+        }
 
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
@@ -614,8 +729,14 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
         {
             if (DeserializeMergeRequest(row.Payload) is not { } id) continue;
 
-            if (row.Kind == PlanOverrideKind.IncludeMr) include.Add(id);
-            else exclude.Add(id);
+            if (row.Kind == PlanOverrideKind.IncludeMr)
+            {
+                include.Add(id);
+            }
+            else
+            {
+                exclude.Add(id);
+            }
         }
 
         include.ExceptWith(exclude);
@@ -760,7 +881,10 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             .Where(m => mergeRequestIds.Contains(m.Id))
             .Select(m => new
             {
-                m.Id, m.TaskId, m.SourceBranch, m.Labels,
+                m.Id,
+                m.TaskId,
+                m.SourceBranch,
+                m.Labels,
                 ConnectionName = m.Repository.Connection.Name,
                 RepositoryExternalId = m.Repository.ExternalId,
                 TaskKey = m.TaskExternalId
@@ -822,8 +946,14 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
             var edge = DeserializeEdge(row.Payload);
             if (edge is null) continue;
 
-            if (row.Kind == PlanOverrideKind.AddEdge) add.Add(edge.Value);
-            else remove.Add(edge.Value);
+            if (row.Kind == PlanOverrideKind.AddEdge)
+            {
+                add.Add(edge.Value);
+            }
+            else
+            {
+                remove.Add(edge.Value);
+            }
         }
 
         return (add, remove);
@@ -902,16 +1032,24 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 .ToListAsync(ct))
             .ToDictionary(t => t.Id, t => t.ExternalId);
 
+        // Read as three columns and joined here rather than concatenated in SQL. Repository.ExternalId
+        // carries a case-sensitive collation on SQL Server (see ProviderSpecificMapping) while the
+        // connection name inherits the database default, and joining two collations is an error there:
+        // "Cannot resolve collation conflict ... in add operator". SQLite has a single collation and no
+        // such rule, so this failed only on a real deployment - in export, validate and import alike,
+        // since all three resolve their keys through here.
         var mrKeys = (await db.MergeRequests
                 .Where(m => mrIds.Contains(m.Id))
                 .Select(m => new
                 {
                     m.Id,
-                    Key = m.Repository.Connection.Name + ":" + m.Repository.ExternalId + "!" + m.ExternalId
+                    Connection = m.Repository.Connection.Name,
+                    Repository = m.Repository.ExternalId,
+                    m.ExternalId
                 })
                 .AsNoTracking()
                 .ToListAsync(ct))
-            .ToDictionary(m => m.Id, m => m.Key);
+            .ToDictionary(m => m.Id, m => $"{m.Connection}:{m.Repository}!{m.ExternalId}");
 
         return (taskKeys, mrKeys);
     }
@@ -1023,8 +1161,13 @@ public class RolloutPlanner(AppDbContext db, TimeProvider clock, ILogger<Rollout
                 .Where(m => mrIds.Contains(m.Id))
                 .Select(m => new
                 {
-                    m.Id, m.ExternalId, m.SourceBranch, m.TargetBranch, m.CreatedAt,
-                    RepoName = m.Repository.Name, m.Status
+                    m.Id,
+                    m.ExternalId,
+                    m.SourceBranch,
+                    m.TargetBranch,
+                    m.CreatedAt,
+                    RepoName = m.Repository.Name,
+                    m.Status
                 })
                 .AsNoTracking()
                 .ToListAsync(ct))
