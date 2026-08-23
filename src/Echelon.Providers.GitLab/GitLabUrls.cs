@@ -33,4 +33,22 @@ internal static class GitLabUrls
 
     internal static Uri CancelPipeline(Uri apiUrl, string projectPath, string pipelineId) =>
         new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/pipelines/{Uri.EscapeDataString(pipelineId)}/cancel");
+
+    internal static Uri MergeRequestPipelines(Uri apiUrl, string projectPath, string iid) =>
+        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests/{Uri.EscapeDataString(iid)}/pipelines");
+
+    internal static Uri PipelineJobs(Uri apiUrl, string projectPath, string pipelineId, int page = 1) =>
+        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/pipelines/{Uri.EscapeDataString(pipelineId)}/jobs?per_page=100&page={page}");
+
+    internal static Uri Job(Uri apiUrl, string projectPath, string jobId) =>
+        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/jobs/{Uri.EscapeDataString(jobId)}");
+
+    internal static Uri PlayJob(Uri apiUrl, string projectPath, string jobId) =>
+        new($"{Job(apiUrl, projectPath, jobId)}/play");
+
+    internal static Uri RetryJob(Uri apiUrl, string projectPath, string jobId) =>
+        new($"{Job(apiUrl, projectPath, jobId)}/retry");
+
+    internal static Uri CancelJob(Uri apiUrl, string projectPath, string jobId) =>
+        new($"{Job(apiUrl, projectPath, jobId)}/cancel");
 }

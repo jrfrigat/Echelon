@@ -154,9 +154,9 @@ Tasks, their statuses, dependencies and hierarchy come from the tracker.
 Register each repository the orchestrator manages.
 
 - **Name**, **External ID** (the VCS path, e.g. `my-group/my-project`), and its **VCS connection**.
-- A repository also needs a **deploy strategy** (how it is deployed - merge the MR, or trigger a
-  pipeline). This is set as a **deploy target** per environment (§2.6); a rollout step cannot run
-  without one.
+- A repository also needs a **deploy strategy** (how it is deployed - merge the MR, trigger a new
+  pipeline, or run one job of the MR's existing pipeline). This is set as a **deploy target** per
+  environment (§2.6); a rollout step cannot run without one.
 
 ### 2.4 Default rollout plan (`Admin -> Default Plan`)
 

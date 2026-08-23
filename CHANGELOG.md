@@ -8,6 +8,30 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- **A `gitlab-job` deploy strategy**: deploying runs one named job of the merge request's own latest
+  pipeline. Neither existing strategy covers the manual-gate workflow it exists for - the pipeline
+  has already run and already built the artefact, and shipping means pressing the one button on it.
+  `gitlab-merge` merges, which is a different act, and `gitlab-pipeline` starts a *second* pipeline
+  from a ref, rebuilding everything against the branch head rather than the commit that was tested.
+  Which verb GitLab wants depends on the job's state and getting it wrong is not a no-op: a job on
+  its manual gate is played, one that has already run is retried (a new job with a new id, which is
+  what has to be polled), one already running is adopted rather than started twice, and a successful
+  one is reported as already done unless the target's `rerun` setting says otherwise. Unlike the
+  pipeline strategy this one reconciles: the job is named inside the merge request's own pipeline, so
+  a step resumed after a crash re-finds the run it started. A misspelled job name is answered with
+  the names the pipeline actually has, since that is the only place an operator can see them.
+- **A step-by-step setup guide** ([docs/en/walkthrough.md](docs/en/walkthrough.md),
+  [ru](docs/ru/walkthrough.md)): every screen in the order it is configured, with example values in
+  each field and what to check before moving on, then the failures by symptom. Getting Started says
+  what each screen holds; this says what to type into it.
+
+### Fixed
+
+- **The VCS poll pointed at a screen that no longer exists.** Its success message sent the operator
+  to "Merge requests"; the section has been called "What to deploy" for a while.
+
 ## [0.2.0] - 2026-08-21
 
 ### Added

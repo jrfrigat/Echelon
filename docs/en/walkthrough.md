@@ -140,10 +140,32 @@ for environment 'dev'".
 | :-- | :-- | :-- |
 | Repository | `Backend` | |
 | Environment | `dev` | |
-| Strategy | `gitlab-merge` | Deploy = merge the merge request. The other is `gitlab-pipeline`: trigger a pipeline and wait for its result |
-| Pipeline ref | - | Appears for `gitlab-pipeline` only. Branch or tag, defaults to `main` |
+| Strategy | `gitlab-merge` | What deploying means here - the three options are below |
 | Redeploy | `Once` | `Always` permits deploying the same MR into this environment again |
 | Readiness | "environment default" | Overrides the environment's rule for this repository |
+
+There are three strategies, and choosing between them is choosing **what counts as a deploy**:
+
+| Strategy | What it does | Its own fields |
+| :-- | :-- | :-- |
+| `gitlab-merge` | Merges the merge request | none |
+| `gitlab-pipeline` | Starts a **new** pipeline on a branch or tag and waits for it | `Pipeline ref` - branch or tag, defaults to `main` |
+| `gitlab-job` | Runs **one job of the merge request's own latest pipeline** and waits for it | `Job name`, `Re-run` |
+
+**`gitlab-job` is for a manual gate in the pipeline you already have.** The MR's pipeline has run and
+the artefact is built, and deploying means pressing the one button on it (`deploy:staging`).
+`gitlab-pipeline` will not do: it starts a *second* pipeline, rebuilding everything against the
+branch head rather than the commit that was tested.
+
+| Field | Example | Notes |
+| :-- | :-- | :-- |
+| Job name | `deploy:staging` | Exactly as spelled in `.gitlab-ci.yml`, case included. Get it wrong and the deploy refuses, listing the jobs the pipeline actually has |
+| Re-run | `if-not-successful` | What to do when that job already succeeded. The default treats it as already deployed; `always` runs it again, which is what "Redeploy: Always" on the target means for an idempotent deploy job |
+
+What happens depends on the job's state: one waiting on its manual gate is **played**; one that has
+already run (`failed`, `canceled`, `skipped`) is **retried**, which is a new job with a new id; one
+already running is adopted rather than started twice; a successful one is *already done* unless
+`Re-run` is `always`.
 
 Repeat for every repository from step 4.
 

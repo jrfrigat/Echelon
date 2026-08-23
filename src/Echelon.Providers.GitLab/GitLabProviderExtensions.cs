@@ -78,6 +78,16 @@ public static class GitLabProviderExtensions
     public const string PipelineStrategyKey = "gitlab-pipeline";
 
     /// <summary>
+    /// The deploy strategy key that runs one named job of the merge request's own latest pipeline.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="PipelineStrategyKey"/>, which starts a new pipeline from a ref: this
+    /// one presses a button on the pipeline the merge request already has, so the deploy runs against
+    /// what was tested rather than against the branch head.
+    /// </remarks>
+    public const string JobStrategyKey = "gitlab-job";
+
+    /// <summary>
     /// Adds the GitLab deploy strategies (merge and pipeline). Each is keyed and paired with a
     /// <see cref="DeployStrategyRegistration"/> so the factory can enumerate and validate the keys,
     /// exactly as the read provider is registered.
@@ -95,6 +105,11 @@ public static class GitLabProviderExtensions
         services.AddHttpClient<GitLabPipelineStrategy>(c => c.Timeout = ApiTimeout);
         services.AddKeyedScoped<IDeployStrategy>(PipelineStrategyKey, (sp, _) => sp.GetRequiredService<GitLabPipelineStrategy>());
         services.AddSingleton(new DeployStrategyRegistration(PipelineStrategyKey, "Deploys by triggering a pipeline."));
+
+        services.AddHttpClient<GitLabJobStrategy>(c => c.Timeout = ApiTimeout);
+        services.AddKeyedScoped<IDeployStrategy>(JobStrategyKey, (sp, _) => sp.GetRequiredService<GitLabJobStrategy>());
+        services.AddSingleton(new DeployStrategyRegistration(JobStrategyKey,
+            "Deploys by running one job of the merge request's latest pipeline."));
 
         return services;
     }

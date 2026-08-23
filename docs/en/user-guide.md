@@ -129,9 +129,9 @@ one is deployed.
 **How:** register each repository against its VCS connection, using the VCS's own path
 (`group/project`).
 
-A repository also carries its **deploy strategy** - *how* to deploy it (merge the MR, or trigger a
-pipeline). A rollout step cannot run without one, so a repository with no strategy will stop a plan
-at execution time.
+A repository also carries its **deploy strategy** - *how* to deploy it: merge the MR, trigger a new
+pipeline, or run one named job of the MR's own latest pipeline (the manual-gate case). A rollout step
+cannot run without one, so a repository with no strategy will stop a plan at execution time.
 
 ### 4.4 Default rollout plan
 

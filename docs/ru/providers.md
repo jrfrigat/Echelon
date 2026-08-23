@@ -192,7 +192,7 @@ services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
 ### 4. Стратегии выкатки
 
 Как катится репозиторий - это `IDeployStrategy`, keyed и в паре с `DeployStrategyRegistration` (GitLab
-поставляет `gitlab-merge` и `gitlab-pipeline`). Выбирается на пару `(репозиторий, окружение)` через
+поставляет `gitlab-merge`, `gitlab-pipeline` и `gitlab-job`). Выбирается на пару `(репозиторий, окружение)` через
 deploy target и объявляет свой `SettingsSchema`.
 
 ### 5. Подключение в корне композиции

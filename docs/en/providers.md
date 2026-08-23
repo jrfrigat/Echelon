@@ -192,7 +192,7 @@ services.AddSingleton(new WebhookParserRegistration(WebhookProviderType));
 ### 4. Deploy strategies
 
 How a repository is deployed is an `IDeployStrategy`, keyed and paired with a
-`DeployStrategyRegistration` (GitLab ships `gitlab-merge` and `gitlab-pipeline`). It is chosen per
+`DeployStrategyRegistration` (GitLab ships `gitlab-merge`, `gitlab-pipeline` and `gitlab-job`). It is chosen per
 `(repository, environment)` deploy target and declares its own `SettingsSchema`.
 
 ### 5. Wire into the composition root
