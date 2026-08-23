@@ -1312,7 +1312,7 @@
     <value>Опросить {0} сейчас</value>
   </data>
   <data name="Vcs_Polled" xml:space="preserve">
-    <value>Опрошено "{0}": {1} открытых merge request'ов, веток - {2}. Они перечислены в разделе "Merge request'ы".</value>
+    <value>Опрошено "{0}": {1} открытых merge request'ов, веток - {2}. Они перечислены в разделе "Что выкатывать".</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Некоторые репозитории не удалось прочитать - {0}</value>

@@ -1312,7 +1312,7 @@
     <value>Poll {0} now</value>
   </data>
   <data name="Vcs_Polled" xml:space="preserve">
-    <value>Polled '{0}': {1} open merge request(s), {2} branch(es). They are listed under Merge requests.</value>
+    <value>Polled '{0}': {1} open merge request(s), {2} branch(es). They are listed under What to deploy.</value>
   </data>
   <data name="Vcs_Poll_Failures" xml:space="preserve">
     <value>Some repositories could not be read - {0}</value>

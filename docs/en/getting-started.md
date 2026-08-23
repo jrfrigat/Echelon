@@ -119,6 +119,9 @@ Once you log in as bootstrap admin, your user gets full permissions, and you can
 Everything is configured from the **Administration** menu, roughly in the order below - each step
 depends on the ones above it. This is the whole setup; there is no YAML to hand-write.
 
+The summary below says what each screen holds. For the same path as numbered steps - example values
+in every field, and what to check before moving on - see [First Setup](walkthrough.md).
+
 ### 2.1 VCS connections (`Admin -> VCS Connections`)
 
 Connect to each GitLab instance the orchestrator reads merge requests from and deploys.

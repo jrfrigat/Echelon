@@ -6,7 +6,8 @@ This guide is for the people who **use** the orchestrator: release managers and 
 configure it and roll tasks out. It answers two questions for every part of the product - *why does
 this exist* and *how do I use it*.
 
-For installation see [Getting Started](getting-started.md); for internals see
+For installation see [Getting Started](getting-started.md); for the first setup as numbered steps
+with example values see [First Setup](walkthrough.md); for internals see
 [Architecture](architecture.md).
 
 ---
