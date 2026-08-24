@@ -159,13 +159,20 @@ branch head rather than the commit that was tested.
 
 | Field | Example | Notes |
 | :-- | :-- | :-- |
-| Job name | `deploy:staging` | Exactly as spelled in `.gitlab-ci.yml`, case included. Get it wrong and the deploy refuses, listing the jobs the pipeline actually has |
+| Job name | `deploy:staging` | Exactly as the pipeline spells it, case included. Chips below the field carry the names from the selected repository's recent pipelines - clicking beats recalling. Typing your own still works: a job added in the branch under review is in no pipeline yet |
 | Re-run | `if-not-successful` | What to do when that job already succeeded. The default treats it as already deployed; `always` runs it again, which is what "Redeploy: Always" on the target means for an idempotent deploy job |
 
 What happens depends on the job's state: one waiting on its manual gate is **played**; one that has
 already run (`failed`, `canceled`, `skipped`) is **retried**, which is a new job with a new id; one
 already running is adopted rather than started twice; a successful one is *already done* unless
 `Re-run` is `always`.
+
+**Where the chips come from.** The union of the repository's three most recent pipelines: a branch
+pipeline and a merge-request pipeline do not run the same jobs, so reading only the newest would miss
+the one you want about half the time. When there are no chips, the reason is printed under the field -
+the provider cannot list jobs, the token was refused, or no pipeline has run yet. The field stays a
+plain text box either way: a job added in the branch under review is in no pipeline yet and still has
+to be configurable.
 
 Repeat for every repository from step 4.
 

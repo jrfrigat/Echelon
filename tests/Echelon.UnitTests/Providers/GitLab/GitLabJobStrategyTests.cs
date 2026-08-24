@@ -1,5 +1,3 @@
-using System.Net;
-using System.Text;
 using Echelon.Providers.Abstractions.Deploy;
 using Echelon.Providers.GitLab;
 using Xunit;
@@ -247,47 +245,4 @@ public class GitLabJobStrategyTests
             "staging",
             settings.ToDictionary(s => s.Key, s => s.Value));
 
-    /// <summary>Answers by the first matching rule, and records every request for the assertions.</summary>
-    private sealed class Router : HttpMessageHandler
-    {
-        private readonly List<(HttpMethod Method, string UrlContains, string Json, string? NextPage)> _routes = [];
-
-        public List<HttpRequestMessage> Requests { get; } = [];
-
-        public Router OnGet(string urlContains, string json, string? nextPage = null)
-        {
-            _routes.Add((HttpMethod.Get, urlContains, json, nextPage));
-            return this;
-        }
-
-        public Router OnPost(string urlContains, string json)
-        {
-            _routes.Add((HttpMethod.Post, urlContains, json, null));
-            return this;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests.Add(request);
-
-            var url = request.RequestUri!.ToString();
-            foreach (var route in _routes)
-            {
-                if (route.Method != request.Method || !url.Contains(route.UrlContains, StringComparison.Ordinal)) continue;
-
-                var response = new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(route.Json, Encoding.UTF8, "application/json")
-                };
-                if (route.NextPage is not null) response.Headers.Add("X-Next-Page", route.NextPage);
-
-                return Task.FromResult(response);
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                Content = new StringContent("{}", Encoding.UTF8, "application/json")
-            });
-        }
-    }
 }

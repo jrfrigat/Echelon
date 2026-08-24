@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Echelon.Application.DTOs;
 using Echelon.Core.Enums;
+using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Providers.Abstractions;
 using Echelon.Pwa.Services.Api;
 using Xunit;
@@ -104,5 +105,47 @@ public class AdminContractApiTests : IAsyncLifetime
         // if Kind, Min and Max survive the trip.
         Assert.Equal(IngestionMode.Poll, poll.Ingestion);
         Assert.Contains(poll.Settings, s => s.Kind == ProviderSettingKind.Int && s.Min is not null);
+    }
+
+    [Fact]
+    public async Task TheJobPickerAnswersWithASentenceRatherThanAFailedRequest()
+    {
+        // It fills a picker beside a text box the operator can type into, so every way of having no
+        // names has to arrive as one - a 500 here reads as though the form itself were broken.
+        // A misspelled provider type is the case that escapes a careless catch filter:
+        // UnknownProviderException derives straight from Exception, not from InvalidOperationException.
+        var repositoryId = await _factory.WithDbAsync(async db =>
+        {
+            var connection = new VcsConnection
+            {
+                Id = Guid.NewGuid(),
+                Name = "gitlab-main",
+                ProviderType = "gitab",
+                ApiUrl = "https://gitlab.example.com",
+                EncryptedAccessToken = [1, 2, 3]
+            };
+            var repository = new Repository
+            {
+                Id = Guid.NewGuid(),
+                Name = "Backend",
+                ExternalId = "group/backend",
+                ConnectionId = connection.Id
+            };
+
+            db.VcsConnections.Add(connection);
+            db.Repositories.Add(repository);
+            await db.SaveChangesAsync();
+
+            return repository.Id;
+        });
+
+        var response = await _client.GetAsync($"api/repositories/{repositoryId}/pipeline-jobs");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var jobs = await response.Content.ReadFromJsonAsync<PipelineJobNamesDto>(ApiClient.Json);
+
+        Assert.Empty(jobs!.Names);
+        Assert.Contains("gitab", jobs.Failure!, StringComparison.Ordinal);
     }
 }

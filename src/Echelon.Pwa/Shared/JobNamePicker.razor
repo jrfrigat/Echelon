@@ -1,0 +1,104 @@
+@inherits LocalizedComponent
+@inject RepositoriesApi RepositoriesApi
+
+@* The job names this repository's recent pipelines actually ran, clickable.
+
+   The same argument as SignalPicker one screen over. The value is a spelling that lives in a file the
+   operator is not looking at, and a job built by `parallel: matrix` is not even spelled there in the
+   form the pipeline uses - `deploy` in the CI file is `deploy: [staging]` in the pipeline. A name that
+   matches nothing is not rejected anywhere: it fails at deploy time, which is the expensive place to
+   learn it.
+
+   This offers what is there; it does not restrict what can be typed. The field above stays a plain
+   text box, because a picker can only show the pipelines that have already run - a job added in the
+   branch under review has not appeared in one yet, and it must still be configurable. *@
+
+<FlareStack Gap="FlareSpacing.XSmall">
+    <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+        @UiStrings.Deploy_Jobs_Hint
+    </FlareText>
+
+    @if (_loading)
+    {
+        <FlareProgress Variant="ProgressVariant.Circular" />
+    }
+    else if (_failure is { Length: > 0 } failure)
+    {
+        @* Said, not swallowed: an empty row of chips reads as "this repository runs no jobs", when it
+           means the token could not read them. *@
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.Error">
+            @string.Format(UiStrings.Deploy_Jobs_Failed, failure)
+        </FlareText>
+    }
+    else if (_names is { Count: > 0 } names)
+    {
+        <FlareStack Row Gap="FlareSpacing.XSmall" Wrap>
+            @foreach (var name in names)
+            {
+                var isSelected = string.Equals(name, Value, StringComparison.Ordinal);
+                <FlareChip Size="ChipSize.Sm"
+                           Variant="@(isSelected ? ChipVariant.Filled : ChipVariant.Outlined)"
+                           Color="@(isSelected ? FlareColor.Primary : FlareColor.OnSurfaceVariant)"
+                           Label="@name"
+                           OnClick="@(() => Pick(name))" />
+            }
+        </FlareStack>
+    }
+    else if (_names is not null)
+    {
+        <FlareText Typo="TypographyScale.BodySmall" Color="FlareColor.OnSurfaceVariant">
+            @UiStrings.Deploy_Jobs_Empty
+        </FlareText>
+    }
+</FlareStack>
+
+@code {
+    /// <summary>The repository whose pipelines are read. Null shows the hint and nothing else.</summary>
+    [Parameter] public Guid? RepositoryId { get; set; }
+
+    /// <summary>The job name currently in the field, for deciding which chip reads as selected.</summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    /// <summary>Raised with the clicked name, which the host writes into the settings bag.</summary>
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    List<string>? _names;
+    string? _failure;
+    bool _loading;
+
+    /// <summary>Which repository the current list belongs to, so a re-render does not re-fetch it.</summary>
+    Guid? _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // The form's repository selector is above this component, so the list has to follow it. Keyed
+        // on the id rather than fetched once: picking another repository must not leave the previous
+        // repository's job names offered as though they were this one's.
+        if (RepositoryId == _loadedFor) return;
+
+        _loadedFor = RepositoryId;
+        _names = null;
+        _failure = null;
+
+        if (RepositoryId is not { } id) return;
+
+        _loading = true;
+        try
+        {
+            var result = await RepositoriesApi.GetPipelineJobNamesAsync(id);
+            _names = [.. result.Names];
+            _failure = result.Failure;
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException)
+        {
+            _names = [];
+            _failure = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    Task Pick(string name) => ValueChanged.InvokeAsync(name);
+}

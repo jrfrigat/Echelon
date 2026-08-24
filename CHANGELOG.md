@@ -22,6 +22,17 @@ All notable changes to this project are documented here. The format is based on
   pipeline strategy this one reconciles: the job is named inside the merge request's own pipeline, so
   a step resumed after a crash re-finds the run it started. A misspelled job name is answered with
   the names the pipeline actually has, since that is the only place an operator can see them.
+- **A job picker on the deploy-target form**, listing what the repository's recent pipelines actually
+  ran. A job name is a spelling that lives in a file the operator is not looking at, and a
+  `parallel: matrix` job is not even spelled there in the form the pipeline uses - `deploy` in the CI
+  file is `deploy: [staging]` in the pipeline - so a name that matches nothing fails at deploy time,
+  the expensive place to learn it. The same argument as the readiness signal chips one screen over.
+  The union of the three most recent pipelines, because a branch pipeline and a merge-request
+  pipeline do not run the same jobs. The field stays free text: a job added in the branch under
+  review has appeared in no pipeline yet and must still be configurable. It is offered to whichever
+  strategy declares the neutral `PipelineJobSettings.JobKey`, and fed by an optional
+  `IPipelineJobSource` port, so neither the form nor the endpoint names GitLab; a provider without CI
+  says so instead of showing an empty list that reads as "this repository runs no jobs".
 - **A step-by-step setup guide** ([docs/en/walkthrough.md](docs/en/walkthrough.md),
   [ru](docs/ru/walkthrough.md)): every screen in the order it is configured, with example values in
   each field and what to check before moving on, then the failures by symptom. Getting Started says

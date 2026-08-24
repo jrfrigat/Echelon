@@ -168,6 +168,12 @@
   <data name="Repo_HasMergeRequests" xml:space="preserve">
     <value>У репозитория остались merge-запросы - сначала удалите их.</value>
   </data>
+  <data name="Repo_JobsUnsupported" xml:space="preserve">
+    <value>Провайдер «{0}» не умеет перечислять job'ы пайплайна - имя придётся вписать.</value>
+  </data>
+  <data name="Repo_JobsFailed" xml:space="preserve">
+    <value>Не удалось прочитать job'ы репозитория «{0}»: {1}</value>
+  </data>
   <data name="Stack_NameTaken" xml:space="preserve">
     <value>Стек с названием "{0}" уже существует.</value>
   </data>

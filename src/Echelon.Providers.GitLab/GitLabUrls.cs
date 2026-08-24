@@ -34,6 +34,9 @@ internal static class GitLabUrls
     internal static Uri CancelPipeline(Uri apiUrl, string projectPath, string pipelineId) =>
         new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/pipelines/{Uri.EscapeDataString(pipelineId)}/cancel");
 
+    internal static Uri Pipelines(Uri apiUrl, string projectPath, int perPage) =>
+        new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/pipelines?per_page={perPage}&order_by=id&sort=desc");
+
     internal static Uri MergeRequestPipelines(Uri apiUrl, string projectPath, string iid) =>
         new($"{Root(apiUrl)}/api/v4/projects/{Uri.EscapeDataString(projectPath)}/merge_requests/{Uri.EscapeDataString(iid)}/pipelines");
 

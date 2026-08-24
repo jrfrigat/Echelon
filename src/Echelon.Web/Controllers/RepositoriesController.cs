@@ -7,6 +7,7 @@ using Echelon.Application.DTOs;
 using Echelon.Infrastructure.Persistence.Models;
 using Echelon.Infrastructure.Auth;
 using Echelon.Infrastructure.Persistence;
+using Echelon.Infrastructure.Providers;
 using Echelon.Web.Resources;
 
 namespace Echelon.Web.Controllers;
@@ -144,6 +145,41 @@ public class RepositoriesController(AppDbContext db, IStringLocalizer<ApiStrings
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// The job names this repository's recent pipelines ran, so a deploy target that runs one can be
+    /// configured by picking rather than by recalling a spelling.
+    /// </summary>
+    /// <param name="id">The repository to look at.</param>
+    /// <param name="lookup">Reads the names through the repository's VCS connection.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// 200 always (bar an unknown repository): the names, or an empty list with the sentence saying
+    /// why. A provider that cannot list jobs, a refused token and a repository with no pipeline yet
+    /// are ordinary states of a form, not failures of the request - and a 500 here would read as
+    /// though the form itself were broken.
+    /// </returns>
+    [HttpGet("{id:guid}/pipeline-jobs")]
+    [Authorize(Policy = Permissions.ConfigEdit)]
+    public async Task<IActionResult> PipelineJobs(
+        Guid id, [FromServices] PipelineJobLookup lookup, CancellationToken ct)
+    {
+        var repository = await db.Repositories
+            .Include(r => r.Connection)
+            .FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (repository is null) return NotFound();
+
+        var (names, supported, error) = await lookup.ListAsync(repository, MaxJobNames, ct);
+
+        var failure = error is { Length: > 0 }
+            ? localizer["Repo_JobsFailed", repository.Name, error].Value
+            : supported ? null : localizer["Repo_JobsUnsupported", repository.Connection.ProviderType].Value;
+
+        return Ok(new PipelineJobNamesDto(names, failure));
+    }
+
+    /// <summary>Enough to pick from; the field still takes anything typed into it.</summary>
+    private const int MaxJobNames = 100;
 
     /// <returns>An error message, or null when the value is acceptable.</returns>
     private async Task<string?> ValidateTrackerAsync(Guid? trackerConnectionId, CancellationToken ct)

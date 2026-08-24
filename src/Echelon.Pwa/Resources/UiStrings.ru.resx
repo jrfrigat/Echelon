@@ -1287,6 +1287,15 @@
   <data name="Deploy_Readiness_Default" xml:space="preserve">
     <value>По умолчанию окружения</value>
   </data>
+  <data name="Deploy_Jobs_Hint" xml:space="preserve">
+    <value>Job'ы из последних пайплайнов этого репозитория. Нажмите, чтобы подставить имя, или впишите любое своё.</value>
+  </data>
+  <data name="Deploy_Jobs_Empty" xml:space="preserve">
+    <value>В последних пайплайнах репозитория job'ов не нашлось - впишите имя вручную.</value>
+  </data>
+  <data name="Deploy_Jobs_Failed" xml:space="preserve">
+    <value>Не удалось прочитать job'ы: {0}</value>
+  </data>
   <data name="LinkPreview_Title" xml:space="preserve">
     <value>Как merge request связывается с задачей</value>
   </data>

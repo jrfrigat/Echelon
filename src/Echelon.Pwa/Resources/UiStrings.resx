@@ -1287,6 +1287,15 @@
   <data name="Deploy_Readiness_Default" xml:space="preserve">
     <value>Environment default</value>
   </data>
+  <data name="Deploy_Jobs_Hint" xml:space="preserve">
+    <value>Jobs from this repository's most recent pipelines. Click one to fill the field, or type any name yourself.</value>
+  </data>
+  <data name="Deploy_Jobs_Empty" xml:space="preserve">
+    <value>No jobs in this repository's recent pipelines - type the name by hand.</value>
+  </data>
+  <data name="Deploy_Jobs_Failed" xml:space="preserve">
+    <value>Could not read the jobs: {0}</value>
+  </data>
   <data name="LinkPreview_Title" xml:space="preserve">
     <value>How merge requests link to tasks</value>
   </data>

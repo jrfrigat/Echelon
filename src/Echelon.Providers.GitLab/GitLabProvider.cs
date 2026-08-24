@@ -16,7 +16,7 @@ namespace Echelon.Providers.GitLab;
 internal sealed class GitLabProvider(
     HttpClient http,
     VcsProviderContext context,
-    VcsCapabilities capabilities) : IVcsProvider
+    VcsCapabilities capabilities) : IVcsProvider, IPipelineJobSource
 {
     /// <inheritdoc/>
     public VcsCapabilities Capabilities => capabilities;
@@ -84,8 +84,60 @@ internal sealed class GitLabProvider(
         return all;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Reads the newest few pipelines rather than only the newest one: a merge-request pipeline and a
+    /// branch pipeline of the same project do not run the same jobs, so answering from whichever
+    /// happened to run last would hide the very job the operator is looking for about half the time.
+    /// One page of jobs per pipeline - this fills a picker, and a hundred names is already more than
+    /// anyone reads; the field takes a typed name for whatever is not offered.
+    /// </remarks>
+    public async Task<IReadOnlyList<string>> ListRecentJobNamesAsync(string projectPath, int limit, CancellationToken ct)
+    {
+        using var request = Authorized(HttpMethod.Get, GitLabUrls.Pipelines(context.ApiUrl, projectPath, PipelinesScanned));
+        var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var pipelines = await response.Content
+            .ReadFromJsonAsync<List<GitLabPipelineRefDto>>(cancellationToken: ct)
+            .ConfigureAwait(false);
+        if (pipelines is not { Count: > 0 }) return [];
+
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var pipeline in pipelines.OrderByDescending(p => p.Id).Take(PipelinesScanned))
+        {
+            var id = pipeline.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            using var jobsRequest = Authorized(HttpMethod.Get, GitLabUrls.PipelineJobs(context.ApiUrl, projectPath, id));
+            var jobsResponse = await http.SendAsync(jobsRequest, ct).ConfigureAwait(false);
+
+            // One unreadable pipeline must not empty the whole answer: an older pipeline can be
+            // expired or deleted while the newest reads fine.
+            if (!jobsResponse.IsSuccessStatusCode) continue;
+
+            var jobs = await jobsResponse.Content
+                .ReadFromJsonAsync<List<GitLabJobNameDto>>(cancellationToken: ct)
+                .ConfigureAwait(false);
+
+            foreach (var job in jobs ?? [])
+                if (!string.IsNullOrWhiteSpace(job.Name)) names.Add(job.Name);
+        }
+
+        // Sorted, because these are read as a list to scan rather than a history to follow.
+        return [.. names.Order(StringComparer.Ordinal).Take(Math.Max(limit, 1))];
+    }
+
     /// <summary>A safety bound so a misbehaving pagination header cannot loop forever (100 pages = 10k MRs).</summary>
     private const int MaxPages = 100;
+
+    /// <summary>How many recent pipelines the job-name lookup unions over.</summary>
+    private const int PipelinesScanned = 3;
+
+    private sealed record GitLabPipelineRefDto(
+        [property: JsonPropertyName("id")] long Id);
+
+    private sealed record GitLabJobNameDto(
+        [property: JsonPropertyName("name")] string? Name);
 
     /// <summary>GitLab's branch shape: the name, whether it has landed, and whether it is the default.</summary>
     private sealed record GitLabBranchDto(

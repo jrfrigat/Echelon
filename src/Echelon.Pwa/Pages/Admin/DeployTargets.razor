@@ -5,6 +5,7 @@
 @inject ReadinessApi ReadinessApi
 @inject EnvironmentsApi EnvironmentsApi
 @inject DeployApi DeployApi
+@using Echelon.Providers.Abstractions.Deploy
 
 <AppTitle Title="@UiStrings.Deploy_Title" />
 
@@ -47,6 +48,18 @@
 
                     @* Whatever the selected strategy declared, rendered from its schema. *@
                     <ProviderSettingsFields Schema="SelectedSchema" Values="_settings" OnChanged="StateHasChanged" />
+
+                    @* Shown only for a strategy that deploys by running a named job, and gated on the
+                       neutral key rather than on a strategy name - a second provider that deploys the
+                       same way gets the picker without this page learning about it. The field itself
+                       stays a plain text box: a job added in the branch under review has not appeared
+                       in any pipeline yet and must still be configurable. *@
+                    @if (DeclaresJobName)
+                    {
+                        <JobNamePicker RepositoryId="_repoId"
+                                       Value="@_settings.GetValueOrDefault(PipelineJobSettings.JobKey, "")"
+                                       ValueChanged="OnJobNamePicked" />
+                    }
 
                     <FlareStack Row>
                         <FlareButton OnClick="Add" Loading="_busy" Disabled="IsIncomplete">@UiStrings.Deploy_Add</FlareButton>
@@ -137,6 +150,20 @@
 
     IReadOnlyList<ProviderSettingSchema> SelectedSchema =>
         _strategies?.FirstOrDefault(s => s.ProviderType == _strategyKey)?.Settings ?? [];
+
+    /// <summary>Whether the chosen strategy deploys by running a named job, and so wants the picker.</summary>
+    bool DeclaresJobName => SelectedSchema.Any(s => s.Key == PipelineJobSettings.JobKey);
+
+    /// <summary>Writes a picked job name into the settings bag the text field reads from.</summary>
+    /// <remarks>
+    /// The picker sets the same value the field binds to, so clicking a chip and typing the name are
+    /// literally the same edit - and the Add button's required-settings check sees either.
+    /// </remarks>
+    void OnJobNamePicked(string name)
+    {
+        _settings[PipelineJobSettings.JobKey] = name;
+        StateHasChanged();
+    }
 
     bool IsIncomplete => _repoId is null || _envId is null || string.IsNullOrWhiteSpace(_strategyKey)
                          || ProviderSettingsFields.MissingRequired(SelectedSchema, _settings, editing: false);

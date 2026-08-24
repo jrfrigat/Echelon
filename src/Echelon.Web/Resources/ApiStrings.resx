@@ -168,6 +168,12 @@
   <data name="Repo_HasMergeRequests" xml:space="preserve">
     <value>Repository still has merge requests; remove them first.</value>
   </data>
+  <data name="Repo_JobsUnsupported" xml:space="preserve">
+    <value>The '{0}' provider cannot list pipeline jobs, so the name has to be typed.</value>
+  </data>
+  <data name="Repo_JobsFailed" xml:space="preserve">
+    <value>Could not read the pipeline jobs of '{0}': {1}</value>
+  </data>
   <data name="Stack_NameTaken" xml:space="preserve">
     <value>A stack named '{0}' already exists.</value>
   </data>

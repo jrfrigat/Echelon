@@ -38,8 +38,11 @@ namespace Echelon.Providers.GitLab;
 /// </remarks>
 internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
 {
-    /// <summary>Settings key naming the job to run.</summary>
-    internal const string JobKey = "job";
+    /// <summary>
+    /// Settings key naming the job to run - the neutral one, so the admin form's job picker finds it
+    /// without knowing this is GitLab.
+    /// </summary>
+    internal const string JobKey = PipelineJobSettings.JobKey;
 
     /// <summary>Settings key deciding what happens when the job already succeeded.</summary>
     internal const string RerunKey = "rerun";

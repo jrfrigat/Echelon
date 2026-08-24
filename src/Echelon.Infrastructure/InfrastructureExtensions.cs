@@ -108,6 +108,8 @@ public static class InfrastructureExtensions
         services.Configure<VcsPollingOptions>(config.GetSection("VcsPolling"));
         // The per-connection poll, shared by the scheduled coordinator and the manual "poll now" endpoint.
         services.AddScoped<VcsConnectionPoller>();
+        // Reads a repository's recent pipeline job names, for the deploy-target form's job picker.
+        services.AddScoped<PipelineJobLookup>();
         services.AddHostedService<VcsPollingCoordinator>();
 
         // The tracker counterpart: asks each poll-mode tracker connection what is open and re-reads what

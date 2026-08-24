@@ -19,6 +19,12 @@ public sealed class RepositoriesApi(HttpClient http) : ApiClient(http)
         SendAsync(() => Http.PostAsJsonAsync("api/repositories",
             new { Name = name, ExternalId = externalId, ConnectionId = connectionId }, Json, ct), ct);
 
+    /// <summary>
+    /// The job names this repository's recent pipelines ran, for the deploy-target form's picker.
+    /// </summary>
+    public Task<PipelineJobNamesDto> GetPipelineJobNamesAsync(Guid id, CancellationToken ct = default) =>
+        GetAsync<PipelineJobNamesDto>($"api/repositories/{id}/pipeline-jobs", ct);
+
     public Task DeleteRepositoryAsync(Guid id, CancellationToken ct = default) =>
         SendAsync(() => Http.DeleteAsync($"api/repositories/{id}", ct), ct);
 }
