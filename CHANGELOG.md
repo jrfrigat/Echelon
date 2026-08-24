@@ -8,9 +8,11 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-24
+
 ### Added
 
-- **A `gitlab-job` deploy strategy**: deploying runs one named job of the merge request's own latest
+- **A `gitlab-job` deploy strategy**: deploying runs one named job of the merge request's own
   pipeline. Neither existing strategy covers the manual-gate workflow it exists for - the pipeline
   has already run and already built the artefact, and shipping means pressing the one button on it.
   `gitlab-merge` merges, which is a different act, and `gitlab-pipeline` starts a *second* pipeline
@@ -22,6 +24,17 @@ All notable changes to this project are documented here. The format is based on
   pipeline strategy this one reconciles: the job is named inside the merge request's own pipeline, so
   a step resumed after a crash re-finds the run it started. A misspelled job name is answered with
   the names the pipeline actually has, since that is the only place an operator can see them.
+- **Which pipeline that job is taken from, stated rather than assumed.** A merge request usually has
+  several at once - the branch push built one, the merge request built another, and a manual,
+  scheduled or API run can sit beside them - and they do not run the same jobs, so "the newest" is a
+  coincidence rather than a decision. Three settings make it one: `pipelineSource` and
+  `pipelineStatus` narrow the candidates, `pipelinePick` takes the newest or the oldest of what
+  remains. What is *not* configurable is the safety property behind them: only pipelines of that same
+  commit are then opened, in order, until one holds the job. So a branch pipeline and a merge-request
+  pipeline of one commit are interchangeable places to find it, while an earlier commit's pipeline is
+  never reached - deploying code nobody chose is worse than refusing. Filters that match nothing are
+  answered with what the merge request does have, ids, sources and statuses included. A job in a
+  child pipeline is not found: GitLab does not list it among the parent's jobs.
 - **A job picker on the deploy-target form**, listing what the repository's recent pipelines actually
   ran. A job name is a spelling that lives in a file the operator is not looking at, and a
   `parallel: matrix` job is not even spelled there in the form the pipeline uses - `deploy` in the CI
@@ -224,7 +237,8 @@ First public release. Everything below describes the state the repository is pub
 - **Branch names were compared case-insensitively on SQL Server**, so two branches differing only in
   case collided on the unique index.
 
-[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jrfrigat/echelon/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jrfrigat/echelon/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jrfrigat/echelon/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/jrfrigat/echelon/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jrfrigat/echelon/releases/tag/v0.1.0

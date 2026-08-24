@@ -38,6 +38,111 @@ public class GitLabJobStrategyTests
     }
 
     [Fact]
+    public async Task PipelineSourcePicksTheKindOfPipelineRatherThanTheNewestOne()
+    {
+        // A merge request usually carries several pipelines - the branch push built one, the merge
+        // request built another - and both can hold a job of the same name. Newest-wins would deploy
+        // from whichever happened to run last, which is not a decision anybody made.
+        var router = TwoPipelines(
+            newer: """{ "id": 101, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            older: """{ "id": 100, "source": "merge_request_event", "status": "success", "sha": "abc123def456" }""",
+            newerJobs: $$"""[ { "id": 30, "name": "{{JobName}}", "status": "manual" } ]""",
+            olderJobs: $$"""[ { "id": 12, "name": "{{JobName}}", "status": "manual" } ]""");
+
+        var result = await Strategy(router).StartAsync(
+            Context((GitLabJobStrategy.JobKey, JobName),
+                    (GitLabJobStrategy.PipelineSourceKey, "merge_request_event")), Ct);
+
+        Assert.Equal(DeployOutcome.Awaiting, result.Outcome);
+        Assert.Equal("12", result.ExternalRef);
+    }
+
+    [Fact]
+    public async Task PipelineStatusSkipsAPipelineThatIsNotInThatState()
+    {
+        // "Deploy only from a build that passed" is the reason this filter exists.
+        var router = TwoPipelines(
+            newer: """{ "id": 101, "source": "push", "status": "failed", "sha": "abc123def456" }""",
+            older: """{ "id": 100, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            newerJobs: $$"""[ { "id": 30, "name": "{{JobName}}", "status": "manual" } ]""",
+            olderJobs: $$"""[ { "id": 12, "name": "{{JobName}}", "status": "manual" } ]""");
+
+        var result = await Strategy(router).StartAsync(
+            Context((GitLabJobStrategy.JobKey, JobName),
+                    (GitLabJobStrategy.PipelineStatusKey, "success")), Ct);
+
+        Assert.Equal("12", result.ExternalRef);
+    }
+
+    [Fact]
+    public async Task PipelinePickFirstTakesTheOldestMatchingPipeline()
+    {
+        var router = TwoPipelines(
+            newer: """{ "id": 101, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            older: """{ "id": 100, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            newerJobs: $$"""[ { "id": 30, "name": "{{JobName}}", "status": "manual" } ]""",
+            olderJobs: $$"""[ { "id": 12, "name": "{{JobName}}", "status": "manual" } ]""");
+
+        var result = await Strategy(router).StartAsync(
+            Context((GitLabJobStrategy.JobKey, JobName),
+                    (GitLabJobStrategy.PipelinePickKey, GitLabJobStrategy.PickFirst)), Ct);
+
+        Assert.Equal("12", result.ExternalRef);
+    }
+
+    [Fact]
+    public async Task LooksInTheSiblingPipelineOfTheSameCommitWhenTheFirstDoesNotHoldTheJob()
+    {
+        // The common shape with no settings at all: the push pipeline built and tested, the
+        // merge-request pipeline carries the deploy gate. Both are the same commit, so either is a
+        // legitimate place to find the job.
+        var router = TwoPipelines(
+            newer: """{ "id": 101, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            older: """{ "id": 100, "source": "merge_request_event", "status": "manual", "sha": "abc123def456" }""",
+            newerJobs: """[ { "id": 30, "name": "build", "status": "success" } ]""",
+            olderJobs: $$"""[ { "id": 12, "name": "{{JobName}}", "status": "manual" } ]""");
+
+        var result = await Strategy(router).StartAsync(Context((GitLabJobStrategy.JobKey, JobName)), Ct);
+
+        Assert.Equal(DeployOutcome.Awaiting, result.Outcome);
+        Assert.Equal("12", result.ExternalRef);
+    }
+
+    [Fact]
+    public async Task NeverFallsThroughToAnEarlierCommitsPipeline()
+    {
+        // The safety property. Scanning on past the chosen commit would deploy something the operator
+        // did not pick - an older commit whose pipeline happens to still have the job - and it would
+        // look like a success. Failing is the right answer.
+        var router = TwoPipelines(
+            newer: """{ "id": 101, "source": "push", "status": "success", "sha": "abc123def456" }""",
+            older: """{ "id": 100, "source": "push", "status": "success", "sha": "0ldc0mmit0000" }""",
+            newerJobs: """[ { "id": 30, "name": "build", "status": "success" } ]""",
+            olderJobs: $$"""[ { "id": 12, "name": "{{JobName}}", "status": "manual" } ]""");
+
+        var result = await Strategy(router).StartAsync(Context((GitLabJobStrategy.JobKey, JobName)), Ct);
+
+        Assert.Equal(DeployOutcome.Failed, result.Outcome);
+        Assert.Contains("abc123de", result.Message!, StringComparison.Ordinal);
+        Assert.DoesNotContain(router.Requests, r => r.Method == HttpMethod.Post);
+    }
+
+    [Fact]
+    public async Task FiltersThatMatchNothingAreToldWhatTheMergeRequestHas()
+    {
+        var router = new Router()
+            .OnGet("/merge_requests/7/pipelines",
+                """[ { "id": 101, "source": "push", "status": "failed", "sha": "abc123def456" } ]""");
+
+        var result = await Strategy(router).StartAsync(
+            Context((GitLabJobStrategy.JobKey, JobName),
+                    (GitLabJobStrategy.PipelineStatusKey, "success")), Ct);
+
+        Assert.Equal(DeployOutcome.Failed, result.Outcome);
+        Assert.Contains("101 (push/failed)", result.Message!, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AJobThatAlreadySucceededIsAlreadyDoneAndNothingIsStarted()
     {
         // The idempotency obligation in IDeployStrategy: a redelivered step must not deploy twice.
@@ -224,6 +329,15 @@ public class GitLabJobStrategyTests
 
         Assert.Contains("group%2Fsub%2Fapi", Assert.Single(router.Requests).RequestUri!.ToString(), StringComparison.Ordinal);
     }
+
+    /// <summary>Two pipelines on one merge request, each with its own jobs - the selection cases.</summary>
+    private static Router TwoPipelines(string newer, string older, string newerJobs, string olderJobs) =>
+        new Router()
+            .OnGet("/merge_requests/7/pipelines", $"[ {newer}, {older} ]")
+            .OnGet("/pipelines/101/jobs", newerJobs)
+            .OnGet("/pipelines/100/jobs", olderJobs)
+            .OnPost("/jobs/12/play", """{ "id": 12, "status": "pending" }""")
+            .OnPost("/jobs/30/play", """{ "id": 30, "status": "pending" }""");
 
     /// <summary>One pipeline holding one job in the given state - the shape most cases need.</summary>
     private static Router Pipeline(string status) =>

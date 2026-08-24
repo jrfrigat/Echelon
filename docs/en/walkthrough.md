@@ -161,11 +161,35 @@ branch head rather than the commit that was tested.
 | :-- | :-- | :-- |
 | Job name | `deploy:staging` | Exactly as the pipeline spells it, case included. Chips below the field carry the names from the selected repository's recent pipelines - clicking beats recalling. Typing your own still works: a job added in the branch under review is in no pipeline yet |
 | Re-run | `if-not-successful` | What to do when that job already succeeded. The default treats it as already deployed; `always` runs it again, which is what "Redeploy: Always" on the target means for an idempotent deploy job |
+| Pipeline source | `any` | Which kind of pipeline to take the job from: `merge_request_event`, `push`, `web`, `api`, `trigger`, `schedule`, `parent_pipeline`, `external` |
+| Pipeline status | `any` | Only consider a pipeline in this state: `success`, `manual`, `running`, `failed` |
+| Pipeline to take | `last` | Which of the matching pipelines to use - the newest (`last`) or the oldest (`first`) |
 
 What happens depends on the job's state: one waiting on its manual gate is **played**; one that has
 already run (`failed`, `canceled`, `skipped`) is **retried**, which is a new job with a new id; one
 already running is adopted rather than started twice; a successful one is *already done* unless
 `Re-run` is `always`.
+
+**Which pipeline it takes.** A merge request usually has several at once: the branch push built one,
+opening the merge request built another (`merge_request_event`), and a manual, scheduled or
+API-triggered run can sit beside them. They do not run the same jobs, so "the latest" is a
+coincidence, not a decision. The rule is:
+
+1. the merge request's pipelines are narrowed by **Pipeline source** and **Pipeline status** (`any`
+   narrows nothing);
+2. **Pipeline to take** picks which end of what remains - newest or oldest;
+3. then only pipelines **of that same commit** are opened, in that order, until one holds the job.
+
+Step three is a safety property and is not configurable. A branch pipeline and a merge-request
+pipeline of one commit are two views of the same build, and the job may live in either; a pipeline of
+an earlier commit is different code, and deploying it by accident is worse than failing. So an older
+commit is never reached, however the filters are set.
+
+When nothing matches, the error lists what the merge request actually has -
+`101 (push/failed), 100 (merge_request_event/success)` - which is enough to correct the filters.
+
+**What it cannot do:** a job in a child pipeline (`trigger:`). GitLab does not return it among the
+parent's jobs, so such a job is reported as missing.
 
 **Where the chips come from.** The union of the repository's three most recent pipelines: a branch
 pipeline and a merge-request pipeline do not run the same jobs, so reading only the newest would miss

@@ -53,9 +53,33 @@ internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
     /// <summary>Re-run even a successful job, for a target whose redeploy is meant to redeploy.</summary>
     internal const string RerunAlways = "always";
 
+    /// <summary>Settings key narrowing which kind of pipeline the job is looked for in.</summary>
+    internal const string PipelineSourceKey = "pipelineSource";
+
+    /// <summary>Settings key narrowing the pipeline by its own status.</summary>
+    internal const string PipelineStatusKey = "pipelineStatus";
+
+    /// <summary>Settings key choosing which end of the candidate list to take.</summary>
+    internal const string PipelinePickKey = "pipelinePick";
+
+    /// <summary>The value both pipeline filters take to mean "do not narrow on this".</summary>
+    internal const string PipelineAny = "any";
+
+    /// <summary>Take the newest matching pipeline. The default.</summary>
+    internal const string PickLast = "last";
+
+    /// <summary>Take the oldest matching pipeline.</summary>
+    internal const string PickFirst = "first";
+
     // A pipeline with more than a hundred jobs is a monorepo, not a mistake; the cap is only there so
     // a paging bug cannot spin forever.
     private const int MaxPages = 20;
+
+    /// <summary>
+    /// How many same-commit pipelines are opened looking for the job. A commit rarely has more than
+    /// two (a branch pipeline and a merge-request one); the cap bounds the requests all the same.
+    /// </summary>
+    private const int MaxPipelinesScanned = 5;
 
     /// <inheritdoc/>
     public IReadOnlyList<ProviderSettingSchema> SettingsSchema =>
@@ -74,7 +98,33 @@ internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
                 + "deploy job means.",
             Kind: ProviderSettingKind.Enum,
             Options: [RerunIfNotSuccessful, RerunAlways],
-            Default: RerunIfNotSuccessful)
+            Default: RerunIfNotSuccessful),
+        new ProviderSettingSchema(
+            Key: PipelineSourceKey,
+            Label: "Pipeline source",
+            Description: "Which kind of pipeline the job is looked for in. A merge request usually has "
+                + "several - the branch push built one and the merge request built another - and they do "
+                + "not run the same jobs. 'any' takes whichever matches the other filters.",
+            Kind: ProviderSettingKind.Enum,
+            Options: [PipelineAny, "merge_request_event", "push", "web", "api", "trigger", "schedule", "parent_pipeline", "external"],
+            Default: PipelineAny),
+        new ProviderSettingSchema(
+            Key: PipelineStatusKey,
+            Label: "Pipeline status",
+            Description: "Only consider a pipeline in this state. 'success' is the useful one when the "
+                + "deploy must run on a build that passed; 'manual' picks the pipeline that is blocked "
+                + "waiting on its gate.",
+            Kind: ProviderSettingKind.Enum,
+            Options: [PipelineAny, "success", "manual", "running", "failed"],
+            Default: PipelineAny),
+        new ProviderSettingSchema(
+            Key: PipelinePickKey,
+            Label: "Pipeline to take",
+            Description: "Which end of the matching pipelines to deploy from: the newest ('last') or the "
+                + "oldest ('first').",
+            Kind: ProviderSettingKind.Enum,
+            Options: [PickLast, PickFirst],
+            Default: PickLast)
     ];
 
     /// <inheritdoc/>
@@ -180,8 +230,30 @@ internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
         return null;
     }
 
-    /// <summary>Finds the named job in the merge request's newest pipeline.</summary>
+    /// <summary>Finds the named job in the merge request's chosen pipeline.</summary>
     /// <returns>The job, or the sentence explaining why there is none.</returns>
+    /// <remarks>
+    /// <para>
+    /// "The merge request's pipeline" is not one thing, which is the whole difficulty here. Pushing the
+    /// branch builds one, opening the merge request builds another, a merged-results run builds a
+    /// third, and a scheduled or API-triggered run can appear beside them - all listed against the same
+    /// merge request, and they do not run the same jobs. Taking the newest and hoping is how a deploy
+    /// ends up on a pipeline nobody meant.
+    /// </para>
+    /// <para>
+    /// So the choice is stated, in three steps. The declared filters narrow the candidates by source
+    /// and by the pipeline's own status; <c>pipelinePick</c> says which end of what remains to take;
+    /// and then - the part that is not configurable - only pipelines of <em>that same commit</em> are
+    /// opened, in that order, until one holds the named job. The commit rule is the safety property:
+    /// falling through to an older pipeline would deploy a commit the operator did not choose, which
+    /// is worse than failing, so an old pipeline is never reached however the filters are set.
+    /// </para>
+    /// <para>
+    /// Not handled: a job in a child pipeline. <c>GET /pipelines/:id/jobs</c> does not descend into
+    /// one triggered by a <c>trigger:</c> bridge, so a deploy job living down there is reported as
+    /// missing rather than found and run.
+    /// </para>
+    /// </remarks>
     private async Task<(JobDto? Job, string Error)> FindAsync(DeployContext context, string jobName, CancellationToken ct)
     {
         using var pipelinesRequest = Authorized(
@@ -198,48 +270,113 @@ internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
             .ReadFromJsonAsync<List<PipelineDto>>(cancellationToken: ct)
             .ConfigureAwait(false);
 
-        // Highest id rather than first: the endpoint is documented as newest-first, and depending on
-        // that order is a silent way to deploy the wrong commit's pipeline if it ever changes.
         if (pipelines is not { Count: > 0 })
             return (null, $"Merge request !{context.MergeRequestExternalId} has no pipeline, so there is no '{jobName}' to run.");
 
-        var pipelineId = Ref(pipelines.Max(p => p.Id));
+        var wantedSource = Setting(context, PipelineSourceKey);
+        var wantedStatus = Setting(context, PipelineStatusKey);
 
+        var matching = pipelines
+            .Where(p => Matches(wantedSource, p.Source) && Matches(wantedStatus, p.Status))
+            .ToList();
+
+        if (matching.Count == 0)
+            return (null, $"Merge request !{context.MergeRequestExternalId} has no pipeline matching "
+                + $"{Describe(wantedSource, wantedStatus)} - it has {Summarize(pipelines)}.");
+
+        // Ordered by id, not by the order GitLab returned: the endpoint is documented as newest-first,
+        // and leaning on that is a silent way to deploy the wrong pipeline if it ever changes.
+        var ordered = Setting(context, PipelinePickKey) == PickFirst
+            ? matching.OrderBy(p => p.Id).ToList()
+            : matching.OrderByDescending(p => p.Id).ToList();
+
+        // One commit only. A branch pipeline and a merge-request pipeline of the same commit are two
+        // views of the same build and either may hold the deploy job; a pipeline of an earlier commit
+        // is a different thing to ship, and reaching it by accident is the failure this prevents.
+        var sha = ordered[0].Sha;
+        var candidates = ordered
+            .Where(p => string.Equals(p.Sha, sha, StringComparison.Ordinal))
+            .Take(MaxPipelinesScanned)
+            .ToList();
+
+        var seen = new List<string>();
+        foreach (var pipeline in candidates)
+        {
+            var (jobs, error) = await JobsOfAsync(context, Ref(pipeline.Id), ct).ConfigureAwait(false);
+            if (error is { Length: > 0 }) return (null, error);
+
+            // Highest id among same-named jobs: a retried job keeps its name, and the newest attempt is
+            // the one whose state describes this pipeline now.
+            var match = jobs
+                .Where(j => string.Equals(j.Name, jobName, StringComparison.Ordinal))
+                .OrderByDescending(j => j.Id)
+                .FirstOrDefault();
+
+            if (match is not null) return (match, string.Empty);
+
+            seen.AddRange(jobs.Select(j => j.Name).Where(n => !string.IsNullOrEmpty(n))!);
+        }
+
+        // The names are in the message on purpose: a job that does not exist is almost always a
+        // spelling, and this is the only place the operator can see what the pipelines actually hold.
+        var available = seen.Distinct(StringComparer.Ordinal).Take(20).ToList();
+        var names = available.Count == 0 ? "they hold none" : $"they hold: {string.Join(", ", available)}";
+        var ids = string.Join(", ", candidates.Select(p => p.Id));
+
+        return (null, $"No job named '{jobName}' in the pipeline(s) of commit {Short(sha)} "
+            + $"(id {ids}) on merge request !{context.MergeRequestExternalId} - {names}.");
+    }
+
+    /// <summary>Reads every job of one pipeline, following GitLab's paging.</summary>
+    private async Task<(IReadOnlyList<JobDto> Jobs, string Error)> JobsOfAsync(
+        DeployContext context, string pipelineId, CancellationToken ct)
+    {
         var jobs = new List<JobDto>();
+
         for (var page = 1; page <= MaxPages; page++)
         {
-            using var jobsRequest = Authorized(
+            using var request = Authorized(
                 HttpMethod.Get, GitLabUrls.PipelineJobs(context.ApiUrl, context.ProjectPath, pipelineId, page), context);
 
-            var jobsResponse = await http.SendAsync(jobsRequest, ct).ConfigureAwait(false);
-            if (!jobsResponse.IsSuccessStatusCode)
-                return (null, $"GitLab returned {(int)jobsResponse.StatusCode} listing the jobs of pipeline {pipelineId}.");
+            var response = await http.SendAsync(request, ct).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return ([], $"GitLab returned {(int)response.StatusCode} listing the jobs of pipeline {pipelineId}.");
 
-            var batch = await jobsResponse.Content
+            var batch = await response.Content
                 .ReadFromJsonAsync<List<JobDto>>(cancellationToken: ct)
                 .ConfigureAwait(false);
             if (batch is { Count: > 0 }) jobs.AddRange(batch);
 
-            var next = jobsResponse.Headers.TryGetValues("X-Next-Page", out var values) ? values.FirstOrDefault() : null;
+            var next = response.Headers.TryGetValues("X-Next-Page", out var values) ? values.FirstOrDefault() : null;
             if (string.IsNullOrEmpty(next)) break;
         }
 
-        // Highest id among same-named jobs: a retried job keeps its name, and the newest attempt is
-        // the one whose state describes this pipeline now.
-        var match = jobs
-            .Where(j => string.Equals(j.Name, jobName, StringComparison.Ordinal))
-            .OrderByDescending(j => j.Id)
-            .FirstOrDefault();
-
-        if (match is not null) return (match, string.Empty);
-
-        // The names are in the message on purpose: a job that does not exist is almost always a
-        // spelling, and this is the only place the operator can see what the pipeline actually has.
-        var available = jobs.Select(j => j.Name).Where(n => !string.IsNullOrEmpty(n)).Distinct(StringComparer.Ordinal).Take(20).ToList();
-        var names = available.Count == 0 ? "it has none" : $"it has: {string.Join(", ", available)}";
-
-        return (null, $"Pipeline {pipelineId} of merge request !{context.MergeRequestExternalId} has no job named '{jobName}' - {names}.");
+        return (jobs, string.Empty);
     }
+
+    /// <summary>Whether a filter accepts a value: unset, or set to "any", accepts everything.</summary>
+    private static bool Matches(string? wanted, string? actual) =>
+        wanted is null || wanted == PipelineAny || string.Equals(wanted, actual, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The filters as a phrase, for the message that says nothing matched them.</summary>
+    private static string Describe(string? source, string? status)
+    {
+        var parts = new List<string>();
+        if (source is { } s && s != PipelineAny) parts.Add($"source '{s}'");
+        if (status is { } t && t != PipelineAny) parts.Add($"status '{t}'");
+
+        return parts.Count == 0 ? "the configured filters" : string.Join(" and ", parts);
+    }
+
+    /// <summary>What the merge request does have, so the filters can be corrected against it.</summary>
+    private static string Summarize(IEnumerable<PipelineDto> pipelines) =>
+        string.Join(", ", pipelines
+            .OrderByDescending(p => p.Id)
+            .Take(10)
+            .Select(p => $"{p.Id} ({p.Source ?? "?"}/{p.Status ?? "?"})"));
+
+    private static string Short(string? sha) =>
+        sha is { Length: > 8 } ? sha[..8] : sha ?? "?";
 
     private static DeployResult Failed(string message) => new(DeployOutcome.Failed, Message: message);
 
@@ -266,7 +403,12 @@ internal sealed class GitLabJobStrategy(HttpClient http) : IDeployStrategy
     }
 
     private sealed record PipelineDto(
-        [property: JsonPropertyName("id")] long Id);
+        [property: JsonPropertyName("id")] long Id,
+        // The three the selection turns on: what built it, what state it is in, and which commit it
+        // belongs to. All three are in the merge request's pipeline list, so choosing costs no extra call.
+        [property: JsonPropertyName("source")] string? Source,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("sha")] string? Sha);
 
     private sealed record JobDto(
         [property: JsonPropertyName("id")] long Id,
